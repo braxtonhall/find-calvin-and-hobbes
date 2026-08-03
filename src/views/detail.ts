@@ -233,6 +233,7 @@ export function renderDetail(date: string): void {
 		year: "numeric",
 		month: "long",
 		day: "numeric",
+		timeZone: "UTC",
 	});
 	const isSunday = dateObject.getUTCDay() === 0;
 

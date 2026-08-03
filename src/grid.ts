@@ -96,6 +96,7 @@ export function renderGrid(): void {
 				year: "numeric",
 				month: "long",
 				day: "numeric",
+				timeZone: "UTC",
 			}) + (day.state !== "none" ? " — has comic" : ""),
 		);
 
@@ -214,6 +215,7 @@ export function renderGrid(): void {
 				year: "numeric",
 				month: "long",
 				day: "numeric",
+				timeZone: "UTC",
 			});
 			const cellRect = cell.getBoundingClientRect();
 			tooltip.style.left = cellRect.right + 6 + "px";

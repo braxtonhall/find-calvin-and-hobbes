@@ -58,7 +58,7 @@ export function formatCompactRange(entry: string): string {
 	const startDate = compactToDate(start);
 	const endDate = compactToDate(end);
 	const formatDate = (date: Date) =>
-		date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+		date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 	return `${formatDate(startDate)} \u2013 ${formatDate(endDate)}`;
 }
 
@@ -72,7 +72,7 @@ export function formatDateRange(start: string, end: string): string {
 	const startDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
 	const endDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
 	const formatDate = (date: Date) =>
-		date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+		date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
 	return `${formatDate(startDate)} \u2013 ${formatDate(endDate)}`;
 }
 

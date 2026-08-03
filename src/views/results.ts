@@ -32,6 +32,7 @@ export function renderResults(query: string): void {
 				year: "numeric",
 				month: "long",
 				day: "numeric",
+				timeZone: "UTC",
 			});
 			const escaped = escHtml(comic.transcript);
 			const regex = new RegExp(escRegex(query), "gi");
