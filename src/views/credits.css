@@ -45,8 +45,22 @@
 	text-decoration: underline;
 }
 
+.credits-section ul {
+	margin: 6px 0 0 0;
+	padding-left: 1.2em;
+}
+
 .credits-footer {
 	margin-top: 32px;
 	font-size: 12px;
 	color: var(--text-muted);
+}
+
+.credits-footer a {
+	color: var(--golden);
+	text-decoration: none;
+}
+
+.credits-footer a:hover {
+	text-decoration: underline;
 }

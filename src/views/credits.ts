@@ -39,7 +39,18 @@ export function renderCredits(): void {
 			<a href="https://commons.wikimedia.org/wiki/File:Calvin_and_Hobbes_title.png" target="_blank" rel="noopener">Wikimedia Commons</a>.
 		</p>
 
-		<p class="credits-footer">Built by Braxton Hall</p>
+		<div class="credits-section">
+			<strong>Prior Art</strong>
+			<ul>
+				<li><a href="https://web.archive.org/web/20081102153520/http://www.s-anand.net/calvinandhobbes.html#19851117" target="_blank" rel="noopener">s-anand.net</a></li>
+				<li><a href="https://web.archive.org/web/20060508010745/http://www.reemst.com/calvin_and_hobbes/stripsearch/1989/10/29/calvin_and_hobbes.html" target="_blank" rel="noopener">C.H.E.S.S.</a></li>
+				<li><a href="https://web.archive.org/web/20260709131130/http://michaelyingling.com/random/calvin_and_hobbes/" target="_blank" rel="noopener">Mike Yingling's Calvin and Hobbes: The Search Engine</a></li>
+				<li><a href="https://web.archive.org/web/20260701171131/https://calvinandhobbes.miraheze.org/wiki/Main_Page" target="_blank" rel="noopener">Calvin and Hobbes Miraheze Wiki</a></li>
+				<li><a href="https://web.archive.org/web/20260803211810/https://seligman.github.io/comics/calvin_and_hobbes.html" target="_blank" rel="noopener">Calvin and Hobbes Search</a></li>
+			</ul>
+		</div>
+
+		<p class="credits-footer">Please send corrections, fixes, and ideas to Braxton Hall through <a href="https://github.com/braxtonhall/find-calvin-and-hobbes" target="_blank" rel="noopener">GitHub</a>.</p>
 	</div>`;
 
 	element.querySelector(".credits-back")!.addEventListener("click", () => history.back());
