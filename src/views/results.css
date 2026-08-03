@@ -1,0 +1,143 @@
+#view-results.active {
+	display: block;
+	padding: 20px;
+}
+
+.results-search-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-bottom: 24px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid var(--grey);
+	position: sticky;
+	top: 0;
+	background: var(--bg);
+	z-index: 2;
+}
+
+.results-input {
+	flex: 1;
+	padding: 10px 14px;
+	font-size: 15px;
+	font-family: var(--font);
+	color: var(--text);
+	background: var(--bg-sidebar);
+	border: 1px solid var(--grey);
+	border-radius: 6px;
+	outline: none;
+	transition: border-color 0.2s;
+}
+
+.results-input:focus {
+	border-color: var(--golden);
+}
+
+.results-input::placeholder {
+	color: var(--text-muted);
+}
+
+.results-clear {
+	width: 32px;
+	height: 32px;
+	font-size: 18px;
+	color: var(--text-muted);
+	background: none;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.results-clear:hover {
+	color: var(--text);
+	background: var(--grey);
+}
+
+.results-empty {
+	text-align: center;
+	color: var(--text-muted);
+	padding: 60px 20px;
+	font-size: 16px;
+}
+
+.result-row {
+	padding: 16px 0;
+	border-bottom: 1px solid var(--grey);
+	cursor: pointer;
+	transition: background 0.1s;
+	position: relative;
+	min-height: 140px;
+}
+
+.result-row:hover {
+	background: var(--bg-sidebar);
+}
+
+.result-row.result-row--highlight {
+	background: #fff8e1;
+}
+
+.result-row--no-image .result-header,
+.result-row--no-image .result-body {
+	margin-right: 0;
+}
+
+.result-row:first-of-type {
+	padding-top: 0;
+}
+
+.result-header {
+	font-weight: 600;
+	margin-bottom: 8px;
+	margin-right: 216px;
+	color: var(--text);
+}
+
+.result-body {
+	margin-right: 216px;
+	height: 140px;
+	overflow: hidden;
+}
+
+.result-text {
+	height: 140px;
+	overflow: hidden;
+	position: relative;
+	white-space: pre-wrap;
+	font-size: 13px;
+	line-height: 1.5;
+}
+
+.result-text--overflow {
+	-webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%);
+	mask-image: linear-gradient(to bottom, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+
+.result-image-wrap {
+	position: absolute;
+	right: 0;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 200px;
+	height: 140px;
+	border-radius: 4px;
+	overflow: hidden;
+	background: var(--grey);
+}
+
+.result-image {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: top;
+	opacity: 0;
+	transition: opacity 0.3s;
+}
+
+.result-image.loaded {
+	opacity: 1;
+}

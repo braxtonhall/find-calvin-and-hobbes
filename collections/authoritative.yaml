@@ -1,0 +1,23 @@
+id: authoritative
+name: The Authoritative Calvin and Hobbes
+type: treasury
+pub_date: 1990-10-01
+colour: true
+notes:
+  - Treasury of Books 3+4. Includes 7-page elephant story. Colour Sundays.
+dailies:
+  - 19870524-19881126
+  - 19881201-19881204
+alterations:
+  19880313: Possibly miscolored dinosaur Sunday strip — off-putting greyish-green hue
+    in some book editions. Not Watterson's intention.
+  19880828: Vertical/redrawn format. Two versions exist. Horizontal format used in
+    newspapers and Complete. Vertical redrawn version used in Book 4, Authoritative,
+    and Lazy Sunday Book. Sunday Pages 1985-1995 has original horizontal. Complete
+    version confirmed via personal scan of the 2005 hardcover.
+extras:
+  - Front cover art
+  - Back cover art
+  - Seven-page elephant story (also in Complete)
+image: assets/authoritative.jpg
+aspect-ratio: 0.78

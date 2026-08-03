@@ -1,0 +1,29 @@
+id: complete
+name: The Complete Calvin and Hobbes
+type: complete
+pub_date: 2005-10-04
+colour: true
+notes:
+  - "Hardcover: 3 volumes. Contains all strips except Nov 28, 1985 washing machine original.
+    Some strips have altered text."
+dailies:
+  - 19851118-19951231
+alterations:
+  19870107: "Text changed: 'Was I adopted?' → 'Was I genetically engineered or
+    cloned?' (Reference to adoption removed in Complete. References to cannibalism
+    and child labor in same strip were NOT changed.)"
+  19871124: "Text changed: 'He says it's colder because the Earth's orbit is taking
+    us farther from the sun.' → 'He says it's colder because our hemisphere is
+    tilted away from the sun now.' (Original text had scientifically incorrect explanation
+    of seasons. Complete has corrected science.)"
+  19881125: "Text changed: 'Biological mother' → 'A good mother' (Both mentions
+    of 'biological mother' changed to 'a good mother' in Complete. Omitted reference
+    to biological parentage/adoption.)"
+  19891224: Vertical/redrawn format. Two versions exist. Original horizontal (red
+    carpet) in newspapers. Vertical (green floor) redrawn version used in Book 6 and
+    Indispensable treasury. Complete version confirmed via personal scan of the 2005
+    hardcover uses the original horizontal format.
+extras:
+  - 14-page introduction by Bill Watterson (original to Complete)
+image: assets/complete.jpg
+aspect-ratio: 1.0

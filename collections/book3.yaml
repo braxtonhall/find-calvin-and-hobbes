@@ -1,0 +1,16 @@
+id: book3
+name: Yukon Ho!
+type: collection
+pub_date: 1989-03-01
+colour: false
+notes:
+  - Includes 'The Yukon Song' original poem.
+dailies:
+  - 19870524-19880221
+alterations: {}
+extras:
+  - Front cover art
+  - Back cover art
+  - Filler B&W vignettes
+image: assets/book3.jpg
+aspect-ratio: 0.9508

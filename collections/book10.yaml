@@ -1,0 +1,18 @@
+id: book10
+name: There's Treasure Everywhere
+type: collection
+pub_date: 1996-03-01
+colour: true
+notes:
+  - Excludes sabbatical repeats Apr 3 to Dec 31, 1994. Some Mar/Apr 1995 also in Magical
+    World.
+dailies:
+  - 19930830-19940402
+  - 19950101-19950319
+  - 19950403-19950408
+alterations: {}
+extras:
+  - Front cover art (also in Complete)
+  - Back cover art (also in Complete)
+image: assets/book10.gif
+aspect-ratio: 1.3916

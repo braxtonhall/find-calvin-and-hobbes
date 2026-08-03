@@ -1,0 +1,17 @@
+id: book2
+name: Something Under the Bed Is Drooling
+type: collection
+pub_date: 1988-04-01
+colour: false
+notes:
+  - Foreword by Pat Oliphant. May 23, 1987 strip excluded (only in Essential treasury).
+dailies:
+  - 19860818-19870522
+alterations: {}
+extras:
+  - Front cover art
+  - Back cover art
+  - Filler B&W vignettes
+  - Foreword by Pat Oliphant
+image: assets/book2.jpg
+aspect-ratio: 0.9367

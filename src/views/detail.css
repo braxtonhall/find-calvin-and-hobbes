@@ -1,0 +1,258 @@
+#view-detail.active {
+	display: block;
+	padding: 20px;
+}
+
+.detail-container {
+	max-width: 800px;
+}
+
+.detail-back {
+	font-family: var(--font);
+	font-size: 14px;
+	color: var(--text);
+	background: none;
+	border: 1px solid var(--grey);
+	border-radius: 6px;
+	padding: 6px 14px;
+	cursor: pointer;
+	margin-bottom: 20px;
+}
+
+.detail-back:hover,
+.detail-home:hover {
+	background: var(--grey);
+}
+
+.detail-home {
+	font-family: var(--font);
+	font-size: 14px;
+	color: var(--text);
+	background: none;
+	border: 1px solid var(--grey);
+	border-radius: 6px;
+	padding: 6px 14px;
+	cursor: pointer;
+	margin-bottom: 20px;
+}
+
+.home-icon {
+	display: inline-block;
+	position: relative;
+	top: -1px;
+}
+
+.nav-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	font-family: var(--font);
+	font-size: 14px;
+	color: var(--text-muted);
+	background: none;
+	border: 1px solid var(--grey);
+	border-radius: 4px;
+	cursor: pointer;
+	margin-left: 4px;
+	vertical-align: middle;
+	padding: 0;
+}
+
+.nav-btn:hover {
+	background: var(--grey);
+}
+
+.nav-btn--disabled {
+	opacity: 0.25;
+	cursor: default;
+}
+
+.detail-date {
+	font-size: 20px;
+	font-weight: 600;
+	margin-bottom: 20px;
+}
+
+.detail-comic + .detail-comic {
+	margin-top: 40px;
+}
+
+.detail-transcript {
+	white-space: pre-wrap;
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--text);
+}
+
+.detail-note {
+	color: var(--text-muted);
+	font-style: italic;
+	font-size: 13px;
+	margin-top: 8px;
+}
+
+.detail-attribution {
+	color: var(--text-muted);
+	font-size: 12px;
+	margin-top: 16px;
+}
+
+.detail-attribution a {
+	color: var(--text-muted);
+}
+
+.detail-read-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 13px;
+	color: var(--text-muted);
+	text-decoration: none;
+	margin-top: 12px;
+}
+
+.detail-read-link:hover {
+	color: var(--golden);
+}
+
+.detail-missing {
+	color: var(--text-muted);
+	font-size: 16px;
+	padding: 40px 0;
+}
+
+.detail-collections-heading {
+	font-size: 12px;
+	color: var(--text-muted);
+	margin: 24px 0 8px 0;
+}
+
+.detail-collections {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.detail-collections--empty {
+	font-style: italic;
+	color: var(--text-muted);
+}
+
+.collection-book {
+	height: 64px;
+	position: relative;
+	cursor: pointer;
+	transition: transform 0.15s;
+	background: var(--grey);
+	border-radius: 3px;
+}
+
+.collection-book img {
+	height: 64px;
+	width: auto;
+	display: block;
+	border-radius: 3px;
+}
+
+.collection-book:hover {
+	transform: scale(1.1);
+}
+
+.collection-book--bw img {
+	filter: grayscale(100%);
+}
+
+.collection-book__badge {
+	position: absolute;
+	top: -5px;
+	right: -5px;
+	width: 17px;
+	height: 17px;
+	border-radius: 50%;
+	background: var(--golden);
+	color: #fff;
+	font-size: 11px;
+	font-weight: 700;
+	line-height: 17px;
+	text-align: center;
+	z-index: 1;
+}
+
+.collection-tooltip {
+	position: fixed;
+	pointer-events: none;
+	z-index: 10000;
+	background: rgba(0, 0, 0, 0.85);
+	color: #fff;
+	padding: 8px 10px;
+	border-radius: 4px;
+	font-size: 13px;
+	white-space: nowrap;
+	opacity: 0;
+	transition: opacity 0.1s;
+}
+
+.collection-tooltip--visible {
+	opacity: 1;
+}
+
+.collection-tooltip__name {
+	font-weight: 600;
+}
+
+.collection-tooltip__year {
+	font-size: 11px;
+	color: #aaa;
+}
+
+.collection-tooltip__divider {
+	border-top: 1px solid rgba(255, 255, 255, 0.15);
+	margin-top: 5px;
+	padding-top: 5px;
+	font-size: 11px;
+	color: #aaa;
+	font-style: italic;
+	line-height: 1.4;
+	white-space: normal;
+	max-width: 260px;
+}
+
+.detail-image-wrapper {
+	position: relative;
+	display: block;
+	width: 100%;
+	margin-bottom: 20px;
+	border-radius: 4px;
+	overflow: hidden;
+	background: var(--grey);
+}
+
+.detail-image-pulse {
+	position: absolute;
+	inset: 0;
+	background: var(--grey);
+	animation: pulse 1.5s ease-in-out infinite;
+}
+
+.detail-image-pulse.loaded {
+	display: none;
+}
+
+.detail-image {
+	max-width: 100%;
+	height: auto;
+	display: block;
+	border-radius: 4px;
+}
+
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 0.4;
+	}
+	50% {
+		opacity: 0.8;
+	}
+}

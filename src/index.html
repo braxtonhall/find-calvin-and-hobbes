@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Calvin &amp; Hobbes Search</title>
+		<link rel="icon" type="image/png" href="https://static.wikitide.net/calvinandhobbeswiki/f/f3/CalvinAndHobbes.png" />
+		<meta name="theme-color" content="#f6b213" />
+		<meta
+			name="description"
+			content="Search the complete Calvin & Hobbes archive. Browse every comic strip from 1985 to 1995."
+		/>
+		<meta property="og:title" content="Calvin & Hobbes Search" />
+		<meta
+			property="og:description"
+			content="Search the complete Calvin & Hobbes archive. Browse every comic strip from 1985 to 1995."
+		/>
+		<meta
+			property="og:image"
+			content="https://upload.wikimedia.org/wikipedia/commons/9/96/Calvin_and_Hobbes_title.png"
+		/>
+		<meta name="twitter:card" content="summary" />
+	</head>
+	<body>
+		<a href="#main" class="skip-link">Skip to content</a>
+
+		<div id="loading" class="hidden">
+			<div class="spinner"></div>
+		</div>
+
+		<button class="mobile-grid-toggle" id="mobile-grid-toggle" aria-label="Toggle calendar grid">&#9638;</button>
+		<div class="mobile-overlay" id="mobile-overlay"></div>
+
+		<aside id="sidebar">
+			<div id="grid-container"></div>
+		</aside>
+
+		<main id="main">
+			<div id="view-landing" class="view active"></div>
+			<div id="view-results" class="view"></div>
+			<div id="view-detail" class="view"></div>
+			<div id="view-collection" class="view"></div>
+			<div id="view-credits" class="view"></div>
+		</main>
+
+		<noscript>
+			<div style="padding: 40px; text-align: center; font-family: sans-serif">
+				<h1>JavaScript Required</h1>
+				<p>This page requires JavaScript to search the Calvin &amp; Hobbes archive.</p>
+			</div>
+		</noscript>
+	</body>
+</html>

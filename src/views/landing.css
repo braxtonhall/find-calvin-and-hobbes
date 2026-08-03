@@ -1,0 +1,53 @@
+#view-landing.active {
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+}
+
+.landing-logo {
+	display: block;
+	max-width: 480px;
+	width: 100%;
+	margin: 0 auto 32px auto;
+}
+
+.landing-form {
+	width: 100%;
+	max-width: 520px;
+	padding: 0 24px;
+}
+
+.landing-input {
+	width: 100%;
+	padding: 16px 20px;
+	font-size: 18px;
+	font-family: var(--font);
+	color: var(--text);
+	background: var(--bg-sidebar);
+	border: 2px solid var(--grey);
+	border-radius: 8px;
+	outline: none;
+	transition: border-color 0.2s;
+}
+
+.landing-input:focus {
+	border-color: var(--golden);
+}
+
+.landing-input::placeholder {
+	color: var(--text-muted);
+}
+
+.landing-credits {
+	display: block;
+	margin-top: 32px;
+	font-size: 12px;
+	font-family: var(--font);
+	color: var(--text-muted);
+	text-decoration: none;
+}
+
+.landing-credits:hover {
+	color: var(--golden);
+}

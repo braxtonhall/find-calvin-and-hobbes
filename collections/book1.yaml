@@ -1,0 +1,19 @@
+id: book1
+name: Calvin and Hobbes
+type: collection
+pub_date: 1987-04-01
+colour: false
+notes:
+  - First collection. Foreword by Garry Trudeau. Filler B&W vignettes.
+dailies:
+  - 19851118-19860817
+alterations:
+  19851215: 10th and 11th panels reversed in first edition of Book 1 (1987). Corrected
+    in later editions and Complete.
+extras:
+  - Front cover art
+  - Back cover art
+  - Filler B&W vignettes
+  - Foreword by Garry Trudeau
+image: assets/book1.png
+aspect-ratio: 0.9347

@@ -1,0 +1,25 @@
+id: book4
+name: Weirdos From Another Planet!
+type: collection
+pub_date: 1990-03-01
+colour: false
+notes:
+  - "Excludes Nov 27-30, 1988 (those strips are in The Revenge of the Baby-Sat instead).
+    Aug 28, 1988 Sunday was redrawn for Complete (book 1, p. 478). Source: Weirdos wiki
+    page."
+dailies:
+  - 19880222-19881126
+  - 19881201-19881204
+alterations:
+  19880313: Possibly miscolored dinosaur Sunday strip — off-putting greyish-green hue
+    in some book editions. Not Watterson's intention.
+  19880828: Vertical/redrawn format. Two versions exist. Horizontal format used in
+    newspapers and Complete. Vertical redrawn version used in Book 4, Authoritative,
+    and Lazy Sunday Book. Sunday Pages 1985-1995 has original horizontal. Complete
+    version confirmed via personal scan of the 2005 hardcover.
+extras:
+  - Front cover art
+  - Back cover art
+  - Filler B&W vignettes
+image: assets/book4.jpg
+aspect-ratio: 0.9335

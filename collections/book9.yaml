@@ -1,0 +1,16 @@
+id: book9
+name: Homicidal Psycho Jungle Cat
+type: collection
+pub_date: 1994-10-01
+colour: true
+notes: []
+dailies:
+  - 19921102-19921107
+  - 19921109-19930829
+alterations: {}
+extras:
+  - Front cover art
+  - Back cover art
+  - Title page and last page art
+image: assets/book9.jpg
+aspect-ratio: 1.3699

@@ -1,0 +1,155 @@
+#sidebar {
+	width: 100px;
+	flex-shrink: 0;
+	overflow-y: auto;
+	border-right: 1px solid var(--grey);
+	background: var(--bg-sidebar);
+}
+
+#grid-container {
+	padding: 4px;
+}
+
+#main {
+	flex: 1;
+	overflow-y: auto;
+	background: var(--bg);
+	scrollbar-width: none;
+}
+
+#main::-webkit-scrollbar {
+	display: none;
+}
+
+.grid-layout {
+	display: flex;
+	gap: 1px;
+	padding-top: 2px;
+}
+
+#grid {
+	display: grid;
+	grid-template-columns: repeat(7, 10px);
+	gap: 1px;
+}
+
+.grid-header {
+	width: 10px;
+	height: 12px;
+	font-size: 9px;
+	color: var(--text-muted);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	line-height: 1;
+}
+
+.grid-header-row {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	background: var(--bg-sidebar);
+	height: 12px;
+}
+
+.grid-header-inner {
+	display: flex;
+	gap: 1px;
+}
+
+.grid-header__spacer {
+	height: 0;
+}
+
+.cell {
+	width: 10px;
+	height: 10px;
+	border-radius: 1px;
+	cursor: pointer;
+	transition:
+		background 0.15s,
+		box-shadow 0.15s,
+		transform 0.15s;
+}
+
+.cell--none {
+	background: var(--grey);
+}
+.cell--has-comic {
+	background: var(--golden);
+}
+.cell--bookmarked {
+	background: var(--orange);
+}
+
+.cell--search-nonmatch {
+	background: var(--golden-dim);
+}
+.cell--search-nonmatch.cell--bookmarked {
+	background: var(--orange-dim);
+}
+.cell--search-nonmatch.cell--none {
+	background: var(--grey-dim);
+}
+.cell--search-nonmatch.cell--none.cell--bookmarked {
+	background: var(--orange-dim);
+}
+.cell--selected {
+	box-shadow: 0 0 0 2px var(--border);
+	z-index: 1;
+	position: relative;
+}
+.cell--bookmarked.cell--selected {
+	box-shadow: 0 0 0 2px #000;
+}
+.cell--hover-highlight {
+	box-shadow: 0 0 4px 2px var(--highlight);
+	z-index: 2;
+	position: relative;
+	transform: scale(1.3);
+}
+
+.grid-tooltip {
+	position: fixed;
+	pointer-events: none;
+	z-index: 10000;
+	background: rgba(0, 0, 0, 0.8);
+	color: #fff;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	white-space: nowrap;
+	opacity: 0;
+	transition: opacity 0.1s;
+	transform: translateY(-50%);
+}
+
+.grid-tooltip--visible {
+	opacity: 1;
+}
+
+.year-labels {
+	position: relative;
+}
+
+.year-label-wrap {
+	position: relative;
+	margin-bottom: 1px;
+}
+
+.year-label-wrap:last-child {
+	margin-bottom: 0;
+}
+
+.year-sticky-label {
+	font-size: 9px;
+	color: var(--text-muted);
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	padding-left: 2px;
+	height: 12px;
+	position: sticky;
+	top: 0;
+	z-index: 3;
+}

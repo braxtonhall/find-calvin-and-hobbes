@@ -1,0 +1,9 @@
+cache/
+comics.db
+__pycache__/
+*.pyc
+.venv/
+node_modules/
+dist/
+assets/comics/
+.DS_Store

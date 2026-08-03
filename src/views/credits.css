@@ -1,0 +1,52 @@
+#view-credits.active {
+	display: block;
+	padding: 20px;
+}
+
+.credits-container {
+	max-width: 600px;
+}
+
+.credits-back {
+	font-family: var(--font);
+	font-size: 14px;
+	color: var(--text);
+	background: none;
+	border: 1px solid var(--grey);
+	border-radius: 6px;
+	padding: 6px 14px;
+	cursor: pointer;
+	margin-bottom: 24px;
+}
+
+.credits-back:hover {
+	background: var(--grey);
+}
+
+.credits-heading {
+	font-size: 20px;
+	font-weight: 600;
+	margin-bottom: 20px;
+}
+
+.credits-section {
+	margin-bottom: 20px;
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--text);
+}
+
+.credits-section a {
+	color: var(--golden);
+	text-decoration: none;
+}
+
+.credits-section a:hover {
+	text-decoration: underline;
+}
+
+.credits-footer {
+	margin-top: 32px;
+	font-size: 12px;
+	color: var(--text-muted);
+}

@@ -1,0 +1,20 @@
+id: book7
+name: Attack of the Deranged Mutant Killer Monster Snow Goons
+type: collection
+pub_date: 1992-04-01
+colour: false
+notes:
+  - Sunday strips B&W; not in colour until Complete.
+dailies:
+  - 19900611-19900616
+  - 19900618-19900623
+  - "19900701"
+  - 19900708-19900714
+  - 19900716-19910410
+alterations: {}
+extras:
+  - Front cover art
+  - Back cover art
+  - Page 2 & 3 art
+image: assets/book7.jpg
+aspect-ratio: 0.9331

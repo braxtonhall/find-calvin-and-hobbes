@@ -1,0 +1,17 @@
+id: book8
+name: The Days Are Just Packed
+type: collection
+pub_date: 1993-10-01
+colour: true
+notes:
+  - Excludes sabbatical repeats May 5, 1991 to Feb 1, 1992.
+dailies:
+  - 19910411-19910504
+  - 19920202-19921101
+  - "19921108"
+alterations: {}
+extras:
+  - Front cover art
+  - Back cover art
+image: assets/book8.png
+aspect-ratio: 1.3389

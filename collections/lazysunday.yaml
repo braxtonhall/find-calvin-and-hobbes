@@ -1,0 +1,27 @@
+id: lazysunday
+name: The Calvin and Hobbes Lazy Sunday Book
+type: special
+pub_date: 1989-09-01
+colour: true
+notes:
+  - Sunday strips only. Includes 10-page Spiff story and redrawn Aug 28, 1988. Afterword
+    by Watterson.
+sundays: true
+dailies:
+  - 19870524-19870913
+  - 19871004-19880207
+  - 19880221-19890730
+alterations:
+  19880828: Vertical/redrawn format. Two versions exist. Horizontal format used in
+    newspapers and Complete. Vertical redrawn version used in Book 4, Authoritative,
+    and Lazy Sunday Book. Sunday Pages 1985-1995 has original horizontal. Complete
+    version confirmed via personal scan of the 2005 hardcover.
+extras:
+  - Front cover art
+  - Back cover art
+  - Additional non-strip art
+  - "Spaceman Spiff: Interplanetary Explorer Extraordinaire! — 10-page story (also in
+    Complete)"
+  - Afterword by Bill Watterson
+image: assets/lazysunday.gif
+aspect-ratio: 0.7832

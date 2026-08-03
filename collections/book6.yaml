@@ -1,0 +1,24 @@
+id: book6
+name: Scientific Progress Goes "Boink"
+type: collection
+pub_date: 1991-10-01
+colour: false
+notes:
+  - Some June/July 1990 strips also in Snow Goons.
+dailies:
+  - 19890911-19891015
+  - 19891019-19900610
+  - "19900617"
+  - 19900624-19900630
+  - 19900702-19900707
+  - "19900715"
+alterations:
+  19891224: Vertical/redrawn format. Two versions exist. Original horizontal (red
+    carpet) in newspapers and Complete. Vertical (green floor) in Book 6 and Indispensable
+    treasury. Complete version confirmed via personal scan of the 2005 hardcover.
+extras:
+  - Front cover art
+  - Back cover art
+  - Title page & page 128 art
+image: assets/book6.gif
+aspect-ratio: 0.9474

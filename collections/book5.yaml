@@ -1,0 +1,17 @@
+id: book5
+name: The Revenge of the Baby-Sat
+type: collection
+pub_date: 1991-04-01
+colour: false
+notes: []
+dailies:
+  - 19881127-19881130
+  - 19881205-19890910
+  - 19891016-19891018
+alterations: {}
+extras:
+  - Front cover art
+  - Back cover art
+  - Page 2 & 128 art
+image: assets/book5.jpg
+aspect-ratio: 0.9453

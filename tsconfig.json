@@ -1,0 +1,14 @@
+{
+	"compilerOptions": {
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"target": "ES2022",
+		"moduleResolution": "node",
+		"strict": true,
+		"types": ["node"],
+		"lib": ["ES2024"],
+		"resolveJsonModule": true,
+		"noImplicitAny": true
+	},
+	"exclude": ["node_modules"]
+}

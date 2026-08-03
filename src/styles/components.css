@@ -1,0 +1,210 @@
+.skip-link {
+	position: absolute;
+	top: -100px;
+	left: 8px;
+	z-index: 10000;
+	padding: 8px 16px;
+	background: var(--bg-sidebar);
+	border: 2px solid var(--golden);
+	border-radius: 4px;
+	font-family: var(--font);
+	font-size: 14px;
+	color: var(--text);
+	text-decoration: none;
+	transition: top 0.2s;
+}
+
+.skip-link:focus {
+	top: 8px;
+}
+
+.copy-link-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	height: 28px;
+	font-family: var(--font);
+	font-size: 12px;
+	color: var(--text-muted);
+	background: none;
+	border: 1px solid var(--grey);
+	border-radius: 4px;
+	padding: 4px 8px;
+	cursor: pointer;
+	margin-left: 12px;
+	vertical-align: middle;
+}
+
+.copy-link-btn:hover {
+	background: var(--grey);
+	color: var(--text);
+}
+
+.copy-link-btn--copied {
+	color: var(--golden);
+	border-color: var(--golden);
+}
+
+.bookmark-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	font-family: var(--font);
+	color: var(--text-muted);
+	background: none;
+	border: 1px solid var(--grey);
+	border-radius: 4px;
+	cursor: pointer;
+	margin-left: 8px;
+	vertical-align: middle;
+	padding: 0;
+}
+
+.bookmark-btn:hover {
+	background: var(--grey);
+}
+
+.bookmark-btn--active {
+	color: var(--orange);
+	border-color: var(--orange);
+}
+
+.bookmark-btn--active .bookmark-icon path {
+	fill: currentColor;
+	stroke: none;
+}
+
+.bookmark-btn svg {
+	width: 14px;
+	height: 14px;
+}
+
+.mobile-grid-toggle {
+	display: none;
+	position: fixed;
+	bottom: 16px;
+	right: 16px;
+	width: 44px;
+	height: 44px;
+	background: var(--golden);
+	color: #fff;
+	border: none;
+	border-radius: 50%;
+	font-size: 18px;
+	cursor: pointer;
+	z-index: 100;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+	align-items: center;
+	justify-content: center;
+}
+
+.mobile-overlay {
+	display: none;
+	position: fixed;
+	inset: 0;
+	z-index: 98;
+	background: rgba(0, 0, 0, 0.3);
+}
+
+.mobile-overlay.visible {
+	display: block;
+}
+
+@media (max-width: 768px) {
+	#sidebar {
+		display: none;
+	}
+
+	#sidebar.mobile-visible {
+		display: block;
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 240px;
+		height: 100vh;
+		z-index: 99;
+		box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+		overflow-y: auto;
+	}
+
+	#grid {
+		grid-template-columns: repeat(7, 14px);
+	}
+
+	.grid-header {
+		width: 14px;
+		height: 14px;
+		font-size: 10px;
+	}
+
+	.grid-header__spacer {
+		height: 15px;
+	}
+
+	.cell {
+		width: 14px;
+		height: 14px;
+	}
+
+	.mobile-grid-toggle {
+		display: flex;
+	}
+
+	.landing-logo {
+		padding: 0 20px;
+	}
+
+	.result-row {
+		min-height: auto;
+	}
+
+	.result-header {
+		margin-right: 0;
+	}
+
+	.result-body {
+		margin-right: 0;
+		height: auto;
+	}
+
+	.result-text {
+		height: auto;
+		max-height: 200px;
+	}
+
+	.result-text--overflow {
+		-webkit-mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+		mask-image: linear-gradient(to bottom, black 80%, transparent 100%);
+	}
+
+	.result-image-wrap {
+		position: relative;
+		right: auto;
+		top: auto;
+		transform: none;
+		width: 100%;
+		height: auto;
+		margin-top: 8px;
+	}
+
+	.result-image {
+		width: 100%;
+		height: auto;
+		max-height: 200px;
+		object-fit: contain;
+	}
+
+	#view-results.active {
+		padding: 12px;
+	}
+
+	#view-detail.active {
+		padding: 12px;
+	}
+
+	.results-input {
+		font-size: 16px;
+	}
+}

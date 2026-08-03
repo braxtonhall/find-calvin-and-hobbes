@@ -1,0 +1,16 @@
+id: book11
+name: It's a Magical World
+type: collection
+pub_date: 1996-10-01
+colour: true
+notes:
+  - Final collection. Some Mar/Apr 1995 also in Treasure Everywhere.
+dailies:
+  - 19950320-19950402
+  - 19950409-19951231
+alterations: {}
+extras:
+  - Front cover art
+  - Back cover art — Calvin & Hobbes hugging
+image: assets/book11.png
+aspect-ratio: 1.3916
