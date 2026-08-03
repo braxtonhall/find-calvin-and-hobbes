@@ -101,23 +101,26 @@
 }
 
 .mobile-overlay {
-	display: none;
 	position: fixed;
 	inset: 0;
 	z-index: 98;
 	background: rgba(0, 0, 0, 0.3);
+	opacity: 0;
+	visibility: hidden;
+	pointer-events: none;
+	transition:
+		opacity 0.3s ease,
+		visibility 0.3s;
 }
 
 .mobile-overlay.visible {
-	display: block;
+	opacity: 1;
+	visibility: visible;
+	pointer-events: auto;
 }
 
 @media (max-width: 768px) {
 	#sidebar {
-		display: none;
-	}
-
-	#sidebar.mobile-visible {
 		display: block;
 		position: fixed;
 		top: 0;
@@ -125,8 +128,21 @@
 		width: 240px;
 		height: 100vh;
 		z-index: 99;
-		box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
 		overflow-y: auto;
+		transform: translateX(-100%);
+		visibility: hidden;
+		pointer-events: none;
+		transition:
+			transform 0.3s ease-in-out,
+			visibility 0.3s,
+			box-shadow 0.3s;
+	}
+
+	#sidebar.mobile-visible {
+		transform: translateX(0);
+		visibility: visible;
+		pointer-events: auto;
+		box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
 	}
 
 	#grid {
