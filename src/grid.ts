@@ -53,27 +53,7 @@ export function buildGridData(): void {
 }
 
 export function renderGrid(): void {
-	const container = document.getElementById("grid-container")!;
-	container.innerHTML = "";
-
-	const dayLabels = ["M", "T", "W", "T", "F", "S", "S"];
-	const headerRow = document.createElement("div");
-	headerRow.className = "grid-header-row";
-	const headerInner = document.createElement("div");
-	headerInner.className = "grid-header-inner";
-	for (const label of dayLabels) {
-		const headerElement = document.createElement("div");
-		headerElement.className = "grid-header";
-		headerElement.textContent = label;
-		headerInner.appendChild(headerElement);
-	}
-	headerRow.appendChild(headerInner);
-	container.appendChild(headerRow);
-
-	const layout = document.createElement("div");
-	layout.className = "grid-layout";
-
-	const gridColumn = document.createElement("div");
+	const layout = document.getElementById("grid-layout")!;
 
 	const grid = document.createElement("div");
 	grid.id = "grid";
@@ -82,10 +62,6 @@ export function renderGrid(): void {
 		const cell = document.createElement("div");
 		cell.className = `cell cell--${day.state}`;
 		cell.dataset.date = day.date;
-		cell.dataset.week = String(day.weekIndex);
-		cell.dataset.day = String(day.dayOfWeek);
-		cell.style.gridColumn = String(((day.dayOfWeek + 6) % 7) + 1);
-		cell.style.gridRow = String(day.weekIndex + 1);
 
 		const [year, month, dayOfMonth] = day.date.split("-").map(Number);
 		const dateObject = new Date(Date.UTC(year, month - 1, dayOfMonth));
@@ -103,34 +79,26 @@ export function renderGrid(): void {
 		grid.appendChild(cell);
 	}
 
-	gridColumn.appendChild(grid);
-	layout.appendChild(gridColumn);
-
 	const yearLabelsColumn = document.createElement("div");
 	yearLabelsColumn.className = "year-labels";
 
-	const spacer = document.createElement("div");
-	spacer.className = "grid-header__spacer";
-	yearLabelsColumn.appendChild(spacer);
-
-	const years = new Map<string, Day[]>();
+	const firstWeekByYear = new Map<string, number>();
 	for (const day of state.allDays) {
 		const year = day.date.substring(0, 4);
-		if (!years.has(year)) years.set(year, []);
-		years.get(year)!.push(day);
+		if (!firstWeekByYear.has(year)) firstWeekByYear.set(year, day.weekIndex);
 	}
 
-	for (const [year, daysForYear] of years) {
-		const minWeek = daysForYear[0].weekIndex;
-		const maxWeek = daysForYear[daysForYear.length - 1].weekIndex;
-		const numWeeks = maxWeek - minWeek + 1;
-		const cellSize = window.matchMedia("(max-width: 768px)").matches ? 14 : 10;
-		const gap = 1;
-		const height = numWeeks * cellSize + (numWeeks - 1) * gap;
+	const yearStarts = [...firstWeekByYear];
+	const weekCount = state.allDays[state.allDays.length - 1].weekIndex + 1;
 
+	for (const [index, [year, firstWeek]] of yearStarts.entries()) {
+		const nextFirstWeek = yearStarts[index + 1]?.[1] ?? weekCount;
+
+		// Grid lines are 1-based, so row N of the grid sits between lines N and N+1.
 		const wrap = document.createElement("div");
 		wrap.className = "year-label-wrap";
-		wrap.style.height = height + "px";
+		wrap.style.gridRowStart = String(firstWeek + 1);
+		wrap.style.gridRowEnd = String(nextFirstWeek + 1);
 
 		const label = document.createElement("div");
 		label.className = "year-sticky-label";
@@ -140,8 +108,7 @@ export function renderGrid(): void {
 		yearLabelsColumn.appendChild(wrap);
 	}
 
-	layout.appendChild(yearLabelsColumn);
-	container.appendChild(layout);
+	layout.replaceChildren(grid, yearLabelsColumn);
 
 	layout.addEventListener("click", (event) => {
 		const cell = (event.target as HTMLElement).closest<HTMLElement>(".cell");

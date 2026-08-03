@@ -125,7 +125,6 @@
 		position: fixed;
 		top: 0;
 		left: 0;
-		width: 240px;
 		height: 100vh;
 		z-index: 99;
 		overflow-y: auto;
@@ -143,25 +142,6 @@
 		visibility: visible;
 		pointer-events: auto;
 		box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
-	}
-
-	#grid {
-		grid-template-columns: repeat(7, 14px);
-	}
-
-	.grid-header {
-		width: 14px;
-		height: 14px;
-		font-size: 10px;
-	}
-
-	.grid-header__spacer {
-		height: 15px;
-	}
-
-	.cell {
-		width: 14px;
-		height: 14px;
 	}
 
 	.mobile-grid-toggle {
