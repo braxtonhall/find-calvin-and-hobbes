@@ -205,14 +205,23 @@ export function renderGrid(): void {
 
 	renderYearRail(cells);
 
-	layout.addEventListener("click", (event) => {
-		const cell = (event.target as HTMLElement).closest<HTMLElement>(".cell");
-		if (!cell) return;
+	const selectCell = (cell: HTMLElement) => {
 		const date = cell.dataset.date;
-		if (date) {
-			scrollCellIntoViewIfNeeded(cell);
-			navigate("#/comic/" + date);
+		if (!date) return;
+		scrollCellIntoViewIfNeeded(cell);
+		navigate("#/comic/" + date);
+	};
+
+	let suppressClick = false;
+
+	layout.addEventListener("click", (event) => {
+		if (suppressClick) {
+			suppressClick = false;
+			return;
 		}
+		const cell =
+			(event.target as HTMLElement).closest<HTMLElement>(".cell") ?? cellAtPoint(event.clientX, event.clientY);
+		if (cell) selectCell(cell);
 	});
 
 	layout.addEventListener("mouseover", (event) => {
@@ -261,61 +270,227 @@ export function renderGrid(): void {
 		state.hoveredCell = null;
 	});
 
-	if (!window.matchMedia("(hover: none)").matches) {
-		const tooltip = document.createElement("div");
-		tooltip.className = "grid-tooltip";
-		document.body.appendChild(tooltip);
+	const tooltip = document.createElement("div");
+	tooltip.className = "grid-tooltip";
+	document.body.appendChild(tooltip);
 
-		let lastMouseX = 0;
-		let lastMouseY = 0;
+	let lastPointerX = 0;
+	let lastPointerY = 0;
+	let lastAnchorAbove = false;
+	let pinnedCell: HTMLElement | null = null;
 
-		const updateTooltip = (cell: HTMLElement) => {
-			const [year, month, dayOfMonth] = cell.dataset.date!.split("-").map(Number);
-			const dateObject = new Date(Date.UTC(year, month - 1, dayOfMonth));
-			tooltip.textContent = dateObject.toLocaleDateString("en-US", {
-				weekday: "long",
-				year: "numeric",
-				month: "long",
-				day: "numeric",
-				timeZone: "UTC",
-			});
-			const cellRect = cell.getBoundingClientRect();
-			tooltip.style.left = cellRect.right + 6 + "px";
-			tooltip.style.top = cellRect.top + cellRect.height / 2 + "px";
-			tooltip.classList.add("grid-tooltip--visible");
-		};
+	const hideTooltip = () => {
+		pinnedCell = null;
+		tooltip.classList.remove("grid-tooltip--visible");
+	};
 
-		layout.addEventListener("mousemove", (event) => {
-			lastMouseX = event.clientX;
-			lastMouseY = event.clientY;
-			const cell = (event.target as HTMLElement).closest<HTMLElement>(".cell");
-			if (!cell) {
-				tooltip.classList.remove("grid-tooltip--visible");
-				return;
-			}
-			updateTooltip(cell);
+	const updateTooltip = (cell: HTMLElement, anchorAbove: boolean) => {
+		const [year, month, dayOfMonth] = cell.dataset.date!.split("-").map(Number);
+		const dateObject = new Date(Date.UTC(year, month - 1, dayOfMonth));
+		tooltip.textContent = dateObject.toLocaleDateString("en-US", {
+			weekday: "long",
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+			timeZone: "UTC",
 		});
 
-		layout.addEventListener("mouseleave", () => {
-			tooltip.classList.remove("grid-tooltip--visible");
-		});
+		const cellRect = cell.getBoundingClientRect();
+		const width = tooltip.offsetWidth;
+		const height = tooltip.offsetHeight;
+		const pad = 6;
 
-		const followScroll = () => {
-			if (!tooltip.classList.contains("grid-tooltip--visible")) return;
-			const elementUnder = document.elementFromPoint(lastMouseX, lastMouseY);
-			if (!elementUnder) return;
-			const cell = elementUnder.closest<HTMLElement>(".cell");
-			if (!cell) {
-				tooltip.classList.remove("grid-tooltip--visible");
+		if (anchorAbove) {
+			const center = cellRect.left + cellRect.width / 2 - width / 2;
+			const top = cellRect.top - height - pad;
+			tooltip.style.transform = "none";
+			tooltip.style.left = Math.max(pad, Math.min(center, window.innerWidth - width - pad)) + "px";
+			tooltip.style.top = (top < pad ? cellRect.bottom + pad : top) + "px";
+		} else {
+			const right = cellRect.right + pad;
+			const left = right + width > window.innerWidth - pad ? cellRect.left - width - pad : right;
+			const middle = cellRect.top + cellRect.height / 2;
+			tooltip.style.transform = "translateY(-50%)";
+			tooltip.style.left = Math.max(pad, left) + "px";
+			tooltip.style.top = Math.max(height / 2 + pad, Math.min(middle, window.innerHeight - height / 2 - pad)) + "px";
+		}
+
+		tooltip.classList.add("grid-tooltip--visible");
+	};
+
+	const showTooltipForMouse = (event: PointerEvent) => {
+		const cell = (event.target as HTMLElement).closest<HTMLElement>(".cell");
+		if (!cell) {
+			hideTooltip();
+			return;
+		}
+		pinnedCell = null;
+		lastAnchorAbove = false;
+		updateTooltip(cell, false);
+	};
+
+	const pinTooltip = (cell: HTMLElement) => {
+		lastAnchorAbove = true;
+		updateTooltip(cell, true);
+		pinnedCell = cell;
+	};
+
+	const LONG_PRESS_MS = 400;
+	const LONG_PRESS_SLOP = 6;
+
+	let pressTimer: number | null = null;
+	let pressStartX = 0;
+	let pressStartY = 0;
+	let inspecting = false;
+	let inspectedCell: HTMLElement | null = null;
+	let lastPointerWasTouch = false;
+
+	const cellAtPoint = (x: number, y: number) => document.elementFromPoint(x, y)?.closest<HTMLElement>(".cell") ?? null;
+
+	const cancelPress = () => {
+		if (pressTimer !== null) clearTimeout(pressTimer);
+		pressTimer = null;
+	};
+
+	const stopInspecting = () => {
+		cancelPress();
+		inspecting = false;
+		inspectedCell = null;
+		hideTooltip();
+	};
+
+	layout.addEventListener("pointerdown", (event) => {
+		if (event.pointerType !== "mouse") return;
+		lastPointerWasTouch = false;
+		suppressClick = false;
+		showTooltipForMouse(event);
+	});
+
+	layout.addEventListener("pointermove", (event) => {
+		if (event.pointerType !== "mouse") return;
+		lastPointerX = event.clientX;
+		lastPointerY = event.clientY;
+		showTooltipForMouse(event);
+	});
+
+	layout.addEventListener("pointerleave", (event) => {
+		if (event.pointerType === "mouse") hideTooltip();
+	});
+
+	layout.addEventListener(
+		"touchstart",
+		(event) => {
+			suppressClick = false;
+			lastPointerWasTouch = true;
+			cancelPress();
+			hideTooltip();
+			if (event.touches.length !== 1) return;
+
+			const touch = event.touches[0];
+			pressStartX = touch.clientX;
+			pressStartY = touch.clientY;
+			lastPointerX = touch.clientX;
+			lastPointerY = touch.clientY;
+			const cell = cellAtPoint(touch.clientX, touch.clientY);
+			if (!cell) return;
+
+			pressTimer = window.setTimeout(() => {
+				pressTimer = null;
+				inspecting = true;
+				inspectedCell = cell;
+				lastAnchorAbove = true;
+				updateTooltip(cell, true);
+			}, LONG_PRESS_MS);
+		},
+		{ passive: true },
+	);
+
+	layout.addEventListener(
+		"touchmove",
+		(event) => {
+			const touch = event.touches[0];
+			if (!touch) return;
+			lastPointerX = touch.clientX;
+			lastPointerY = touch.clientY;
+
+			if (!event.cancelable || event.touches.length !== 1) {
+				stopInspecting();
 				return;
 			}
-			updateTooltip(cell);
-		};
 
-		// The sidebar scrolls on desktop, the grid container on mobile.
-		document.getElementById("sidebar")!.addEventListener("scroll", followScroll);
-		document.getElementById("grid-container")!.addEventListener("scroll", followScroll);
-	}
+			if (inspecting) {
+				event.preventDefault();
+				inspectedCell = cellAtPoint(touch.clientX, touch.clientY);
+				if (inspectedCell) updateTooltip(inspectedCell, true);
+				else hideTooltip();
+				return;
+			}
+
+			// Moving before the press lands means this is a scroll, not an inspect.
+			if (Math.hypot(touch.clientX - pressStartX, touch.clientY - pressStartY) > LONG_PRESS_SLOP) cancelPress();
+		},
+		{ passive: false },
+	);
+
+	layout.addEventListener(
+		"touchend",
+		(event) => {
+			const wasInspecting = inspecting;
+			const tapped = !wasInspecting && pressTimer !== null;
+			const touch = event.changedTouches[0];
+			const releasedOn = touch ? cellAtPoint(touch.clientX, touch.clientY) : null;
+			const cell = wasInspecting ? inspectedCell : releasedOn;
+			stopInspecting();
+			if (!wasInspecting && !tapped) return;
+
+			if (event.cancelable) event.preventDefault();
+			suppressClick = true;
+			if (!cell) return;
+			selectCell(cell);
+			pinTooltip(cell);
+		},
+		{ passive: false },
+	);
+
+	layout.addEventListener("touchcancel", stopInspecting);
+
+	document.addEventListener(
+		"pointerdown",
+		(event) => {
+			if (!layout.contains(event.target as Node)) hideTooltip();
+		},
+		true,
+	);
+
+	layout.addEventListener("contextmenu", (event) => {
+		if (lastPointerWasTouch) event.preventDefault();
+	});
+
+	const followScroll = () => {
+		if (!tooltip.classList.contains("grid-tooltip--visible")) return;
+
+		if (pinnedCell) {
+			const cellRect = pinnedCell.getBoundingClientRect();
+			const centerX = cellRect.left + cellRect.width / 2;
+			const centerY = cellRect.top + cellRect.height / 2;
+			if (cellAtPoint(centerX, centerY) !== pinnedCell) hideTooltip();
+			else updateTooltip(pinnedCell, true);
+			return;
+		}
+
+		const elementUnder = document.elementFromPoint(lastPointerX, lastPointerY);
+		if (!elementUnder) return;
+		const cell = elementUnder.closest<HTMLElement>(".cell");
+		if (!cell) {
+			hideTooltip();
+			return;
+		}
+		updateTooltip(cell, lastAnchorAbove);
+	};
+
+	// The sidebar scrolls on desktop, the grid container on mobile.
+	document.getElementById("sidebar")!.addEventListener("scroll", followScroll);
+	document.getElementById("grid-container")!.addEventListener("scroll", followScroll);
 }
 
 export async function loadComicData(): Promise<void> {
@@ -355,7 +530,7 @@ export async function loadComicData(): Promise<void> {
 		state.collectionTooltip.className = "collection-tooltip";
 		document.body.appendChild(state.collectionTooltip);
 	} catch {
-		// collection data unavailable — "Appears in" section won't render
+		// collection data unavailable - "Appears in" section won't render
 	}
 
 	state.dataLoaded = true;

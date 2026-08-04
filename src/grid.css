@@ -51,6 +51,11 @@
 	display: flex;
 	gap: var(--grid-gap);
 	padding-top: var(--cell-ring);
+	-webkit-touch-callout: none;
+	-webkit-user-select: none;
+	user-select: none;
+	/* Pan and pinch still work; dropping double-tap zoom is what keeps a tap from being held back. */
+	touch-action: manipulation;
 }
 
 #grid {
