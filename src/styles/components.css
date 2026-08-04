@@ -92,7 +92,6 @@
 	color: #fff;
 	border: none;
 	border-radius: 50%;
-	font-size: 18px;
 	cursor: pointer;
 	z-index: 100;
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -121,13 +120,13 @@
 
 @media (max-width: 768px) {
 	#sidebar {
-		display: block;
+		display: flex;
 		position: fixed;
 		top: 0;
 		left: 0;
 		height: 100vh;
 		z-index: 99;
-		overflow-y: auto;
+		overflow: hidden;
 		transform: translateX(-100%);
 		visibility: hidden;
 		pointer-events: none;

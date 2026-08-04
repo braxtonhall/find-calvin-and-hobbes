@@ -52,11 +52,124 @@ export function buildGridData(): void {
 	state.allDays = days;
 }
 
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+interface LabelSpan {
+	text: string;
+	startWeek: number;
+	endWeek: number;
+}
+
+function createLabelColumn(className: string, spans: LabelSpan[]): HTMLElement {
+	const column = document.createElement("div");
+	column.className = `grid-labels ${className}`;
+
+	for (const span of spans) {
+		// Grid lines are 1-based, so row N of the grid sits between lines N and N+1.
+		const wrap = document.createElement("div");
+		wrap.className = "grid-label-wrap";
+		wrap.style.gridRowStart = String(span.startWeek + 1);
+		wrap.style.gridRowEnd = String(span.endWeek + 1);
+
+		const label = document.createElement("div");
+		label.className = "grid-sticky-label";
+		label.textContent = span.text;
+
+		wrap.appendChild(label);
+		column.appendChild(wrap);
+	}
+
+	return column;
+}
+
+function buildLabelSpans(prefixLength: number, weekCount: number, text: (period: string) => string): LabelSpan[] {
+	const firstDays = new Map<string, Day>();
+	for (const day of state.allDays) {
+		const period = day.date.substring(0, prefixLength);
+		if (!firstDays.has(period)) firstDays.set(period, day);
+	}
+
+	const starts = [...firstDays];
+	return starts.map(([period, firstDay], index) => ({
+		text: text(period),
+		startWeek: firstDay.weekIndex,
+		endWeek: starts[index + 1]?.[1].weekIndex ?? weekCount,
+	}));
+}
+
+const HIGHLIGHT_DEADZONE_DAYS = 2 * 7;
+
+function renderYearRail(cells: HTMLElement[]): void {
+	const rail = document.getElementById("year-rail")!;
+	const sidebar = document.getElementById("sidebar")!;
+	const scroller = document.getElementById("grid-container")!;
+	const header = document.querySelector<HTMLElement>(".grid-header-row")!;
+
+	const bounds = new Map<string, { first: number; last: number }>();
+	for (const [index, day] of state.allDays.entries()) {
+		const year = day.date.substring(0, 4);
+		const existing = bounds.get(year);
+		if (existing) existing.last = index;
+		else bounds.set(year, { first: index, last: index });
+	}
+
+	const entries = [...bounds].map(([year, { first, last }]) => {
+		const button = document.createElement("button");
+		button.type = "button";
+		button.className = "year-rail-button";
+		button.setAttribute("aria-label", `Jump to ${year}`);
+
+		const pill = document.createElement("span");
+		pill.className = "year-rail-pill";
+		pill.textContent = `'${year.slice(2)}`;
+		button.appendChild(pill);
+
+		const firstCell = cells[first];
+		button.addEventListener("click", () => {
+			const offset = firstCell.getBoundingClientRect().top - cells[0].getBoundingClientRect().top;
+			scroller.scrollTo({ top: offset, behavior: "smooth" });
+		});
+
+		return { button, firstCell, lastCell: cells[Math.max(first, last - HIGHLIGHT_DEADZONE_DAYS)] };
+	});
+
+	rail.replaceChildren(...entries.map((entry) => entry.button));
+
+	const updateActiveYears = () => {
+		const viewport = sidebar.getBoundingClientRect();
+		const top = viewport.top + header.getBoundingClientRect().height;
+		for (const { button, firstCell, lastCell } of entries) {
+			const onScreen =
+				firstCell.getBoundingClientRect().top < viewport.bottom && lastCell.getBoundingClientRect().bottom > top;
+			button.classList.toggle("year-rail-button--active", onScreen);
+			if (onScreen) button.setAttribute("aria-current", "true");
+			else button.removeAttribute("aria-current");
+		}
+	};
+
+	let queued = false;
+	const queueUpdate = () => {
+		if (queued) return;
+		queued = true;
+		requestAnimationFrame(() => {
+			queued = false;
+			updateActiveYears();
+		});
+	};
+
+	sidebar.addEventListener("scroll", queueUpdate);
+	scroller.addEventListener("scroll", queueUpdate);
+	window.addEventListener("resize", queueUpdate);
+	updateActiveYears();
+}
+
 export function renderGrid(): void {
 	const layout = document.getElementById("grid-layout")!;
 
 	const grid = document.createElement("div");
 	grid.id = "grid";
+
+	const cells: HTMLElement[] = [];
 
 	for (const day of state.allDays) {
 		const cell = document.createElement("div");
@@ -76,39 +189,21 @@ export function renderGrid(): void {
 			}) + (day.state !== "none" ? " — has comic" : ""),
 		);
 
+		cells.push(cell);
 		grid.appendChild(cell);
 	}
 
-	const yearLabelsColumn = document.createElement("div");
-	yearLabelsColumn.className = "year-labels";
-
-	const firstWeekByYear = new Map<string, number>();
-	for (const day of state.allDays) {
-		const year = day.date.substring(0, 4);
-		if (!firstWeekByYear.has(year)) firstWeekByYear.set(year, day.weekIndex);
-	}
-
-	const yearStarts = [...firstWeekByYear];
 	const weekCount = state.allDays[state.allDays.length - 1].weekIndex + 1;
 
-	for (const [index, [year, firstWeek]] of yearStarts.entries()) {
-		const nextFirstWeek = yearStarts[index + 1]?.[1] ?? weekCount;
+	const monthSpans = buildLabelSpans(7, weekCount, (month) => MONTH_NAMES[Number(month.substring(5, 7)) - 1]);
+	const yearSpans = buildLabelSpans(4, weekCount, (year) => `'${year.slice(2)}`);
 
-		// Grid lines are 1-based, so row N of the grid sits between lines N and N+1.
-		const wrap = document.createElement("div");
-		wrap.className = "year-label-wrap";
-		wrap.style.gridRowStart = String(firstWeek + 1);
-		wrap.style.gridRowEnd = String(nextFirstWeek + 1);
+	const monthLabelsColumn = createLabelColumn("month-labels", monthSpans);
+	const yearLabelsColumn = createLabelColumn("year-labels", yearSpans);
 
-		const label = document.createElement("div");
-		label.className = "year-sticky-label";
-		label.textContent = `'${year.slice(2)}`;
+	layout.replaceChildren(grid, monthLabelsColumn, yearLabelsColumn);
 
-		wrap.appendChild(label);
-		yearLabelsColumn.appendChild(wrap);
-	}
-
-	layout.replaceChildren(grid, yearLabelsColumn);
+	renderYearRail(cells);
 
 	layout.addEventListener("click", (event) => {
 		const cell = (event.target as HTMLElement).closest<HTMLElement>(".cell");
@@ -205,8 +300,7 @@ export function renderGrid(): void {
 			tooltip.classList.remove("grid-tooltip--visible");
 		});
 
-		const sidebar = document.getElementById("sidebar")!;
-		sidebar.addEventListener("scroll", () => {
+		const followScroll = () => {
 			if (!tooltip.classList.contains("grid-tooltip--visible")) return;
 			const elementUnder = document.elementFromPoint(lastMouseX, lastMouseY);
 			if (!elementUnder) return;
@@ -216,7 +310,11 @@ export function renderGrid(): void {
 				return;
 			}
 			updateTooltip(cell);
-		});
+		};
+
+		// The sidebar scrolls on desktop, the grid container on mobile.
+		document.getElementById("sidebar")!.addEventListener("scroll", followScroll);
+		document.getElementById("grid-container")!.addEventListener("scroll", followScroll);
 	}
 }
 

@@ -3,6 +3,7 @@
 	--cell-radius: 1px;
 	--grid-gap: 1px;
 	--label-font-size: 9px;
+	--cell-ring: 2px;
 
 	width: 100px;
 	flex-shrink: 0;
@@ -13,21 +14,6 @@
 
 #grid-container {
 	padding: 4px;
-}
-
-@media (max-width: 768px) {
-	#sidebar {
-		--cell-size: 28px;
-		--cell-radius: 3px;
-		--grid-gap: 2px;
-		--label-font-size: 12px;
-
-		width: 280px;
-	}
-
-	#grid-container {
-		padding: 8px;
-	}
 }
 
 #main {
@@ -64,7 +50,7 @@
 .grid-layout {
 	display: flex;
 	gap: var(--grid-gap);
-	padding-top: 2px;
+	padding-top: var(--cell-ring);
 }
 
 #grid {
@@ -106,12 +92,12 @@
 	background: var(--orange-dim);
 }
 .cell--selected {
-	box-shadow: 0 0 0 2px var(--border);
+	box-shadow: 0 0 0 var(--cell-ring) var(--border);
 	z-index: 1;
 	position: relative;
 }
 .cell--bookmarked.cell--selected {
-	box-shadow: 0 0 0 2px #000;
+	box-shadow: 0 0 0 var(--cell-ring) #000;
 }
 .cell--hover-highlight {
 	box-shadow: 0 0 4px 2px var(--highlight);
@@ -139,17 +125,21 @@
 	opacity: 1;
 }
 
-.year-labels {
+.grid-labels {
 	display: grid;
 	grid-auto-rows: var(--cell-size);
 	gap: var(--grid-gap);
 }
 
-.year-label-wrap {
+.month-labels {
+	display: none;
+}
+
+.grid-label-wrap {
 	grid-column: 1;
 }
 
-.year-sticky-label {
+.grid-sticky-label {
 	position: sticky;
 	top: 0;
 	z-index: 3;
@@ -159,5 +149,83 @@
 	padding-left: 2px;
 	font-size: var(--label-font-size);
 	line-height: 1;
+	white-space: nowrap;
 	color: var(--text-muted);
+}
+
+#year-rail {
+	display: none;
+}
+
+.year-rail-button {
+	flex: 1;
+	min-height: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	font-family: var(--font);
+	background: none;
+	border: none;
+	cursor: pointer;
+}
+
+.year-rail-pill {
+	padding: 3px 5px;
+	border-radius: 4px;
+	font-size: var(--label-font-size);
+	line-height: 1;
+	white-space: nowrap;
+	color: var(--text-muted);
+	transition:
+		background 0.15s,
+		color 0.15s;
+}
+
+.year-rail-button--active .year-rail-pill {
+	background: var(--golden);
+	color: #fff;
+	font-weight: 600;
+}
+
+@media (max-width: 768px) {
+	#sidebar {
+		--cell-size: 28px;
+		--cell-radius: 3px;
+		--grid-gap: 2px;
+		--label-font-size: 12px;
+		width: max-content;
+		max-width: 92vw;
+	}
+
+	#grid-container {
+		flex: 1;
+		overflow-y: auto;
+		padding: 8px;
+	}
+
+	.grid-header-row {
+		box-shadow: 0 -8px 0 var(--bg-sidebar);
+	}
+
+	.month-labels {
+		display: grid;
+	}
+
+	.year-labels {
+		display: none;
+	}
+
+	.grid-sticky-label {
+		padding-left: 6px;
+	}
+
+	#year-rail {
+		display: flex;
+		flex-direction: column;
+		flex-shrink: 0;
+		padding: 8px 4px;
+		border-left: 1px solid var(--grey);
+		background: var(--bg-sidebar);
+	}
 }

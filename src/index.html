@@ -29,7 +29,14 @@
 			<div class="spinner"></div>
 		</div>
 
-		<button class="mobile-grid-toggle" id="mobile-grid-toggle" aria-label="Toggle calendar grid">&#9638;</button>
+		<button class="mobile-grid-toggle" id="mobile-grid-toggle" aria-label="Toggle calendar grid">
+			<svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+				<rect x="1" y="1" width="8" height="8" rx="2" fill="currentColor" />
+				<rect x="11" y="1" width="8" height="8" rx="2" fill="currentColor" />
+				<rect x="1" y="11" width="8" height="8" rx="2" fill="currentColor" />
+				<rect x="11" y="11" width="8" height="8" rx="2" fill="currentColor" />
+			</svg>
+		</button>
 		<div class="mobile-overlay" id="mobile-overlay"></div>
 
 		<aside id="sidebar">
@@ -45,6 +52,7 @@
 				</div>
 				<div class="grid-layout" id="grid-layout"></div>
 			</div>
+			<nav id="year-rail" aria-label="Jump to year"></nav>
 		</aside>
 
 		<main id="main">
