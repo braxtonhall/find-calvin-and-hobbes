@@ -173,14 +173,20 @@
 	background: none;
 	border: none;
 	cursor: pointer;
+	touch-action: manipulation;
+	-webkit-user-select: none;
+	user-select: none;
 }
 
 .year-rail-pill {
+	min-width: 3em;
 	padding: 3px 5px;
 	border-radius: 4px;
 	font-size: var(--label-font-size);
 	line-height: 1;
 	white-space: nowrap;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
 	color: var(--text-muted);
 	transition:
 		background 0.15s,
