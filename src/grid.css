@@ -69,6 +69,10 @@
 		transform 0.15s;
 }
 
+.cell-date {
+	display: none;
+}
+
 .cell--none {
 	background: var(--grey);
 }
@@ -125,6 +129,12 @@
 	opacity: 1;
 }
 
+@media (hover: none) {
+	.grid-tooltip {
+		display: none;
+	}
+}
+
 .grid-labels {
 	display: grid;
 	grid-auto-rows: var(--cell-size);
@@ -168,14 +178,20 @@
 	background: none;
 	border: none;
 	cursor: pointer;
+	touch-action: manipulation;
+	-webkit-user-select: none;
+	user-select: none;
 }
 
 .year-rail-pill {
+	min-width: 2.4em;
 	padding: 3px 5px;
 	border-radius: 4px;
 	font-size: var(--label-font-size);
 	line-height: 1;
 	white-space: nowrap;
+	text-align: center;
+	font-variant-numeric: tabular-nums;
 	color: var(--text-muted);
 	transition:
 		background 0.15s,
@@ -206,6 +222,25 @@
 
 	.grid-header-row {
 		box-shadow: 0 -8px 0 var(--bg-sidebar);
+	}
+
+	.cell {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.cell--selected .cell-date {
+		display: block;
+		pointer-events: none;
+		font-size: 12px;
+		line-height: 1;
+		font-weight: 500;
+		color: rgba(255, 255, 255, 0.95);
+	}
+
+	.cell--search-nonmatch.cell--selected .cell-date {
+		color: rgba(255, 255, 255, 0.7);
 	}
 
 	.month-labels {

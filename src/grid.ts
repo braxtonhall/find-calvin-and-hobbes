@@ -189,6 +189,13 @@ export function renderGrid(): void {
 			}) + (day.state !== "none" ? " — has comic" : ""),
 		);
 
+		// Only visible on mobile, where cells are large enough to hold a number.
+		const dateLabel = document.createElement("span");
+		dateLabel.className = "cell-date";
+		dateLabel.setAttribute("aria-hidden", "true");
+		dateLabel.textContent = String(dayOfMonth);
+		cell.appendChild(dateLabel);
+
 		cells.push(cell);
 		grid.appendChild(cell);
 	}
@@ -261,61 +268,59 @@ export function renderGrid(): void {
 		state.hoveredCell = null;
 	});
 
-	if (!window.matchMedia("(hover: none)").matches) {
-		const tooltip = document.createElement("div");
-		tooltip.className = "grid-tooltip";
-		document.body.appendChild(tooltip);
+	const tooltip = document.createElement("div");
+	tooltip.className = "grid-tooltip";
+	document.body.appendChild(tooltip);
 
-		let lastMouseX = 0;
-		let lastMouseY = 0;
+	let lastMouseX = 0;
+	let lastMouseY = 0;
 
-		const updateTooltip = (cell: HTMLElement) => {
-			const [year, month, dayOfMonth] = cell.dataset.date!.split("-").map(Number);
-			const dateObject = new Date(Date.UTC(year, month - 1, dayOfMonth));
-			tooltip.textContent = dateObject.toLocaleDateString("en-US", {
-				weekday: "long",
-				year: "numeric",
-				month: "long",
-				day: "numeric",
-				timeZone: "UTC",
-			});
-			const cellRect = cell.getBoundingClientRect();
-			tooltip.style.left = cellRect.right + 6 + "px";
-			tooltip.style.top = cellRect.top + cellRect.height / 2 + "px";
-			tooltip.classList.add("grid-tooltip--visible");
-		};
-
-		layout.addEventListener("mousemove", (event) => {
-			lastMouseX = event.clientX;
-			lastMouseY = event.clientY;
-			const cell = (event.target as HTMLElement).closest<HTMLElement>(".cell");
-			if (!cell) {
-				tooltip.classList.remove("grid-tooltip--visible");
-				return;
-			}
-			updateTooltip(cell);
+	const updateTooltip = (cell: HTMLElement) => {
+		const [year, month, dayOfMonth] = cell.dataset.date!.split("-").map(Number);
+		const dateObject = new Date(Date.UTC(year, month - 1, dayOfMonth));
+		tooltip.textContent = dateObject.toLocaleDateString("en-US", {
+			weekday: "long",
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+			timeZone: "UTC",
 		});
+		const cellRect = cell.getBoundingClientRect();
+		tooltip.style.left = cellRect.right + 6 + "px";
+		tooltip.style.top = cellRect.top + cellRect.height / 2 + "px";
+		tooltip.classList.add("grid-tooltip--visible");
+	};
 
-		layout.addEventListener("mouseleave", () => {
+	layout.addEventListener("mousemove", (event) => {
+		lastMouseX = event.clientX;
+		lastMouseY = event.clientY;
+		const cell = (event.target as HTMLElement).closest<HTMLElement>(".cell");
+		if (!cell) {
 			tooltip.classList.remove("grid-tooltip--visible");
-		});
+			return;
+		}
+		updateTooltip(cell);
+	});
 
-		const followScroll = () => {
-			if (!tooltip.classList.contains("grid-tooltip--visible")) return;
-			const elementUnder = document.elementFromPoint(lastMouseX, lastMouseY);
-			if (!elementUnder) return;
-			const cell = elementUnder.closest<HTMLElement>(".cell");
-			if (!cell) {
-				tooltip.classList.remove("grid-tooltip--visible");
-				return;
-			}
-			updateTooltip(cell);
-		};
+	layout.addEventListener("mouseleave", () => {
+		tooltip.classList.remove("grid-tooltip--visible");
+	});
 
-		// The sidebar scrolls on desktop, the grid container on mobile.
-		document.getElementById("sidebar")!.addEventListener("scroll", followScroll);
-		document.getElementById("grid-container")!.addEventListener("scroll", followScroll);
-	}
+	const followScroll = () => {
+		if (!tooltip.classList.contains("grid-tooltip--visible")) return;
+		const elementUnder = document.elementFromPoint(lastMouseX, lastMouseY);
+		if (!elementUnder) return;
+		const cell = elementUnder.closest<HTMLElement>(".cell");
+		if (!cell) {
+			tooltip.classList.remove("grid-tooltip--visible");
+			return;
+		}
+		updateTooltip(cell);
+	};
+
+	// The sidebar scrolls on desktop, the grid container on mobile.
+	document.getElementById("sidebar")!.addEventListener("scroll", followScroll);
+	document.getElementById("grid-container")!.addEventListener("scroll", followScroll);
 }
 
 export async function loadComicData(): Promise<void> {
