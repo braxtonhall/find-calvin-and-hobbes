@@ -4,7 +4,7 @@ import "./styles/components.css";
 import { getBookmarkedDates } from "./bookmarks";
 import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
-import { handleRoute, navigate, parseRoute } from "./router";
+import { handleRoute, markInitialHistoryEntry, navigate, parseRoute } from "./router";
 import { getAdjacentComicDate, getSameDayComicDate } from "./views/detail";
 
 async function initialize(): Promise<void> {
@@ -21,6 +21,8 @@ async function initialize(): Promise<void> {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+	markInitialHistoryEntry();
+
 	initialize();
 
 	window.addEventListener("hashchange", handleRoute);

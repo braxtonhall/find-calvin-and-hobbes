@@ -32,12 +32,35 @@ export function parseRoute(): Route {
 		return { view: "credits" };
 	}
 
-	history.replaceState(null, "", window.location.pathname + "#/");
+	replaceRoute("#/");
 	return { view: "landing" };
 }
 
+interface HistoryState {
+	depth: number;
+}
+
+function currentDepth(): number {
+	const historyState = history.state as HistoryState | null;
+	return typeof historyState?.depth === "number" ? historyState.depth : 0;
+}
+
+export function canGoBack(): boolean {
+	return currentDepth() > 0;
+}
+
+export function markInitialHistoryEntry(): void {
+	if (history.state === null) {
+		history.replaceState({ depth: 0 } satisfies HistoryState, "", window.location.pathname + window.location.hash);
+	}
+}
+
+export function replaceRoute(hash: string): void {
+	history.replaceState({ depth: currentDepth() } satisfies HistoryState, "", window.location.pathname + hash);
+}
+
 export function navigate(hash: string): void {
-	history.pushState(null, "", window.location.pathname + hash);
+	history.pushState({ depth: currentDepth() + 1 } satisfies HistoryState, "", window.location.pathname + hash);
 	handleRoute();
 }
 

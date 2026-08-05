@@ -3,12 +3,7 @@ import "./collection.css";
 import { state } from "../state";
 import { escHtml } from "../utils";
 import { isDateInCollection, getCollectionCoverage, formatCompactRange } from "../date-utils";
-import { navigate } from "../router";
-
-function buildBackAndHomeButtons(): string {
-	return `<button class="detail-back">&larr; Back</button>
-		<button class="detail-home"><span class="home-icon">&#8962;</span> Home</button>`;
-}
+import { attachBackAndHomeHandlers, buildBackAndHomeButtons } from "./nav-buttons";
 
 function getTypeLabel(type: string): string {
 	const typeLabels: Record<string, string> = {
@@ -28,8 +23,7 @@ export function renderCollection(collectionId: string): void {
 			${buildBackAndHomeButtons()}
 			<p class="detail-missing">Collection data not available.</p>
 		</div>`;
-		element.querySelector(".detail-back")!.addEventListener("click", () => history.back());
-		element.querySelector(".detail-home")!.addEventListener("click", () => navigate("#/"));
+		attachBackAndHomeHandlers(element);
 		return;
 	}
 
@@ -39,8 +33,7 @@ export function renderCollection(collectionId: string): void {
 			${buildBackAndHomeButtons()}
 			<p class="detail-missing">Collection "${escHtml(collectionId)}" not found.</p>
 		</div>`;
-		element.querySelector(".detail-back")!.addEventListener("click", () => history.back());
-		element.querySelector(".detail-home")!.addEventListener("click", () => navigate("#/"));
+		attachBackAndHomeHandlers(element);
 		return;
 	}
 
@@ -123,6 +116,5 @@ export function renderCollection(collectionId: string): void {
 		${collection.links && collection.links.length > 0 ? `<p class="collection-section-heading">Links</p><div class="collection-links">${collection.links.map((link) => `<a class="collection-link" href="${escHtml(link.href)}" target="_blank" rel="noopener">${escHtml(link.title)}</a>`).join("")}</div>` : ``}
 	</div>`;
 
-	element.querySelector(".detail-back")!.addEventListener("click", () => history.back());
-	element.querySelector(".detail-home")!.addEventListener("click", () => navigate("#/"));
+	attachBackAndHomeHandlers(element);
 }
