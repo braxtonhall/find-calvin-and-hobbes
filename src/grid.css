@@ -35,6 +35,7 @@
 	grid-template-columns: repeat(7, var(--cell-size));
 	gap: var(--grid-gap);
 	background: var(--bg-sidebar);
+	box-shadow: -8px 0 0 var(--bg-sidebar);
 }
 
 .grid-header {
@@ -221,7 +222,9 @@
 	}
 
 	.grid-header-row {
-		box-shadow: 0 -8px 0 var(--bg-sidebar);
+		box-shadow:
+			-8px 0 0 var(--bg-sidebar),
+			0 -8px 0 var(--bg-sidebar);
 	}
 
 	.cell {

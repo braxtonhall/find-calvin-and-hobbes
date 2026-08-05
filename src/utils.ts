@@ -10,10 +10,13 @@ export function escRegex(text: string): string {
 
 export function scrollCellIntoViewIfNeeded(cell: HTMLElement): void {
 	const sidebar = document.getElementById("sidebar")!;
-	const sidebarRect = sidebar.getBoundingClientRect();
+	const container = document.getElementById("grid-container")!;
+	const header = document.querySelector<HTMLElement>(".grid-header-row")!;
+	const top = header.getBoundingClientRect().bottom;
+	const bottom = Math.min(sidebar.getBoundingClientRect().bottom, container.getBoundingClientRect().bottom);
+
 	const cellRect = cell.getBoundingClientRect();
-	const isVisible = cellRect.top >= sidebarRect.top && cellRect.bottom <= sidebarRect.bottom;
-	if (!isVisible) {
+	if (cellRect.top < top || cellRect.bottom > bottom) {
 		cell.scrollIntoView({ block: "center", behavior: "smooth" });
 	}
 }
