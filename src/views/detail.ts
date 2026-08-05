@@ -250,7 +250,10 @@ export function renderDetail(date: string): void {
 	const headerHtml = `<div class="detail-container">
 		<button class="detail-back">&larr; Back</button>
 		<button class="detail-home"><span class="home-icon">&#8962;</span> Home</button>
-		<h2 class="detail-date">${dateFormatted} <button class="copy-link-btn" id="copy-link-btn" data-href="${window.location.pathname}#/comic/${date}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark"><svg class="bookmark-icon" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button> ${prevButtonHtml} ${nextButtonHtml}</h2>`;
+		<h2 class="detail-date">${dateFormatted}</h2>
+		<div class="detail-actions">
+			<button class="copy-link-btn" id="copy-link-btn" data-href="${window.location.pathname}#/comic/${date}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark"><svg class="bookmark-icon" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button> ${prevButtonHtml} ${nextButtonHtml}
+		</div>`;
 
 	if (!comicsForDate || comicsForDate.length === 0) {
 		element.innerHTML = `${headerHtml}

@@ -239,8 +239,8 @@
 		color: rgba(255, 255, 255, 0.95);
 	}
 
-	.cell--search-nonmatch.cell--selected .cell-date {
-		color: rgba(255, 255, 255, 0.7);
+	.cell--none:not(.cell--bookmarked).cell--selected .cell-date {
+		color: var(--text-muted);
 	}
 
 	.month-labels {
