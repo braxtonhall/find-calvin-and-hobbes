@@ -119,10 +119,13 @@ function buildAppearanceEntries(appearances: Appearance[]): AppearanceEntry[] {
 		if (appearance.edition) {
 			const edition = collection.editions && collection.editions[appearance.edition];
 			const fullLabel = edition ? edition.label : appearance.edition;
-			const shortVolume = appearance.volume ? ` v${appearance.volume},` : "";
-			const longVolume = appearance.volume ? `vol. ${appearance.volume}, ` : "";
-			entry.captionLines.push(`${shortenEditionLabel(fullLabel)}${shortVolume} ${formatPages(appearance.pages)}`);
-			entry.tooltipLines.push(`${fullLabel} — ${longVolume}${formatPages(appearance.pages)}`);
+			const totalMatch = fullLabel.match(/\((\d+)/);
+			const totalVolumes = totalMatch ? parseInt(totalMatch[1]) : 0;
+			const volumePart = appearance.volume ? ` ${appearance.volume}` : "";
+			entry.captionLines.push(`${fullLabel.charAt(0)}${volumePart}, ${formatPages(appearance.pages)}`);
+			entry.tooltipLines.push(
+				`${shortenEditionLabel(fullLabel)}, Book ${appearance.volume} of ${totalVolumes}, ${formatPages(appearance.pages).replace("p.", "page")}`,
+			);
 		} else {
 			entry.captionLines.push(formatPages(appearance.pages));
 			entry.tooltipLines.push(formatPages(appearance.pages, true));
