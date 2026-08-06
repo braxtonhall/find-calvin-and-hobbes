@@ -177,56 +177,104 @@ function buildComicBodiesHtml(date: string, dateFormatted: string, isSunday: boo
 	return bodies;
 }
 
-function attachCollectionBookHandlers(element: HTMLElement, date: string, isSunday: boolean): void {
+let lastMouseX = 0;
+let lastMouseY = 0;
+// The rendered detail view only ever shows one date, so its Sunday-ness is safe to keep here.
+let tooltipIsSunday = false;
+let tooltipFollowersAttached = false;
+
+function hideCollectionTooltip(): void {
+	state.collectionTooltip?.classList.remove("collection-tooltip--visible");
+}
+
+function showCollectionTooltip(book: HTMLElement): void {
+	const tooltip = state.collectionTooltip;
+	if (!tooltip) return;
+	const collectionId = book.dataset.collectionId;
+	if (!collectionId) return;
+	const collection = state.collectionsById!.get(collectionId);
+	if (!collection) return;
+
+	const pubYear = collection.pub_year.toString();
+	let html = `<span class="collection-tooltip__name">${escHtml(collection.name)}</span> <span class="collection-tooltip__year">(${pubYear})</span>`;
+
+	const notes: string[] = [];
+	const inColour = book.dataset.colour === "1";
+	if (tooltipIsSunday && !inColour) {
+		notes.push("Printed in black & white");
+	}
+	const alteration = book.dataset.alteration;
+	if (alteration) {
+		notes.push(alteration);
+	}
+	if (notes.length > 0) {
+		html += `<div class="collection-tooltip__divider">${notes.map((note) => escHtml(note)).join("<br>")}</div>`;
+	}
+
+	tooltip.innerHTML = html;
+	const bookRect = book.getBoundingClientRect();
+	const tooltipWidth = tooltip.offsetWidth;
+	const tooltipHeight = tooltip.offsetHeight;
+	const center = bookRect.left + bookRect.width / 2;
+	const pad = 8;
+	const left = Math.max(pad, Math.min(center - tooltipWidth / 2, window.innerWidth - tooltipWidth - pad));
+	tooltip.style.left = left + "px";
+	tooltip.style.transform = "none";
+	tooltip.style.top = Math.max(0, bookRect.top - tooltipHeight - pad) + "px";
+	tooltip.classList.add("collection-tooltip--visible");
+}
+
+function followCollectionTooltip(): void {
+	const tooltip = state.collectionTooltip;
+	if (!tooltip || !tooltip.classList.contains("collection-tooltip--visible")) return;
+	const elementUnder = document.elementFromPoint(lastMouseX, lastMouseY);
+	const book = elementUnder?.closest<HTMLElement>(".collection-book");
+	if (!book) {
+		hideCollectionTooltip();
+		return;
+	}
+	showCollectionTooltip(book);
+}
+
+function attachCollectionTooltipFollowers(): void {
+	if (tooltipFollowersAttached) return;
+	tooltipFollowersAttached = true;
+
+	document.addEventListener("mousemove", (event) => {
+		lastMouseX = event.clientX;
+		lastMouseY = event.clientY;
+	});
+
+	// Wait a frame so the layout has settled after the scroll/resize/load that triggered us.
+	const follow = () => requestAnimationFrame(followCollectionTooltip);
+	const main = document.getElementById("main")!;
+	main.addEventListener("scroll", follow);
+	window.addEventListener("resize", follow);
+	// Image loads reflow the page around the tooltip; load doesn't bubble, so capture it.
+	main.addEventListener("load", follow, true);
+}
+
+function attachCollectionBookHandlers(element: HTMLElement, isSunday: boolean): void {
 	element.querySelectorAll<HTMLElement>(".collection-book").forEach((book) => {
 		book.addEventListener("click", () => {
 			const collectionId = book.dataset.collectionId;
-			if (collectionId) navigate("#/collection/" + collectionId);
+			if (!collectionId) return;
+			hideCollectionTooltip();
+			navigate("#/collection/" + collectionId);
 		});
 	});
 
-	if (state.collectionTooltip) {
-		element.querySelectorAll<HTMLElement>(".collection-book").forEach((book) => {
-			book.addEventListener("mouseenter", () => {
-				const collectionId = book.dataset.collectionId;
-				if (!collectionId) return;
-				const collection = state.collectionsById!.get(collectionId);
-				if (!collection) return;
+	if (!state.collectionTooltip) return;
 
-				const pubYear = collection.pub_year.toString();
-				let html = `<span class="collection-tooltip__name">${escHtml(collection.name)}</span> <span class="collection-tooltip__year">(${pubYear})</span>`;
+	tooltipIsSunday = isSunday;
+	attachCollectionTooltipFollowers();
 
-				const notes: string[] = [];
-				const inColour = book.dataset.colour === "1";
-				if (isSunday && !inColour) {
-					notes.push("Printed in black & white");
-				}
-				const alteration = book.dataset.alteration;
-				if (alteration) {
-					notes.push(alteration);
-				}
-				if (notes.length > 0) {
-					html += `<div class="collection-tooltip__divider">${notes.map((note) => escHtml(note)).join("<br>")}</div>`;
-				}
+	element.querySelectorAll<HTMLElement>(".collection-book").forEach((book) => {
+		book.addEventListener("mouseenter", () => showCollectionTooltip(book));
+		book.addEventListener("mouseleave", hideCollectionTooltip);
+	});
 
-				state.collectionTooltip!.innerHTML = html;
-				const bookRect = book.getBoundingClientRect();
-				const tooltipWidth = state.collectionTooltip!.offsetWidth;
-				const tooltipHeight = state.collectionTooltip!.offsetHeight;
-				const center = bookRect.left + bookRect.width / 2;
-				const pad = 8;
-				const left = Math.max(pad, Math.min(center - tooltipWidth / 2, window.innerWidth - tooltipWidth - pad));
-				state.collectionTooltip!.style.left = left + "px";
-				state.collectionTooltip!.style.transform = "none";
-				state.collectionTooltip!.style.top = Math.max(0, bookRect.top - tooltipHeight - pad) + "px";
-				state.collectionTooltip!.classList.add("collection-tooltip--visible");
-			});
-
-			book.addEventListener("mouseleave", () => {
-				state.collectionTooltip!.classList.remove("collection-tooltip--visible");
-			});
-		});
-	}
+	followCollectionTooltip();
 }
 
 export function renderDetail(date: string): void {
@@ -293,5 +341,5 @@ export function renderDetail(date: string): void {
 		nextButton.addEventListener("click", () => navigate("#/comic/" + nextDate));
 	}
 
-	attachCollectionBookHandlers(element, date, isSunday);
+	attachCollectionBookHandlers(element, isSunday);
 }
