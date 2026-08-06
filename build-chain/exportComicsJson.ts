@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import yaml from "js-yaml";
+import { loadComicSource } from "./comicSource";
 
 const EXTENSIONS = [".gif", ".jpg", ".jpeg", ".png", ".webp", ".bmp"];
 
@@ -27,37 +27,23 @@ interface Entry {
 	aspectRatio?: number;
 }
 
-interface SpecialData {
-	date: string;
-	transcript: string;
-	sort?: number;
-	"aspect-ratio"?: number;
-}
-
-interface SourceData {
-	dailies: Record<string, string>;
-	specials: Record<string, SpecialData>;
-}
-
 export function exportComicsJson(projectDir: string): string {
-	const yamlPath = path.join(projectDir, "comics.yaml");
 	const assetsDir = path.join(projectDir, "assets", "comics");
-
-	const source = yaml.load(fs.readFileSync(yamlPath, "utf-8")) as SourceData;
+	const source = loadComicSource(path.join(projectDir, "comics.yaml"));
 
 	const entries: Entry[] = [];
 
-	for (const [dateStr, transcript] of Object.entries(source.dailies || {})) {
+	for (const [dateStr, daily] of Object.entries(source.dailies)) {
 		const entry: Entry = {
 			date: formatDate(dateStr),
-			transcript: transcript,
+			transcript: daily.transcript,
 		};
 		const img = findImage(dateStr, assetsDir);
 		if (img) entry.image = img;
 		entries.push(entry);
 	}
 
-	for (const [sid, special] of Object.entries(source.specials || {})) {
+	for (const [sid, special] of Object.entries(source.specials)) {
 		const entry: Entry = {
 			date: formatDate(special.date),
 			transcript: special.transcript,

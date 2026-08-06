@@ -7,6 +7,25 @@ export interface Comic {
 	aspectRatio?: number;
 }
 
+export interface Appearance {
+	collection: string;
+	edition?: string;
+	volume?: number;
+	pages: number[];
+}
+
+export interface ComicDetail {
+	description?: string;
+	appearances?: Appearance[];
+}
+
+export type MonthShard = Record<string, ComicDetail>;
+
+export interface Edition {
+	label: string;
+	isbn?: string[];
+}
+
 export interface Collection {
 	id: string;
 	name: string;
@@ -23,6 +42,7 @@ export interface Collection {
 	specials: Record<string, string>;
 	links?: { title: string; href: string }[];
 	aspectRatio?: number;
+	editions?: Record<string, Edition>;
 }
 
 export interface CollectionIndex {

@@ -1,5 +1,7 @@
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
+import { loadCollectionData } from "./collectionPages";
+import { exportComicDetails } from "./exportComicDetails";
 import { exportComicsJson } from "./exportComicsJson";
 import { generateCollectionIndex } from "./generateCollectionIndex";
 
@@ -15,12 +17,17 @@ class YamlToJsonPlugin {
 				},
 				() => {
 					const projectDir = compiler.context;
+					const collectionData = loadCollectionData(projectDir);
 
 					const comicsJson = exportComicsJson(projectDir);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 
-					const collectionIndexJson = generateCollectionIndex(projectDir);
+					const collectionIndexJson = generateCollectionIndex(collectionData);
 					compilation.emitAsset("collection-index.json", new sources.RawSource(collectionIndexJson));
+
+					for (const [name, json] of exportComicDetails(projectDir, collectionData)) {
+						compilation.emitAsset(name, new sources.RawSource(json));
+					}
 				},
 			);
 		});
