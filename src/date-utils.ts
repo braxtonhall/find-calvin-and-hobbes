@@ -55,25 +55,19 @@ export function getCollectionCoverage(collection: Collection): string[] {
 
 export function formatCompactRange(entry: string): string {
 	const [start, end] = parseDailiesRange(entry);
-	const startDate = compactToDate(start);
-	const endDate = compactToDate(end);
-	const formatDate = (date: Date) =>
-		date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
-	return `${formatDate(startDate)} \u2013 ${formatDate(endDate)}`;
+	const formatDate = (compact: string) =>
+		compactToDate(compact).toLocaleDateString("en-US", {
+			month: "long",
+			day: "numeric",
+			year: "numeric",
+			timeZone: "UTC",
+		});
+	if (start === end) return formatDate(start);
+	return `${formatDate(start)} \u2013 ${formatDate(end)}`;
 }
 
 export function dateToString(year: number, month: number, day: number): string {
 	return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-}
-
-export function formatDateRange(start: string, end: string): string {
-	const [startYear, startMonth, startDay] = start.split("-").map(Number);
-	const [endYear, endMonth, endDay] = end.split("-").map(Number);
-	const startDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
-	const endDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
-	const formatDate = (date: Date) =>
-		date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
-	return `${formatDate(startDate)} \u2013 ${formatDate(endDate)}`;
 }
 
 export function isSabbatical(dateStr: string): boolean {
