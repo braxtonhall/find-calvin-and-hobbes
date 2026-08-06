@@ -1,7 +1,11 @@
 id: essential
 name: The Essential Calvin and Hobbes
 type: treasury
-pub_date: 1988-09-01
+pub_year: 1988
+pub_month: 9
+isbn:
+  - 0-8362-1809-4
+  - 0-8362-1805-1
 colour: true
 notes:
   - Treasury of Books 1+2. Foreword by Charles M. Schulz. Includes 'A Nauseous Nocturne'.
@@ -10,9 +14,9 @@ dailies:
   - 19851118-19870523
 alterations: {}
 extras:
-  - Front cover art (also in Complete)
-  - Back cover art — giant Calvin rampaging through Chagrin Falls (also in Complete)
+  - Front cover art
+  - Back cover art — giant Calvin rampaging through Chagrin Falls
   - Foreword by Charles M. Schulz
-  - A Nauseous Nocturne (illustrated poem; also in Complete)
+  - A Nauseous Nocturne (illustrated poem)
 image: assets/essential.png
 aspect-ratio: 0.7789

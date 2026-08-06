@@ -1,18 +1,23 @@
 id: book10
 name: There's Treasure Everywhere
 type: collection
-pub_date: 1996-03-01
+pub_year: 1996
+pub_month: 3
+isbn:
+  - 0-8362-1313-0
+  - 0-8362-1312-2
 colour: true
 notes:
-  - Excludes sabbatical repeats Apr 3 to Dec 31, 1994. Some Mar/Apr 1995 also in Magical
-    World.
+  - Excludes sabbatical repeats Apr 3 to Dec 31, 1994. June 3, 1995 strip also in
+    Magical World.
 dailies:
   - 19930830-19940402
   - 19950101-19950319
   - 19950403-19950408
+  - "19950603"
 alterations: {}
 extras:
-  - Front cover art (also in Complete)
-  - Back cover art (also in Complete)
+  - Front cover art
+  - Back cover art
 image: assets/book10.gif
 aspect-ratio: 1.3916

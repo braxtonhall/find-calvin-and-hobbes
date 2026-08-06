@@ -1,7 +1,10 @@
 id: sundaypages
 name: "Calvin and Hobbes: Sunday Pages 1985–1995"
 type: special
-pub_date: 2001-09-17
+pub_year: 2001
+pub_month: 9
+isbn:
+  - 0-7407-2135-6
 colour: true
 notes:
   - Exhibition catalogue. 36 Sunday strips with original sketches. Unordered.

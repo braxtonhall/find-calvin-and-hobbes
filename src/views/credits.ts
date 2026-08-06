@@ -19,6 +19,12 @@ export function renderCredits(): void {
 		</p>
 
 		<p class="credits-section">
+			<strong>Descriptions and page index</strong> from
+			<a href="https://web.archive.org/web/20160526232457/http://www.reemst.com/calvin_and_hobbes/" target="_blank" rel="noopener">Calvin and Hobbes at Martijn's</a> and
+			<a href="https://openlibrary.org/books/OL3311404M/The_Complete_Calvin_and_Hobbes" target="_blank" rel="noopener">OpenLibrary</a>.
+		</p>
+
+		<p class="credits-section">
 			<strong>Comic dates</strong> from
 			<a href="https://en.wikipedia.org/wiki/List_of_Calvin_and_Hobbes_books" target="_blank" rel="noopener">Wikipedia</a> and the
 			<a href="https://calvinandhobbes.fandom.com/" target="_blank" rel="noopener">Calvin and Hobbes Fandom Wiki</a>.

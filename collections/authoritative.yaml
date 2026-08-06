@@ -1,7 +1,11 @@
 id: authoritative
 name: The Authoritative Calvin and Hobbes
 type: treasury
-pub_date: 1990-10-01
+pub_year: 1990
+pub_month: 10
+isbn:
+  - 0-8362-1864-7
+  - 0-8362-1822-1
 colour: true
 notes:
   - Treasury of Books 3+4. Includes 7-page elephant story. Colour Sundays.
@@ -18,6 +22,6 @@ alterations:
 extras:
   - Front cover art
   - Back cover art
-  - Seven-page elephant story (also in Complete)
+  - Seven-page elephant story
 image: assets/authoritative.jpg
 aspect-ratio: 0.78

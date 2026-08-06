@@ -1,7 +1,11 @@
 id: book5
 name: The Revenge of the Baby-Sat
 type: collection
-pub_date: 1991-04-01
+pub_year: 1991
+pub_month: 4
+isbn:
+  - 0-8362-1866-3
+  - 0-590-45218-5
 colour: false
 notes: []
 dailies:

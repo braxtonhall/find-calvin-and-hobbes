@@ -1,7 +1,12 @@
 id: book9
 name: Homicidal Psycho Jungle Cat
 type: collection
-pub_date: 1994-10-01
+pub_year: 1994
+pub_month: 10
+isbn:
+  - 0-8362-1771-3
+  - 0-8362-1769-1
+  - 0-7515-1127-7
 colour: true
 notes: []
 dailies:

@@ -1,7 +1,12 @@
 id: book6
 name: Scientific Progress Goes "Boink"
 type: collection
-pub_date: 1991-10-01
+pub_year: 1991
+pub_month: 10
+isbn:
+  - 0-8362-1878-7
+  - 0-7515-0481-5
+  - 0-590-45678-4
 colour: false
 notes:
   - Some June/July 1990 strips also in Snow Goons.

@@ -11,7 +11,9 @@ export interface Collection {
 	id: string;
 	name: string;
 	type: string;
-	pub_date: string;
+	pub_year: number;
+	pub_month: number;
+	pub_day?: number;
 	image: string;
 	colour: boolean;
 	sundays?: boolean;

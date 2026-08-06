@@ -1,7 +1,12 @@
 id: book1
 name: Calvin and Hobbes
 type: collection
-pub_date: 1987-04-01
+pub_year: 1987
+pub_month: 4
+isbn:
+  - 0-8362-2088-9
+  - 0-7474-0288-4
+  - 0-440-84481-9
 colour: false
 notes:
   - First collection. Foreword by Garry Trudeau. Filler B&W vignettes.

@@ -87,7 +87,11 @@ function buildCollectionSectionHtml(comic: Comic, date: string, isSunday: boolea
 	if (comic.id && state.collectionIndex && state.collectionsById) {
 		const matchingCollections = state.collectionIndex.collections
 			.filter((collection) => collection.specials && collection.specials[comic.id!])
-			.sort((a, b) => a.pub_date.localeCompare(b.pub_date));
+			.sort((a, b) => {
+				if (a.pub_year !== b.pub_year) return a.pub_year - b.pub_year;
+				if (a.pub_month !== b.pub_month) return a.pub_month - b.pub_month;
+				return (a.pub_day || 0) - (b.pub_day || 0);
+			});
 
 		if (matchingCollections.length > 0) {
 			let boxes = "";
@@ -104,7 +108,11 @@ function buildCollectionSectionHtml(comic: Comic, date: string, isSunday: boolea
 	} else if (!comic.id && state.collectionIndex && state.collectionsById) {
 		const matchingCollections = state.collectionIndex.collections
 			.filter((collection) => isDateInCollection(date, collection))
-			.sort((a, b) => a.pub_date.localeCompare(b.pub_date));
+			.sort((a, b) => {
+				if (a.pub_year !== b.pub_year) return a.pub_year - b.pub_year;
+				if (a.pub_month !== b.pub_month) return a.pub_month - b.pub_month;
+				return (a.pub_day || 0) - (b.pub_day || 0);
+			});
 
 		if (matchingCollections.length > 0) {
 			let boxes = "";
@@ -185,7 +193,7 @@ function attachCollectionBookHandlers(element: HTMLElement, date: string, isSund
 				const collection = state.collectionsById!.get(collectionId);
 				if (!collection) return;
 
-				const pubYear = collection.pub_date.slice(0, 4);
+				const pubYear = collection.pub_year.toString();
 				let html = `<span class="collection-tooltip__name">${escHtml(collection.name)}</span> <span class="collection-tooltip__year">(${pubYear})</span>`;
 
 				const notes: string[] = [];

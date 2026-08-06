@@ -1,7 +1,10 @@
 id: book4
 name: Weirdos From Another Planet!
 type: collection
-pub_date: 1990-03-01
+pub_year: 1990
+pub_month: 3
+isbn:
+  - 0-8362-1862-0
 colour: false
 notes:
   - "Excludes Nov 27-30, 1988 (those strips are in The Revenge of the Baby-Sat instead).

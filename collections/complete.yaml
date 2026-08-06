@@ -1,7 +1,12 @@
 id: complete
 name: The Complete Calvin and Hobbes
 type: complete
-pub_date: 2005-10-04
+pub_year: 2005
+pub_month: 10
+pub_day: 4
+isbn:
+  - 0-7407-4847-5
+  - 1-4494-3325-1
 colour: true
 notes:
   - "Hardcover: 3 volumes. Contains all strips except Nov 28, 1985 washing machine original.
@@ -25,5 +30,26 @@ alterations:
     hardcover uses the original horizontal format.
 extras:
   - 14-page introduction by Bill Watterson (original to Complete)
+  - A Nauseous Nocturne (illustrated poem; from The Essential Calvin and Hobbes)
+  - The Yukon Song (from Yukon Ho!)
+  - "Spaceman Spiff: Interplanetary Explorer Extraordinaire! (10-page story; from The Calvin and Hobbes Lazy Sunday Book)"
+  - "Calvin Becomes an Elephant (illustrated story; from The Authoritative Calvin and Hobbes)"
+  - "\"I made a big decision...\" (illustrated poem from The Indispensable Calvin and Hobbes)"
+  - Front cover: Calvin and Hobbes
+  - Front cover: Something Under the Bed Is Drooling
+  - Front and reverse cover: Yukon Ho!
+  - Front and reverse cover: Weirdos From Another Planet!
+  - Front and reverse cover: The Revenge of the Baby-Sat
+  - Front and reverse cover: Scientific Progress Goes "Boink"
+  - Front and reverse cover: Attack of the Deranged Mutant Killer Monster Snow Goons
+  - Reverse cover: The Days Are Just Packed
+  - Front and reverse cover: Homicidal Psycho Jungle Cat
+  - Front and reverse cover: There's Treasure Everywhere
+  - Front cover: It's a Magical World
+  - Front and reverse cover: The Essential Calvin and Hobbes
+  - Front and reverse cover: The Authoritative Calvin and Hobbes
+  - Reverse cover: The Indispensable Calvin and Hobbes
+  - Front and reverse cover: The Calvin and Hobbes Tenth Anniversary Book
+  - Original colour endpaper illustrations in each volume
 image: assets/complete.jpg
 aspect-ratio: 1.0

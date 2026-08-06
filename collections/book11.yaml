@@ -1,10 +1,14 @@
 id: book11
 name: It's a Magical World
 type: collection
-pub_date: 1996-10-01
+pub_year: 1996
+pub_month: 10
+isbn:
+  - 0-8362-2234-2
+  - 0-8362-2136-2
 colour: true
 notes:
-  - Final collection. Some Mar/Apr 1995 also in Treasure Everywhere.
+  - Final collection. June 3, 1995 strip also in Treasure Everywhere.
 dailies:
   - 19950320-19950402
   - 19950409-19951231

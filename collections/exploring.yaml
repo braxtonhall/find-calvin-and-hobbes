@@ -1,7 +1,10 @@
 id: exploring
 name: Exploring Calvin and Hobbes
 type: special
-pub_date: 2015-02-01
+pub_year: 2015
+pub_month: 2
+isbn:
+  - 1-4494-6036-6
 colour: false
 notes:
   - Exhibition catalogue with interview by Jenny Robb. Unordered.

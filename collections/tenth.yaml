@@ -1,15 +1,20 @@
 id: tenth
 name: The Calvin and Hobbes Tenth Anniversary Book
 type: special
-pub_date: 1995-10-01
+pub_year: 1995
+pub_month: 10
+isbn:
+  - 0-8362-0440-9
+  - 0-8362-0438-7
+  - 0-7515-1557-4
 colour: true
 notes:
   - Curated selection by Watterson with commentary. Strip list not fully known (unordered).
 dailies: []
 alterations: {}
 extras:
-  - Front cover (reproduced in Complete as full-page illustration)
-  - Back cover (reproduced in Complete as full-page illustration)
+  - Front cover
+  - Back cover
   - Dedication page art
   - Extensive commentary and annotations by Watterson
 image: assets/tenth.gif

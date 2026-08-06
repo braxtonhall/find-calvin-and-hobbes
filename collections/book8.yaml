@@ -1,7 +1,11 @@
 id: book8
 name: The Days Are Just Packed
 type: collection
-pub_date: 1993-10-01
+pub_year: 1993
+pub_month: 10
+isbn:
+  - 0-8362-1736-5
+  - 0-8362-1735-7
 colour: true
 notes:
   - Excludes sabbatical repeats May 5, 1991 to Feb 1, 1992.

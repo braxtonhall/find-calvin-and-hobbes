@@ -1,7 +1,11 @@
 id: indispensable
 name: The Indispensable Calvin and Hobbes
 type: treasury
-pub_date: 1992-10-01
+pub_year: 1992
+pub_month: 10
+isbn:
+  - 0-8362-1703-9
+  - 0-8362-1898-1
 colour: true
 notes:
   - Treasury of Books 5+6. Several illustrated poems. Colour Sundays.
@@ -18,7 +22,7 @@ alterations:
     treasury. Complete version confirmed via personal scan of the 2005 hardcover.
 extras:
   - Front cover & page 1 art
-  - Back/reverse cover art (also in Complete)
-  - Illustrated poems incl. Christmas Eve (also in Complete)
+  - Back/reverse cover art
+  - Illustrated poems incl. Christmas Eve
 image: assets/indispensable.jpg
 aspect-ratio: 0.7747

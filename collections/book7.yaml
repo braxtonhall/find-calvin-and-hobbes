@@ -1,7 +1,10 @@
 id: book7
 name: Attack of the Deranged Mutant Killer Monster Snow Goons
 type: collection
-pub_date: 1992-04-01
+pub_year: 1992
+pub_month: 4
+isbn:
+  - 0-8362-1883-3
 colour: false
 notes:
   - Sunday strips B&W; not in colour until Complete.

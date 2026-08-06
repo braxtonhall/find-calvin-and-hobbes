@@ -57,8 +57,28 @@ export function renderCollection(collectionId: string): void {
 	const imageUrl = collection.image;
 	const coverage = getCollectionCoverage(collection);
 
-	const pubDate = new Date(collection.pub_date + "T00:00:00");
-	const pubDateFormatted = pubDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+	let pubDateFormatted = "";
+	if (collection.pub_year) {
+		const monthNames = [
+			"January",
+			"February",
+			"March",
+			"April",
+			"May",
+			"June",
+			"July",
+			"August",
+			"September",
+			"October",
+			"November",
+			"December",
+		];
+		const monthName = monthNames[collection.pub_month - 1];
+		pubDateFormatted = `${monthName} ${collection.pub_year}`;
+		if (collection.pub_day) {
+			pubDateFormatted = `${monthName} ${collection.pub_day}, ${collection.pub_year}`;
+		}
+	}
 
 	let rangesHtml = "";
 	if (collection.dailies && collection.dailies.length > 0) {
