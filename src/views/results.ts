@@ -1,7 +1,7 @@
 import "./results.css";
 
 import { state } from "../state";
-import { escHtml, escRegex, scrollCellIntoViewIfNeeded } from "../utils";
+import { escHtml, highlightMatches, scrollCellIntoViewIfNeeded } from "../utils";
 import { navigate, updateGridState } from "../router";
 
 export function renderResults(query: string): void {
@@ -34,9 +34,7 @@ export function renderResults(query: string): void {
 				day: "numeric",
 				timeZone: "UTC",
 			});
-			const escaped = escHtml(comic.transcript);
-			const regex = new RegExp(escRegex(query), "gi");
-			const highlighted = escaped.replace(regex, "<mark>$&</mark>");
+			const highlighted = highlightMatches(comic.transcript, query);
 
 			html += `<div class="result-row${comic.image ? "" : " result-row--no-image"}" data-date="${comic.date}" tabindex="0" role="button" aria-label="View comic from ${dateFormatted}">
 				<div class="result-header">${dateFormatted}</div>
