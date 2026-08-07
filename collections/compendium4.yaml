@@ -1,0 +1,18 @@
+id: compendium4
+name: The Calvin and Hobbes Portable Compendium Set 4
+type: collection
+pub_year: 2025
+pub_month: 3
+pub_day: 4
+isbn:
+  - 978-1-5248-9061-2
+colour: true
+notes:
+  - Nearly 500 comics from December 1989 to April 1991. Fourth of seven sets.
+pages: {}
+alterations: {}
+extras:
+  - Two 144-page paperback books in archival slipcase
+  - Cover art selected by Bill Watterson
+image: assets/compendium4.jpg
+aspect-ratio: 0.8021

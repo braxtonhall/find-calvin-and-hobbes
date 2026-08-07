@@ -1,0 +1,18 @@
+id: compendium1
+name: The Calvin and Hobbes Portable Compendium Set 1
+type: collection
+pub_year: 2023
+pub_month: 8
+pub_day: 29
+isbn:
+  - 978-1-5248-8497-0
+colour: true
+notes:
+  - Nearly 500 comics from November 1985 to March 1987. First of seven sets.
+pages: {}
+alterations: {}
+extras:
+  - Two 144-page paperback books in archival slipcase
+  - Cover art selected by Bill Watterson
+image: assets/compendium1.jpg
+aspect-ratio: 0.8021

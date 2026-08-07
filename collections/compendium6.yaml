@@ -1,0 +1,18 @@
+id: compendium6
+name: The Calvin and Hobbes Portable Compendium Set 6
+type: collection
+pub_year: 2026
+pub_month: 3
+pub_day: 3
+isbn:
+  - 978-1-5248-9069-8
+colour: true
+notes:
+  - Nearly 500 comics from July 1993 to July 1995. Sixth of seven sets.
+pages: {}
+alterations: {}
+extras:
+  - Two paperback books in archival slipcase
+  - Cover art selected by Bill Watterson
+image: assets/compendium6.jpg
+aspect-ratio: 0.8021

@@ -1,0 +1,18 @@
+id: compendium2
+name: The Calvin and Hobbes Portable Compendium Set 2
+type: collection
+pub_year: 2024
+pub_month: 3
+pub_day: 5
+isbn:
+  - 978-1-5248-8804-6
+colour: true
+notes:
+  - Nearly 500 comics from March 1987 to July 1988. Second of seven sets.
+pages: {}
+alterations: {}
+extras:
+  - Two 144-page paperback books in archival slipcase
+  - Cover art selected by Bill Watterson
+image: assets/compendium2.jpg
+aspect-ratio: 0.8021
