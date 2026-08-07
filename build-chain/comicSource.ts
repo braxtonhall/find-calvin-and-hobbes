@@ -3,6 +3,7 @@ import yaml from "js-yaml";
 
 export interface DailyEntry {
 	transcript: string;
+	alternate?: string;
 	description?: string;
 }
 

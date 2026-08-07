@@ -6,7 +6,16 @@ import { navigate, replaceRoute, updateGridState } from "../router";
 
 export function renderResults(query: string): void {
 	const element = document.getElementById("view-results")!;
-	const results = state.comics.filter((comic) => comic.transcript.toLowerCase().includes(query.toLowerCase()));
+	const lowerQuery = query.toLowerCase();
+	// A comic matches on either its transcript or its alternate dialog; the original wins when both match.
+	const results = state.comics
+		.map((comic) => {
+			if (comic.transcript.toLowerCase().includes(lowerQuery)) return { comic, text: comic.transcript };
+			if (comic.alternate && comic.alternate.toLowerCase().includes(lowerQuery))
+				return { comic, text: comic.alternate };
+			return null;
+		})
+		.filter((result) => result !== null);
 
 	let html = `<div class="results-search-bar">
 		<input
@@ -24,7 +33,7 @@ export function renderResults(query: string): void {
 		html += `<div class="results-empty">No comics found for &ldquo;${escHtml(query)}&rdquo;</div>`;
 	} else {
 		html += `<div style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">${results.length} result${results.length !== 1 ? "s" : ""} for &ldquo;${escHtml(query)}&rdquo;</div>`;
-		for (const comic of results) {
+		for (const { comic, text } of results) {
 			const [year, month, day] = comic.date.split("-").map(Number);
 			const dateObject = new Date(Date.UTC(year, month - 1, day));
 			const dateFormatted = dateObject.toLocaleDateString("en-US", {
@@ -34,7 +43,7 @@ export function renderResults(query: string): void {
 				day: "numeric",
 				timeZone: "UTC",
 			});
-			const highlighted = highlightMatches(comic.transcript, query);
+			const highlighted = highlightMatches(text, query);
 
 			html += `<div class="result-row${comic.image ? "" : " result-row--no-image"}" data-date="${comic.date}" tabindex="0" role="button" aria-label="View comic from ${dateFormatted}">
 				<div class="result-header">${dateFormatted}</div>
@@ -48,7 +57,7 @@ export function renderResults(query: string): void {
 
 	element.innerHTML = html;
 
-	state.searchResultsDateSet = new Set(results.map((comic) => comic.date));
+	state.searchResultsDateSet = new Set(results.map((result) => result.comic.date));
 
 	const input = document.getElementById("results-input") as HTMLInputElement;
 	const clearButton = document.getElementById("results-clear")!;

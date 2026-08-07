@@ -1,6 +1,7 @@
 export interface Comic {
 	date: string;
 	transcript: string;
+	alternate?: string;
 	image?: string;
 	id?: string;
 	sort?: number;
