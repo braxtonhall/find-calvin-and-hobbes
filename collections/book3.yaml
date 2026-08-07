@@ -131,7 +131,10 @@ pages:
   124: [19880215, 19880216, 19880217]
   125: [19880218, 19880219, 19880220]
   126: [19880221]
-alterations: {}
+alterations:
+  19871124: "Text changed: 'He says it's colder because the Earth's orbit is taking
+    us farther from the sun.' → 'He says it's colder because our hemisphere is
+    tilted away from the sun now.'"
 extras:
   - Front cover art
   - Back cover art
