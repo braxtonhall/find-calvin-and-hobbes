@@ -4,7 +4,7 @@ import { state } from "../state";
 import { SortMode } from "../types";
 import { search } from "../search";
 import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
-import { buildSearchHash, navigate, replaceRoute, updateGridState } from "../router";
+import { buildSearchHash, navigate, replaceSearch } from "../router";
 
 const DATE_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
 	<rect x="2" y="3.5" width="12" height="10" rx="1.5" /><path d="M2 6.5h12M5.5 2v3M10.5 2v3" />
@@ -68,6 +68,17 @@ export function renderResults(query: string, sort: SortMode): void {
 		}
 	}
 
+	const previousInput = document.getElementById("results-input") as HTMLInputElement | null;
+	const carried =
+		previousInput && document.activeElement === previousInput && previousInput.value.trim() === query
+			? {
+					value: previousInput.value,
+					start: previousInput.selectionStart ?? previousInput.value.length,
+					end: previousInput.selectionEnd ?? previousInput.value.length,
+					direction: previousInput.selectionDirection ?? "none",
+				}
+			: null;
+
 	element.innerHTML = html;
 
 	state.searchResultsDateSet = new Set(results.map((result) => result.comic.date));
@@ -81,11 +92,7 @@ export function renderResults(query: string, sort: SortMode): void {
 		const inputQuery = input.value.trim();
 		state.resultsDebounceTimer = window.setTimeout(() => {
 			if (inputQuery) {
-				replaceRoute(buildSearchHash(inputQuery, sort));
-				renderResults(inputQuery, sort);
-				updateGridState({ view: "results" });
-				document.getElementById("main")!.scrollTop = 0;
-				document.title = inputQuery + " — Calvin & Hobbes Search";
+				replaceSearch(buildSearchHash(inputQuery, sort));
 			} else {
 				navigate("#/");
 			}
@@ -97,10 +104,10 @@ export function renderResults(query: string, sort: SortMode): void {
 			event.preventDefault();
 			if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
 			const inputQuery = input.value.trim();
-			if (inputQuery) {
-				navigate(buildSearchHash(inputQuery, sort));
-			} else {
+			if (!inputQuery) {
 				navigate("#/");
+			} else if (inputQuery !== query) {
+				replaceSearch(buildSearchHash(inputQuery, sort));
 			}
 		}
 	});
@@ -112,7 +119,7 @@ export function renderResults(query: string, sort: SortMode): void {
 	sortButton.addEventListener("click", () => {
 		if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
 		const inputQuery = input.value.trim() || query;
-		if (inputQuery) navigate(buildSearchHash(inputQuery, sortIsRank ? "date" : "rank"));
+		if (inputQuery) replaceSearch(buildSearchHash(inputQuery, sortIsRank ? "date" : "rank"));
 	});
 
 	element.querySelectorAll<HTMLElement>(".result-row").forEach((row) => {
@@ -217,5 +224,10 @@ export function renderResults(query: string, sort: SortMode): void {
 	});
 
 	input.focus();
-	input.setSelectionRange(input.value.length, input.value.length);
+	if (carried) {
+		input.value = carried.value;
+		input.setSelectionRange(carried.start, carried.end, carried.direction);
+	} else {
+		input.setSelectionRange(input.value.length, input.value.length);
+	}
 }

@@ -73,6 +73,11 @@ export function navigate(hash: string): void {
 	handleRoute();
 }
 
+export function replaceSearch(hash: string): void {
+	replaceRoute(hash);
+	handleRoute();
+}
+
 export function handleRoute(): void {
 	const route = parseRoute();
 
