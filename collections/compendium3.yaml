@@ -1,0 +1,18 @@
+id: compendium3
+name: The Calvin and Hobbes Portable Compendium Set 3
+type: collection
+pub_year: 2024
+pub_month: 10
+pub_day: 1
+isbn:
+  - 978-1-5248-8807-7
+colour: true
+notes:
+  - Nearly 500 comics from June 1988 to November 1989. Third of seven sets.
+pages: {}
+alterations: {}
+extras:
+  - Two 144-page paperback books in archival slipcase
+  - Cover art selected by Bill Watterson
+image: assets/compendium3.jpg
+aspect-ratio: 0.8021

@@ -1,0 +1,20 @@
+id: compendium7
+name: The Calvin and Hobbes Portable Compendium Set 7
+type: collection
+pub_year: 2026
+pub_month: 10
+pub_day: 6
+isbn:
+  - 978-1-5248-9073-5
+colour: true
+notes:
+  - Contains the complete final year of strips (1995-1996). Seventh of seven sets.
+  - Includes bonus gallery of standalone stories, poems, and archival art from the treasury editions (Spaceman Spiff, A Nauseous Nocturne).
+pages: {}
+alterations: {}
+extras:
+  - Two paperback books in archival slipcase
+  - Cover art selected by Bill Watterson
+  - Bonus gallery of stories, poems, and archival art
+image: assets/compendium7.jpg
+aspect-ratio: 0.8021

@@ -1,0 +1,18 @@
+id: compendium5
+name: The Calvin and Hobbes Portable Compendium Set 5
+type: collection
+pub_year: 2025
+pub_month: 10
+pub_day: 7
+isbn:
+  - 978-1-5248-9065-0
+colour: true
+notes:
+  - Nearly 500 comics from March 1991 to March 1993. Fifth of seven sets.
+pages: {}
+alterations: {}
+extras:
+  - Two 144-page paperback books in archival slipcase
+  - Cover art selected by Bill Watterson
+image: assets/compendium5.jpg
+aspect-ratio: 0.8021
