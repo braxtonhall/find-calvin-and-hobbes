@@ -21,6 +21,7 @@ function formatDate(dateStr: string): string {
 interface Entry {
 	date: string;
 	transcript: string;
+	alternate?: string;
 	image?: string;
 	id?: string;
 	sort?: number;
@@ -38,6 +39,7 @@ export function exportComicsJson(projectDir: string): string {
 			date: formatDate(dateStr),
 			transcript: daily.transcript,
 		};
+		if (daily.alternate) entry.alternate = daily.alternate;
 		const img = findImage(dateStr, assetsDir);
 		if (img) entry.image = img;
 		entries.push(entry);
@@ -49,6 +51,7 @@ export function exportComicsJson(projectDir: string): string {
 			transcript: special.transcript,
 			id: sid,
 		};
+		if (special.alternate) entry.alternate = special.alternate;
 		if (special.sort) entry.sort = special.sort;
 		if (special["aspect-ratio"]) entry.aspectRatio = special["aspect-ratio"];
 		const img = findImage(sid, assetsDir);
