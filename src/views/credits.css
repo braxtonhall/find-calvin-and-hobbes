@@ -8,6 +8,7 @@
 }
 
 .credits-back {
+	display: inline-block;
 	font-family: var(--font);
 	font-size: 14px;
 	color: var(--text);
@@ -19,7 +20,12 @@
 	margin-bottom: 24px;
 }
 
-.credits-back:hover {
+.credits-back--disabled {
+	opacity: 0.25;
+	cursor: default;
+}
+
+.credits-back:not(.credits-back--disabled):hover {
 	background: var(--grey);
 }
 

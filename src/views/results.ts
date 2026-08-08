@@ -2,7 +2,7 @@ import "./results.css";
 
 import { state } from "../state";
 import { escHtml, highlightMatches, scrollCellIntoViewIfNeeded } from "../utils";
-import { navigate, updateGridState } from "../router";
+import { navigate, replaceRoute, updateGridState } from "../router";
 
 export function renderResults(query: string): void {
 	const element = document.getElementById("view-results")!;
@@ -58,7 +58,7 @@ export function renderResults(query: string): void {
 		const inputQuery = input.value.trim();
 		state.resultsDebounceTimer = window.setTimeout(() => {
 			if (inputQuery) {
-				history.replaceState(null, "", window.location.pathname + "#/search?q=" + encodeURIComponent(inputQuery));
+				replaceRoute("#/search?q=" + encodeURIComponent(inputQuery));
 				renderResults(inputQuery);
 				updateGridState({ view: "results" });
 				document.getElementById("main")!.scrollTop = 0;

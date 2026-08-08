@@ -1,9 +1,11 @@
 import "./credits.css";
 
+import { attachBackButtonHandler, buildBackButton } from "./nav-buttons";
+
 export function renderCredits(): void {
 	const element = document.getElementById("view-credits")!;
 	element.innerHTML = `<div class="credits-container">
-		<button class="credits-back">&larr; Back</button>
+		${buildBackButton("credits-back")}
 		<h2 class="credits-heading">Credits</h2>
 
 		<p class="credits-section">
@@ -59,5 +61,5 @@ export function renderCredits(): void {
 		<p class="credits-footer">Please send corrections, fixes, and ideas to Braxton Hall through <a href="https://github.com/braxtonhall/find-calvin-and-hobbes" target="_blank" rel="noopener">GitHub</a>.</p>
 	</div>`;
 
-	element.querySelector(".credits-back")!.addEventListener("click", () => history.back());
+	attachBackButtonHandler(element, "credits-back");
 }

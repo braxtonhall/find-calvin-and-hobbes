@@ -8,6 +8,7 @@
 }
 
 .detail-back {
+	display: inline-block;
 	font-family: var(--font);
 	font-size: 14px;
 	color: var(--text);
@@ -19,7 +20,12 @@
 	margin-bottom: 20px;
 }
 
-.detail-back:hover,
+.detail-back--disabled {
+	opacity: 0.25;
+	cursor: default;
+}
+
+.detail-back:not(.detail-back--disabled):hover,
 .detail-home:hover {
 	background: var(--grey);
 }
