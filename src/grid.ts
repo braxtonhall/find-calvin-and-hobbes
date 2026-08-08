@@ -5,6 +5,7 @@ import { RANGE_START, RANGE_END } from "./constants";
 import { dateToString, isSabbatical } from "./date-utils";
 import { scrollCellIntoViewIfNeeded } from "./utils";
 import { state } from "./state";
+import { loadDescriptions } from "./details";
 import { navigate, parseRoute } from "./router";
 
 export function updateGridStatesFromData(): void {
@@ -324,6 +325,8 @@ export function renderGrid(): void {
 }
 
 export async function loadComicData(): Promise<void> {
+	void loadDescriptions();
+
 	try {
 		const response = await fetch("comics.json");
 		if (!response.ok) throw new Error(`HTTP ${response.status}`);

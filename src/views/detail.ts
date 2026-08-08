@@ -1,10 +1,10 @@
 import "./detail.css";
 
-import { Appearance, Collection, Comic, ComicDetail } from "../types";
+import { Appearance, Collection, Comic } from "../types";
 import { state } from "../state";
 import { escHtml } from "../utils";
-import { dateToCompact, isDateInCollection } from "../date-utils";
-import { getComicDetail, loadMonthShard, monthOf, prefetchMonthsAround } from "../details";
+import { dateToCompact } from "../date-utils";
+import { getDescription, loadDescriptions } from "../details";
 import { isBookmarked, toggleBookmark } from "../bookmarks";
 import { navigate, parseRoute } from "../router";
 import { attachBackAndHomeHandlers, buildBackAndHomeButtons } from "./nav-buttons";
@@ -173,35 +173,10 @@ function buildAppearancesSectionHtml(appearances: Appearance[], alterationKey: s
 	return wrapCollectionSection(`<div class="detail-collections">${boxes}</div>`);
 }
 
-function buildRangeFallbackSectionHtml(comic: Comic, date: string, isSunday: boolean): string {
-	if (comic.id) return "";
-
-	const alterationKey = dateToCompact(date);
-	const boxes = state
-		.collectionIndex!.collections.filter((collection) => isDateInCollection(date, collection))
-		.sort((a, b) => {
-			if (a.pub_year !== b.pub_year) return a.pub_year - b.pub_year;
-			if (a.pub_month !== b.pub_month) return a.pub_month - b.pub_month;
-			return (a.pub_day || 0) - (b.pub_day || 0);
-		})
-		.map(
-			(collection) =>
-				`<div class="collection-entry">${buildCoverBoxHtml(collection, alterationKey, isSunday, [])}</div>`,
-		)
-		.join("");
-
-	if (!boxes) return "";
-	return wrapCollectionSection(`<div class="detail-collections">${boxes}</div>`);
-}
-
 function buildCollectionSectionHtml(comic: Comic, date: string, isSunday: boolean): string {
 	if (!state.collectionIndex || !state.collectionsById) return "";
 
-	const detail = getComicDetail(date, comic.id);
-	if (detail) {
-		return buildAppearancesSectionHtml(detail.appearances || [], comic.id || dateToCompact(date), isSunday);
-	}
-	return buildRangeFallbackSectionHtml(comic, date, isSunday);
+	return buildAppearancesSectionHtml(comic.appearances || [], comic.id || dateToCompact(date), isSunday);
 }
 
 function getAspectRatio(comic: Comic, isSunday: boolean): number {
@@ -209,27 +184,27 @@ function getAspectRatio(comic: Comic, isSunday: boolean): number {
 	return isSunday ? 1.427 : 3.098;
 }
 
-function describeImage(detail: ComicDetail | undefined, dateFormatted: string): string {
-	return detail && detail.description ? detail.description : `Comic from ${dateFormatted}`;
+function describeImage(description: string | undefined, dateFormatted: string): string {
+	return description ? description : `Comic from ${dateFormatted}`;
 }
 
-function buildDescriptionSlotContents(comic: Comic, detail: ComicDetail | undefined, shardResolved: boolean): string {
+function buildDescriptionSlotContents(comic: Comic, description: string | undefined, resolved: boolean): string {
 	if (comic.image) return "";
-	if (!shardResolved) {
+	if (!resolved) {
 		return `<div class="detail-description-skeleton"><span></span><span></span><span></span></div>`;
 	}
-	if (!detail || !detail.description) return "";
-	return `<p class="detail-description">${escHtml(detail.description)}</p><p class="detail-transcript-label">Transcript</p>`;
+	if (!description) return "";
+	return `<p class="detail-description">${escHtml(description)}</p><p class="detail-transcript-label">Transcript</p>`;
 }
 
 function buildComicBodiesHtml(date: string, dateFormatted: string, isSunday: boolean): string {
 	const comicsForDate = state.comicsByDate.get(date);
 	if (!comicsForDate || comicsForDate.length === 0) return "";
-	const shardResolved = state.detailsByMonth.has(monthOf(date));
+	const descriptionsResolved = state.descriptions !== null;
 
 	let bodies = "";
 	for (const comic of comicsForDate) {
-		const detail = getComicDetail(date, comic.id);
+		const description = getDescription(date, comic.id);
 
 		let transcriptHtml: string;
 		if (comic.transcript) {
@@ -249,8 +224,8 @@ function buildComicBodiesHtml(date: string, dateFormatted: string, isSunday: boo
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
 
 		bodies += `<div class="detail-comic${illustratedClass}" data-comic-key="${escHtml(comic.id || date)}">
-				${comic.image ? `<div class="detail-image-wrapper" style="aspect-ratio: ${aspectRatio}"><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}" alt="${escHtml(describeImage(detail, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
-			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, detail, shardResolved)}</div>
+				${comic.image ? `<div class="detail-image-wrapper" style="aspect-ratio: ${aspectRatio}"><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}" alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
+			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
 			${transcriptHtml}
 			${readLinkHtml}
 			<div class="detail-collections-slot">${buildCollectionSectionHtml(comic, date, isSunday)}</div>
@@ -260,7 +235,7 @@ function buildComicBodiesHtml(date: string, dateFormatted: string, isSunday: boo
 	return bodies;
 }
 
-function patchDetailBlocks(element: HTMLElement, date: string, dateFormatted: string, isSunday: boolean): void {
+function patchDetailBlocks(element: HTMLElement, date: string, dateFormatted: string): void {
 	const comicsForDate = state.comicsByDate.get(date);
 	if (!comicsForDate) return;
 
@@ -269,19 +244,14 @@ function patchDetailBlocks(element: HTMLElement, date: string, dateFormatted: st
 		const block = element.querySelector<HTMLElement>(`.detail-comic[data-comic-key="${key}"]`);
 		if (!block) continue;
 
-		const detail = getComicDetail(date, comic.id);
+		const description = getDescription(date, comic.id);
 
 		const descriptionSlot = block.querySelector<HTMLElement>(".detail-description-slot");
-		if (descriptionSlot) descriptionSlot.innerHTML = buildDescriptionSlotContents(comic, detail, true);
+		if (descriptionSlot) descriptionSlot.innerHTML = buildDescriptionSlotContents(comic, description, true);
 
 		const image = block.querySelector<HTMLImageElement>(".detail-image");
-		if (image) image.alt = describeImage(detail, dateFormatted);
-
-		const collectionsSlot = block.querySelector<HTMLElement>(".detail-collections-slot");
-		if (collectionsSlot) collectionsSlot.innerHTML = buildCollectionSectionHtml(comic, date, isSunday);
+		if (image) image.alt = describeImage(description, dateFormatted);
 	}
-
-	attachCollectionBookHandlers(element);
 }
 
 let lastMouseX = 0;
@@ -449,13 +419,11 @@ export function renderDetail(date: string): void {
 
 	attachCollectionBookHandlers(element);
 
-	const shardMonth = monthOf(date);
-	if (!state.detailsByMonth.has(shardMonth)) {
-		loadMonthShard(shardMonth).then(() => {
+	if (state.descriptions === null) {
+		loadDescriptions().then(() => {
 			const route = parseRoute();
 			if (route.view !== "detail" || route.date !== date) return;
-			patchDetailBlocks(element, date, dateFormatted, isSunday);
+			patchDetailBlocks(element, date, dateFormatted);
 		});
 	}
-	prefetchMonthsAround(date);
 }

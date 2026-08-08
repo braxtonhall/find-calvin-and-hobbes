@@ -46,7 +46,7 @@ export function renderResults(query: string, sort: SortMode): void {
 		html += `<div class="results-empty">No comics found for &ldquo;${escHtml(query)}&rdquo;</div>`;
 	} else {
 		html += `<div style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">${results.length} result${results.length !== 1 ? "s" : ""} for &ldquo;${escHtml(query)}&rdquo;</div>`;
-		for (const { comic, text, ranges } of results) {
+		for (const { comic, text, ranges, source } of results) {
 			const [year, month, day] = comic.date.split("-").map(Number);
 			const dateObject = new Date(Date.UTC(year, month - 1, day));
 			const dateFormatted = dateObject.toLocaleDateString("en-US", {
@@ -57,9 +57,10 @@ export function renderResults(query: string, sort: SortMode): void {
 				timeZone: "UTC",
 			});
 			const highlighted = highlightRanges(text, ranges);
+			const sourceTag = source === "description" ? `<span class="result-source">Description</span>` : ``;
 
 			html += `<div class="result-row${comic.image ? "" : " result-row--no-image"}" data-date="${comic.date}" tabindex="0" role="button" aria-label="View comic from ${dateFormatted}">
-				<div class="result-header">${dateFormatted}</div>
+				<div class="result-header">${dateFormatted}${sourceTag}</div>
 				<div class="result-body">
 					<div class="result-text">${highlighted}</div>
 					${comic.image ? `<div class="result-image-wrap"><img class="result-image" src="${escHtml(comic.image)}" alt="Comic from ${dateFormatted}" onload="this.classList.add('loaded')" onerror="this.style.display='none'" /></div>` : ``}
