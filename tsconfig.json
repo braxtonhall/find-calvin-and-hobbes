@@ -6,7 +6,7 @@
 		"moduleResolution": "node",
 		"strict": true,
 		"types": ["node"],
-		"lib": ["ES2024"],
+		"lib": ["ES2024", "DOM", "DOM.Iterable"],
 		"resolveJsonModule": true,
 		"noImplicitAny": true
 	},

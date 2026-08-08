@@ -1,6 +1,6 @@
-# Calvin & Hobbes Search
+# Find Calvin and Hobbes
 
-A searchable, browsable archive of every Calvin & Hobbes comic strip (1985–1995) with full-text transcripts, a calendar grid, and collection browsing.
+A searchable, browsable archive of every Calvin and Hobbes comic strip (1985–1995) with full-text transcripts, a calendar grid, and collection browsing.
 
 ## Build
 

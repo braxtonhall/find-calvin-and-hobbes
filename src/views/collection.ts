@@ -37,7 +37,7 @@ export function renderCollection(collectionId: string): void {
 		return;
 	}
 
-	document.title = `${collection.name} — Calvin & Hobbes`;
+	document.title = `${collection.name} — Find Calvin and Hobbes`;
 
 	state.collectionDateSet = new Set();
 	for (const [date] of state.comicsByDate) {

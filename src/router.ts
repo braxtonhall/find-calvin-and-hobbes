@@ -98,20 +98,20 @@ export function handleRoute(): void {
 		case "landing": {
 			document.getElementById("view-landing")!.classList.add("active");
 			renderLanding();
-			document.title = "Calvin & Hobbes Search";
+			document.title = "Find Calvin and Hobbes";
 			break;
 		}
 		case "results": {
 			document.getElementById("view-results")!.classList.add("active");
 			renderResults(route.q || "", route.sort || "date");
 			document.getElementById("main")!.scrollTop = 0;
-			document.title = `${route.q} — Calvin & Hobbes Search`;
+			document.title = `${route.q} — Find Calvin and Hobbes`;
 			break;
 		}
 		case "detail": {
 			document.getElementById("view-detail")!.classList.add("active");
 			renderDetail(route.date || "");
-			document.title = `${route.date} — Calvin & Hobbes Search`;
+			document.title = `${route.date} — Find Calvin and Hobbes`;
 			break;
 		}
 		case "collection": {
@@ -123,7 +123,7 @@ export function handleRoute(): void {
 			document.getElementById("view-credits")!.classList.add("active");
 			renderCredits();
 			document.getElementById("main")!.scrollTop = 0;
-			document.title = "Credits — Calvin & Hobbes Search";
+			document.title = "Credits — Find Calvin and Hobbes";
 			break;
 		}
 	}

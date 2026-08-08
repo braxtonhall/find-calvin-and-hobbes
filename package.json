@@ -4,6 +4,7 @@
 	"devDependencies": {
 		"@types/js-yaml": "^4.0.9",
 		"@types/node": "^22.14.1",
+		"@types/picomatch": "^4.0.3",
 		"@typescript-eslint/eslint-plugin": "^8.66.0",
 		"@typescript-eslint/parser": "^8.66.0",
 		"copy-webpack-plugin": "^13.0.0",
