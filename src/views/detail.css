@@ -120,7 +120,7 @@
 	color: var(--text);
 }
 
-.detail-comic--described .detail-transcript {
+.detail-comic--illustrated .detail-transcript {
 	color: var(--text-muted);
 }
 

@@ -213,7 +213,8 @@ function describeImage(detail: ComicDetail | undefined, dateFormatted: string): 
 	return detail && detail.description ? detail.description : `Comic from ${dateFormatted}`;
 }
 
-function buildDescriptionSlotContents(detail: ComicDetail | undefined, shardResolved: boolean): string {
+function buildDescriptionSlotContents(comic: Comic, detail: ComicDetail | undefined, shardResolved: boolean): string {
+	if (comic.image) return "";
 	if (!shardResolved) {
 		return `<div class="detail-description-skeleton"><span></span><span></span><span></span></div>`;
 	}
@@ -245,11 +246,11 @@ function buildComicBodiesHtml(date: string, dateFormatted: string, isSunday: boo
 		}
 
 		const aspectRatio = getAspectRatio(comic, isSunday);
-		const describedClass = detail && detail.description ? " detail-comic--described" : "";
+		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
 
-		bodies += `<div class="detail-comic${describedClass}" data-comic-key="${escHtml(comic.id || date)}">
+		bodies += `<div class="detail-comic${illustratedClass}" data-comic-key="${escHtml(comic.id || date)}">
 				${comic.image ? `<div class="detail-image-wrapper" style="aspect-ratio: ${aspectRatio}"><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}" alt="${escHtml(describeImage(detail, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
-			<div class="detail-description-slot">${buildDescriptionSlotContents(detail, shardResolved)}</div>
+			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, detail, shardResolved)}</div>
 			${transcriptHtml}
 			${readLinkHtml}
 			<div class="detail-collections-slot">${buildCollectionSectionHtml(comic, date, isSunday)}</div>
@@ -269,10 +270,9 @@ function patchDetailBlocks(element: HTMLElement, date: string, dateFormatted: st
 		if (!block) continue;
 
 		const detail = getComicDetail(date, comic.id);
-		block.classList.toggle("detail-comic--described", Boolean(detail && detail.description));
 
 		const descriptionSlot = block.querySelector<HTMLElement>(".detail-description-slot");
-		if (descriptionSlot) descriptionSlot.innerHTML = buildDescriptionSlotContents(detail, true);
+		if (descriptionSlot) descriptionSlot.innerHTML = buildDescriptionSlotContents(comic, detail, true);
 
 		const image = block.querySelector<HTMLImageElement>(".detail-image");
 		if (image) image.alt = describeImage(detail, dateFormatted);
