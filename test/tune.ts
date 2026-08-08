@@ -1,4 +1,4 @@
-import { TUNING, Tuning } from "../src/search";
+import { search, TUNING, Tuning } from "../src/search";
 import { DESCRIBED, RECITED } from "./fixtures/golden";
 import { describeMisses, evaluate } from "./helpers/metrics";
 import { install, loadRealArchive } from "./helpers/archive";
@@ -9,8 +9,8 @@ const CANDIDATES: Record<keyof Tuning, number[]> = {
 	transcriptRepeatWeight: [0, 0.25, 0.5, 1],
 	descriptionRepeatWeight: [0, 0.1, 0.25, 0.5, 1],
 	rarityExponent: [1, 1.25, 1.5, 2],
-	transcriptMinCoverage: [0.3, 0.4, 0.5, 0.6, 0.7],
-	descriptionMinCoverage: [0.3, 0.4, 0.5, 0.6, 0.7],
+	transcriptCoverageFloor: [0.3, 0.4, 0.5, 0.6, 0.7],
+	descriptionCoverageFloor: [0.3, 0.4, 0.5, 0.6, 0.7],
 	descriptionMinMass: [0, 1, 1.5, 2.5, 4],
 	transcriptIdfFloor: [0, 0.25, 0.5, 1],
 	descriptionIdfFloor: [0.25, 0.5, 1, 1.5, 2],
@@ -25,10 +25,10 @@ const OBJECTIVE: Record<keyof Tuning, "recited" | "described" | "combined"> = {
 	sequenceWeight: "recited",
 	runWeight: "recited",
 	transcriptRepeatWeight: "recited",
-	transcriptMinCoverage: "recited",
+	transcriptCoverageFloor: "recited",
 	transcriptIdfFloor: "recited",
 	descriptionRepeatWeight: "described",
-	descriptionMinCoverage: "described",
+	descriptionCoverageFloor: "described",
 	descriptionMinMass: "described",
 	descriptionIdfFloor: "described",
 	rarityExponent: "combined",
@@ -49,6 +49,23 @@ function score(tuning: Tuning): Score {
 	const recited = evaluate(RECITED, tuning).meanReciprocalRank;
 	const described = evaluate(DESCRIBED, tuning).meanReciprocalRank;
 	return { recited, described, combined: (recited + described) / 2 };
+}
+
+// Ranking metrics cannot see this, so it has to be a constraint rather than part of the
+// objective. A saturated query set will happily trade the property away for a rounding error.
+const MONOTONICITY_PROBES = [
+	["rosalyn help", "calvin rosalyn help"],
+	["transmogrifier", "calvin transmogrifier"],
+	["snow goons", "calvin snow goons"],
+	["clean your room", "calvin clean your room"],
+	["rosalyn susie", "calvin rosalyn susie"],
+];
+
+function monotonic(tuning: Tuning): boolean {
+	return MONOTONICITY_PROBES.every(([shorter, longer]) => {
+		const before = search(shorter, "rank", tuning).length;
+		return search(longer, "rank", tuning).length <= before;
+	});
 }
 
 function format(label: string, value: Score): string {
@@ -73,7 +90,11 @@ for (let pass = 1; pass <= 2; pass++) {
 			if (value === best[knob]) continue;
 			const candidateScore = score({ ...best, [knob]: value });
 			const gain = candidateScore[objective] - chosenScore[objective];
-			if (gain > MINIMUM_GAIN) {
+			// A parameter must earn its keep on the intent it governs, and must not pay for it
+			// out of the other one. Transcript parameters reach description queries through the
+			// merge, so "transcript-only" is true of the mechanism, not of the effect.
+			const collateral = candidateScore.combined < bestScore.combined - 1e-9;
+			if (gain > MINIMUM_GAIN && !collateral && monotonic({ ...best, [knob]: value })) {
 				chosen = value;
 				chosenScore = candidateScore;
 			}

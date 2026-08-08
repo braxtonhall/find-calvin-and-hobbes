@@ -76,6 +76,25 @@ test("real archive behaviour", async (suite) => {
 		);
 	});
 
+	// Adding a word asks for more, so it must not admit comics the shorter query rejected.
+	// Because query length is measured in information rather than in words, a common word adds
+	// almost nothing to the allowance and cannot turn an AND into an OR. MRR is blind to this:
+	// a configuration can score perfectly on the golden set and still widen 8 results into 29.
+	await suite.test("adding a common word to a query does not widen the result set", () => {
+		const pairs = [
+			["rosalyn help", "calvin rosalyn help"],
+			["transmogrifier", "calvin transmogrifier"],
+			["snow goons", "calvin snow goons"],
+			["clean your room", "calvin clean your room"],
+			["rosalyn susie", "calvin rosalyn susie"],
+		];
+		for (const [shorter, longer] of pairs) {
+			const before = search(shorter, "rank").length;
+			const after = search(longer, "rank").length;
+			assert.ok(after <= before, `"${longer}" returned ${after} results against ${before} for "${shorter}"`);
+		}
+	});
+
 	await suite.test("a single query stays well under a frame budget", () => {
 		search("warm up", "rank");
 		const started = process.hrtime.bigint();

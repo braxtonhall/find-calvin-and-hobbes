@@ -97,16 +97,37 @@ test("a ubiquitous description word neither admits nor blocks a result", () => {
 	assert.deepEqual(ranked("calvin hallway"), ["2000-01-02"]);
 });
 
-test("a rarer keyword outranks a more common one in descriptions", () => {
+test("a partial description match survives only if it covers the rare term", () => {
 	install(
 		buildArchive([
-			{ date: "2000-01-01", transcript: "Nothing to see here.", description: "Calvin uses the transmogrifier." },
-			{ date: "2000-01-02", transcript: "Nothing to see here.", description: "Calvin is in the bathtub again." },
-			{ date: "2000-01-03", transcript: "Nothing to see here.", description: "Calvin is in the bathtub once more." },
-			{ date: "2000-01-04", transcript: "Nothing to see here.", description: "Calvin fills the bathtub up." },
+			{
+				date: "2000-01-01",
+				transcript: "Nothing to see here.",
+				description: "Calvin uses the transmogrifier in the bathtub.",
+			},
+			{
+				date: "2000-01-02",
+				transcript: "Nothing to see here.",
+				description: "Calvin is in the bathtub by the sandbox.",
+			},
+			{ date: "2000-01-03", transcript: "Nothing to see here.", description: "Calvin fills the bathtub up." },
 		]),
 	);
-	assert.deepEqual(ranked("transmogrifier bathtub").slice(0, 1), ["2000-01-01"]);
+	assert.deepEqual(ranked("transmogrifier bathtub sandbox"), ["2000-01-01"]);
+});
+
+// A wrong word in a two-word query leaves nothing to forgive it with, so the pair behaves as
+// an AND. The allowance only appears once the query is long enough to carry one.
+test("required coverage tightens as the query shortens", () => {
+	install(
+		buildArchive([
+			{ date: "2000-01-01", transcript: "Rosalyn is here to babysit.", description: "Rosalyn arrives." },
+			{ date: "2000-01-02", transcript: "Susie is reading outside.", description: "Susie reads on the porch." },
+		]),
+	);
+	assert.deepEqual(ranked("rosalyn"), ["2000-01-01"]);
+	assert.deepEqual(ranked("susie"), ["2000-01-02"]);
+	assert.deepEqual(ranked("rosalyn susie"), [], "neither term may carry a two-word query alone");
 });
 
 test("description vocabulary absent from the transcript is still findable", () => {
@@ -180,7 +201,7 @@ test("tuning is injectable and coverage is what admits partial matches", () => {
 			{ date: "2000-01-02", transcript: "I don't know what you mean by that." },
 		]),
 	);
-	const strict: Tuning = { ...TUNING, transcriptMinCoverage: 1 };
+	const strict: Tuning = { ...TUNING, transcriptCoverageFloor: 1 };
 	assert.deepEqual(ranked("you know you'll hate something when they don't tell you", strict), []);
 	assert.deepEqual(ranked("you know you'll hate something when they don't tell you"), ["2000-01-01"]);
 });
