@@ -58,9 +58,12 @@ export interface Day {
 	state: string;
 }
 
+export type SortMode = "date" | "rank";
+
 export interface Route {
 	view: "landing" | "results" | "detail" | "collection" | "credits";
 	q?: string;
+	sort?: SortMode;
 	date?: string;
 	id?: string;
 }

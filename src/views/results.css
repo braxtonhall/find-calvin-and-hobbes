@@ -57,6 +57,36 @@
 	background: var(--grey);
 }
 
+.results-sort {
+	width: 32px;
+	height: 32px;
+	color: var(--text-muted);
+	background: none;
+	border: 1px solid var(--grey);
+	border-radius: 6px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	padding: 0;
+}
+
+.results-sort:hover {
+	color: var(--text);
+	background: var(--grey);
+}
+
+.results-sort--active {
+	color: var(--golden);
+	border-color: var(--golden);
+}
+
+.results-sort svg {
+	width: 16px;
+	height: 16px;
+}
+
 .results-empty {
 	text-align: center;
 	color: var(--text-muted);

@@ -1,4 +1,4 @@
-import { Route } from "./types";
+import { Route, SortMode } from "./types";
 import { state } from "./state";
 import { scrollCellIntoViewIfNeeded } from "./utils";
 import { renderLanding } from "./views/landing";
@@ -13,9 +13,14 @@ export function parseRoute(): Route {
 
 	const noHash = hash.startsWith("#") ? hash.slice(1) : hash;
 
-	const searchMatch = noHash.match(/^\/search\?q=(.*)$/);
+	const searchMatch = noHash.match(/^\/search\?(.*)$/);
 	if (searchMatch) {
-		return { view: "results", q: decodeURIComponent(searchMatch[1]) };
+		const params = new URLSearchParams(searchMatch[1]);
+		return {
+			view: "results",
+			q: params.get("q") ?? "",
+			sort: params.get("sort") === "rank" ? "rank" : "date",
+		};
 	}
 
 	const comicMatch = noHash.match(/^\/comic\/(\d{4}-\d{2}-\d{2})$/);
@@ -34,6 +39,10 @@ export function parseRoute(): Route {
 
 	replaceRoute("#/");
 	return { view: "landing" };
+}
+
+export function buildSearchHash(query: string, sort: SortMode = "date"): string {
+	return "#/search?q=" + encodeURIComponent(query) + (sort === "rank" ? "&sort=rank" : "");
 }
 
 interface HistoryState {
@@ -89,7 +98,7 @@ export function handleRoute(): void {
 		}
 		case "results": {
 			document.getElementById("view-results")!.classList.add("active");
-			renderResults(route.q || "");
+			renderResults(route.q || "", route.sort || "date");
 			document.getElementById("main")!.scrollTop = 0;
 			document.title = `${route.q} — Calvin & Hobbes Search`;
 			break;

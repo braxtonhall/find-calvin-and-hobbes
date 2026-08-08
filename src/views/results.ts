@@ -1,21 +1,27 @@
 import "./results.css";
 
 import { state } from "../state";
-import { escHtml, highlightMatches, scrollCellIntoViewIfNeeded } from "../utils";
-import { navigate, replaceRoute, updateGridState } from "../router";
+import { SortMode } from "../types";
+import { search } from "../search";
+import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
+import { buildSearchHash, navigate, replaceRoute, updateGridState } from "../router";
 
-export function renderResults(query: string): void {
+const DATE_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+	<rect x="2" y="3.5" width="12" height="10" rx="1.5" /><path d="M2 6.5h12M5.5 2v3M10.5 2v3" />
+</svg>`;
+
+const RANK_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+	<path d="M3 3v10M3 13l-2-2M3 13l2-2M7.5 4h7M7.5 8h5M7.5 12h3" />
+</svg>`;
+
+export function renderResults(query: string, sort: SortMode): void {
 	const element = document.getElementById("view-results")!;
-	const lowerQuery = query.toLowerCase();
-	// A comic matches on either its transcript or its alternate dialog; the original wins when both match.
-	const results = state.comics
-		.map((comic) => {
-			if (comic.transcript.toLowerCase().includes(lowerQuery)) return { comic, text: comic.transcript };
-			if (comic.alternate && comic.alternate.toLowerCase().includes(lowerQuery))
-				return { comic, text: comic.alternate };
-			return null;
-		})
-		.filter((result) => result !== null);
+	const results = search(query, sort);
+
+	const sortIsRank = sort === "rank";
+	const sortLabel = sortIsRank
+		? "Sorted by relevance — click to sort by date"
+		: "Sorted by date — click to sort by relevance";
 
 	let html = `<div class="results-search-bar">
 		<input
@@ -27,13 +33,20 @@ export function renderResults(query: string): void {
 			autocomplete="off"
 		/>
 		<button class="results-clear" id="results-clear" aria-label="Clear search">&times;</button>
+		<button
+			class="results-sort${sortIsRank ? " results-sort--active" : ""}"
+			id="results-sort"
+			title="${sortLabel}"
+			aria-label="${sortLabel}"
+			aria-pressed="${sortIsRank}"
+		>${sortIsRank ? RANK_ICON : DATE_ICON}</button>
 	</div>`;
 
 	if (results.length === 0) {
 		html += `<div class="results-empty">No comics found for &ldquo;${escHtml(query)}&rdquo;</div>`;
 	} else {
 		html += `<div style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">${results.length} result${results.length !== 1 ? "s" : ""} for &ldquo;${escHtml(query)}&rdquo;</div>`;
-		for (const { comic, text } of results) {
+		for (const { comic, text, ranges } of results) {
 			const [year, month, day] = comic.date.split("-").map(Number);
 			const dateObject = new Date(Date.UTC(year, month - 1, day));
 			const dateFormatted = dateObject.toLocaleDateString("en-US", {
@@ -43,7 +56,7 @@ export function renderResults(query: string): void {
 				day: "numeric",
 				timeZone: "UTC",
 			});
-			const highlighted = highlightMatches(text, query);
+			const highlighted = highlightRanges(text, ranges);
 
 			html += `<div class="result-row${comic.image ? "" : " result-row--no-image"}" data-date="${comic.date}" tabindex="0" role="button" aria-label="View comic from ${dateFormatted}">
 				<div class="result-header">${dateFormatted}</div>
@@ -61,14 +74,15 @@ export function renderResults(query: string): void {
 
 	const input = document.getElementById("results-input") as HTMLInputElement;
 	const clearButton = document.getElementById("results-clear")!;
+	const sortButton = document.getElementById("results-sort")!;
 
 	input.addEventListener("input", () => {
 		if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
 		const inputQuery = input.value.trim();
 		state.resultsDebounceTimer = window.setTimeout(() => {
 			if (inputQuery) {
-				replaceRoute("#/search?q=" + encodeURIComponent(inputQuery));
-				renderResults(inputQuery);
+				replaceRoute(buildSearchHash(inputQuery, sort));
+				renderResults(inputQuery, sort);
 				updateGridState({ view: "results" });
 				document.getElementById("main")!.scrollTop = 0;
 				document.title = inputQuery + " — Calvin & Hobbes Search";
@@ -84,7 +98,7 @@ export function renderResults(query: string): void {
 			if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
 			const inputQuery = input.value.trim();
 			if (inputQuery) {
-				navigate("#/search?q=" + encodeURIComponent(inputQuery));
+				navigate(buildSearchHash(inputQuery, sort));
 			} else {
 				navigate("#/");
 			}
@@ -93,6 +107,12 @@ export function renderResults(query: string): void {
 
 	clearButton.addEventListener("click", () => {
 		navigate("#/");
+	});
+
+	sortButton.addEventListener("click", () => {
+		if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
+		const inputQuery = input.value.trim() || query;
+		if (inputQuery) navigate(buildSearchHash(inputQuery, sortIsRank ? "date" : "rank"));
 	});
 
 	element.querySelectorAll<HTMLElement>(".result-row").forEach((row) => {

@@ -1,6 +1,6 @@
 import "./landing.css";
 
-import { navigate } from "../router";
+import { buildSearchHash, navigate } from "../router";
 
 export function renderLanding(): void {
 	const element = document.getElementById("view-landing")!;
@@ -28,6 +28,6 @@ export function renderLanding(): void {
 	document.getElementById("landing-form")!.addEventListener("submit", (event) => {
 		event.preventDefault();
 		const query = input.value.trim();
-		if (query) navigate("#/search?q=" + encodeURIComponent(query));
+		if (query) navigate(buildSearchHash(query));
 	});
 }

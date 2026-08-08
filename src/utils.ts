@@ -10,21 +10,13 @@ export function escHtml(text: string): string {
 	return text.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
 }
 
-export function escRegex(text: string): string {
-	return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-export function highlightMatches(text: string, query: string): string {
-	if (!query) {
-		return escHtml(text);
-	}
-
-	const regex = new RegExp(escRegex(query), "gi");
+export function highlightRanges(text: string, ranges: readonly [number, number][]): string {
 	let html = "";
 	let index = 0;
-	for (const match of text.matchAll(regex)) {
-		html += escHtml(text.slice(index, match.index)) + `<mark>${escHtml(match[0])}</mark>`;
-		index = match.index + match[0].length;
+	for (const [start, end] of ranges) {
+		if (start < index) continue;
+		html += escHtml(text.slice(index, start)) + `<mark>${escHtml(text.slice(start, end))}</mark>`;
+		index = end;
 	}
 	return html + escHtml(text.slice(index));
 }
