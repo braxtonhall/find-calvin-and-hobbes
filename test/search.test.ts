@@ -97,7 +97,17 @@ test("a ubiquitous description word neither admits nor blocks a result", () => {
 	assert.deepEqual(ranked("calvin hallway"), ["2000-01-02"]);
 });
 
+// The corpus has to be big enough for `bathtub` to be common WITHOUT being weightless. An
+// earlier version of this used three documents, which put `bathtub` in all of them: its IDF was
+// zero, it was dropped below descriptionIdfFloor before scoring, and the two candidates were
+// left covering one equally rare term each. The assertion pinned a preference between two
+// symmetric documents, so it was measuring a tie-break rather than the rule in its own name.
 test("a partial description match survives only if it covers the rare term", () => {
+	const filler: Entry[] = Array.from({ length: 7 }, (_, index) => ({
+		date: `2000-02-${String(index + 1).padStart(2, "0")}`,
+		transcript: "Nothing to see here.",
+		description: "Hobbes naps on the windowsill.",
+	}));
 	install(
 		buildArchive([
 			{
@@ -108,12 +118,15 @@ test("a partial description match survives only if it covers the rare term", () 
 			{
 				date: "2000-01-02",
 				transcript: "Nothing to see here.",
-				description: "Calvin is in the bathtub by the sandbox.",
+				description: "Calvin is in the bathtub by the window.",
 			},
 			{ date: "2000-01-03", transcript: "Nothing to see here.", description: "Calvin fills the bathtub up." },
+			...filler,
 		]),
 	);
-	assert.deepEqual(ranked("transmogrifier bathtub sandbox"), ["2000-01-01"]);
+	// `bathtub` is in 3 of 10 descriptions and carries real weight; `transmogrifier` is in one.
+	// The two strips that have only the common word must not ride in on it.
+	assert.deepEqual(ranked("transmogrifier bathtub"), ["2000-01-01"]);
 });
 
 // A wrong word in a two-word query leaves nothing to forgive it with, so the pair behaves as

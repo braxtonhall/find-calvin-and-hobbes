@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { loadRealArchive } from "./helpers/archive";
+import { RECITED } from "./fixtures/golden";
 import { CLASS_NAMES, GENERATED_PATH, LabelledQuery, loadGenerated, splitFor } from "./helpers/queries";
 
 const CLASSES = Object.keys(CLASS_NAMES);
@@ -30,6 +31,46 @@ const descriptionOf = (date: string) => {
 	const comic = byDate.get(date);
 	return comic ? archive.descriptions.get(comic.id || comic.date) || "" : "";
 };
+
+// Document frequency over the descriptions, matching how the index counts: one comic is one
+// document. The engine's own test for whether a word is worth anything in this corpus: below
+// descriptionIdfFloor a term is dropped outright, so a query resting on such words is resting
+// on nothing. `calvin` is in 98% of descriptions and fails this, as it should.
+const DESCRIPTION_IDF_FLOOR = 1;
+const documentFrequency = new Map<string, number>();
+for (const description of archive.descriptions.values()) {
+	for (const word of new Set(words(description))) {
+		documentFrequency.set(word, (documentFrequency.get(word) || 0) + 1);
+	}
+}
+const informative = (word: string) => {
+	const frequency = documentFrequency.get(word);
+	return frequency !== undefined && Math.log(archive.descriptions.size / frequency) >= DESCRIPTION_IDF_FLOOR;
+};
+
+// Every bound a recitation has to clear, measured in one place so the calibration test below
+// can hold the hand-written set to exactly the rules the generator is held to.
+function recite(query: string, date: string) {
+	const asked = words(query);
+	const transcript = words(transcriptOf(date));
+	const joined = transcript.join(" ");
+	const present = new Set(transcript);
+
+	let run = 0;
+	for (let start = 0; start < asked.length; start++) {
+		for (let end = start; end < asked.length; end++) {
+			if (!joined.includes(asked.slice(start, end + 1).join(" "))) break;
+			run = Math.max(run, end - start + 1);
+		}
+	}
+
+	return {
+		run,
+		overlap: asked.filter((word) => present.has(word)).length / asked.length,
+		length: asked.length,
+		share: asked.length / Math.max(1, transcript.length),
+	};
+}
 
 test(`${GENERATED_PATH} schema`, async (suite) => {
 	await suite.test("every row has the required shape", () => {
@@ -79,20 +120,12 @@ test(`${GENERATED_PATH} schema`, async (suite) => {
 	});
 });
 
-// Queries copied out of the source text measure the corpus against itself. A recitation is a
-// memory, so it must differ from the transcript somewhere; a description query is written by
-// someone who has never read the description, so it cannot echo its phrasing.
+// A description query is written by someone who has never read the description, so it cannot
+// echo its phrasing. There is deliberately no matching rule for class A: a remembered line is
+// verbatim by nature, and banning that is what broke the recited set (see the calibration test
+// below). Class A is bounded by length and by share of the transcript instead.
 test("generated queries do not leak the text they are meant to find", async (suite) => {
-	const recited = generated.filter((row: LabelledQuery) => row.class === "A" && row.date);
 	const described = generated.filter((row: LabelledQuery) => row.class === "B" && row.date);
-
-	await suite.test("a recited query is never a verbatim span of the transcript", () => {
-		for (const row of recited) {
-			const query = words(row.query).join(" ");
-			const transcript = words(transcriptOf(row.date!)).join(" ");
-			assert.ok(!transcript.includes(query), `${row.id}: "${row.query}" is copied verbatim from the transcript`);
-		}
-	});
 
 	await suite.test("a described query shares no three-word span with the description", () => {
 		for (const row of described) {
@@ -104,53 +137,94 @@ test("generated queries do not leak the text they are meant to find", async (sui
 	});
 });
 
-// The anti-leak rule stops a recitation being a copy; this stops it being a paraphrase. The two
-// together bracket a class A query from both sides. The hand-written set keeps a median verbatim
-// run of 8 words and 100% overlap and clears these thresholds at 26 of 27, while the generated
-// batches kept a run of 3 and 44-59% — the agent applied `substituted synonym` to every content
-// word, which is a thesaurus pass rather than a memory and cannot be found by anything.
-test("generated recitations are memories, not paraphrases", async (suite) => {
+// A class A query is bracketed from both sides. Below, it must stay close enough to the
+// transcript to be a memory rather than a thesaurus pass: the first generated batches kept a
+// run of 3 words and 44-59% overlap, which nothing can find. Above, it must stay small enough
+// to be a query rather than a transcription — and this is the half that was missing. Banning
+// verbatim spans outright, as an earlier rule did, made "reproduce the strip and change two
+// words" the cheapest way to satisfy the run and overlap rules, and the generator took it:
+// the median class A row covered 73% of its transcript against the hand-written set's 19%,
+// one covered 108%, and the class returned a 0% zero rate and MRR 0.993 while discriminating
+// between no two configurations at all.
+//
+// Class C is deliberately excluded: a hybrid query draws some of its words from the
+// description, so holding it to a recitation standard would be measuring the wrong thing.
+const MINIMUM_RUN = 5;
+const MINIMUM_OVERLAP = 0.7;
+
+// Both bounds are the hand-written set's own maxima, so every rule here is calibrated against
+// a real query rather than a theory of one. The calibration test below pins that.
+const LONGEST_RECITED = 14;
+const MAXIMUM_SHARE = 0.65;
+
+test("generated recitations are memories, not transcriptions", async (suite) => {
 	const recited = generated.filter((row: LabelledQuery) => row.class === "A" && row.date);
-
-	const MINIMUM_RUN = 5;
-	const MINIMUM_OVERLAP = 0.7;
-
-	// Class C is deliberately excluded: a hybrid query draws some of its words from the
-	// description, so holding it to a recitation standard would be measuring the wrong thing.
-	function measure(row: LabelledQuery): { run: number; overlap: number } {
-		const query = words(row.query);
-		const transcript = words(transcriptOf(row.date!));
-		const joined = transcript.join(" ");
-		const present = new Set(transcript);
-
-		let run = 0;
-		for (let start = 0; start < query.length; start++) {
-			for (let end = start; end < query.length; end++) {
-				if (!joined.includes(query.slice(start, end + 1).join(" "))) break;
-				run = Math.max(run, end - start + 1);
-			}
-		}
-
-		return { run, overlap: query.filter((word) => present.has(word)).length / query.length };
-	}
+	const measure = (row: LabelledQuery) => recite(row.query, row.date!);
 
 	await suite.test(`a recited query keeps a verbatim run of ${MINIMUM_RUN} words`, () => {
-		const paraphrased = recited.filter((row) => measure(row).run < MINIMUM_RUN);
 		assert.deepEqual(
-			paraphrased.map((row) => `${row.id} (run ${measure(row).run})`),
+			recited.filter((row) => measure(row).run < MINIMUM_RUN).map((row) => `${row.id} (run ${measure(row).run})`),
 			[],
 			"a recitation with no intact phrase is a paraphrase, and measures the generator",
 		);
 	});
 
 	await suite.test(`a recited query keeps ${MINIMUM_OVERLAP * 100}% of its words`, () => {
-		const thin = recited.filter((row) => measure(row).overlap < MINIMUM_OVERLAP);
 		assert.deepEqual(
-			thin.map((row) => `${row.id} (${(measure(row).overlap * 100).toFixed(0)}%)`),
+			recited
+				.filter((row) => measure(row).overlap < MINIMUM_OVERLAP)
+				.map((row) => `${row.id} (${(measure(row).overlap * 100).toFixed(0)}%)`),
 			[],
 			"too few of the words survive in the transcript to call this a memory of it",
 		);
 	});
+
+	await suite.test(`a recited query is at most ${LONGEST_RECITED} words`, () => {
+		assert.deepEqual(
+			recited
+				.filter((row) => measure(row).length > LONGEST_RECITED)
+				.map((row) => `${row.id} (${measure(row).length} words)`),
+			[],
+			"nobody types a paragraph from memory; a query this long is a transcription",
+		);
+	});
+
+	await suite.test(`a recited query covers at most ${MAXIMUM_SHARE * 100}% of the transcript`, () => {
+		assert.deepEqual(
+			recited
+				.filter((row) => measure(row).share > MAXIMUM_SHARE)
+				.map((row) => `${row.id} (${(measure(row).share * 100).toFixed(0)}% of the strip)`),
+			[],
+			"a query that reproduces the strip is the corpus measuring itself, and is found by anything",
+		);
+	});
+});
+
+// The rule that was missing. Every threshold above is a claim about what a real recited query
+// looks like, and the 27 hand-written ones are the only evidence in the repository of what
+// that is. A rule they fail is measuring the wrong thing — which is exactly what happened:
+// the verbatim-span ban rejected 17 of these 27, including `will you check for monsters under
+// the bed`, while the set it produced scored MRR 1.000 and told the sweep nothing.
+test("the class A rules accept the queries a person actually wrote", () => {
+	const failures = RECITED.filter((row) => {
+		const measured = recite(row.query, row.date);
+		return (
+			measured.run < MINIMUM_RUN ||
+			measured.overlap < MINIMUM_OVERLAP ||
+			measured.length > LONGEST_RECITED ||
+			measured.share > MAXIMUM_SHARE
+		);
+	});
+
+	// One golden query is a genuine outlier rather than evidence the rules are wrong, so the
+	// bar is 26 of 27 rather than all of them. Any further slippage means a threshold moved
+	// away from the hand-written set and needs justifying against it, not against a theory.
+	assert.ok(
+		failures.length <= 1,
+		`${failures.length} of ${RECITED.length} hand-written recited queries fail the class A rules, ` +
+			`so the rules describe something other than a real query:\n` +
+			failures.map((row) => `  "${row.query}" -> ${JSON.stringify(recite(row.query, row.date))}`).join("\n"),
+	);
 });
 
 // The anti-leak rules stop a query being too close to its source. These stop it being too far.
@@ -160,25 +234,6 @@ test("generated recitations are memories, not paraphrases", async (suite) => {
 // hand-written set's 1.000, on queries averaging 23 words against the golden set's 5.
 test("generated description queries are answerable at all", async (suite) => {
 	const described = generated.filter((row: LabelledQuery) => row.class === "B" && row.date);
-
-	// Document frequency over the descriptions, matching how the index counts: one comic is
-	// one document.
-	const documentFrequency = new Map<string, number>();
-	for (const description of archive.descriptions.values()) {
-		for (const word of new Set(words(description))) {
-			documentFrequency.set(word, (documentFrequency.get(word) || 0) + 1);
-		}
-	}
-	const documents = archive.descriptions.size;
-
-	// The engine's own test for whether a word is worth anything in this corpus: below
-	// descriptionIdfFloor a term is dropped outright, so a query resting on such words is
-	// resting on nothing. `calvin` is in 98% of descriptions and fails this, as it should.
-	const DESCRIPTION_IDF_FLOOR = 1;
-	const informative = (word: string) => {
-		const frequency = documentFrequency.get(word);
-		return frequency !== undefined && Math.log(documents / frequency) >= DESCRIPTION_IDF_FLOOR;
-	};
 
 	// The hand-written set tops out at eight words and a real keyword query is shorter still,
 	// so the cap is generous: only paragraph-length paraphrases fail it.
@@ -204,6 +259,30 @@ test("generated description queries are answerable at all", async (suite) => {
 			unanswerable.map((row) => row.id),
 			[],
 			`no informative word in common with the description, so no lexical matcher can find it`,
+		);
+	});
+});
+
+// A near-miss pair asks the engine to prefer one of two similar strips, which is only a question
+// if something in the query separates them. The generation protocol asked for a decoy that was
+// plausibly confusable and never required it to be distinguishable, and paraphrase-level decoys
+// usually are not: 4 of the first 7 pairs shared no distinguishing word at all, a 5th was
+// separated only by `an`, and the class scored 0/7. That measured the fixture, not the ranker.
+test("generated near-miss pairs are decidable", async (suite) => {
+	const pairs = generated.filter((row: LabelledQuery) => row.class === "E" && row.date && row.decoy);
+
+	const vocabulary = (date: string) => new Set([...words(descriptionOf(date)), ...words(transcriptOf(date))]);
+
+	await suite.test("a near-miss query holds an informative word the decoy does not", () => {
+		const undecidable = pairs.filter((row) => {
+			const target = vocabulary(row.date!);
+			const decoy = vocabulary(row.decoy!);
+			return !words(row.query).some((word) => target.has(word) && !decoy.has(word) && informative(word));
+		});
+		assert.deepEqual(
+			undecidable.map((row) => `${row.id} (vs ${row.decoy})`),
+			[],
+			"nothing in the query separates the target from its decoy, so no ranking of the two can be correct",
 		);
 	});
 });

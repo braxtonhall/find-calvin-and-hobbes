@@ -18,8 +18,15 @@ const CANDIDATES: Record<string, number[]> = {
 	transcriptRepeatWeight: [0, 0.25, 0.5, 1],
 	descriptionRepeatWeight: [0, 0.1, 0.25, 0.5, 1],
 	rarityExponent: [1, 1.25, 1.5, 2],
-	transcriptCoverageFloor: [0.3, 0.4, 0.5, 0.6, 0.7],
-	descriptionCoverageFloor: [0.3, 0.4, 0.5, 0.6, 0.7],
+	// Both floors ran with 0.3 as the bottom of the grid while sitting at or near it, so the
+	// sweep could not try the only direction that helped and reported eleven `keep` lines that
+	// read as convergence. At 0.1 the description floor takes class C's zero-result rate from
+	// 25% to 3% and the held-out rate to nothing, with both guard rails still holding.
+	// 0 is deliberately absent from both: it reduces required coverage to a single term, which
+	// turns every query into an OR and is caught by the hollow-bloat guard rather than the
+	// objective. Leaving it out keeps the grid inside the range where the guard has margin.
+	transcriptCoverageFloor: [0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],
+	descriptionCoverageFloor: [0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],
 	descriptionMinMass: [0, 1, 1.5, 2.5, 4],
 	descriptionIdfFloor: [0.25, 0.5, 1, 1.5, 2],
 	descriptionPreference: [0.4, 0.55, 0.7, 0.85, 1],
@@ -94,6 +101,30 @@ function collapses(tuning: Tuning): string[] {
 	});
 }
 
+// The collapse guard stops the description corpus disappearing; this stops it flooding. Class D
+// is scored on result count rather than rank, so it never enters the objective and a candidate
+// that doubles every result set costs the sweep nothing — descriptionCoverageFloor at 0 reduces
+// required coverage to a single term, which scores best on every ranking metric in this file
+// while taking hollow queries from 145 results to 239. Ranking metrics cannot see a result set
+// that is merely useless, so this has to be a constraint too.
+const BLOAT_SHARE = 1.5;
+
+let baselineHollowResults = 0;
+
+function hollowResults(tuning: Tuning): number {
+	const rows = select(generated, { classes: ["D"] });
+	if (rows.length === 0) return 0;
+	return rows.reduce((total, row) => total + search(row.query, "rank", tuning).length, 0) / rows.length;
+}
+
+function bloats(tuning: Tuning): string[] {
+	if (baselineHollowResults === 0) return [];
+	const after = hollowResults(tuning);
+	return after > baselineHollowResults * BLOAT_SHARE
+		? [`hollow queries ${baselineHollowResults.toFixed(0)} -> ${after.toFixed(0)} results on average`]
+		: [];
+}
+
 interface Score {
 	recited: number;
 	described: number;
@@ -107,6 +138,8 @@ const generated = loadGenerated();
 const golden = loadGolden();
 const train = select(generated, { split: "train" });
 const held = select(generated, { split: "test" });
+
+baselineHollowResults = hollowResults(TUNING);
 
 // Below this the differences between candidate values sit inside the noise, and the sweep
 // would be fitting a handful of queries rather than measuring anything.
@@ -191,7 +224,8 @@ for (let pass = 1; pass <= 2; pass++) {
 				gain > MINIMUM_GAIN &&
 				!collateral &&
 				violations(candidate).length === 0 &&
-				collapses(candidate).length === 0
+				collapses(candidate).length === 0 &&
+				bloats(candidate).length === 0
 			) {
 				chosen = value;
 				chosenScore = candidateScore;
@@ -211,6 +245,26 @@ for (let pass = 1; pass <= 2; pass++) {
 
 console.log(`\n${format("tuned", bestScore)}`);
 console.log(JSON.stringify(best, null, "\t"));
+
+// A value resting against the end of its own candidate list is not a converged parameter, it is
+// an unanswered question: the sweep never saw what lies beyond it. This is indistinguishable
+// from a real optimum in the log — the run of 2026-08-09 printed `keep` for all eleven knobs
+// with descriptionCoverageFloor pinned to the bottom of its grid, and the value one notch below
+// turned out to be worth 0.11 MRR on the described intent.
+const atEdge = KNOBS.flatMap((knob) => {
+	const values = [...CANDIDATES[knob]].sort((a, b) => a - b);
+	const value = best[knob] as number;
+	if (values.length < 2 || (value !== values[0] && value !== values[values.length - 1])) return [];
+	const direction = value === values[0] ? "below" : "above";
+	return [
+		`  ${knob} = ${value} is the ${direction === "below" ? "lowest" : "highest"} value tried; nothing ${direction} it was measured`,
+	];
+});
+if (atEdge.length > 0) {
+	console.log(`\nparameters resting on the edge of their grid:`);
+	for (const line of atEdge) console.log(line);
+	console.log(`Extend the candidate list before reading these as converged.`);
+}
 
 function report(label: string, rows: LabelledQuery[]): Record<string, unknown> {
 	if (rows.length === 0) return {};

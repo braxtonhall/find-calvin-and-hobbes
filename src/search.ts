@@ -35,7 +35,13 @@ export const TUNING: Tuning = {
 	descriptionRepeatWeight: 0,
 	rarityExponent: 1.25,
 	transcriptCoverageFloor: 0.4,
-	descriptionCoverageFloor: 0.3,
+	// Measured, not swept: 0.3 was the bottom of the sweep's own candidate grid, so the only
+	// direction that helped was never tried and eleven `keep` lines read as convergence. Down
+	// here the described intent goes 0.7524 -> 0.8674 MRR, hybrid queries returning nothing go
+	// from 25% to 1%, and the held-out zero rate reaches nought, with the golden set unmoved.
+	// Not lower: at 0 the requirement degenerates to a single term and hollow queries jump from
+	// 145 results to 239, and 0.02 buys 0.007 MRR that 62 distinct strips cannot resolve.
+	descriptionCoverageFloor: 0.05,
 	descriptionMinMass: 1.5,
 	transcriptIdfFloor: 0.5,
 	descriptionIdfFloor: 1,
