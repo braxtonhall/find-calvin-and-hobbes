@@ -268,6 +268,33 @@ test("the inflection that was typed still outranks the one that was not", () => 
 	assert.deepEqual(ranked("complained"), ["2000-01-02"]);
 });
 
+// One term reaches several words, so a field saying `snow` five times and a field saying
+// `snow` and `snowball` once each both collect more hits than a field saying `snow` alone.
+// `repeatVariety` decides whether the second of those counts as emphasis.
+const SNOW: Entry[] = [
+	{ date: "2000-01-01", transcript: "There is snow outside." },
+	{ date: "2000-01-02", transcript: "Snow, snow, snow, snow and more snow outside." },
+	{ date: "2000-01-03", transcript: "There is snow and a snowball outside." },
+	...Array.from({ length: 7 }, (_, index) => ({
+		date: `2000-02-${String(index + 1).padStart(2, "0")}`,
+		transcript: "Nothing to see here at all.",
+	})),
+];
+
+test("repeatVariety decides whether a second matched word counts as saying it again", () => {
+	install(buildArchive(SNOW));
+	const emphasis: Tuning = { ...TUNING, repeatVariety: 0 };
+
+	// At 1 the extra word is a repetition, so one `snow` and one `snowball` outrank one `snow`.
+	assert.deepEqual(ranked("snow outside").slice(0, 3), ["2000-01-02", "2000-01-03", "2000-01-01"]);
+	// At 0 only the same word again counts, and the pair falls back behind the single mention.
+	assert.deepEqual(ranked("snow outside", emphasis).slice(0, 3), ["2000-01-02", "2000-01-01", "2000-01-03"]);
+
+	// Either way, five of one word beat one of it: a rarer relative must not displace the
+	// repetition of the word that was typed.
+	assert.equal(ranked("snow outside", emphasis)[0], "2000-01-02");
+});
+
 test("tuning is injectable and coverage is what admits partial matches", () => {
 	install(
 		buildArchive([

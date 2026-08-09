@@ -19,6 +19,7 @@ export interface Tuning {
 	runWeight: number;
 	transcriptRepeatWeight: number;
 	descriptionRepeatWeight: number;
+	repeatVariety: number;
 	rarityExponent: number;
 	transcriptCoverageFloor: number;
 	descriptionCoverageFloor: number;
@@ -34,8 +35,22 @@ export interface Tuning {
 export const TUNING: Tuning = {
 	sequenceWeight: 1,
 	runWeight: 2,
-	transcriptRepeatWeight: 1,
+	// Measured, not swept: the sweep judges this on the recited intent alone, where 0.25 gains
+	// 0.0022 against a 0.005 threshold, so it would keep 1 forever. Across the whole grid 0.25
+	// is the only value that is at least as good as every other on every measure at once —
+	// train recited 0.9189 -> 0.9211 and described unmoved at its own maximum, held-out
+	// identical, and both golden sets at 1.000, golden described having sat at 0.971. Above it
+	// golden described falls away again; below it the described intent does.
+	transcriptRepeatWeight: 0.25,
 	descriptionRepeatWeight: 0,
+	// How much of a term's variety counts as repetition. 1 is what the engine has always done
+	// and what every other parameter here was fitted against, so it is the default until
+	// something can tell the two apart. Nothing in the fixture can: across 394 generated and
+	// 50 golden queries, 0 and 1 produce identical ranks for every single one, and differ only
+	// in which text five `snow` results display. The queries that would resolve it are the ones
+	// nobody has written — a strip that says one word repeatedly against a strip that says
+	// several forms of it once.
+	repeatVariety: 1,
 	rarityExponent: 1.25,
 	transcriptCoverageFloor: 0.4,
 	// Measured, not swept: 0.3 was the bottom of the sweep's own candidate grid, so the only
@@ -396,15 +411,34 @@ function collectHits(field: IndexedField, expansions: Expansion[]): FieldHits {
 	return hits;
 }
 
-function summarise(hits: FieldHits, ceilings: Float64Array, repeatWeight: number): Summary {
+function summarise(hits: FieldHits, ceilings: Float64Array, repeatWeight: number, variety: number): Summary {
 	const termCount = ceilings.length;
 	const best = new Float64Array(termCount);
 	const counts = new Int32Array(termCount);
 
+	// Two readings of what the repeat weight is counting, and `repeatVariety` slides between
+	// them. A term reaches several words at once — `play` hits `play` and `playing` by prefix,
+	// and now `played` by stem — so a field that says each of them once has either said one
+	// thing three ways (`hits`, variety 1) or said three different words once each (`repeats`,
+	// variety 0). Which one earns a repetition bonus is a question about readers, not about
+	// arithmetic, so it is a parameter rather than a decision.
+	//
+	// A word is identified by its contribution, which is a property of the word and the term
+	// together. The map is skipped at variety 1, where the per-word tally is unused.
+	const occurrences = variety < 1 ? new Map<string, number>() : null;
+	const repeats = new Int32Array(termCount);
+
 	for (let index = 0; index < hits.positions.length; index++) {
 		const term = hits.terms[index];
+		const contribution = hits.contributions[index];
 		counts[term]++;
-		if (hits.contributions[index] > best[term]) best[term] = hits.contributions[index];
+		if (occurrences !== null) {
+			const key = `${term}\0${contribution}`;
+			const seen = (occurrences.get(key) || 0) + 1;
+			occurrences.set(key, seen);
+			if (seen > repeats[term]) repeats[term] = seen;
+		}
+		if (contribution > best[term]) best[term] = contribution;
 	}
 
 	let base = 0;
@@ -416,7 +450,10 @@ function summarise(hits: FieldHits, ceilings: Float64Array, repeatWeight: number
 		const contribution = Math.min(best[term], ceilings[term]);
 		ceiling += ceilings[term];
 		achieved += contribution;
-		if (counts[term] > 0) base += contribution * (1 + repeatWeight * Math.log2(counts[term]));
+		// At variety 1 this is the hit count and `repeats` was never filled, which the blend
+		// gives back exactly; at 0 it is the most any one word was repeated.
+		const repeated = repeats[term] + variety * (counts[term] - repeats[term]);
+		if (counts[term] > 0) base += contribution * (1 + repeatWeight * Math.log2(repeated));
 	}
 
 	return { base, achieved, ceiling, coverage: ceiling > 0 ? achieved / ceiling : 0 };
@@ -485,7 +522,7 @@ function scoreTranscript(
 	const hits = collectHits(field, expansions);
 	if (hits.positions.length === 0) return null;
 
-	const summary = summarise(hits, ceilings, tuning.transcriptRepeatWeight);
+	const summary = summarise(hits, ceilings, tuning.transcriptRepeatWeight, tuning.repeatVariety);
 	if (summary.ceiling === 0 || summary.coverage < required) return null;
 
 	const { lcs, run } = orderedSubsequence(order, hits);
@@ -508,7 +545,7 @@ function scoreDescription(
 	const hits = collectHits(field, expansions);
 	if (hits.positions.length === 0) return null;
 
-	const summary = summarise(hits, ceilings, tuning.descriptionRepeatWeight);
+	const summary = summarise(hits, ceilings, tuning.descriptionRepeatWeight, tuning.repeatVariety);
 	if (summary.ceiling === 0 || summary.coverage < required) return null;
 	if (summary.achieved < tuning.descriptionMinMass) return null;
 

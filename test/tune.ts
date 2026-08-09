@@ -17,6 +17,10 @@ const CANDIDATES: Record<string, number[]> = {
 	runWeight: [0, 1, 2, 4, 8],
 	transcriptRepeatWeight: [0, 0.25, 0.5, 1],
 	descriptionRepeatWeight: [0, 0.1, 0.25, 0.5, 1],
+	// Inert while both repeat weights leave it nothing to count differently, and inert on the
+	// current fixture regardless — it is here so that queries written to separate emphasis from
+	// variety have a knob to move. Judged on both intents because one value serves both corpora.
+	repeatVariety: [0, 0.25, 0.5, 0.75, 1],
 	rarityExponent: [1, 1.25, 1.5, 2],
 	// Both floors ran with 0.3 as the bottom of the grid while sitting at or near it, so the
 	// sweep could not try the only direction that helped and reported eleven `keep` lines that
@@ -56,6 +60,7 @@ const OBJECTIVE: Record<string, "recited" | "described" | "combined"> = {
 	descriptionMinMass: "described",
 	descriptionIdfFloor: "described",
 	rarityExponent: "combined",
+	repeatVariety: "combined",
 	descriptionPreference: "combined",
 	agreementBonus: "combined",
 };

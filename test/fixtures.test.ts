@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { loadRealArchive } from "./helpers/archive";
 import { RECITED } from "./fixtures/golden";
+import { stem } from "../src/stem";
 import { CLASS_NAMES, GENERATED_PATH, LabelledQuery, loadGenerated, splitFor } from "./helpers/queries";
 
 const CLASSES = Object.keys(CLASS_NAMES);
@@ -263,6 +264,39 @@ test("generated description queries are answerable at all", async (suite) => {
 	});
 });
 
+// An emphasis pair: the target says one word over and over, the decoy says two other forms of
+// that same word once each and never the word itself. Both strips look equally relevant to a
+// bag of words, and they come apart only on whether variety counts as repetition. Requiring the
+// repeated word to be in the query, informative, and absent from the decoy makes the pair
+// decidable by the rule above as well, so it measures the parameter rather than confusion.
+const EMPHASIS_REPEATS = 3;
+const EMPHASIS_FORMS = 2;
+const EMPHASIS_FROM = 12;
+const EMPHASIS_SHARE = 0.25;
+
+function emphasises(row: LabelledQuery): string | null {
+	const target = words(`${transcriptOf(row.date!)} ${descriptionOf(row.date!)}`);
+	const decoy = words(`${transcriptOf(row.decoy!)} ${descriptionOf(row.decoy!)}`);
+	const asked = new Set(words(row.query));
+
+	const families = new Map<string, Set<string>>();
+	for (const word of decoy) {
+		const key = stem(word);
+		if (!families.has(key)) families.set(key, new Set());
+		families.get(key)!.add(word);
+	}
+
+	const repeats = new Map<string, number>();
+	for (const word of target) repeats.set(word, (repeats.get(word) || 0) + 1);
+
+	for (const [word, count] of repeats) {
+		if (count < EMPHASIS_REPEATS || !asked.has(word) || !informative(word)) continue;
+		if (families.get(stem(word))?.has(word)) continue;
+		if ((families.get(stem(word))?.size ?? 0) >= EMPHASIS_FORMS) return word;
+	}
+	return null;
+}
+
 // A near-miss pair asks the engine to prefer one of two similar strips, which is only a question
 // if something in the query separates them. The generation protocol asked for a decoy that was
 // plausibly confusable and never required it to be distinguishable, and paraphrase-level decoys
@@ -283,6 +317,29 @@ test("generated near-miss pairs are decidable", async (suite) => {
 			undecidable.map((row) => `${row.id} (vs ${row.decoy})`),
 			[],
 			"nothing in the query separates the target from its decoy, so no ranking of the two can be correct",
+		);
+	});
+
+	// `repeatVariety` asks whether several forms of a word are the same evidence as one word
+	// said several times, and nothing in the fixture can answer it: at 0 and at 1 all 444
+	// queries return their target at exactly the same rank. An emphasis pair is the shape that
+	// separates them. The archive offers 23,607 of them, so the gap is in what the protocol
+	// asks for rather than in what the corpus holds.
+	//
+	// `stem` is imported rather than reimplemented here, unlike the document frequencies above:
+	// what makes two words the same word is the engine's definition, and a pair built on any
+	// other one would not stress the parameter it exists to stress.
+	await suite.test("some near-miss pairs separate emphasis from variety", () => {
+		const emphasis = pairs.filter((row) => emphasises(row) !== null);
+		// A share only means something once there are pairs enough for it to be about the
+		// protocol rather than about luck.
+		const required = pairs.length < EMPHASIS_FROM ? 0 : Math.ceil(pairs.length * EMPHASIS_SHARE);
+		assert.ok(
+			emphasis.length >= required,
+			`${emphasis.length} of ${pairs.length} near-miss pairs separate emphasis from variety, and ` +
+				`${required} are needed. Such a pair repeats one informative query word in the target at least ` +
+				`${EMPHASIS_REPEATS} times, and names a decoy that never uses that word but does use ` +
+				`${EMPHASIS_FORMS} other forms of it.`,
 		);
 	});
 });
