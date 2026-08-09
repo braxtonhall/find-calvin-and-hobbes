@@ -104,6 +104,55 @@ test("generated queries do not leak the text they are meant to find", async (sui
 	});
 });
 
+// The anti-leak rule stops a recitation being a copy; this stops it being a paraphrase. The two
+// together bracket a class A query from both sides. The hand-written set keeps a median verbatim
+// run of 8 words and 100% overlap and clears these thresholds at 26 of 27, while the generated
+// batches kept a run of 3 and 44-59% — the agent applied `substituted synonym` to every content
+// word, which is a thesaurus pass rather than a memory and cannot be found by anything.
+test("generated recitations are memories, not paraphrases", async (suite) => {
+	const recited = generated.filter((row: LabelledQuery) => row.class === "A" && row.date);
+
+	const MINIMUM_RUN = 5;
+	const MINIMUM_OVERLAP = 0.7;
+
+	// Class C is deliberately excluded: a hybrid query draws some of its words from the
+	// description, so holding it to a recitation standard would be measuring the wrong thing.
+	function measure(row: LabelledQuery): { run: number; overlap: number } {
+		const query = words(row.query);
+		const transcript = words(transcriptOf(row.date!));
+		const joined = transcript.join(" ");
+		const present = new Set(transcript);
+
+		let run = 0;
+		for (let start = 0; start < query.length; start++) {
+			for (let end = start; end < query.length; end++) {
+				if (!joined.includes(query.slice(start, end + 1).join(" "))) break;
+				run = Math.max(run, end - start + 1);
+			}
+		}
+
+		return { run, overlap: query.filter((word) => present.has(word)).length / query.length };
+	}
+
+	await suite.test(`a recited query keeps a verbatim run of ${MINIMUM_RUN} words`, () => {
+		const paraphrased = recited.filter((row) => measure(row).run < MINIMUM_RUN);
+		assert.deepEqual(
+			paraphrased.map((row) => `${row.id} (run ${measure(row).run})`),
+			[],
+			"a recitation with no intact phrase is a paraphrase, and measures the generator",
+		);
+	});
+
+	await suite.test(`a recited query keeps ${MINIMUM_OVERLAP * 100}% of its words`, () => {
+		const thin = recited.filter((row) => measure(row).overlap < MINIMUM_OVERLAP);
+		assert.deepEqual(
+			thin.map((row) => `${row.id} (${(measure(row).overlap * 100).toFixed(0)}%)`),
+			[],
+			"too few of the words survive in the transcript to call this a memory of it",
+		);
+	});
+});
+
 // The anti-leak rules stop a query being too close to its source. These stop it being too far.
 // A paragraph-length paraphrase that shares no informative word with the description it targets
 // cannot be answered at any parameter value, so a set full of them measures the generator
