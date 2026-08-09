@@ -29,6 +29,10 @@ const CANDIDATES: Record<string, number[]> = {
 	descriptionCoverageFloor: [0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],
 	descriptionMinMass: [0, 1, 1.5, 2.5, 4],
 	descriptionIdfFloor: [0.25, 0.5, 1, 1.5, 2],
+	// 0 is a real value here rather than an omission: it suppresses the inflection lookup, so
+	// the bottom of each grid is the engine as it was before the stemmer existed.
+	transcriptInflectionWeight: [0, 0.5, 0.7, 0.85, 1],
+	descriptionInflectionWeight: [0, 0.5, 0.7, 0.85, 1],
 	descriptionPreference: [0.4, 0.55, 0.7, 0.85, 1],
 	agreementBonus: [0, 0.15, 0.3, 0.6],
 };
@@ -45,7 +49,9 @@ const OBJECTIVE: Record<string, "recited" | "described" | "combined"> = {
 	runWeight: "recited",
 	transcriptRepeatWeight: "recited",
 	transcriptCoverageFloor: "recited",
+	transcriptInflectionWeight: "recited",
 	descriptionRepeatWeight: "described",
+	descriptionInflectionWeight: "described",
 	descriptionCoverageFloor: "described",
 	descriptionMinMass: "described",
 	descriptionIdfFloor: "described",

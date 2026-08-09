@@ -1,6 +1,7 @@
 import { Comic, SortMode } from "./types";
 import { state } from "./state";
 import { COMPOUNDS } from "./compounds";
+import { stem } from "./stem";
 
 export interface SearchResult {
 	comic: Comic;
@@ -24,6 +25,8 @@ export interface Tuning {
 	descriptionMinMass: number;
 	transcriptIdfFloor: number;
 	descriptionIdfFloor: number;
+	transcriptInflectionWeight: number;
+	descriptionInflectionWeight: number;
 	descriptionPreference: number;
 	agreementBonus: number;
 }
@@ -45,6 +48,21 @@ export const TUNING: Tuning = {
 	descriptionMinMass: 1.5,
 	transcriptIdfFloor: 0.5,
 	descriptionIdfFloor: 1,
+	// How much another inflection of a query word is worth beside the word itself.
+	//
+	// Off for transcripts, measured rather than assumed: across a 5x5 grid the transcript
+	// weight moves the recited intent by 0.0016 — a third of the sweep's own noise threshold —
+	// and takes a golden query with it, since `learning to ride a bicycle crash` then reaches
+	// the neighbouring strip that says "once you learn how to ride a bicycle". That fits what
+	// the two corpora are: a recitation quotes the strip, so its inflections are already the
+	// strip's, while a description query is the reader's own sentence about the picture.
+	//
+	// 0.7 for descriptions is where the described intent peaks (0.8497 -> 0.8542), class C
+	// stops returning nothing at all, and both queries that found no result now rank 2 and 3.
+	// Not higher: at 1 an inflection is worth as much as the word itself and held-out MRR
+	// falls from 0.931 to 0.911.
+	transcriptInflectionWeight: 0,
+	descriptionInflectionWeight: 0.7,
 	descriptionPreference: 0.7,
 	agreementBonus: 0.15,
 };
@@ -81,6 +99,10 @@ interface Corpus {
 	name: string;
 	documentFrequency: Map<string, number>;
 	documentCount: number;
+	// Words grouped by stem. Grouping rather than rewriting is what keeps this off the corpus
+	// statistics: every word keeps its own document frequency, so a query for `complains` is
+	// still as rare as `complains` is and only what it can match has widened.
+	inflections: Map<string, Set<string>>;
 }
 
 interface Expansion {
@@ -127,7 +149,16 @@ let cachedTuning: Tuning | null = null;
 const expansionCache = new Map<string, Expansion>();
 
 function emptyCorpus(name: string): Corpus {
-	return { name, documentFrequency: new Map(), documentCount: 0 };
+	return { name, documentFrequency: new Map(), documentCount: 0, inflections: new Map() };
+}
+
+function indexInflections(corpus: Corpus): void {
+	for (const word of corpus.documentFrequency.keys()) {
+		const key = stem(word);
+		const family = corpus.inflections.get(key);
+		if (family === undefined) corpus.inflections.set(key, new Set([word]));
+		else family.add(word);
+	}
 }
 
 /**
@@ -198,6 +229,9 @@ function ensureIndex(): void {
 
 		indexedComics.push({ comic, transcripts, description });
 	}
+
+	indexInflections(transcriptCorpus);
+	indexInflections(descriptionCorpus);
 }
 
 function inverseDocumentFrequency(corpus: Corpus, word: string): number {
@@ -239,12 +273,19 @@ function boundedDistance(a: string, b: string, max: number): number {
  * coverage. Rarity is anchored on the term as typed, so expanding `calvin` to the rarer
  * `calvin's` cannot make `calvin` itself look informative.
  */
-function expandTerm(corpus: Corpus, term: string, tuning: Tuning, suppressBelow: number): Expansion {
+function expandTerm(
+	corpus: Corpus,
+	term: string,
+	tuning: Tuning,
+	suppressBelow: number,
+	inflectionWeight: number,
+): Expansion {
 	const key = `${corpus.name}\0${term}`;
 	const cached = expansionCache.get(key);
 	if (cached) return cached;
 
 	const maxDistance = maxDistanceFor(term);
+	const inflections = inflectionWeight > 0 ? corpus.inflections.get(stem(term)) : undefined;
 	const matchWeights = new Map<string, number>();
 	const contributions = new Map<string, number>();
 	let bestContribution = 0;
@@ -259,6 +300,11 @@ function expandTerm(corpus: Corpus, term: string, tuning: Tuning, suppressBelow:
 		} else if (maxDistance > 0) {
 			const distance = boundedDistance(word, term, maxDistance);
 			if (distance > 0 && distance <= maxDistance) weight = DISTANCE_WEIGHTS[distance];
+		}
+		// Taken as a floor rather than a replacement: `sinks` and `sink` are one edit apart and
+		// would otherwise be scored as a typo, at 0.7, when they are the same word.
+		if (weight < inflectionWeight && inflections !== undefined && inflections.has(word)) {
+			weight = inflectionWeight;
 		}
 		if (weight === 0) continue;
 
@@ -539,9 +585,11 @@ function rankedSearch(sequence: string[], tuning: Tuning): SearchResult[] {
 	const termIndices = new Map(terms.map((term, index) => [term, index]));
 	const order = sequence.map((term) => termIndices.get(term)!);
 
-	const transcriptExpansions = terms.map((term) => expandTerm(transcriptCorpus, term, tuning, 0));
+	const transcriptExpansions = terms.map((term) =>
+		expandTerm(transcriptCorpus, term, tuning, 0, tuning.transcriptInflectionWeight),
+	);
 	const descriptionExpansions = terms.map((term) =>
-		expandTerm(descriptionCorpus, term, tuning, tuning.descriptionIdfFloor),
+		expandTerm(descriptionCorpus, term, tuning, tuning.descriptionIdfFloor, tuning.descriptionInflectionWeight),
 	);
 	const transcriptCeilings = denominators(transcriptExpansions, descriptionExpansions, transcriptCorpus, tuning);
 	const descriptionCeilings = denominators(descriptionExpansions, transcriptExpansions, descriptionCorpus, tuning);

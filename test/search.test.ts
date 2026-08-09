@@ -231,6 +231,43 @@ test("a split compound is highlighted once, across the whole word", () => {
 	assert.equal(result.text.slice(start, end), "goodnight");
 });
 
+// The prefix rule already reaches `complains` from `complain`, because the corpus word is the
+// longer of the two. This is the same relation in the direction a prefix cannot go, and it
+// runs on descriptions only: a recitation quotes the strip, so its inflections are the
+// strip's own, while a description query is the reader's sentence about the picture.
+const BEDTIME: Entry[] = [
+	{
+		date: "2000-01-01",
+		transcript: "Nothing to see here.",
+		description: "Calvin complains that bedtime is a fascist regime.",
+	},
+	{
+		date: "2000-01-02",
+		transcript: "Nothing to see here.",
+		description: "Calvin complained that bedtime is unfair.",
+	},
+	...Array.from({ length: 7 }, (_, index) => ({
+		date: `2000-02-${String(index + 1).padStart(2, "0")}`,
+		transcript: "Nothing to see here.",
+		description: "Hobbes naps on the windowsill.",
+	})),
+];
+
+test("a description written in another tense is still reachable", () => {
+	install(buildArchive(BEDTIME));
+	assert.deepEqual(ranked("complaining"), ["2000-01-01", "2000-01-02"]);
+});
+
+// Rarity is anchored on the term as typed and another inflection is worth less than the word
+// itself, so widening what a term can reach never reorders what it already reached. At one
+// term the two are not even comparable: required coverage is total, which only the word as
+// written can pay, so a single-word query answers with exactly what was asked for.
+test("the inflection that was typed still outranks the one that was not", () => {
+	install(buildArchive(BEDTIME));
+	assert.deepEqual(ranked("complained bedtime"), ["2000-01-02", "2000-01-01"]);
+	assert.deepEqual(ranked("complained"), ["2000-01-02"]);
+});
+
 test("tuning is injectable and coverage is what admits partial matches", () => {
 	install(
 		buildArchive([
