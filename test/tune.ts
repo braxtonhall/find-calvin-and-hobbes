@@ -59,12 +59,39 @@ const MONOTONICITY_PROBES = [
 	["snow goons", "calvin snow goons"],
 	["clean your room", "calvin clean your room"],
 	["rosalyn susie", "calvin rosalyn susie"],
+	["good night", "calvin good night"],
 ];
+
+// The same blind spot from the other direction. Every query in both fixtures is a phrase, so
+// a candidate can zero single-keyword description search without moving any MRR in the sweep:
+// descriptionMinMass at 4 takes `snow` from 129 description results to none while train,
+// held-out and golden all stay identical to four decimals. Measured, not hypothetical.
+const DESCRIPTION_PROBES = ["snow", "snowman", "wagon", "rosalyn", "bicycle", "doctor"];
+
+// Half of baseline, so ordinary tightening is allowed and a collapse is not.
+const COLLAPSE_SHARE = 0.5;
+
+function descriptionResults(probe: string, tuning: Tuning): number {
+	return search(probe, "rank", tuning).filter((result) => result.source === "description").length;
+}
 
 function violations(tuning: Tuning): string[] {
 	return MONOTONICITY_PROBES.filter(([shorter, longer]) => {
 		return search(longer, "rank", tuning).length > search(shorter, "rank", tuning).length;
 	}).map(([shorter, longer]) => `"${longer}" widens "${shorter}"`);
+}
+
+// Filled once the archive is installed, since every probe is a real search.
+let baselineDescriptionResults = new Map<string, number>();
+
+function collapses(tuning: Tuning): string[] {
+	return DESCRIPTION_PROBES.flatMap((probe) => {
+		const before = baselineDescriptionResults.get(probe)!;
+		const after = descriptionResults(probe, tuning);
+		return after < Math.ceil(before * COLLAPSE_SHARE)
+			? [`"${probe}" ${before} -> ${after} description-sourced results`]
+			: [];
+	});
 }
 
 interface Score {
@@ -74,6 +101,7 @@ interface Score {
 }
 
 install(loadRealArchive());
+baselineDescriptionResults = new Map(DESCRIPTION_PROBES.map((probe) => [probe, descriptionResults(probe, TUNING)]));
 
 const generated = loadGenerated();
 const golden = loadGolden();
@@ -126,6 +154,19 @@ if (baselineViolations.length > 0) {
 	process.exit(1);
 }
 
+// And the same check the other way: a probe that already returns nothing constrains nothing,
+// so the guard would be silently vacuous for it rather than protecting anything.
+const emptyProbes = DESCRIPTION_PROBES.filter((probe) => baselineDescriptionResults.get(probe) === 0);
+if (emptyProbes.length > 0) {
+	console.error(`\nthese description probes return nothing at the baseline: ${emptyProbes.join(", ")}`);
+	console.error(`A probe with no baseline results cannot detect a collapse and guards nothing.`);
+	process.exit(1);
+}
+console.log(
+	`description probes  ` +
+		DESCRIPTION_PROBES.map((probe) => `${probe} ${baselineDescriptionResults.get(probe)}`).join("  "),
+);
+
 let best = { ...TUNING };
 let bestScore = score(best);
 console.log(format("baseline", bestScore));
@@ -146,7 +187,12 @@ for (let pass = 1; pass <= 2; pass++) {
 			// out of the other one. Transcript parameters reach description queries through the
 			// merge, so "transcript-only" is true of the mechanism, not of the effect.
 			const collateral = candidateScore.combined < bestScore.combined - 1e-9;
-			if (gain > MINIMUM_GAIN && !collateral && violations(candidate).length === 0) {
+			if (
+				gain > MINIMUM_GAIN &&
+				!collateral &&
+				violations(candidate).length === 0 &&
+				collapses(candidate).length === 0
+			) {
 				chosen = value;
 				chosenScore = candidateScore;
 			}

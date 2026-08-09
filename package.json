@@ -34,6 +34,7 @@
 		"tune": "node --import tsx test/tune.ts",
 		"sample": "node --import tsx test/sample.ts",
 		"probe": "node --import tsx test/probe.ts",
+		"compounds": "node --import tsx build-chain/compoundLexicon.ts",
 		"lint": "eslint .",
 		"fix": "yarn lint --fix",
 		"pretty": "yarn prettier --write .",

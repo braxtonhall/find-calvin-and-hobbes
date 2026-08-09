@@ -13,13 +13,13 @@ test("golden queries", async (suite) => {
 	await suite.test("recited dialogue ranks its strip first", () => {
 		const evaluation = evaluate(RECITED);
 		assert.ok(
-			evaluation.recallAtOne >= 0.92,
-			`recall@1 ${evaluation.recallAtOne.toFixed(3)} below 0.92\n${describeMisses(evaluation)}`,
+			evaluation.recallAtOne >= 0.96,
+			`recall@1 ${evaluation.recallAtOne.toFixed(3)} below 0.96\n${describeMisses(evaluation)}`,
 		);
 		assert.ok(evaluation.recallAtTen >= 0.96, `recall@10 ${evaluation.recallAtTen.toFixed(3)} below 0.96`);
 		assert.ok(
-			evaluation.meanReciprocalRank >= 0.94,
-			`MRR ${evaluation.meanReciprocalRank.toFixed(3)} below 0.94\n${describeMisses(evaluation)}`,
+			evaluation.meanReciprocalRank >= 0.96,
+			`MRR ${evaluation.meanReciprocalRank.toFixed(3)} below 0.96\n${describeMisses(evaluation)}`,
 		);
 	});
 
@@ -87,11 +87,24 @@ test("real archive behaviour", async (suite) => {
 			["snow goons", "calvin snow goons"],
 			["clean your room", "calvin clean your room"],
 			["rosalyn susie", "calvin rosalyn susie"],
+			["good night", "calvin good night"],
 		];
 		for (const [shorter, longer] of pairs) {
 			const before = search(shorter, "rank").length;
 			const after = search(longer, "rank").length;
 			assert.ok(after <= before, `"${longer}" returned ${after} results against ${before} for "${shorter}"`);
+		}
+	});
+
+	// The mirror image of the monotonicity probe above. That one guards against a result set
+	// widening; this one guards against the description half of it disappearing. No query in
+	// either fixture is a single mid-frequency keyword, so a parameter can zero description-only
+	// search entirely while every MRR in the suite stays flat: descriptionMinMass at 4 takes
+	// `snow` from 129 description results to none, and nothing else in this project notices.
+	await suite.test("a single keyword still returns description-led results", () => {
+		for (const probe of ["snow", "snowman", "wagon", "rosalyn", "bicycle", "doctor"]) {
+			const sourced = search(probe, "rank").filter((result) => result.source === "description");
+			assert.ok(sourced.length > 0, `"${probe}" returned no description-sourced results at all`);
 		}
 	});
 

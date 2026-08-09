@@ -103,3 +103,58 @@ test("generated queries do not leak the text they are meant to find", async (sui
 		}
 	});
 });
+
+// The anti-leak rules stop a query being too close to its source. These stop it being too far.
+// A paragraph-length paraphrase that shares no informative word with the description it targets
+// cannot be answered at any parameter value, so a set full of them measures the generator
+// rather than the engine: the 45 rows written in the first loop scored MRR 0.022 against the
+// hand-written set's 1.000, on queries averaging 23 words against the golden set's 5.
+test("generated description queries are answerable at all", async (suite) => {
+	const described = generated.filter((row: LabelledQuery) => row.class === "B" && row.date);
+
+	// Document frequency over the descriptions, matching how the index counts: one comic is
+	// one document.
+	const documentFrequency = new Map<string, number>();
+	for (const description of archive.descriptions.values()) {
+		for (const word of new Set(words(description))) {
+			documentFrequency.set(word, (documentFrequency.get(word) || 0) + 1);
+		}
+	}
+	const documents = archive.descriptions.size;
+
+	// The engine's own test for whether a word is worth anything in this corpus: below
+	// descriptionIdfFloor a term is dropped outright, so a query resting on such words is
+	// resting on nothing. `calvin` is in 98% of descriptions and fails this, as it should.
+	const DESCRIPTION_IDF_FLOOR = 1;
+	const informative = (word: string) => {
+		const frequency = documentFrequency.get(word);
+		return frequency !== undefined && Math.log(documents / frequency) >= DESCRIPTION_IDF_FLOOR;
+	};
+
+	// The hand-written set tops out at eight words and a real keyword query is shorter still,
+	// so the cap is generous: only paragraph-length paraphrases fail it.
+	const LONGEST = 12;
+
+	await suite.test(`a described query is at most ${LONGEST} words`, () => {
+		const long = described
+			.map((row) => ({ row, length: words(row.query).length }))
+			.filter(({ length }) => length > LONGEST);
+		assert.deepEqual(
+			long.map(({ row, length }) => `${row.id} (${length} words)`),
+			[],
+			`a description query nobody would type cannot measure the engine`,
+		);
+	});
+
+	await suite.test("a described query shares an informative word with its description", () => {
+		const unanswerable = described.filter((row) => {
+			const description = new Set(words(descriptionOf(row.date!)));
+			return !words(row.query).some((word) => description.has(word) && informative(word));
+		});
+		assert.deepEqual(
+			unanswerable.map((row) => row.id),
+			[],
+			`no informative word in common with the description, so no lexical matcher can find it`,
+		);
+	});
+});

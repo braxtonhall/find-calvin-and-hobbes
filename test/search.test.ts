@@ -194,6 +194,30 @@ test("an empty query returns nothing and a punctuation query falls back to subst
 	assert.deepEqual(ranked("?!"), ["2000-01-01"]);
 });
 
+// A compound the corpus usually writes open is indexed and queried as its parts, so the two
+// spellings are one token to the scorer. The highlight still has to cover the word as written.
+test("a closed compound and its open spelling find each other", () => {
+	install(
+		buildArchive([
+			{ date: "2000-01-01", transcript: "Aren't you going to say good night to Hobbes?" },
+			{ date: "2000-01-02", transcript: "She said goodnight and turned off the lamp." },
+		]),
+	);
+
+	assert.deepEqual(ranked("goodnight"), ["2000-01-01", "2000-01-02"]);
+	assert.deepEqual(ranked("good night"), ["2000-01-01", "2000-01-02"]);
+});
+
+test("a split compound is highlighted once, across the whole word", () => {
+	install(buildArchive([{ date: "2000-01-01", transcript: "She said goodnight and left." }]));
+
+	const [result] = search("goodnight", "rank");
+	assert.equal(result.comic.date, "2000-01-01");
+	const [start, end] = result.ranges[0];
+	assert.equal(result.ranges.length, 1, `expected one range, got ${JSON.stringify(result.ranges)}`);
+	assert.equal(result.text.slice(start, end), "goodnight");
+});
+
 test("tuning is injectable and coverage is what admits partial matches", () => {
 	install(
 		buildArchive([
