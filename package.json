@@ -32,6 +32,8 @@
 		"build": "webpack --mode production",
 		"test": "node --import tsx --test \"test/**/*.test.ts\"",
 		"tune": "node --import tsx test/tune.ts",
+		"sample": "node --import tsx test/sample.ts",
+		"probe": "node --import tsx test/probe.ts",
 		"lint": "eslint .",
 		"fix": "yarn lint --fix",
 		"pretty": "yarn prettier --write .",

@@ -1,0 +1,5 @@
+{"id":"19851120-a1","query":"you were the one who played the cymbals","date":"1985-11-20","class":"A","corruption":"substituted synonym","status":"validated","source":"seed@2026-08-09","split":"train"}
+{"id":"19900108-b1","query":"duplicator counterfeiting money","date":"1990-01-08","class":"B","corruption":"concepts only","status":"validated","source":"seed@2026-08-09","split":"train"}
+{"id":"19860726-c1","query":"forty minutes of terror piano","date":"1986-07-26","class":"C","corruption":"transcript and description vocabulary","status":"validated","source":"seed@2026-08-09","split":"train"}
+{"id":"hollow-1","query":"calvin tells hobbes about his mom","date":null,"class":"D","corruption":"ubiquitous words only","status":"validated","source":"seed@2026-08-09","split":"train"}
+{"id":"19910104-e1","query":"snowman builds a monstrous version of itself","date":"1991-01-04","decoy":"1990-01-08","class":"E","corruption":"plausible decoy","status":"validated","source":"seed@2026-08-09","split":"train"}
