@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "fs";
+import path from "path";
 import { loadRealArchive } from "./helpers/archive";
 import { RECITED } from "./fixtures/golden";
 import { stem } from "../src/stem";
-import { CLASS_NAMES, GENERATED_PATH, LabelledQuery, loadGenerated, splitFor } from "./helpers/queries";
+import { CLASS_NAMES, GENERATED_PATH, LabelledQuery, loadGenerated, parseQueryLine, splitFor } from "./helpers/queries";
 
 const CLASSES = Object.keys(CLASS_NAMES);
 const STATUSES = ["validated", "ambiguous"];
@@ -108,6 +110,26 @@ test(`${GENERATED_PATH} schema`, async (suite) => {
 				assert.notEqual(row.decoy, row.date, `${row.id}: the decoy must differ from the target`);
 			}
 		}
+	});
+
+	// The split is a function of the strip and the loader computes it. A row carrying its own is a
+	// row whose author guessed at an FNV hash, which is how 18 rows across 6 strips landed on the
+	// wrong side of the boundary on 2026-08-10. So the rule is not "author it correctly" — nobody
+	// can — it is "do not author it".
+	await suite.test("no row authors its own split", () => {
+		const authored = fs
+			.readFileSync(path.join(process.cwd(), GENERATED_PATH), "utf-8")
+			.split("\n")
+			.map((line) => line.trim())
+			.filter((line) => line.length > 0)
+			.map((line, index) => parseQueryLine(line, index + 1))
+			.filter((row) => "split" in row);
+
+		assert.deepEqual(
+			authored.map((row) => row.id),
+			[],
+			`split is derived from the strip by loadGenerated. Remove the field from these rows.`,
+		);
 	});
 
 	await suite.test("splits follow the strip, not the query", () => {
@@ -273,6 +295,13 @@ const EMPHASIS_REPEATS = 3;
 const EMPHASIS_FORMS = 2;
 const EMPHASIS_FROM = 12;
 const EMPHASIS_SHARE = 0.25;
+// A share of a growing population is the wrong instrument on its own: every ordinary near-miss pair
+// raises the emphasis debt, so a class that is useful in its own right taxes a class that is hard to
+// write. That is most of how 2026-08-10 ended up needing 4 while holding 2. What the fixture
+// actually needs is enough pairs to resolve `repeatVariety`, which is a count and not a proportion —
+// each pair is a direct test of the property — so the share applies until the count is reached and
+// then stops asking for more.
+const EMPHASIS_CAP = 8;
 
 function emphasises(row: LabelledQuery): string | null {
 	const target = words(`${transcriptOf(row.date!)} ${descriptionOf(row.date!)}`);
@@ -329,11 +358,32 @@ test("generated near-miss pairs are decidable", async (suite) => {
 	// `stem` is imported rather than reimplemented here, unlike the document frequencies above:
 	// what makes two words the same word is the engine's definition, and a pair built on any
 	// other one would not stress the parameter it exists to stress.
+	// The quota below only binds once twelve pairs exist, which let three mislabelled pairs through
+	// on 2026-08-10: iterations 1 to 4 passed their own fixture check while the rule was vacuous,
+	// and the run then died at iteration 5 with the bad rows already written. This rule has no
+	// threshold, so it fires on the pass that wrote the pair. Both failures that day were the
+	// generator asserting something about the decoy that was not true — a decoy holding no form of
+	// the word at all, and a decoy holding one form where two are needed — which is exactly what a
+	// label cannot be trusted with and a structural check can.
+	await suite.test("a pair labelled an emphasis pair is one", () => {
+		const claimed = pairs.filter((row) => (row.corruption ?? "").toLowerCase().includes("emphasis"));
+		const lying = claimed.filter((row) => emphasises(row) === null);
+
+		assert.deepEqual(
+			lying.map((row) => `${row.id} (target ${row.date}, decoy ${row.decoy})`),
+			[],
+			`labelled an emphasis pair but not one: the target must repeat an informative query word ` +
+				`${EMPHASIS_REPEATS}+ times, and the decoy must use ${EMPHASIS_FORMS}+ OTHER forms of it and ` +
+				`never the word itself. Relabel the pair or choose a decoy that qualifies.`,
+		);
+	});
+
 	await suite.test("some near-miss pairs separate emphasis from variety", () => {
 		const emphasis = pairs.filter((row) => emphasises(row) !== null);
 		// A share only means something once there are pairs enough for it to be about the
 		// protocol rather than about luck.
-		const required = pairs.length < EMPHASIS_FROM ? 0 : Math.ceil(pairs.length * EMPHASIS_SHARE);
+		const required =
+			pairs.length < EMPHASIS_FROM ? 0 : Math.min(EMPHASIS_CAP, Math.ceil(pairs.length * EMPHASIS_SHARE));
 		assert.ok(
 			emphasis.length >= required,
 			`${emphasis.length} of ${pairs.length} near-miss pairs separate emphasis from variety, and ` +

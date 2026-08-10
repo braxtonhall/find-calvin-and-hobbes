@@ -1,6 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { search, TUNING, Tuning } from "../src/search";
+import { stem } from "../src/stem";
+import { COMPOUNDS } from "../src/compounds";
 import {
 	describeMisses,
 	evaluate,
@@ -10,7 +12,15 @@ import {
 	summarise,
 } from "./helpers/metrics";
 import { install, loadRealArchive } from "./helpers/archive";
-import { CLASS_NAMES, countByClass, LabelledQuery, loadGenerated, loadGolden, select } from "./helpers/queries";
+import {
+	CLASS_NAMES,
+	countByClass,
+	LabelledQuery,
+	loadGenerated,
+	loadGolden,
+	select,
+	subsample,
+} from "./helpers/queries";
 
 const CANDIDATES: Record<string, number[]> = {
 	sequenceWeight: [0, 0.5, 1, 2, 3],
@@ -39,6 +49,9 @@ const CANDIDATES: Record<string, number[]> = {
 	// 0 admits everything the engine admitted before this existed. Above 0.5 the fixture's own
 	// targets start failing it — a fifth of them match half the query or less — so the grid
 	// stops where the measurement says the cost turns.
+	// 0 is kept as the record of what the engine admitted before this existed, but the correction
+	// guard below rejects it on sight: at 0 a strip can be admitted having matched nothing of the
+	// query as written, which is the property the floor exists to hold.
 	transcriptLiteralShare: [0, 0.2, 0.3, 0.4, 0.5],
 	descriptionLiteralShare: [0, 0.2, 0.3, 0.4, 0.5],
 	descriptionMinMass: [0, 1, 1.5, 2.5, 4],
@@ -99,6 +112,65 @@ const MONOTONICITY_PROBES = [
 // descriptionMinMass at 4 takes `snow` from 129 description results to none while train,
 // held-out and golden all stay identical to four decimals. Measured, not hypothetical.
 const DESCRIPTION_PROBES = ["snow", "snowman", "wagon", "rosalyn", "bicycle", "doctor"];
+
+// The third blind spot, and the one the literal-share floors exist to close: a strip that matches
+// nothing of the query as written is not an answer to it, however its rarity-weighted coverage
+// adds up. `ding dong rosalyn` reached a ping-pong ball, a game of Calvinball, a leaf collection
+// and a strip saying `dying` that way, every one of them on a spelling correction alone. MRR
+// cannot see it — none of these queries has such a strip as its target, so admitting four of them
+// costs the objective nothing — so it has to be a constraint, like monotonicity.
+//
+// Mined rather than invented, which matters: of the 440 real queries in both fixtures, these are
+// the ones that admit such a strip once the floors come off. A probe chosen by hand would mostly
+// have tested that a query has no near-neighbours in the corpus, which is a property of the query.
+const CORRECTION_PROBES = [
+	"ding dong rosalyn",
+	"wagon ride born contribution earth better place",
+	"night yard hose freeze snow goons dad",
+	"football chase chair stuck tackle game",
+	"sledding late bedtime hope mom missing",
+	"spaceman spiff hall pass principal",
+];
+
+const WORD_PATTERN = /[\p{L}\p{N}']+/gu;
+
+// Both sides go through the index's own decomposition, since `goodnight` is `good night` to the
+// scorer and a guard that disagreed would be asking about a vocabulary the engine does not have.
+const words = (text: string) =>
+	[...text.toLowerCase().matchAll(WORD_PATTERN)].flatMap((match) => COMPOUNDS.get(match[0]) || [match[0]]);
+
+// Whether the field holds any query word as written, extended, or in another inflection — the
+// engine's three literal routes. `stem` is imported for the same reason the decomposition is: what
+// counts as the same word is the scorer's definition, not this file's.
+//
+// Read off the field text rather than the highlight ranges, which are filtered by
+// transcriptIdfFloor: a field matching only a common word literally reports no ranges at all, and
+// scoring that as a violation would fail configurations that are perfectly sound.
+function literal(text: string, terms: string[], stems: Set<string>): boolean {
+	return words(text).some(
+		(word) =>
+			terms.includes(word) ||
+			terms.some((term) => word.length > term.length && word.startsWith(term)) ||
+			stems.has(stem(word)),
+	);
+}
+
+function bare(probe: string, tuning: Tuning): string[] {
+	const terms = words(probe);
+	const stems = new Set(terms.map(stem));
+	return search(probe, "rank", tuning)
+		.filter((result) => !literal(result.text, terms, stems))
+		.map((result) => result.comic.date);
+}
+
+function corrections(tuning: Tuning): string[] {
+	return CORRECTION_PROBES.flatMap((probe) => {
+		const admitted = bare(probe, tuning);
+		if (admitted.length === 0) return [];
+		const first = admitted.slice(0, 3).join(", ");
+		return [`"${probe}" admits ${admitted.length} strips matching none of it literally (${first})`];
+	});
+}
 
 // Half of baseline, so ordinary tightening is allowed and a collapse is not.
 const COLLAPSE_SHARE = 0.5;
@@ -179,9 +251,30 @@ const trainSet = usingGolden ? golden : train;
 const recitedOf = (rows: LabelledQuery[]) => select(rows, { classes: ["A", "C"] });
 const describedOf = (rows: LabelledQuery[]) => select(rows, { classes: ["B", "C"] });
 
-function score(tuning: Tuning): Score {
-	const recited = evaluate(recitedOf(trainSet), tuning).meanReciprocalRank;
-	const described = evaluate(describedOf(trainSet), tuning).meanReciprocalRank;
+// The sweep evaluates its objective a few hundred times — 18 parameters across 101 candidate
+// values, twice — so its cost is the train split's size multiplied by that. The 2026-08-09 run
+// took 55 minutes at 332 queries and 64 values; the same run on a five-pass set would be past two
+// hours. So the sweep sees a subsample and every move it accepts is then re-confirmed on the whole
+// split, which costs one evaluation per move rather than one per candidate.
+//
+// 250 is the plan's number, and it is a floor as much as a budget: below ~200 the differences
+// between candidate values sit inside the noise. If the split ever grows enough that the sweep is
+// slow again, raise the machine's parallelism rather than lowering this.
+const SWEEP_SUBSAMPLE = 250;
+// Fixed, so that re-running a sweep on an unchanged set reaches the same decisions from the same
+// evidence. Changing it is a way to ask whether a result was an artefact of the draw.
+const SWEEP_SEED = 20260810;
+
+// Only the classes the objective reads. D is scored on result count and E on rank gaps, neither of
+// which is part of `score`, so spending the sample's budget on them would buy nothing — they are
+// reported on the full split below, and the hollow guard reads every D row in the fixture anyway.
+const scored = select(trainSet, { classes: ["A", "B", "C"] });
+const sweepSet = subsample(scored, SWEEP_SUBSAMPLE, SWEEP_SEED);
+const subsampling = sweepSet.length < scored.length;
+
+function score(tuning: Tuning, rows: LabelledQuery[]): Score {
+	const recited = evaluate(recitedOf(rows), tuning).meanReciprocalRank;
+	const described = evaluate(describedOf(rows), tuning).meanReciprocalRank;
 	return { recited, described, combined: (recited + described) / 2 };
 }
 
@@ -193,6 +286,13 @@ function format(label: string, value: Score): string {
 console.log(
 	`train ${trainSet.length}  held-out ${held.length}  golden ${golden.length}  ` +
 		`generated ${generated.length} ${JSON.stringify(countByClass(generated))}`,
+);
+console.log(
+	subsampling
+		? `sweeping on ${sweepSet.length} of the ${scored.length} scored train queries ` +
+				`${JSON.stringify(countByClass(sweepSet))}, seed ${SWEEP_SEED}; every accepted move is ` +
+				`then re-confirmed on all ${scored.length}`
+		: `sweeping on all ${scored.length} scored train queries; too few to be worth subsampling`,
 );
 if (usingGolden) {
 	console.log(
@@ -225,9 +325,41 @@ console.log(
 		DESCRIPTION_PROBES.map((probe) => `${probe} ${baselineDescriptionResults.get(probe)}`).join("  "),
 );
 
+// The same two checks for the correction guard. First that the baseline satisfies it, for the
+// reason above: a constraint the current configuration fails rejects every candidate and reports
+// a dead end as an optimum.
+const baselineCorrections = corrections(TUNING);
+if (baselineCorrections.length > 0) {
+	console.error(`\nthe baseline already admits strips that match nothing of the query literally:`);
+	for (const correction of baselineCorrections) console.error(`  ${correction}`);
+	console.error(`\nEvery candidate would be rejected and the sweep would report a false optimum.`);
+	process.exit(1);
+}
+
+// And then that each probe is live — that it would admit such a strip with the floors off. A probe
+// no longer capable of failing guards nothing, and would sit here looking like protection while
+// the property drifted out from under it. This is the check the monotonicity constraint went two
+// runs without.
+const openLiteral: Tuning = { ...TUNING, transcriptLiteralShare: 0, descriptionLiteralShare: 0 };
+const deadProbes = CORRECTION_PROBES.filter((probe) => bare(probe, openLiteral).length === 0);
+if (deadProbes.length > 0) {
+	console.error(`\nthese correction probes admit nothing even with the literal share floors at 0:`);
+	for (const probe of deadProbes) console.error(`  ${probe}`);
+	console.error(`A probe that cannot fail is not a guard. Mine the fixture for replacements.`);
+	process.exit(1);
+}
+console.log(
+	`correction probes   ` +
+		CORRECTION_PROBES.map(
+			(probe) => `${probe.split(" ").slice(0, 2).join(" ")} ${bare(probe, openLiteral).length}`,
+		).join("  ") +
+		`  (strips each would admit on a correction alone, floors off)`,
+);
+
 let best = { ...TUNING };
-let bestScore = score(best);
+let bestScore = score(best, sweepSet);
 console.log(format("baseline", bestScore));
+if (subsampling) console.log(format("baseline (all scored train)", score(best, scored)));
 
 for (let pass = 1; pass <= 2; pass++) {
 	console.log(`\n--- pass ${pass} ---`);
@@ -239,7 +371,7 @@ for (let pass = 1; pass <= 2; pass++) {
 		for (const value of CANDIDATES[knob]) {
 			if (value === best[knob]) continue;
 			const candidate = { ...best, [knob]: value };
-			const candidateScore = score(candidate);
+			const candidateScore = score(candidate, sweepSet);
 			const gain = candidateScore[objective] - chosenScore[objective];
 			// A parameter must earn its keep on the intent it governs, and must not pay for it
 			// out of the other one. Transcript parameters reach description queries through the
@@ -250,7 +382,8 @@ for (let pass = 1; pass <= 2; pass++) {
 				!collateral &&
 				violations(candidate).length === 0 &&
 				collapses(candidate).length === 0 &&
-				bloats(candidate).length === 0
+				bloats(candidate).length === 0 &&
+				corrections(candidate).length === 0
 			) {
 				chosen = value;
 				chosenScore = candidateScore;
@@ -268,7 +401,57 @@ for (let pass = 1; pass <= 2; pass++) {
 	}
 }
 
-console.log(`\n${format("tuned", bestScore)}`);
+console.log(`\n${format(subsampling ? "tuned (on the subsample)" : "tuned", bestScore)}`);
+
+// The subsample decided; the whole split confirms. A move worth less than the sampling noise is
+// exactly the kind this document keeps catching after the fact, so each one is re-tested here
+// against every scored train query, in the order the sweep made them, and dropped if it does not
+// hold up. The constraints are re-checked too: dropping one move leaves a combination the sweep
+// never evaluated, and a combination nothing checked is how an invariant escapes.
+const dropped: string[] = [];
+if (subsampling) {
+	const moves = KNOBS.filter((knob) => best[knob] !== TUNING[knob]);
+	console.log(`\n--- confirming ${moves.length} move${moves.length === 1 ? "" : "s"} on all ${scored.length} ---`);
+
+	let confirmed = { ...TUNING };
+	let confirmedScore = score(confirmed, scored);
+	for (const knob of moves) {
+		const objective = OBJECTIVE[knob];
+		const candidate = { ...confirmed, [knob]: best[knob] };
+		const candidateScore = score(candidate, scored);
+		const gain = candidateScore[objective] - confirmedScore[objective];
+		const collateral = candidateScore.combined < confirmedScore.combined - 1e-9;
+		const blocked = [
+			...violations(candidate),
+			...collapses(candidate),
+			...bloats(candidate),
+			...corrections(candidate),
+		];
+
+		if (gain > MINIMUM_GAIN && !collateral && blocked.length === 0) {
+			confirmed = candidate;
+			confirmedScore = candidateScore;
+			console.log(format(`${knob} -> ${best[knob]}   confirmed (${objective} +${gain.toFixed(4)})`, candidateScore));
+			continue;
+		}
+
+		let why = `${objective} +${gain.toFixed(4)} on the full split, under the ${MINIMUM_GAIN} threshold`;
+		if (blocked.length > 0) why = blocked[0];
+		else if (collateral) why = `the combined score would fall`;
+		dropped.push(`${knob} ${TUNING[knob]} -> ${best[knob]}: ${why}`);
+		console.log(`${`${knob} -> ${best[knob]}`.padEnd(44)} DROPPED   ${why}`);
+	}
+
+	best = confirmed;
+	bestScore = confirmedScore;
+	console.log(`\n${format("tuned (all scored train)", bestScore)}`);
+	if (dropped.length > 0) {
+		console.log(`${dropped.length} move${dropped.length === 1 ? "" : "s"} did not survive the full split:`);
+		for (const line of dropped) console.log(`  ${line}`);
+		console.log(`That is the subsample doing its job, not a failure. The values below exclude them.`);
+	}
+}
+
 console.log(JSON.stringify(best, null, "\t"));
 
 // A value resting against the end of its own candidate list is not a converged parameter, it is
@@ -341,6 +524,11 @@ fs.appendFileSync(
 		heldOutSize: held.length,
 		goldenSize: golden.length,
 		usingGoldenAsTrain: usingGolden,
+		// What the sweep actually decided on, and what the whole split then threw out. Without
+		// these two a later reader cannot tell a run that measured 250 queries from one that
+		// measured 500, and the parameters would look more firmly established than they are.
+		sweepSize: sweepSet.length,
+		droppedOnFullTrain: dropped,
 		parameters: best,
 		train: trainSummary,
 		heldOut: heldSummary,
