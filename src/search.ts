@@ -25,6 +25,8 @@ export interface Tuning {
 	descriptionCoverageFloor: number;
 	transcriptLengthForgiveness: number;
 	descriptionLengthForgiveness: number;
+	transcriptLiteralShare: number;
+	descriptionLiteralShare: number;
 	descriptionMinMass: number;
 	transcriptIdfFloor: number;
 	descriptionIdfFloor: number;
@@ -74,6 +76,21 @@ export const TUNING: Tuning = {
 	// is a long recitation with a misremembered word in it by definition.
 	transcriptLengthForgiveness: 1,
 	descriptionLengthForgiveness: 1,
+	// The share of the query's terms a field must match outright — as written, extended, or in
+	// another inflection — before a spelling correction is allowed to carry the rest. Coverage
+	// is rarity-weighted, so two rare words can answer a ten-word query; this is the plain
+	// count, which they cannot, and it is the only thing standing between a reader and a strip
+	// about a ping-pong ball when they asked for `ding dong rosalyn`.
+	//
+	// Measured, not swept: every gain here is under the sweep's 0.005 threshold, so it would
+	// keep 0 forever. At 0.2 nothing regresses — train recited 0.9211 -> 0.9218, described
+	// 0.8542 -> 0.8544, held-out 0.9308 -> 0.9318, both golden intents still 1.000, no
+	// zero-result query, and the monotonicity, collapse and hollow guards unmoved. What it
+	// removes from `ding dong rosalyn` is the four strips that had matched nothing but a
+	// correction: a ping-pong ball, a game of Calvinball, a leaf collection, and `dying`.
+	// Not higher: at 0.3 the zero-result rate leaves nought and recited starts falling.
+	transcriptLiteralShare: 0.2,
+	descriptionLiteralShare: 0.2,
 	descriptionMinMass: 1.5,
 	transcriptIdfFloor: 0.5,
 	descriptionIdfFloor: 1,
@@ -137,6 +154,8 @@ interface Corpus {
 interface Expansion {
 	matchWeights: Map<string, number>;
 	contributions: Map<string, number>;
+	// The subset of `matchWeights` reached without spelling correction.
+	literalWords: Set<string>;
 	ceiling: number;
 	rarity: number;
 	present: boolean;
@@ -147,6 +166,7 @@ interface FieldHits {
 	terms: number[];
 	weights: number[];
 	contributions: number[];
+	literal: boolean[];
 }
 
 interface Summary {
@@ -154,6 +174,10 @@ interface Summary {
 	achieved: number;
 	ceiling: number;
 	coverage: number;
+	// The share of the query's live terms this field matched without spelling correction.
+	// Coverage is rarity-weighted, so a couple of rare words can stand in for a whole query;
+	// this is the plain count, which they cannot.
+	literalShare: number;
 }
 
 interface FieldMatch {
@@ -317,25 +341,35 @@ function expandTerm(
 	const inflections = inflectionWeight > 0 ? corpus.inflections.get(stem(term)) : undefined;
 	const matchWeights = new Map<string, number>();
 	const contributions = new Map<string, number>();
+	const literalWords = new Set<string>();
 	let bestContribution = 0;
 	let bestRarity = 0;
 
 	for (const word of corpus.documentFrequency.keys()) {
 		let weight = 0;
+		// The word as written, extended, or in another inflection is the word. A word within an
+		// edit or two is a guess at what was meant, which is a different kind of evidence and is
+		// tracked separately: the weights cannot tell them apart, since a description inflection
+		// and a single typo are both 0.7.
+		let literal = false;
 		if (word === term) {
 			weight = EXACT_WEIGHT;
+			literal = true;
 		} else if (word.length > term.length && word.startsWith(term)) {
 			weight = PREFIX_WEIGHT;
+			literal = true;
 		} else if (maxDistance > 0) {
 			const distance = boundedDistance(word, term, maxDistance);
 			if (distance > 0 && distance <= maxDistance) weight = DISTANCE_WEIGHTS[distance];
 		}
 		// Taken as a floor rather than a replacement: `sinks` and `sink` are one edit apart and
 		// would otherwise be scored as a typo, at 0.7, when they are the same word.
-		if (weight < inflectionWeight && inflections !== undefined && inflections.has(word)) {
-			weight = inflectionWeight;
+		if (inflections !== undefined && inflections.has(word)) {
+			weight = Math.max(weight, inflectionWeight);
+			literal = literal || inflectionWeight > 0;
 		}
 		if (weight === 0) continue;
+		if (literal) literalWords.add(word);
 
 		const idf = inverseDocumentFrequency(corpus, word);
 		const contribution = weight * Math.pow(idf, tuning.rarityExponent);
@@ -354,8 +388,8 @@ function expandTerm(
 
 	const expansion: Expansion =
 		rarity < suppressBelow
-			? { matchWeights: new Map(), contributions: new Map(), ceiling: 0, rarity, present }
-			: { matchWeights, contributions, ceiling, rarity, present };
+			? { matchWeights: new Map(), contributions: new Map(), literalWords: new Set(), ceiling: 0, rarity, present }
+			: { matchWeights, contributions, literalWords, ceiling, rarity, present };
 
 	if (expansionCache.size >= MAX_CACHED_EXPANSIONS) expansionCache.clear();
 	expansionCache.set(key, expansion);
@@ -415,7 +449,7 @@ function denominators(here: Expansion[], there: Expansion[], corpus: Corpus, tun
 }
 
 function collectHits(field: IndexedField, expansions: Expansion[]): FieldHits {
-	const hits: FieldHits = { positions: [], terms: [], weights: [], contributions: [] };
+	const hits: FieldHits = { positions: [], terms: [], weights: [], contributions: [], literal: [] };
 
 	for (let index = 0; index < field.words.length; index++) {
 		const word = field.words[index];
@@ -426,6 +460,7 @@ function collectHits(field: IndexedField, expansions: Expansion[]): FieldHits {
 			hits.terms.push(term);
 			hits.weights.push(weight);
 			hits.contributions.push(expansions[term].contributions.get(word)!);
+			hits.literal.push(expansions[term].literalWords.has(word));
 		}
 	}
 
@@ -448,11 +483,13 @@ function summarise(hits: FieldHits, ceilings: Float64Array, repeatWeight: number
 	// together. The map is skipped at variety 1, where the per-word tally is unused.
 	const occurrences = variety < 1 ? new Map<string, number>() : null;
 	const repeats = new Int32Array(termCount);
+	const literal = new Uint8Array(termCount);
 
 	for (let index = 0; index < hits.positions.length; index++) {
 		const term = hits.terms[index];
 		const contribution = hits.contributions[index];
 		counts[term]++;
+		if (hits.literal[index]) literal[term] = 1;
 		if (occurrences !== null) {
 			const key = `${term}\0${contribution}`;
 			const seen = (occurrences.get(key) || 0) + 1;
@@ -465,7 +502,16 @@ function summarise(hits: FieldHits, ceilings: Float64Array, repeatWeight: number
 	let base = 0;
 	let achieved = 0;
 	let ceiling = 0;
+	// A term the query asked for that this corpus can answer at all. One absent from both
+	// corpora is a typo with nothing behind it and is already excluded from the ceiling, so
+	// counting it here would ask a field to match a word that does not exist.
+	let live = 0;
+	let literalTerms = 0;
 	for (let term = 0; term < termCount; term++) {
+		if (ceilings[term] > 0) {
+			live++;
+			literalTerms += literal[term];
+		}
 		// Capped at the ceiling, which is anchored on the term as typed: correcting `help` to
 		// the rarer `held` must never score higher than matching `help` itself.
 		const contribution = Math.min(best[term], ceilings[term]);
@@ -477,7 +523,17 @@ function summarise(hits: FieldHits, ceilings: Float64Array, repeatWeight: number
 		if (counts[term] > 0) base += contribution * (1 + repeatWeight * Math.log2(repeated));
 	}
 
-	return { base, achieved, ceiling, coverage: ceiling > 0 ? achieved / ceiling : 0 };
+	return {
+		base,
+		achieved,
+		ceiling,
+		coverage: ceiling > 0 ? achieved / ceiling : 0,
+		// Only asked of a query with something else in it. At one term there is no rest of the
+		// query for a correction to over-carry, and `requiredCoverage` already demands the whole
+		// of it there — so applying this too would not bound typo tolerance, it would delete it,
+		// and `transmogrifer` would find nothing at all.
+		literalShare: live > 1 ? literalTerms / live : 1,
+	};
 }
 
 /**
@@ -545,6 +601,7 @@ function scoreTranscript(
 
 	const summary = summarise(hits, ceilings, tuning.transcriptRepeatWeight, tuning.repeatVariety);
 	if (summary.ceiling === 0 || summary.coverage < required) return null;
+	if (summary.literalShare < tuning.transcriptLiteralShare) return null;
 
 	const { lcs, run } = orderedSubsequence(order, hits);
 	const proportionalRun = run / order.length;
@@ -569,6 +626,7 @@ function scoreDescription(
 	const summary = summarise(hits, ceilings, tuning.descriptionRepeatWeight, tuning.repeatVariety);
 	if (summary.ceiling === 0 || summary.coverage < required) return null;
 	if (summary.achieved < tuning.descriptionMinMass) return null;
+	if (summary.literalShare < tuning.descriptionLiteralShare) return null;
 
 	return {
 		score: summary.base / summary.ceiling,

@@ -318,6 +318,42 @@ test("length forgiveness decides how fast a long query relaxes", () => {
 	assert.deepEqual(ranked("transmogrifier", strict), ranked("transmogrifier"));
 });
 
+// Coverage is rarity-weighted, so a strip holding two rare words can answer a query it has
+// almost nothing to do with. `literalShare` is the plain count of terms matched without
+// spelling correction, which is what separates the two cases below.
+test("a literal share floor keeps out strips that only matched a misspelling", () => {
+	install(
+		buildArchive([
+			{ date: "2000-01-01", transcript: "Ding dong. It's Rosalyn at the door." },
+			{ date: "2000-01-02", transcript: "I cut a ping pong ball in half for school." },
+			...Array.from({ length: 7 }, (_, index) => ({
+				date: `2000-02-${String(index + 1).padStart(2, "0")}`,
+				transcript: "Nothing to see here at all.",
+			})),
+		]),
+	);
+
+	// `ping` and `pong` are each one edit from `ding` and `dong`, so with no floor the ball
+	// answers a question about a doorbell, and the doorbell answers a question about the ball.
+	const open: Tuning = { ...TUNING, transcriptLiteralShare: 0 };
+	assert.deepEqual(ranked("ding dong", open), ["2000-01-01", "2000-01-02"]);
+	assert.deepEqual(ranked("ping pong", open), ["2000-01-02", "2000-01-01"]);
+
+	// Requiring a third of the query to be matched outright leaves each of them with nothing to
+	// answer the other: neither holds a term of it as written, extended, or in another inflection.
+	const literal: Tuning = { ...TUNING, transcriptLiteralShare: 0.34 };
+	assert.deepEqual(ranked("ding dong", literal), ["2000-01-01"]);
+	assert.deepEqual(ranked("ping pong", literal), ["2000-01-02"]);
+});
+
+test("a typo is still forgiven when the rest of the query is literal", () => {
+	install(buildArchive([{ date: "2000-01-01", transcript: "Isn't that your transmogrifier, Calvin?" }]));
+	const literal: Tuning = { ...TUNING, transcriptLiteralShare: 0.34 };
+	// One word of three is misspelt, so two thirds are still matched outright and the floor is
+	// met. The floor bounds how much of a query a correction may carry, not whether it may.
+	assert.deepEqual(ranked("your transmogrifer calvin", literal), ["2000-01-01"]);
+});
+
 test("tuning is injectable and coverage is what admits partial matches", () => {
 	install(
 		buildArchive([

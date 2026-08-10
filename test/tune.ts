@@ -36,6 +36,11 @@ const CANDIDATES: Record<string, number[]> = {
 	// words in the first place.
 	transcriptLengthForgiveness: [0.25, 0.4, 0.55, 0.7, 0.85, 1],
 	descriptionLengthForgiveness: [0.25, 0.4, 0.55, 0.7, 0.85, 1],
+	// 0 admits everything the engine admitted before this existed. Above 0.5 the fixture's own
+	// targets start failing it — a fifth of them match half the query or less — so the grid
+	// stops where the measurement says the cost turns.
+	transcriptLiteralShare: [0, 0.2, 0.3, 0.4, 0.5],
+	descriptionLiteralShare: [0, 0.2, 0.3, 0.4, 0.5],
 	descriptionMinMass: [0, 1, 1.5, 2.5, 4],
 	descriptionIdfFloor: [0.25, 0.5, 1, 1.5, 2],
 	// 0 is a real value here rather than an omission: it suppresses the inflection lookup, so
@@ -61,6 +66,8 @@ const OBJECTIVE: Record<string, "recited" | "described" | "combined"> = {
 	transcriptInflectionWeight: "recited",
 	transcriptLengthForgiveness: "recited",
 	descriptionLengthForgiveness: "described",
+	transcriptLiteralShare: "recited",
+	descriptionLiteralShare: "described",
 	descriptionRepeatWeight: "described",
 	descriptionInflectionWeight: "described",
 	descriptionCoverageFloor: "described",
