@@ -34,7 +34,7 @@ export function renderResults(query: string, sort: SortMode): void {
 		/>
 		<button class="results-clear" id="results-clear" aria-label="Clear search">&times;</button>
 		<button
-			class="results-sort${sortIsRank ? " results-sort--active" : ""}"
+			class="results-sort"
 			id="results-sort"
 			title="${sortLabel}"
 			aria-label="${sortLabel}"

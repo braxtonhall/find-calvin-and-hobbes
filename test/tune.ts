@@ -31,6 +31,11 @@ const CANDIDATES: Record<string, number[]> = {
 	// objective. Leaving it out keeps the grid inside the range where the guard has margin.
 	transcriptCoverageFloor: [0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],
 	descriptionCoverageFloor: [0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],
+	// 1 is the 1/m decay the engine has always used, so it is the top of each grid: values above
+	// it loosen a long query further, which is the direction that produced 471 results for five
+	// words in the first place.
+	transcriptLengthForgiveness: [0.25, 0.4, 0.55, 0.7, 0.85, 1],
+	descriptionLengthForgiveness: [0.25, 0.4, 0.55, 0.7, 0.85, 1],
 	descriptionMinMass: [0, 1, 1.5, 2.5, 4],
 	descriptionIdfFloor: [0.25, 0.5, 1, 1.5, 2],
 	// 0 is a real value here rather than an omission: it suppresses the inflection lookup, so
@@ -54,6 +59,8 @@ const OBJECTIVE: Record<string, "recited" | "described" | "combined"> = {
 	transcriptRepeatWeight: "recited",
 	transcriptCoverageFloor: "recited",
 	transcriptInflectionWeight: "recited",
+	transcriptLengthForgiveness: "recited",
+	descriptionLengthForgiveness: "described",
 	descriptionRepeatWeight: "described",
 	descriptionInflectionWeight: "described",
 	descriptionCoverageFloor: "described",

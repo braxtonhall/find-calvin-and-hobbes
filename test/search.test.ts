@@ -295,6 +295,29 @@ test("repeatVariety decides whether a second matched word counts as saying it ag
 	assert.equal(ranked("snow outside", emphasis)[0], "2000-01-02");
 });
 
+// The allowance that lets a long recitation survive a wrong word also lets a long query be
+// answered by strips holding a fraction of it. `lengthForgiveness` is how fast that trade is
+// made, and the two boundaries have to survive every value of it.
+test("length forgiveness decides how fast a long query relaxes", () => {
+	install(
+		buildArchive([
+			{ date: "2000-01-01", transcript: "Calvin and Hobbes discuss the transmogrifier at length today." },
+			{ date: "2000-01-02", transcript: "Susie reads a book about the transmogrifier." },
+			{ date: "2000-01-03", transcript: "Calvin and Hobbes discuss nothing at all today." },
+		]),
+	);
+	const strict: Tuning = { ...TUNING, transcriptLengthForgiveness: 0.25 };
+	const query = "calvin and hobbes discuss the transmogrifier at length today";
+
+	assert.ok(
+		ranked(query, strict).length <= ranked(query).length,
+		"holding the bar up for a long query cannot admit more than letting it fall",
+	);
+	// A one-word query demands everything whatever the forgiveness, because m ** anything is 1
+	// when m is 1, so a short query still has no room for a wrong word.
+	assert.deepEqual(ranked("transmogrifier", strict), ranked("transmogrifier"));
+});
+
 test("tuning is injectable and coverage is what admits partial matches", () => {
 	install(
 		buildArchive([

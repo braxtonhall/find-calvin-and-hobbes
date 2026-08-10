@@ -23,6 +23,8 @@ export interface Tuning {
 	rarityExponent: number;
 	transcriptCoverageFloor: number;
 	descriptionCoverageFloor: number;
+	transcriptLengthForgiveness: number;
+	descriptionLengthForgiveness: number;
 	descriptionMinMass: number;
 	transcriptIdfFloor: number;
 	descriptionIdfFloor: number;
@@ -60,6 +62,18 @@ export const TUNING: Tuning = {
 	// Not lower: at 0 the requirement degenerates to a single term and hollow queries jump from
 	// 145 results to 239, and 0.02 buys 0.007 MRR that 62 distinct strips cannot resolve.
 	descriptionCoverageFloor: 0.05,
+	// How fast the coverage requirement decays as the query lengthens: the requirement is
+	// `floor + (1 - floor) / m ** forgiveness`, so 1 is the 1/m decay this has always used and
+	// lower values hold the bar up for long queries.
+	//
+	// Both ship at 1, which is exactly the previous engine, because the two corpora need
+	// different answers and neither has been measured yet. What is measured is that they need
+	// asking separately: `how do you play house` returns 471 where `play house` returns 28, and
+	// 434 of the 471 are description matches against 37 transcript ones. The transcript side
+	// barely moves, and it is the side that must not be tightened carelessly — a class A query
+	// is a long recitation with a misremembered word in it by definition.
+	transcriptLengthForgiveness: 1,
+	descriptionLengthForgiveness: 1,
 	descriptionMinMass: 1.5,
 	transcriptIdfFloor: 0.5,
 	descriptionIdfFloor: 1,
@@ -353,10 +367,17 @@ function expandTerm(
  * no room for a wrong word — at one term this demands everything, and at two it demands more
  * than either term of a pair holds alone. The allowance grows with query length, so one
  * misremembered word in a long recitation stays forgivable.
+ *
+ * `forgiveness` is how fast it grows. The allowance exists so that a near-miss is admitted
+ * and the sequence bonus can then rank it, not so that a long query becomes an OR — and at 1
+ * it decays as 1/m, which hands a twenty-term query the right to miss most of itself. Below 1
+ * the requirement still falls with length, just slowly enough that the holes stay holes.
+ * Every value keeps the two boundaries the shape depends on: at one term it demands
+ * everything, since m ** anything is 1, and it never rises above the floor.
  */
-function requiredCoverage(floor: number, terms: number): number {
+function requiredCoverage(floor: number, terms: number, forgiveness: number): number {
 	if (terms === 0) return 0;
-	return floor + (1 - floor) / terms;
+	return floor + (1 - floor) / Math.pow(terms, forgiveness);
 }
 
 /**
@@ -630,8 +651,16 @@ function rankedSearch(sequence: string[], tuning: Tuning): SearchResult[] {
 	);
 	const transcriptCeilings = denominators(transcriptExpansions, descriptionExpansions, transcriptCorpus, tuning);
 	const descriptionCeilings = denominators(descriptionExpansions, transcriptExpansions, descriptionCorpus, tuning);
-	const transcriptRequired = requiredCoverage(tuning.transcriptCoverageFloor, effectiveTerms(transcriptCeilings));
-	const descriptionRequired = requiredCoverage(tuning.descriptionCoverageFloor, effectiveTerms(descriptionCeilings));
+	const transcriptRequired = requiredCoverage(
+		tuning.transcriptCoverageFloor,
+		effectiveTerms(transcriptCeilings),
+		tuning.transcriptLengthForgiveness,
+	);
+	const descriptionRequired = requiredCoverage(
+		tuning.descriptionCoverageFloor,
+		effectiveTerms(descriptionCeilings),
+		tuning.descriptionLengthForgiveness,
+	);
 
 	interface Candidate {
 		comic: Comic;

@@ -77,11 +77,6 @@
 	background: var(--grey);
 }
 
-.results-sort--active {
-	color: var(--golden);
-	border-color: var(--golden);
-}
-
 .results-sort svg {
 	width: 16px;
 	height: 16px;

@@ -19,7 +19,11 @@ export function parseRoute(): Route {
 		return {
 			view: "results",
 			q: params.get("q") ?? "",
-			sort: params.get("sort") === "rank" ? "rank" : "date",
+			// Relevance is the default and `?sort=date` is the alternative. Date order has no
+			// ranking in it, so the coverage bar is the only thing keeping a weak match out of
+			// the top of the page: `ding dong rosalyn` led with a strip about a ping-pong ball,
+			// which is one edit from `ding dong` and nothing to do with the query.
+			sort: params.get("sort") === "date" ? "date" : "rank",
 		};
 	}
 
@@ -41,8 +45,10 @@ export function parseRoute(): Route {
 	return { view: "landing" };
 }
 
-export function buildSearchHash(query: string, sort: SortMode = "date"): string {
-	return "#/search?q=" + encodeURIComponent(query) + (sort === "rank" ? "&sort=rank" : "");
+// A link that names no sort is a link to the ranked results, so the parameter only appears on
+// the way to date order. An older `&sort=rank` link still parses to the same place it always did.
+export function buildSearchHash(query: string, sort: SortMode = "rank"): string {
+	return "#/search?q=" + encodeURIComponent(query) + (sort === "date" ? "&sort=date" : "");
 }
 
 interface HistoryState {
@@ -103,7 +109,7 @@ export function handleRoute(): void {
 		}
 		case "results": {
 			document.getElementById("view-results")!.classList.add("active");
-			renderResults(route.q || "", route.sort || "date");
+			renderResults(route.q || "", route.sort || "rank");
 			document.getElementById("main")!.scrollTop = 0;
 			document.title = `${route.q} — Find Calvin and Hobbes`;
 			break;
