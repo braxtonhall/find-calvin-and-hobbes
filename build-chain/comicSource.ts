@@ -5,6 +5,12 @@ export interface DailyEntry {
 	transcript: string;
 	alternate?: string;
 	description?: string;
+	/**
+	 * Where this entry's text came from, when it was not the original data: recorded by the date repair
+	 * in scripts/sunday-dates so a corrected entry can be traced, and deliberately not shipped to the
+	 * browser — exportComicsJson builds its output field by field and never copies this.
+	 */
+	source?: string;
 }
 
 export interface SpecialEntry extends DailyEntry {
