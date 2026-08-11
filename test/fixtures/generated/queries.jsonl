@@ -1,6 +1,6 @@
 {"id":"19860726-c1","query":"forty minutes of terror piano","date":"1986-07-26","class":"C","corruption":"transcript and description vocabulary","status":"validated","source":"seed@2026-08-09"}
 {"id":"hollow-1","query":"calvin tells hobbes about his mom","date":null,"class":"D","corruption":"ubiquitous words only","status":"validated","source":"seed@2026-08-09"}
-{"id":"19910104-e1","query":"snowman builds a monstrous version of itself","date":"1991-01-04","decoy":"1990-01-08","class":"E","corruption":"plausible decoy","status":"validated","source":"seed@2026-08-09"}
+{"id":"19910104-e1","query":"snowman builds a monstrous version of itself","date":"1991-01-04","decoy":"1990-02-19","class":"E","corruption":"plausible decoy","status":"validated","source":"seed@2026-08-09"}
 {"id":"19870204-c1","query":"Calvin complained about unfair designated bedtime from report card","date":"1987-02-04","class":"C","corruption":"transcript and description vocabulary","decoy":null,"status":"validated","source":"agent@2026-08-09"}
 {"id":"19880308-c1","query":"in the bathtub talking about somebodys orders day after day and growing fangs","date":"1988-03-08","class":"C","corruption":"transcript and description vocabulary","decoy":null,"status":"validated","source":"agent@2026-08-09"}
 {"id":"19861102-c1","query":"enemy sinks paper carrier in the bath flooding the floor","date":"1986-11-02","class":"C","corruption":"transcript and description vocabulary","decoy":null,"status":"validated","source":"agent@2026-08-09"}
@@ -523,7 +523,7 @@
 {"id":"hollow-23","query":"calvin and hobbes talk about their day","date":null,"class":"D","corruption":"ubiquitous words only","decoy":null,"status":"validated","source":"agent@2026-08-10"}
 {"id":"hollow-24","query":"calvin goes outside and does something","date":null,"class":"D","corruption":"ubiquitous words only","decoy":null,"status":"validated","source":"agent@2026-08-10"}
 {"id":"hollow-25","query":"mom tells calvin to do something at home","date":null,"class":"D","corruption":"ubiquitous words only","decoy":null,"status":"validated","source":"agent@2026-08-10"}
-{"id":"19920514-e1","query":"calvin is going to wait for his destiny to find him","date":"1992-05-14","decoy":"1988-04-07","class":"E","corruption":"plausible decoy","status":"validated","source":"agent@2026-08-10"}
-{"id":"19900222-e1","query":"making abstract snow sculptures","date":"1990-02-22","decoy":"1992-05-14","class":"E","corruption":"plausible decoy","status":"validated","source":"agent@2026-08-10"}
-{"id":"19910129-e1","query":"hobbes wins at checkers with one jump after another","date":"1991-01-29","class":"E","corruption":"emphasis pair","decoy":"1988-10-02","status":"validated","source":"hand@2026-08-10"}
-{"id":"19881221-e1","query":"read the same bedtime story over and over","date":"1988-12-21","class":"E","corruption":"emphasis pair","decoy":"1985-12-30","status":"validated","source":"hand@2026-08-10"}
+{"id":"19920514-e1","query":"calvin is going to wait for his destiny to find him","date":"1992-05-14","decoy":"1992-03-20","class":"E","corruption":"plausible decoy","status":"validated","source":"agent@2026-08-10"}
+{"id":"19900222-e1","query":"making abstract snow sculptures","date":"1990-02-22","decoy":"1988-11-18","class":"E","corruption":"plausible decoy","status":"validated","source":"agent@2026-08-10"}
+{"id":"19870307-e1","query":"calvin unplugs the phone to stop the ring","date":"1987-03-07","class":"E","corruption":"emphasis pair","decoy":"1989-10-03","status":"validated","source":"hand@2026-08-11"}
+{"id":"19950425-e1","query":"warm up before chewing gum","date":"1995-04-25","class":"E","corruption":"emphasis pair","decoy":"1987-06-08","status":"validated","source":"hand@2026-08-11"}

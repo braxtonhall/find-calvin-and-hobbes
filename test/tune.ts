@@ -46,12 +46,11 @@ const CANDIDATES: Record<string, number[]> = {
 	// words in the first place.
 	transcriptLengthForgiveness: [0.25, 0.4, 0.55, 0.7, 0.85, 1],
 	descriptionLengthForgiveness: [0.25, 0.4, 0.55, 0.7, 0.85, 1],
-	// 0 admits everything the engine admitted before this existed. Above 0.5 the fixture's own
-	// targets start failing it — a fifth of them match half the query or less — so the grid
-	// stops where the measurement says the cost turns.
-	// 0 is kept as the record of what the engine admitted before this existed, but the correction
-	// guard below rejects it on sight: at 0 a strip can be admitted having matched nothing of the
-	// query as written, which is the property the floor exists to hold.
+	// Above 0.5 the fixture's own targets start failing it — a fifth of them match half the query or
+	// less — so the grid stops where the measurement says the cost turns. 0 is kept as the record of
+	// what the engine admitted before this existed, but the correction guard below rejects it on
+	// sight: at 0 a strip can be admitted having matched nothing of the query as written, which is
+	// the property the floor exists to hold.
 	transcriptLiteralShare: [0, 0.2, 0.3, 0.4, 0.5],
 	descriptionLiteralShare: [0, 0.2, 0.3, 0.4, 0.5],
 	descriptionMinMass: [0, 1, 1.5, 2.5, 4],
@@ -361,12 +360,28 @@ let bestScore = score(best, sweepSet);
 console.log(format("baseline", bestScore));
 if (subsampling) console.log(format("baseline (all scored train)", score(best, scored)));
 
+// Why a knob was kept, which `keep` on its own never said. A value can fail for three quite
+// different reasons — it gained nothing, it gained on its own intent while costing more elsewhere,
+// or it gained and a constraint forbade it — and only the third tells you a guard is doing work.
+// The 2026-08-10 review had to write "the two possibilities cannot be separated" about eighteen
+// parameters, which is a report about this file rather than about the engine.
+interface Attempt {
+	knob: string;
+	value: number;
+	gain: number;
+	collateral: boolean;
+	blocked: string[];
+}
+
+const blockedAttempts: Attempt[] = [];
+
 for (let pass = 1; pass <= 2; pass++) {
 	console.log(`\n--- pass ${pass} ---`);
 	for (const knob of KNOBS) {
 		const objective = OBJECTIVE[knob];
 		let chosen = best[knob];
 		let chosenScore = bestScore;
+		const attempts: Attempt[] = [];
 
 		for (const value of CANDIDATES[knob]) {
 			if (value === best[knob]) continue;
@@ -377,21 +392,46 @@ for (let pass = 1; pass <= 2; pass++) {
 			// out of the other one. Transcript parameters reach description queries through the
 			// merge, so "transcript-only" is true of the mechanism, not of the effect.
 			const collateral = candidateScore.combined < bestScore.combined - 1e-9;
-			if (
-				gain > MINIMUM_GAIN &&
-				!collateral &&
-				violations(candidate).length === 0 &&
-				collapses(candidate).length === 0 &&
-				bloats(candidate).length === 0 &&
-				corrections(candidate).length === 0
-			) {
+			// Only asked of a value that would otherwise win, since each probe is a real search and
+			// the answer is only interesting for a candidate the objective wants.
+			const blocked =
+				gain > MINIMUM_GAIN && !collateral
+					? [...violations(candidate), ...collapses(candidate), ...bloats(candidate), ...corrections(candidate)]
+					: [];
+			attempts.push({ knob, value, gain, collateral, blocked });
+
+			if (gain > MINIMUM_GAIN && !collateral && blocked.length === 0) {
 				chosen = value;
 				chosenScore = candidateScore;
 			}
 		}
 
+		// A candidate the objective wanted and a rule refused is a finding in its own right, so it
+		// is named on the spot and collected for the tuning log.
+		for (const attempt of attempts) {
+			if (attempt.blocked.length > 0) {
+				console.log(`  ${knob} = ${attempt.value} gained ${attempt.gain.toFixed(4)} but is BLOCKED:`);
+				for (const reason of attempt.blocked) console.log(`    ${reason}`);
+				blockedAttempts.push(attempt);
+			} else if (attempt.gain > MINIMUM_GAIN && attempt.collateral) {
+				console.log(
+					`  ${knob} = ${attempt.value} gained ${attempt.gain.toFixed(4)} on ${objective} ` +
+						`but the combined score would fall`,
+				);
+			}
+		}
+
 		if (chosen === best[knob]) {
-			console.log(`${knob.padEnd(44)} keep ${best[knob]}   (${objective})`);
+			// The best value tried and what it was worth, so a `keep` can be read as "nothing here"
+			// rather than "nothing measured".
+			const closest = attempts.reduce<Attempt | null>(
+				(leader, attempt) => (leader === null || attempt.gain > leader.gain ? attempt : leader),
+				null,
+			);
+			const near = closest
+				? `   best alternative ${closest.value} at ${closest.gain >= 0 ? "+" : ""}${closest.gain.toFixed(4)}`
+				: "";
+			console.log(`${knob.padEnd(44)} keep ${best[knob]}   (${objective})${near}`);
 			continue;
 		}
 		const gain = chosenScore[objective] - bestScore[objective];
@@ -399,6 +439,14 @@ for (let pass = 1; pass <= 2; pass++) {
 		bestScore = chosenScore;
 		console.log(format(`${knob} -> ${chosen}   (${objective} +${gain.toFixed(4)})`, chosenScore));
 	}
+}
+
+if (blockedAttempts.length > 0) {
+	console.log(`\n${blockedAttempts.length} candidate values were wanted by the objective and refused by a constraint:`);
+	for (const attempt of blockedAttempts) {
+		console.log(`  ${attempt.knob} = ${attempt.value} (+${attempt.gain.toFixed(4)}): ${attempt.blocked[0]}`);
+	}
+	console.log(`Those are the guards earning their place. A run with none has not proved they work.`);
 }
 
 console.log(`\n${format(subsampling ? "tuned (on the subsample)" : "tuned", bestScore)}`);
@@ -501,8 +549,21 @@ function report(label: string, rows: LabelledQuery[]): Record<string, unknown> {
 
 	const nearMiss = evaluateNearMiss(rows, best);
 	if (nearMiss.pairs > 0) {
-		console.log(`  E near-miss          ${nearMiss.targetAboveDecoy}/${nearMiss.pairs} beat their decoy`);
-		for (const loss of nearMiss.losses) console.log(`    lost: "${loss.query}" to ${loss.decoy}`);
+		// The contested count leads because it is the only one that says anything about the ranker.
+		// `11/15 beat their decoy` was read as a ranking result for a whole run; it was nine
+		// walkovers, two real comparisons and four queries that returned nothing.
+		console.log(
+			`  E near-miss          ${nearMiss.targetAboveDecoy}/${nearMiss.contested} contested pairs won  ` +
+				`(of ${nearMiss.pairs}: ${nearMiss.decoyUncontested.length} decoy never admitted, ` +
+				`${nearMiss.targetAbsent.length} target absent)`,
+		);
+		for (const loss of nearMiss.decoyWins) {
+			console.log(`    decoy wins: "${loss.query}" — target #${loss.targetRank}, ${loss.decoy} #${loss.decoyRank}`);
+		}
+		for (const row of nearMiss.targetAbsent) console.log(`    target absent: "${row.query}" (${row.date})`);
+		for (const row of nearMiss.decoyUncontested) {
+			console.log(`    untested: "${row.query}" — ${row.decoy} was never admitted`);
+		}
 		summary.Epairs = nearMiss;
 	}
 
@@ -529,6 +590,14 @@ fs.appendFileSync(
 		// measured 500, and the parameters would look more firmly established than they are.
 		sweepSize: sweepSet.length,
 		droppedOnFullTrain: dropped,
+		// Candidates the objective wanted and a constraint refused. An empty list in a run that also
+		// moved nothing means the guards were never tested, which is worth knowing later.
+		blockedByConstraint: blockedAttempts.map((attempt) => ({
+			knob: attempt.knob,
+			value: attempt.value,
+			gain: attempt.gain,
+			reason: attempt.blocked[0],
+		})),
 		parameters: best,
 		train: trainSummary,
 		heldOut: heldSummary,

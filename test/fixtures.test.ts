@@ -365,6 +365,30 @@ test("generated near-miss pairs are decidable", async (suite) => {
 	// generator asserting something about the decoy that was not true — a decoy holding no form of
 	// the word at all, and a decoy holding one form where two are needed — which is exactly what a
 	// label cannot be trusted with and a structural check can.
+	// A decoy has to be a competitor, not merely a wrong answer. Nine of the fifteen pairs in the
+	// fixture on 2026-08-10 named a decoy the engine never admitted for the query, so the pair was
+	// scored a win without any comparison taking place — including both emphasis pairs written by
+	// hand to fix exactly this class of problem. The rule that says the query must hold a word the
+	// decoy lacks turns out to be satisfiable by a decoy that shares nothing at all.
+	//
+	// Whether a strip is really admitted is a question for the ranker, and this file is deliberately
+	// blind to it; `test/eval.test.ts` asks that directly. What can be checked here is the condition
+	// underneath it: the decoy must share an informative word with the query, so that it has some
+	// reason to be in the result set at all.
+	await suite.test("a near-miss decoy shares informative vocabulary with the query", () => {
+		const uncontested = pairs.filter((row) => {
+			const decoy = vocabulary(row.decoy!);
+			return !words(row.query).some((word) => decoy.has(word) && informative(word));
+		});
+
+		assert.deepEqual(
+			uncontested.map((row) => `${row.id} (vs ${row.decoy})`),
+			[],
+			`the decoy shares no informative word with the query, so nothing will put it in the results ` +
+				`and the pair tests nothing. A decoy must be a plausible competitor, not just a wrong answer.`,
+		);
+	});
+
 	await suite.test("a pair labelled an emphasis pair is one", () => {
 		const claimed = pairs.filter((row) => (row.corruption ?? "").toLowerCase().includes("emphasis"));
 		const lying = claimed.filter((row) => emphasises(row) === null);

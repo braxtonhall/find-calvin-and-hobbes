@@ -4,6 +4,7 @@ import { search } from "../src/search";
 import { DESCRIBED, RECITED } from "./fixtures/golden";
 import { describeMisses, evaluate } from "./helpers/metrics";
 import { install, loadRealArchive } from "./helpers/archive";
+import { loadGenerated } from "./helpers/queries";
 
 test("golden queries", async (suite) => {
 	install(loadRealArchive());
@@ -114,5 +115,49 @@ test("real archive behaviour", async (suite) => {
 		search("calvin clean your room right now young man", "rank");
 		const elapsed = Number(process.hrtime.bigint() - started) / 1e6;
 		assert.ok(elapsed < 250, `query took ${elapsed.toFixed(1)}ms`);
+	});
+});
+
+// The blind half of this rule lives in test/fixtures.test.ts, which may not run a search and so can
+// only ask whether the decoy shares vocabulary with the query. This is the half that matters: for a
+// pair to test a ranking at all, the engine has to put both strips in the result set. On 2026-08-10
+// nine of fifteen pairs named a decoy it never admitted, so those pairs were scored as wins with no
+// comparison taking place, and the two written by hand to fix the problem had the same defect.
+//
+// Asserted only for pairs that claim to be emphasis pairs, because those exist for one purpose: to
+// separate saying a word repeatedly from saying several forms of it once. A pair whose decoy is
+// absent cannot separate anything. Note what is NOT asserted — that the target wins. A pair the
+// target loses is the interesting kind, and one currently does.
+test("emphasis pairs put both strips in the results", async (suite) => {
+	install(loadRealArchive());
+
+	const claimed = loadGenerated().filter(
+		(row) => row.class === "E" && row.date && row.decoy && (row.corruption ?? "").toLowerCase().includes("emphasis"),
+	);
+
+	await suite.test("there are emphasis pairs to check", () => {
+		assert.ok(claimed.length > 0, "no pair claims to be an emphasis pair, so this guard is vacuous");
+	});
+
+	await suite.test("both the target and the decoy are admitted", () => {
+		const untested = claimed
+			.map((row) => {
+				const results = search(row.query, "rank");
+				const target = results.findIndex((result) => result.comic.date === row.date);
+				const decoy = results.findIndex((result) => result.comic.date === row.decoy);
+				return { row, target, decoy };
+			})
+			.filter(({ target, decoy }) => target === -1 || decoy === -1)
+			.map(
+				({ row, target }) =>
+					`${row.id}: ${target === -1 ? `target ${row.date} absent` : `decoy ${row.decoy} never admitted`}`,
+			);
+
+		assert.deepEqual(
+			untested,
+			[],
+			"an emphasis pair whose strips are not both in the result set tests nothing. Pick a decoy from " +
+				"the strips the query already returns, or write a query that reaches both.",
+		);
 	});
 });
