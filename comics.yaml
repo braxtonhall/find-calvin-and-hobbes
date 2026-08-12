@@ -9075,11 +9075,13 @@ dailies:
     description: Calvin is taking a bath.  He has a pail, ball, duck, sailboat, swim mask, and an umbrella.  The shower is running.  Mom looks in and says they should draw the line at the umbrella.
     source: s-anand+seligman
     review: "verified: checked against a source outside the corpus by the maintainer"
+    requiresBookReview: true
   "19950418":
     transcript: I hate all this wind! Boy, this is unpleasant! Stupid, miserable wind! What a lousy weather! What an awful day! Well if you can't change it, what's the point of griping about it? I'm not going to let a little wind be more annoying than me.
     description: Calvin is complaining about the wind to Hobbes.  Hobbes asks what the point is in griping about it if you can't change it.  Calvin replies he isn't going to let a little wind be more annoying than him.
     source: s-anand+seligman
     review: "verified: checked against a source outside the corpus by the maintainer"
+    requiresBookReview: true
   "19950419":
     transcript: Ah! I got the letter I wrote to myself! What did you write? "Dear Calvin, Hi! I'm writing this on Monday. What day is it now? How are things going? Your pal, Calvin." My past self is corresponding with my future self. Too bad you can't write back.
     description: Out of the mailbox, Calvin gets a letter he wrote to himself.  He reads it to Hobbes.  It asks what day it is, since he's writing it on Monday.  Calvin says his past self is corresponding with his future self.  Hobbes says it's too bad he can't write back.
@@ -9091,11 +9093,13 @@ dailies:
     description: In bed, Calvin tells Mom he has a sore throat, ear ache, is seeing spots, and is dizzy.  Mom offers to call the doctor.  Calvin gets out of bed, saying it's all clearing up.  While he gets dressed, he says it's hard to hit the magic number of vague, mildly serious, but not worrisome symptoms.
     source: s-anand+seligman
     review: "verified: checked against a source outside the corpus by the maintainer"
+    requiresBookReview: true
   "19950422":
     transcript: What a pretty sky today! It's too blue. It needs some red. Red? Just a little right over there. Hang on. That's better. Well I'll be!
     description: Looking at the sky, Calvin tells Hobbes it's too blue.  It needs some red.  He points up to show Hobbes where it should have some red.  He runs off.  Later, Calvin is flying a kite.  He says that's better, and Hobbes agrees.
     source: s-anand+seligman
     review: "verified: checked against a source outside the corpus by the maintainer"
+    requiresBookReview: true
   "19950423":
     transcript: Look at all the stars! The universe just goes out forever and ever! It kind of makes you wonder why man considers himself such a big screaming deal. That's why we stay inside with our appliances.
     description: Calvin and Hobbes look at the sky at night.  Calvin says to look at the stars.  The universe goes on forever and ever.  Hobbes says it makes you wonder why man considers himself such a big deal.  Calvin thinks about it.  They go inside to watch television.  Calvin says that's why they stay inside with their appliances.
@@ -9145,6 +9149,7 @@ dailies:
     description: ""
     source: s-anand+seligman+miraheze
     review: "description dropped: it belonged to another date, which already has a correct one"
+    requiresBookReview: true
   "19950508":
     transcript: '"Please excuse Calvin from class today. His genius is urgently required on a top secret matter of national security. Sincerely, The President of the United States. P.S. Really." Nice try. Sit down. I gotta learn how to write in cursive.'
     description: Miss Wormwood reads a note from the President of the United States, indicating Calvin should be excused because his genius is required on a matter of national security.  Miss Wormwood looks at Calvin and tells him it was a nice try.  Calvin sits down, grumbling that he needs to learn how to write in cursive.
@@ -9173,6 +9178,7 @@ dailies:
     description: Calvin blows a soap bubble.  He watches the large bubble drift along.  It pops.  Calvin says that secretly he was hoping for a deafening explosion.
     source: s-anand+seligman
     review: "verified: checked against a source outside the corpus by the maintainer"
+    requiresBookReview: true
   "19950516":
     transcript: AA! AA! AA! AA! What do you mean, you want a glove for the other hand too? Which word don't you understand?
     description: Calvin tosses the ball into the air so he can catch it.  It comes down and bites his glove.  Later, Dad clarifies that Calvin wants a glove for the other hand, also.
@@ -9182,6 +9188,7 @@ dailies:
     description: Calvin tosses a baseball into the air so he can hit it.  He swings and hits the ball.  It is stuck on his bat, chewing it.  Calvin hides up in a tree.  Dad asks what he's scared of.  The ball isn't going to bite him.  Calvin asks how he knows.
     source: s-anand+seligman
     review: "verified: checked against a source outside the corpus by the maintainer"
+    requiresBookReview: true
   "19950518":
     transcript: Have you been hitting rocks with this bat? No, why? Look at it. It's chewed up. You should take care of your equipment. The ball did this! It's what I've been trying to tell you! These are fang marks! That ball is berserk! It's deranged! It's a menace! Why do I even bother?
     description: Dad asks Calvin if he's been hitting rocks with the bat.  Calvin says no.  Dad says the bat is all chewed up.  Calvin claims the ball did it.  He says that's what he's been trying to tell Dad.  He says the ball is deranged and a menace.  In bed, Calvin asks why he even bothers.
@@ -9191,6 +9198,7 @@ dailies:
     description: Calvin warily approaches the baseball with a bat.  He taps the ball with the bat.  The ball bites the end of the bat, and Calvin runs off.  Later, Dad sees the ball and bat on the ground.  He asks how often he's told Calvin not to leave his stuff in the yard.
     source: s-anand+seligman
     review: "verified: checked against a source outside the corpus by the maintainer"
+    requiresBookReview: true
   "19950520":
     transcript: FFOOOOFF. FFOOOOF. bip.
     description: Calvin blows a soap bubble.  It starts to drift off, then stops.  It blows back at Calvin.  Then, it pops.  Calvin isn't sure what just happened.
