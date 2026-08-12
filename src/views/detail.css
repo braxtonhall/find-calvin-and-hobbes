@@ -99,11 +99,51 @@
 	margin-top: 40px;
 }
 
+.detail-description {
+	font-size: 15px;
+	line-height: 1.7;
+	color: var(--text);
+}
+
+.detail-transcript-label {
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--text-muted);
+	margin: 20px 0 6px 0;
+}
+
 .detail-transcript {
 	white-space: pre-wrap;
 	font-size: 14px;
 	line-height: 1.6;
 	color: var(--text);
+}
+
+.detail-comic--illustrated .detail-transcript {
+	color: var(--text-muted);
+}
+
+.detail-description-skeleton span {
+	display: block;
+	height: 11px;
+	border-radius: 3px;
+	background: var(--grey);
+	animation: pulse 1.5s ease-in-out infinite;
+	margin-bottom: 9px;
+}
+
+.detail-description-skeleton span:nth-child(1) {
+	width: 100%;
+}
+
+.detail-description-skeleton span:nth-child(2) {
+	width: 96%;
+}
+
+.detail-description-skeleton span:nth-child(3) {
+	width: 62%;
+	margin-bottom: 26px;
 }
 
 .detail-note {
@@ -152,7 +192,29 @@
 .detail-collections {
 	display: flex;
 	flex-wrap: wrap;
+	align-items: flex-start;
 	gap: 10px;
+}
+
+.collection-entry {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.collection-pages {
+	max-width: 72px;
+	margin-top: 7px;
+	font-size: 11px;
+	line-height: 1.35;
+	color: var(--text-muted);
+	text-align: center;
+	hyphens: auto;
+	overflow-wrap: break-word;
+}
+
+.collection-pages__line {
+	display: block;
 }
 
 .detail-collections--empty {
@@ -225,6 +287,15 @@
 .collection-tooltip__year {
 	font-size: 11px;
 	color: #aaa;
+}
+
+.collection-tooltip__pages {
+	margin-top: 4px;
+	font-size: 12px;
+	color: #ddd;
+	white-space: normal;
+	max-width: 260px;
+	line-height: 1.4;
 }
 
 .collection-tooltip__divider {

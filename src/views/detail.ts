@@ -1,11 +1,12 @@
 import "./detail.css";
 
-import { Comic } from "../types";
+import { Appearance, Collection, Comic, ComicDetail } from "../types";
 import { state } from "../state";
 import { escHtml } from "../utils";
 import { dateToCompact, isDateInCollection } from "../date-utils";
+import { getComicDetail, loadMonthShard, monthOf, prefetchMonthsAround } from "../details";
 import { isBookmarked, toggleBookmark } from "../bookmarks";
-import { navigate } from "../router";
+import { navigate, parseRoute } from "../router";
 import { attachBackAndHomeHandlers, buildBackAndHomeButtons } from "./nav-buttons";
 
 export function getAdjacentComicDate(date: string, direction: -1 | 1, jump: number = 1): string | null {
@@ -84,58 +85,123 @@ function buildBookmarkButtonHandler(bookmarkButton: HTMLButtonElement, date: str
 	});
 }
 
-function buildCollectionSectionHtml(comic: Comic, date: string, isSunday: boolean): string {
-	if (comic.id && state.collectionIndex && state.collectionsById) {
-		const matchingCollections = state.collectionIndex.collections
-			.filter((collection) => collection.specials && collection.specials[comic.id!])
-			.sort((a, b) => {
-				if (a.pub_year !== b.pub_year) return a.pub_year - b.pub_year;
-				if (a.pub_month !== b.pub_month) return a.pub_month - b.pub_month;
-				return (a.pub_day || 0) - (b.pub_day || 0);
-			});
+function formatPages(pages: number[], long: boolean = false): string {
+	if (pages.length === 0) return "";
+	if (pages.length === 1) return long ? `Page ${pages[0]}` : `p. ${pages[0]}`;
+	const isContiguous = pages.every((page, index) => index === 0 || page === pages[index - 1] + 1);
+	const list = isContiguous ? `${pages[0]}–${pages[pages.length - 1]}` : pages.join(", ");
+	return long ? `Pages ${list}` : `pp. ${list}`;
+}
 
-		if (matchingCollections.length > 0) {
-			let boxes = "";
-			for (const collection of matchingCollections) {
-				const alteration = collection.alterations && collection.alterations[comic.id!];
-				const badge = alteration ? '<div class="collection-book__badge">*</div>' : "";
-				const imageUrl = collection.image;
-				boxes += `<div class="collection-book" data-collection-id="${escHtml(collection.id)}" data-alteration="${escHtml(alteration || "")}" style="aspect-ratio: ${collection.aspectRatio}"><img src="${escHtml(imageUrl)}" alt="${escHtml(collection.name)}" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${badge}</div>`;
-			}
-			return `<p class="detail-collections-heading">Appears in:</p><div class="detail-collections">${boxes}</div>`;
-		} else {
-			return `<p class="detail-collections-heading">Appears in:</p><div class="detail-collections detail-collections--empty">No collections</div>`;
-		}
-	} else if (!comic.id && state.collectionIndex && state.collectionsById) {
-		const matchingCollections = state.collectionIndex.collections
-			.filter((collection) => isDateInCollection(date, collection))
-			.sort((a, b) => {
-				if (a.pub_year !== b.pub_year) return a.pub_year - b.pub_year;
-				if (a.pub_month !== b.pub_month) return a.pub_month - b.pub_month;
-				return (a.pub_day || 0) - (b.pub_day || 0);
-			});
+function shortenEditionLabel(label: string): string {
+	return label.replace(/\s*\(.*\)\s*$/, "");
+}
 
-		if (matchingCollections.length > 0) {
-			let boxes = "";
-			for (const collection of matchingCollections) {
-				const inColour = collection.colour && isSunday;
-				const bwClass = isSunday && !inColour ? " collection-book--bw" : "";
-				const compactDate = dateToCompact(date);
-				const alterationKey = comic.id || compactDate;
-				const alteration = collection.alterations && collection.alterations[alterationKey];
-				const badge = alteration ? '<div class="collection-book__badge">*</div>' : "";
-				const imageUrl = collection.image;
-				boxes += `<div class="collection-book${bwClass}" data-collection-id="${escHtml(collection.id)}" data-colour="${inColour ? "1" : "0"}" data-alteration="${escHtml(alteration || "")}" style="aspect-ratio: ${collection.aspectRatio}"><img src="${escHtml(imageUrl)}" alt="${escHtml(collection.name)}" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${badge}</div>`;
-			}
-			return `<p class="detail-collections-heading">Appears in:</p><div class="detail-collections">${boxes}</div>`;
-		} else {
-			return `<p class="detail-collections-heading">Appears in:</p><div class="detail-collections detail-collections--empty">No collections</div>`;
+interface AppearanceEntry {
+	collection: Collection;
+	captionLines: string[];
+	tooltipLines: string[];
+}
+
+function buildAppearanceEntries(appearances: Appearance[]): AppearanceEntry[] {
+	const entriesById = new Map<string, AppearanceEntry>();
+
+	for (const appearance of appearances) {
+		const collection = state.collectionsById!.get(appearance.collection);
+		if (!collection) continue;
+
+		let entry = entriesById.get(appearance.collection);
+		if (!entry) {
+			entry = { collection, captionLines: [], tooltipLines: [] };
+			entriesById.set(appearance.collection, entry);
 		}
-	} else if (comic.sort) {
-		return `<p class="detail-collections-heading">Appears in:</p><div class="detail-collections detail-collections--empty">No collections</div>`;
+
+		if (appearance.edition) {
+			const edition = collection.editions && collection.editions[appearance.edition];
+			const fullLabel = edition ? edition.label : appearance.edition;
+			const totalMatch = fullLabel.match(/\((\d+)/);
+			const totalVolumes = totalMatch ? parseInt(totalMatch[1]) : 0;
+			const volumePart = appearance.volume ? ` ${appearance.volume}` : "";
+			entry.captionLines.push(`${fullLabel.charAt(0)}${volumePart}, ${formatPages(appearance.pages)}`);
+			entry.tooltipLines.push(
+				`${shortenEditionLabel(fullLabel)}, Book ${appearance.volume} of ${totalVolumes}, ${formatPages(appearance.pages).replace("p.", "page")}`,
+			);
+		} else {
+			entry.captionLines.push(formatPages(appearance.pages));
+			entry.tooltipLines.push(formatPages(appearance.pages, true));
+		}
 	}
 
-	return "";
+	return [...entriesById.values()];
+}
+
+function buildCoverBoxHtml(
+	collection: Collection,
+	alterationKey: string,
+	isSunday: boolean,
+	tooltipLines: string[],
+): string {
+	const isBlackAndWhite = isSunday && !collection.colour;
+	const bwClass = isBlackAndWhite ? " collection-book--bw" : "";
+	const alteration = collection.alterations && collection.alterations[alterationKey];
+	const badge = alteration ? '<div class="collection-book__badge">*</div>' : "";
+
+	return `<div class="collection-book${bwClass}" data-collection-id="${escHtml(collection.id)}" data-bw="${isBlackAndWhite ? "1" : "0"}" data-alteration="${escHtml(alteration || "")}" data-pages="${escHtml(tooltipLines.join("\n"))}" style="aspect-ratio: ${collection.aspectRatio}"><img src="${escHtml(collection.image)}" alt="${escHtml(collection.name)}" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${badge}</div>`;
+}
+
+function wrapCollectionSection(inner: string): string {
+	return `<p class="detail-collections-heading">Printed in:</p>${inner}`;
+}
+
+function buildAppearancesSectionHtml(appearances: Appearance[], alterationKey: string, isSunday: boolean): string {
+	const entries = buildAppearanceEntries(appearances);
+	if (entries.length === 0) {
+		return wrapCollectionSection(
+			`<div class="detail-collections detail-collections--empty">Not reprinted in any book</div>`,
+		);
+	}
+
+	const boxes = entries
+		.map((entry) => {
+			const caption = entry.captionLines
+				.map((line) => `<span class="collection-pages__line">${escHtml(line)}</span>`)
+				.join("");
+			return `<div class="collection-entry">${buildCoverBoxHtml(entry.collection, alterationKey, isSunday, entry.tooltipLines)}<div class="collection-pages">${caption}</div></div>`;
+		})
+		.join("");
+
+	return wrapCollectionSection(`<div class="detail-collections">${boxes}</div>`);
+}
+
+function buildRangeFallbackSectionHtml(comic: Comic, date: string, isSunday: boolean): string {
+	if (comic.id) return "";
+
+	const alterationKey = dateToCompact(date);
+	const boxes = state
+		.collectionIndex!.collections.filter((collection) => isDateInCollection(date, collection))
+		.sort((a, b) => {
+			if (a.pub_year !== b.pub_year) return a.pub_year - b.pub_year;
+			if (a.pub_month !== b.pub_month) return a.pub_month - b.pub_month;
+			return (a.pub_day || 0) - (b.pub_day || 0);
+		})
+		.map(
+			(collection) =>
+				`<div class="collection-entry">${buildCoverBoxHtml(collection, alterationKey, isSunday, [])}</div>`,
+		)
+		.join("");
+
+	if (!boxes) return "";
+	return wrapCollectionSection(`<div class="detail-collections">${boxes}</div>`);
+}
+
+function buildCollectionSectionHtml(comic: Comic, date: string, isSunday: boolean): string {
+	if (!state.collectionIndex || !state.collectionsById) return "";
+
+	const detail = getComicDetail(date, comic.id);
+	if (detail) {
+		return buildAppearancesSectionHtml(detail.appearances || [], comic.id || dateToCompact(date), isSunday);
+	}
+	return buildRangeFallbackSectionHtml(comic, date, isSunday);
 }
 
 function getAspectRatio(comic: Comic, isSunday: boolean): number {
@@ -143,12 +209,28 @@ function getAspectRatio(comic: Comic, isSunday: boolean): number {
 	return isSunday ? 1.427 : 3.098;
 }
 
+function describeImage(detail: ComicDetail | undefined, dateFormatted: string): string {
+	return detail && detail.description ? detail.description : `Comic from ${dateFormatted}`;
+}
+
+function buildDescriptionSlotContents(comic: Comic, detail: ComicDetail | undefined, shardResolved: boolean): string {
+	if (comic.image) return "";
+	if (!shardResolved) {
+		return `<div class="detail-description-skeleton"><span></span><span></span><span></span></div>`;
+	}
+	if (!detail || !detail.description) return "";
+	return `<p class="detail-description">${escHtml(detail.description)}</p><p class="detail-transcript-label">Transcript</p>`;
+}
+
 function buildComicBodiesHtml(date: string, dateFormatted: string, isSunday: boolean): string {
 	const comicsForDate = state.comicsByDate.get(date);
 	if (!comicsForDate || comicsForDate.length === 0) return "";
+	const shardResolved = state.detailsByMonth.has(monthOf(date));
 
 	let bodies = "";
 	for (const comic of comicsForDate) {
+		const detail = getComicDetail(date, comic.id);
+
 		let transcriptHtml: string;
 		if (comic.transcript) {
 			transcriptHtml = `<div class="detail-transcript">${escHtml(comic.transcript)}</div>`;
@@ -163,25 +245,47 @@ function buildComicBodiesHtml(date: string, dateFormatted: string, isSunday: boo
 			readLinkHtml = `<a class="detail-read-link" href="${escHtml(gocomicsUrl)}" target="_blank" rel="noopener">Read <svg class="detail-read-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`;
 		}
 
-		const collectionSectionHtml = buildCollectionSectionHtml(comic, date, isSunday);
-
 		const aspectRatio = getAspectRatio(comic, isSunday);
+		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
 
-		bodies += `<div class="detail-comic">
-				${comic.image ? `<div class="detail-image-wrapper" style="aspect-ratio: ${aspectRatio}"><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}" alt="Comic from ${dateFormatted}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
+		bodies += `<div class="detail-comic${illustratedClass}" data-comic-key="${escHtml(comic.id || date)}">
+				${comic.image ? `<div class="detail-image-wrapper" style="aspect-ratio: ${aspectRatio}"><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}" alt="${escHtml(describeImage(detail, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
+			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, detail, shardResolved)}</div>
 			${transcriptHtml}
 			${readLinkHtml}
-			${collectionSectionHtml}
+			<div class="detail-collections-slot">${buildCollectionSectionHtml(comic, date, isSunday)}</div>
 		</div>`;
 	}
 
 	return bodies;
 }
 
+function patchDetailBlocks(element: HTMLElement, date: string, dateFormatted: string, isSunday: boolean): void {
+	const comicsForDate = state.comicsByDate.get(date);
+	if (!comicsForDate) return;
+
+	for (const comic of comicsForDate) {
+		const key = comic.id || date;
+		const block = element.querySelector<HTMLElement>(`.detail-comic[data-comic-key="${key}"]`);
+		if (!block) continue;
+
+		const detail = getComicDetail(date, comic.id);
+
+		const descriptionSlot = block.querySelector<HTMLElement>(".detail-description-slot");
+		if (descriptionSlot) descriptionSlot.innerHTML = buildDescriptionSlotContents(comic, detail, true);
+
+		const image = block.querySelector<HTMLImageElement>(".detail-image");
+		if (image) image.alt = describeImage(detail, dateFormatted);
+
+		const collectionsSlot = block.querySelector<HTMLElement>(".detail-collections-slot");
+		if (collectionsSlot) collectionsSlot.innerHTML = buildCollectionSectionHtml(comic, date, isSunday);
+	}
+
+	attachCollectionBookHandlers(element);
+}
+
 let lastMouseX = 0;
 let lastMouseY = 0;
-// The rendered detail view only ever shows one date, so its Sunday-ness is safe to keep here.
-let tooltipIsSunday = false;
 let tooltipFollowersAttached = false;
 
 function hideCollectionTooltip(): void {
@@ -199,9 +303,13 @@ function showCollectionTooltip(book: HTMLElement): void {
 	const pubYear = collection.pub_year.toString();
 	let html = `<span class="collection-tooltip__name">${escHtml(collection.name)}</span> <span class="collection-tooltip__year">(${pubYear})</span>`;
 
+	const pageLines = book.dataset.pages ? book.dataset.pages.split("\n").filter(Boolean) : [];
+	if (pageLines.length > 0) {
+		html += `<div class="collection-tooltip__pages">${pageLines.map((line) => escHtml(line)).join("<br>")}</div>`;
+	}
+
 	const notes: string[] = [];
-	const inColour = book.dataset.colour === "1";
-	if (tooltipIsSunday && !inColour) {
+	if (book.dataset.bw === "1") {
 		notes.push("Printed in black & white");
 	}
 	const alteration = book.dataset.alteration;
@@ -255,7 +363,7 @@ function attachCollectionTooltipFollowers(): void {
 	main.addEventListener("load", follow, true);
 }
 
-function attachCollectionBookHandlers(element: HTMLElement, isSunday: boolean): void {
+function attachCollectionBookHandlers(element: HTMLElement): void {
 	element.querySelectorAll<HTMLElement>(".collection-book").forEach((book) => {
 		book.addEventListener("click", () => {
 			const collectionId = book.dataset.collectionId;
@@ -267,7 +375,6 @@ function attachCollectionBookHandlers(element: HTMLElement, isSunday: boolean): 
 
 	if (!state.collectionTooltip) return;
 
-	tooltipIsSunday = isSunday;
 	attachCollectionTooltipFollowers();
 
 	element.querySelectorAll<HTMLElement>(".collection-book").forEach((book) => {
@@ -340,5 +447,15 @@ export function renderDetail(date: string): void {
 		nextButton.addEventListener("click", () => navigate("#/comic/" + nextDate));
 	}
 
-	attachCollectionBookHandlers(element, isSunday);
+	attachCollectionBookHandlers(element);
+
+	const shardMonth = monthOf(date);
+	if (!state.detailsByMonth.has(shardMonth)) {
+		loadMonthShard(shardMonth).then(() => {
+			const route = parseRoute();
+			if (route.view !== "detail" || route.date !== date) return;
+			patchDetailBlocks(element, date, dateFormatted, isSunday);
+		});
+	}
+	prefetchMonthsAround(date);
 }

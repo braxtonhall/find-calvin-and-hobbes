@@ -1,8 +1,9 @@
-import { Comic, CollectionIndex, Collection, Day, Route } from "./types";
+import { Comic, CollectionIndex, Collection, Day, MonthShard, Route } from "./types";
 
 export interface AppState {
 	comics: Comic[];
 	comicsByDate: Map<string, Comic[]>;
+	detailsByMonth: Map<string, MonthShard | null>;
 	allDays: Day[];
 	searchResultsDateSet: Set<string> | null;
 	collectionDateSet: Set<string> | null;
@@ -20,6 +21,7 @@ export interface AppState {
 export const state: AppState = {
 	comics: [],
 	comicsByDate: new Map(),
+	detailsByMonth: new Map(),
 	allDays: [],
 	searchResultsDateSet: null,
 	collectionDateSet: null,
