@@ -54,6 +54,15 @@ const CANDIDATES: Record<string, number[]> = {
 	transcriptLiteralShare: [0, 0.2, 0.3, 0.4, 0.5],
 	descriptionLiteralShare: [0, 0.2, 0.3, 0.4, 0.5],
 	descriptionMinMass: [0, 1, 1.5, 2.5, 4],
+	// The units of `descriptionMinMass`: 0 compares the raw sum over query terms, 1 the mean per
+	// matched term. These two have to be read together — at 0 the threshold is inert at every
+	// value on the grid above, and at 1 the same numbers mean something entirely different — so a
+	// sweep that moves one without the other is measuring noise. See question 5.
+	descriptionMassNormalization: [0, 0.5, 1],
+	// Pivoted document-length normalization. 0 is the engine as it has always been; the grid stops
+	// at 1, full normalization, because beyond it a long field is penalised more than its length.
+	transcriptLengthNormalization: [0, 0.25, 0.5, 0.75, 1],
+	descriptionLengthNormalization: [0, 0.25, 0.5, 0.75, 1],
 	descriptionIdfFloor: [0.25, 0.5, 1, 1.5, 2],
 	// 0 is a real value here rather than an omission: it suppresses the inflection lookup, so
 	// the bottom of each grid is the engine as it was before the stemmer existed.
@@ -84,6 +93,9 @@ const OBJECTIVE: Record<string, "recited" | "described" | "combined"> = {
 	descriptionInflectionWeight: "described",
 	descriptionCoverageFloor: "described",
 	descriptionMinMass: "described",
+	descriptionMassNormalization: "described",
+	transcriptLengthNormalization: "recited",
+	descriptionLengthNormalization: "described",
 	descriptionIdfFloor: "described",
 	rarityExponent: "combined",
 	repeatVariety: "combined",

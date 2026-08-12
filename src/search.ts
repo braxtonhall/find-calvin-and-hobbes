@@ -28,6 +28,9 @@ export interface Tuning {
 	transcriptLiteralShare: number;
 	descriptionLiteralShare: number;
 	descriptionMinMass: number;
+	descriptionMassNormalization: number;
+	transcriptLengthNormalization: number;
+	descriptionLengthNormalization: number;
 	transcriptIdfFloor: number;
 	descriptionIdfFloor: number;
 	transcriptInflectionWeight: number;
@@ -91,7 +94,63 @@ export const TUNING: Tuning = {
 	// Not higher: at 0.3 the zero-result rate leaves nought and recited starts falling.
 	transcriptLiteralShare: 0.2,
 	descriptionLiteralShare: 0.2,
-	descriptionMinMass: 1.5,
+	// Raised from 1.5 together with the normalization below, which is the only way it could move:
+	// at normalization 0 this threshold is inert at every value up to 3.5 and destructive from 4,
+	// so neither knob does anything without the other. A sweep works one parameter at a time and
+	// therefore cannot find this pair — see question 5.
+	descriptionMinMass: 2.5,
+	// How much of the query's length is divided out of the mass gate: `achieved / matched ** b`,
+	// so 0 is the raw sum this has always compared and 1 is the mean mass per matched term.
+	//
+	// The gate asks whether a query has enough content to be worth answering from descriptions, but
+	// `achieved` sums over query terms, so it grows with query length and answers a different
+	// question. Measured 2026-08-12: `snow` scores 3.90 and the class D archetype `calvin tells
+	// hobbes about his mom` scores 5.42, so the flood outweighs the keyword and no threshold
+	// separates them — which is why the gate has been inert from 0 to 3.5 and, at 4, takes all 110
+	// of `snow`'s description results while the hollow mean falls only from 179 to 167.
+	//
+	// Measured, not swept, and it has to be set jointly with the threshold above. At 1 with a
+	// threshold of 2.5 the hollow queries of class D fall from 179 results to 103 while every other
+	// measure holds exactly: train recited 0.9261, described 0.8538, held out unchanged, 27 absent
+	// targets, both golden intents 1.000, all six description probes at full strength and every
+	// monotonicity probe intact. Not higher: at a threshold of 3 a real target starts to fail.
+	//
+	// Once shipped, the existing bloat guard defends it without anything new being written — the
+	// baseline hollow mean is 103, so its 1.5x ceiling is 154 and every route back to the old
+	// behaviour lands at 179 and is rejected.
+	descriptionMassNormalization: 1,
+	// Pivoted document-length normalization, `1 - b + b * (length / average length)`, dividing the
+	// field's strength. 0 leaves the score untouched, which is what the engine has always done; 1
+	// is full normalization, where a match in a field of twice the average is worth half as much.
+	//
+	// There is currently none, and the bias runs toward long fields rather than being merely
+	// absent: repetition is counted as `1 + repeatWeight * log2(repeated)`, and a longer field has
+	// more room to repeat a word. `transmogrifier` scores 1.3550 in a 117-word transcript against
+	// 1.1050 in a 25-word one. That is not evenly spread over the corpus — Sunday transcripts
+	// average 89.9 words against a weekday's 47.8 — so it is a systematic advantage for Sundays.
+	//
+	// Both measured, not swept, and both gain less than the sweep's 0.005 threshold on the intent
+	// they are judged against, so a sweep would keep 0 forever.
+	//
+	// 0 for transcripts, and the measurement is the reason rather than caution. 0.25 is worth
+	// +0.0017 on the recited intent — a third of the sweep's own threshold — and it costs a pinned
+	// property: `repeatVariety` exists to make a transcript saying `snow` and `snowball` outrank
+	// one saying `snow` once, and at 0.25 the seven-word strip falls behind the four-word one
+	// because length cancels the variety bonus. `test/search.test.ts` fails on exactly that case.
+	// A third of a threshold does not buy a property, which is the same trade
+	// `transcriptInflectionWeight` refused. Above 0.25 the described intent falls too, and at 1 a
+	// golden recitation goes with it.
+	//
+	// 0.1 for descriptions, which is the largest value that is no worse anywhere. It is worth
+	// +0.0067 on the described intent — above the sweep's threshold, unlike most of these — and
+	// +0.0022 recited, with held out improving on both. Not higher: at 0.15 the golden described
+	// set drops to 0.978, because `learning to ride a bicycle crash` then ranks 1986-09-02 first.
+	// Those two strips are consecutive days of one story and both descriptions are about learning
+	// to ride and crashing, so it is a knife-edge rather than a clear error — but the golden set is
+	// a guard rail and the rule is that it does not regress. The gain from 0.15 to 0.25 is real
+	// (described reaches 0.8680) and is available if that query is ever re-examined.
+	transcriptLengthNormalization: 0,
+	descriptionLengthNormalization: 0.1,
 	transcriptIdfFloor: 0.5,
 	descriptionIdfFloor: 1,
 	// How much another inflection of a query word is worth beside the word itself.
@@ -149,6 +208,10 @@ interface Corpus {
 	// statistics: every word keeps its own document frequency, so a query for `complains` is
 	// still as rare as `complains` is and only what it can match has widened.
 	inflections: Map<string, Set<string>>;
+	// Mean words per *field*, not per document: a comic with an alternate is one document but two
+	// transcripts, and length normalization divides a single field's score, so the average it is
+	// measured against has to be counted the same way.
+	averageFieldLength: number;
 }
 
 interface Expansion {
@@ -172,6 +235,10 @@ interface FieldHits {
 interface Summary {
 	base: number;
 	achieved: number;
+	// How many query terms this field actually hit. The mass gate divides by it, so that the
+	// question it asks is "were the words you matched specific ones" rather than "how many were
+	// there" — a sum over terms answers the second and was never meant to.
+	matched: number;
 	ceiling: number;
 	coverage: number;
 	// The share of the query's live terms this field matched without spelling correction.
@@ -202,7 +269,18 @@ let cachedTuning: Tuning | null = null;
 const expansionCache = new Map<string, Expansion>();
 
 function emptyCorpus(name: string): Corpus {
-	return { name, documentFrequency: new Map(), documentCount: 0, inflections: new Map() };
+	return { name, documentFrequency: new Map(), documentCount: 0, inflections: new Map(), averageFieldLength: 0 };
+}
+
+function averageFieldLength(fields: IndexedField[][]): number {
+	let words = 0;
+	let count = 0;
+	for (const group of fields)
+		for (const field of group) {
+			words += field.words.length;
+			count++;
+		}
+	return count === 0 ? 0 : words / count;
 }
 
 function indexInflections(corpus: Corpus): void {
@@ -270,6 +348,8 @@ function ensureIndex(): void {
 	expansionCache.clear();
 
 	const interned = new Map<string, string>();
+	const transcriptFields: IndexedField[][] = [];
+	const descriptionFields: IndexedField[][] = [];
 	for (const comic of state.comics) {
 		const transcripts = [indexField(comic.transcript, interned)];
 		if (comic.alternate) transcripts.push(indexField(comic.alternate, interned));
@@ -278,13 +358,29 @@ function ensureIndex(): void {
 		const description = descriptionText ? indexField(descriptionText, interned) : null;
 
 		countDocument(transcriptCorpus, transcripts);
-		if (description) countDocument(descriptionCorpus, [description]);
+		transcriptFields.push(transcripts);
+		if (description) {
+			countDocument(descriptionCorpus, [description]);
+			descriptionFields.push([description]);
+		}
 
 		indexedComics.push({ comic, transcripts, description });
 	}
 
 	indexInflections(transcriptCorpus);
 	indexInflections(descriptionCorpus);
+	transcriptCorpus.averageFieldLength = averageFieldLength(transcriptFields);
+	descriptionCorpus.averageFieldLength = averageFieldLength(descriptionFields);
+}
+
+/**
+ * Pivoted length normalization, the BM25 shape: at 0 the divisor is 1 and the score is untouched,
+ * at 1 a field of twice the average is worth half as much. Floored well above zero because an
+ * empty field would otherwise divide by `1 - b`, which is 0 at full normalization.
+ */
+function lengthPivot(field: IndexedField, corpus: Corpus, normalization: number): number {
+	if (normalization === 0 || corpus.averageFieldLength === 0) return 1;
+	return Math.max(0.01, 1 - normalization + normalization * (field.words.length / corpus.averageFieldLength));
 }
 
 function inverseDocumentFrequency(corpus: Corpus, word: string): number {
@@ -507,6 +603,7 @@ function summarise(hits: FieldHits, ceilings: Float64Array, repeatWeight: number
 	// counting it here would ask a field to match a word that does not exist.
 	let live = 0;
 	let literalTerms = 0;
+	let matched = 0;
 	for (let term = 0; term < termCount; term++) {
 		if (ceilings[term] > 0) {
 			live++;
@@ -520,12 +617,16 @@ function summarise(hits: FieldHits, ceilings: Float64Array, repeatWeight: number
 		// At variety 1 this is the hit count and `repeats` was never filled, which the blend
 		// gives back exactly; at 0 it is the most any one word was repeated.
 		const repeated = repeats[term] + variety * (counts[term] - repeats[term]);
-		if (counts[term] > 0) base += contribution * (1 + repeatWeight * Math.log2(repeated));
+		if (counts[term] > 0) {
+			matched++;
+			base += contribution * (1 + repeatWeight * Math.log2(repeated));
+		}
 	}
 
 	return {
 		base,
 		achieved,
+		matched,
 		ceiling,
 		coverage: ceiling > 0 ? achieved / ceiling : 0,
 		// Only asked of a query with something else in it. At one term there is no rest of the
@@ -590,6 +691,7 @@ function matchRanges(field: IndexedField, hits: FieldHits, expansions: Expansion
 
 function scoreTranscript(
 	field: IndexedField,
+	corpus: Corpus,
 	expansions: Expansion[],
 	ceilings: Float64Array,
 	required: number,
@@ -607,7 +709,7 @@ function scoreTranscript(
 	const proportionalRun = run / order.length;
 
 	return {
-		strength: summary.base / summary.ceiling,
+		strength: summary.base / summary.ceiling / lengthPivot(field, corpus, tuning.transcriptLengthNormalization),
 		multiplier: 1 + tuning.sequenceWeight * (lcs / order.length) + tuning.runWeight * proportionalRun ** 2,
 		ranges: matchRanges(field, hits, expansions, tuning.transcriptIdfFloor),
 	};
@@ -615,6 +717,7 @@ function scoreTranscript(
 
 function scoreDescription(
 	field: IndexedField,
+	corpus: Corpus,
 	expansions: Expansion[],
 	ceilings: Float64Array,
 	required: number,
@@ -625,11 +728,15 @@ function scoreDescription(
 
 	const summary = summarise(hits, ceilings, tuning.descriptionRepeatWeight, tuning.repeatVariety);
 	if (summary.ceiling === 0 || summary.coverage < required) return null;
-	if (summary.achieved < tuning.descriptionMinMass) return null;
+	// Divided by the query's own length before the comparison, so the threshold means the same
+	// thing to a one-word query as to a six-word one. At normalization 0 the divisor is 1 and this
+	// is the raw sum it has always been.
+	const mass = summary.achieved / Math.max(1, summary.matched) ** tuning.descriptionMassNormalization;
+	if (mass < tuning.descriptionMinMass) return null;
 	if (summary.literalShare < tuning.descriptionLiteralShare) return null;
 
 	return {
-		score: summary.base / summary.ceiling,
+		score: summary.base / summary.ceiling / lengthPivot(field, corpus, tuning.descriptionLengthNormalization),
 		ranges: matchRanges(field, hits, expansions, tuning.descriptionIdfFloor),
 	};
 }
@@ -735,7 +842,15 @@ function rankedSearch(sequence: string[], tuning: Tuning): SearchResult[] {
 		let transcript: TranscriptMatch | null = null;
 		let transcriptText = "";
 		for (const field of transcripts) {
-			const match = scoreTranscript(field, transcriptExpansions, transcriptCeilings, transcriptRequired, order, tuning);
+			const match = scoreTranscript(
+				field,
+				transcriptCorpus,
+				transcriptExpansions,
+				transcriptCeilings,
+				transcriptRequired,
+				order,
+				tuning,
+			);
 			if (match === null) continue;
 			if (transcript === null || match.strength * match.multiplier > transcript.strength * transcript.multiplier) {
 				transcript = match;
@@ -745,7 +860,14 @@ function rankedSearch(sequence: string[], tuning: Tuning): SearchResult[] {
 		if (transcript !== null && transcript.multiplier > bestMultiplier) bestMultiplier = transcript.multiplier;
 
 		const summary = description
-			? scoreDescription(description, descriptionExpansions, descriptionCeilings, descriptionRequired, tuning)
+			? scoreDescription(
+					description,
+					descriptionCorpus,
+					descriptionExpansions,
+					descriptionCeilings,
+					descriptionRequired,
+					tuning,
+				)
 			: null;
 
 		if (transcript === null && summary === null) continue;

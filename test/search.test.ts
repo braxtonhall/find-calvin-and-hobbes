@@ -255,7 +255,11 @@ const BEDTIME: Entry[] = [
 
 test("a description written in another tense is still reachable", () => {
 	install(buildArchive(BEDTIME));
-	assert.deepEqual(ranked("complaining"), ["2000-01-01", "2000-01-02"]);
+	// Both are reachable, which is the property. Their order against each other is not: neither
+	// holds the word as typed, so both are reached the same way and nothing ranked them until
+	// `descriptionLengthNormalization` began breaking the tie by density. Which of the two comes
+	// first is pinned by the next test, on a query that does hold one of them literally.
+	assert.deepEqual(ranked("complaining").sort(), ["2000-01-01", "2000-01-02"]);
 });
 
 // Rarity is anchored on the term as typed and another inflection is worth less than the word
@@ -364,4 +368,63 @@ test("tuning is injectable and coverage is what admits partial matches", () => {
 	const strict: Tuning = { ...TUNING, transcriptCoverageFloor: 1 };
 	assert.deepEqual(ranked("you know you'll hate something when they don't tell you", strict), []);
 	assert.deepEqual(ranked("you know you'll hate something when they don't tell you"), ["2000-01-01"]);
+});
+
+test("document length normalization is off by default and prefers the shorter field when on", () => {
+	// The same match in two transcripts of very different lengths, with the padding chosen so it
+	// shares no vocabulary with the query and can only affect the result through length.
+	install(
+		buildArchive([
+			{ date: "2000-01-01", transcript: "Isn't that your transmogrifier?" },
+			{
+				date: "2000-01-02",
+				transcript:
+					"Isn't that your transmogrifier? " +
+					"Mom said we should go outside and play until dinner, so we went to the yard and " +
+					"looked at the sky for a while, and then we came back in again because it rained.",
+			},
+		]),
+	);
+
+	// Off: the longer transcript is not penalised for its length, and wins on repetition alone or
+	// ties. This is the behaviour every other parameter was fitted against.
+	const off = search("transmogrifier", "rank");
+	assert.equal(off.length, 2);
+	assert.ok(
+		off[0].score === off[1].score || off[0].comic.date === "2000-01-02",
+		`without normalization the longer field must not be penalised, got ${off.map((r) => `${r.comic.date}:${r.score.toFixed(3)}`).join(" ")}`,
+	);
+
+	// On: the short transcript is mostly about the transmogrifier and the long one mostly is not.
+	const on: Tuning = { ...TUNING, transcriptLengthNormalization: 1 };
+	assert.deepEqual(ranked("transmogrifier", on), ["2000-01-01", "2000-01-02"]);
+});
+
+test("the description mass gate is a sum until normalized, and then a mean", () => {
+	// The filler descriptions rotate eight subjects across sixty comics, so a subject word is
+	// moderately common — rare enough to carry mass, common enough that a query full of them is
+	// not specific. `snowman` appears once and is genuinely rare.
+	install(
+		buildArchive([
+			{
+				date: "2000-01-01",
+				transcript: "Whump. Thpt.",
+				description: "Calvin builds a snowman near the sandbox, the porch and the driveway.",
+			},
+		]),
+	);
+
+	// `achieved` sums over query terms, so padding a query with moderately common words raises the
+	// total without making the query more specific. At normalization 0 a threshold therefore
+	// rejects the one precise word and admits the vague four — which is backwards, and is why the
+	// gate could never be raised far enough to stop a hollow query without deleting `snow` first.
+	const summed: Tuning = { ...TUNING, descriptionMinMass: 8, descriptionMassNormalization: 0 };
+	assert.deepEqual(ranked("snowman", summed), [], "one rare term cannot reach a threshold four terms sum to");
+	assert.deepEqual(ranked("snowman sandbox porch driveway", summed), ["2000-01-01"]);
+
+	// At normalization 1 the threshold is mass per matched term, so it means the same thing to a
+	// query of one word as to a query of four, and the specific query is the one that survives.
+	const meaned: Tuning = { ...TUNING, descriptionMinMass: 4, descriptionMassNormalization: 1 };
+	assert.deepEqual(ranked("snowman", meaned), ["2000-01-01"]);
+	assert.deepEqual(ranked("snowman sandbox porch driveway", meaned), [], "diluted by its own vaguer words");
 });
