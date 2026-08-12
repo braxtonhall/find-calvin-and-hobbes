@@ -5,6 +5,8 @@ export interface DailyEntry {
 	transcript: string;
 	alternate?: string;
 	description?: string;
+	source?: string;
+	review?: string;
 }
 
 export interface SpecialEntry extends DailyEntry {
