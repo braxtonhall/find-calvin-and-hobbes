@@ -6,7 +6,6 @@ export interface DailyEntry {
 	alternate?: string;
 	description?: string;
 	source?: string;
-	/** What a future reviewer needs to know about this entry. See the header of comics.yaml. */
 	review?: string;
 }
 
