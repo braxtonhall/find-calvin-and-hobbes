@@ -6,6 +6,7 @@ export interface Comic {
 	id?: string;
 	sort?: number;
 	aspectRatio?: number;
+	appearances?: Appearance[];
 }
 
 export interface Appearance {
@@ -14,13 +15,6 @@ export interface Appearance {
 	volume?: number;
 	pages: number[];
 }
-
-export interface ComicDetail {
-	description?: string;
-	appearances?: Appearance[];
-}
-
-export type MonthShard = Record<string, ComicDetail>;
 
 export interface Edition {
 	label: string;

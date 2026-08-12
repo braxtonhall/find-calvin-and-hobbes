@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { Appearance, CollectionData } from "./collectionPages";
 import { loadComicSource } from "./comicSource";
 
 const EXTENSIONS = [".gif", ".jpg", ".jpeg", ".png", ".webp", ".bmp"];
@@ -26,11 +27,17 @@ interface Entry {
 	id?: string;
 	sort?: number;
 	aspectRatio?: number;
+	appearances?: Appearance[];
 }
 
-export function exportComicsJson(projectDir: string): string {
+export function exportComicsJson(projectDir: string, collectionData: CollectionData): string {
 	const assetsDir = path.join(projectDir, "assets", "comics");
 	const source = loadComicSource(path.join(projectDir, "comics.yaml"));
+
+	const attachAppearances = (entry: Entry, lookupKey: string) => {
+		const appearances = collectionData.appearancesByComic.get(lookupKey);
+		if (appearances && appearances.length) entry.appearances = appearances;
+	};
 
 	const entries: Entry[] = [];
 
@@ -42,6 +49,7 @@ export function exportComicsJson(projectDir: string): string {
 		if (daily.alternate) entry.alternate = daily.alternate;
 		const img = findImage(dateStr, assetsDir);
 		if (img) entry.image = img;
+		attachAppearances(entry, dateStr);
 		entries.push(entry);
 	}
 
@@ -56,6 +64,7 @@ export function exportComicsJson(projectDir: string): string {
 		if (special["aspect-ratio"]) entry.aspectRatio = special["aspect-ratio"];
 		const img = findImage(sid, assetsDir);
 		if (img) entry.image = img;
+		attachAppearances(entry, sid);
 		entries.push(entry);
 	}
 

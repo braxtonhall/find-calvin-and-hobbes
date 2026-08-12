@@ -1,8 +1,8 @@
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
 import { loadCollectionData } from "./collectionPages";
-import { exportComicDetails } from "./exportComicDetails";
 import { exportComicsJson } from "./exportComicsJson";
+import { exportDescriptions } from "./exportDescriptions";
 import { generateCollectionIndex } from "./generateCollectionIndex";
 
 const PLUGIN_NAME = "YamlToJsonPlugin";
@@ -19,15 +19,14 @@ class YamlToJsonPlugin {
 					const projectDir = compiler.context;
 					const collectionData = loadCollectionData(projectDir);
 
-					const comicsJson = exportComicsJson(projectDir);
+					const comicsJson = exportComicsJson(projectDir, collectionData);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 
 					const collectionIndexJson = generateCollectionIndex(collectionData);
 					compilation.emitAsset("collection-index.json", new sources.RawSource(collectionIndexJson));
 
-					for (const [name, json] of exportComicDetails(projectDir, collectionData)) {
-						compilation.emitAsset(name, new sources.RawSource(json));
-					}
+					const descriptionsJson = exportDescriptions(projectDir);
+					compilation.emitAsset("descriptions.json", new sources.RawSource(descriptionsJson));
 				},
 			);
 		});
