@@ -1,30 +1,3 @@
-# Calvin and Hobbes source data.
-#
-# Most entries carry a transcript and a description and nothing else. An entry with no `source` and no
-# `review` line is believed correct in both: either the maintainer has checked it against a source
-# outside this corpus, or an independent source corroborates the transcript and the description on the
-# date corresponds to it.
-#
-# Where that is not true, the entry says so:
-#
-#   source:  where the text came from, when it was not the original data.
-#            s-anand, seligman, miraheze, pr-review, or a combination — text from the first named,
-#            date agreed by the others.
-#
-#   review:  what a future reviewer needs to know.
-#            verified                 a human checked this date against an outside source
-#            settled                  a disagreement examined and decided; the reason is given
-#            unresolved               our text disagrees with a source and nobody has settled it
-#            unchallenged             a source disagrees only because it holds no usable text
-#            description unverified   transcript corroborated, description not confirmed against it
-#            description dropped      the description here belonged to another date and was removed
-#            wordless                 the strip has no dialogue; an empty transcript is finished work
-#            sound effects only        the strip's entire text is noise
-#            missing                  the transcript is another strip and no source has the right text
-#            no transcript            blank, and no source has been checked for it
-#
-# The repair that produced these annotations, and the evidence behind each one, is in
-# scripts/sunday-dates — review.json holds the maintainer's verdicts, annotations.json the scheme.
 dailies:
   "19851118":
     transcript: So long Pop! I'm off to check my tiger trap! I rigged a tuna fish sandwich yesterday, so I'm sure to have a tiger by now! They like tuna fish, huh? Tigers will do anything for a tuna fish sandwich. We're kind of stupid that way.  Munch Munch
@@ -41,7 +14,6 @@ dailies:
   "19851122":
     transcript: Good night, Calvin. 'night Dad! Hey! Aren't you going to say good night to Hobbes?! Good night, Hobbes. That's it?! No story? No smooch?? Go to sleep, you sissy.
     description: Dad tells Calvin good night.  As he's leaving, Calvin asks if he isn't going to say good night to Hobbes.  Dad does so.  Hobbes complains about there being no story or smooch.  Calvin calls Hobbes a sissy and tells him to go to bed.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19851123":
     transcript: What's this? Taste it. You'll love it. You know you'll hate something when they won't tell you what it is.
     description: Calvin looks at his dinner plate and asks Dad what it is.  Dad replies Calvin should taste it, he'll like it.  Calvin thinks you know you'll hate it when they won't tell you what it is.
@@ -108,7 +80,6 @@ dailies:
   "19851214":
     transcript: Hello, Dad! It is now three in the morning. Do you know where I am?
     description: Calvin climbs out his bedroom window on sheets bound together.  He walks along in the darkness.  Calvin stops at a pay phone to call Dad.  Calvin states it's now three in the morning, and does Dad know where Calvin is?
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.00)"
   "19851215":
     transcript: We join our hero Megazorks above the planet Gloob ... Spaceman Spiff, conqueror of the cosmos, is pursued by the hideous scum beings of planet Q-13! Spiff hyper-freem drive malfunctions! The aliens close in! suddenly, a searing bolt of deadly fram ray slices across the blackness! Our hero is unfazed. Another bolt! Spiff is hit!! Spiff is going down can he make it?? Is this the end?!? AAAAAA Spiff's alive! He made it!! I'm alive! Ha ha ha! I kiss the sweet ground! Maybe you should play on the swings, Calvin.
     description: Spiff is being pursued.  His hyper-freem drive fails.  A frap ray nearly misses.  Finally, Spiff is hit.  He's going down and wonders if he'll make it.  As Calvin lands on the ground after coming down the slide, he kisses the sweet ground. Miss Wormwood thinks maybe Calvin should play on the swings instead.
@@ -127,7 +98,6 @@ dailies:
   "19851220":
     transcript: I wonder where we go when we die. Pittsburgh? You mean if we're good or if we're bad?
     description: Calvin and Hobbes are lying on a hill.  Calvin wonders where they go when they die.  They think about it awhile, and Hobbes wonders if it's Pittsburgh.  Calvin wonders whether Hobbes is referring to where they go if they're good or if they're bad.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19851221":
     transcript: We're lost again. Ha! We're brave explorers! The word lost isn't even in our vocabulary! How about the word "Mommy"? Mommmyyy!!
     description: Calvin and Hobbes are wandering in the tall grass.  Hobbes says they're lost again.  Calvin, in his pith helmet, says that "lost" isn't in the vocabulary of brave explorers.  Hobbes wonders if "mommy" is.  They both cry out "mommy".
@@ -149,11 +119,9 @@ dailies:
   "19851227":
     transcript: Calvin! What are you doing to the coffee table?!? Is this some sort of trick question, or what?
     description: Calvin is hammering nails into a table.  Mom runs out yelling, asking Calvin what he's doing.  Calvin looks at the nails in the table and asks whether that's a trick question or something.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19851228":
     transcript: Hey Calvin, you want to play "house"? I don't know. How do you play? Okay ... first, you come home from work. Then I come home from work. We'll gripe about our jobs, and then we'll argue over whose turn it is to microwave dinner.
     description: Susie asks Calvin whether he wants to play house.  Calvin asks how you play.  Susie explains that he comes home from work, then she does.  Then, they argue about their jobs and about who will microwave dinner.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19851229":
     transcript: Very grim, Calvin. You're still having oatmeal. Gurgle. Quit playing with your oatmeal and eat it, Calvin. Gagpth! I'm free! Bugh! Yaah! Death to oatmeal! You'll never escape, vile glop! Die! Die! Calvin! Quit! ... oh no ... It's  your fault we didn't have a sweet little girl! Your stupid chromosome!! Not mine!! ... I just live here.
     description: Calvin is sitting at the table with a bowl of oatmeal.  Mom tells Calvin to eat the oatmeal, not play with it.  The oatmeal jumps out of its bowl and bounces around the table.  Calvin stabs at it while yelling "death to oatmeal".  He chases the vile glop around.  Mom comes to the kitchen and sees the mess.  Mom then yells at Dad.  She says it's Dad's fault they didn't have a sweet girl.  It's his chromosome that was the problem.  Dad watches Mom go off, sits back into his chair and says he just lives there.
@@ -178,7 +146,6 @@ dailies:
   "19860105":
     transcript: I love winter days. They're so peaceful. Ha ha! Gotcha Susie! Hey, you dummy! You'll never be able to throw a snow ball that big! Ha! Stupid girl! Hey, what are you doing? Get away. Hey! Put me down! Where are you taking me?! Hey! Hey! Chunk.
     description: Calvin smacks Susie in the back of the head with a snowball.  Susie, enraged, rolls up a huge snowball.  Calvin taunts Susie about the size of the snowball and her inability to throw it.  Susie walks up to Calvin, picks him up, and deposits him in the snowball.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.11)"
   "19860106":
     transcript: All right class, who would like to give his book report first? Calvin, how about you? Calvin? Calvin? Spaceman Spiff cooly draws his death ray blaster ...
     description: Miss Wormwood asks the class who will be the first to do his book report.  Calvin, sitting at his desk with a smile on his face, is chosen.  Calvin just sits there as Miss Wormwood calls his name again.  Then, Spaceman Spiff pulls his death ray blaster as the monster approaches him.
@@ -302,7 +269,6 @@ dailies:
   "19860215":
     transcript: ""
     description: Mom is sitting at the table when Calvin walks by dressed in his coat and hat.  Puzzled, Mom goes upstairs and opens the bedroom door.  There, she finds Calvin has opened the window letting snow into the room.  Calvin is working on a snowman.  Mom just covers her face.
-    review: "wordless: no dialogue in either source; assessed by agent, not verified against the strip"
   "19860216":
     transcript: Hey Calvin! Are we near a slaughterhouse, or did you forget your deodorant?! Drop dead Susie! You're so ugly, I hear your mom puts a bag over your head before she kisses you goodnight!! It's shameless the way we flirt. What's it like to fall in love? Well ... say the object of your affection walks by ... yeah? First your heart falls into your stomach and splashes your innards. All the moisture makes you sweat profusely. This condensation shorts the circuits to your brain, and you get all woozy. When your brain burns out altogether, your mouth disengages and you bable like a cretin until she leaves. That's love?!? Medically speaking. Heck, that happened to me once, but I figured it was cooties!!
     description: Calvin asks Hobbes what it's like to be in love.  Hobbes describes your heart falling into your stomach, you sweat and get woozy and that you babble like a cretin until she leaves.  Calvin is surprised that is what love is.  He felt that way once, but thought it was cooties.
@@ -324,7 +290,6 @@ dailies:
   "19860222":
     transcript: Mommmm! I'm thirsty! What's this? Just water?
     description: In the middle of the night, Mom and Dad awake to Calvin yelling for Mom.  He yells that he's thirsty.  Mom dutifully stumbles off to take care of things.  She gives Calvin a cup, to which he questions if this is just water.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.14)"
   "19860223":
     transcript: Hey Mom, can I drive now? No. How about now? Oh no! oh you stupid car! What's wrong with you now?!? That's it Mom! Go ahead and swear! We don't mind! Calvin, be quiet! Want Hobbes and me to go get help? You stay where you are. I'll look under the hood. Kick the car Mom! It works on the TV! Look at all these cars going by. Nobody's stopping to help. Let's blow the horn! Maybe someone will come. Beeeep! Hoorayy!! Someone stopped! We're heroes!! Want me to call a tow truck lady? First call the police and report an infanticide.
     description: As Mom is driving Calvin home, the car breaks down.  Mom starts yelling at the car, and Calvin encourages her to go ahead and swear.  Mom gets out of the car to look under the hood.  Calvin suggests she kick the car, because that works on TV.  Calvin notices all the cars going by on the road and worries no one will stop.  Hobbes suggests they honk the horn.  They do, as Mom holds her ears in pain.  Calvin and Hobbes cheer as someone stops.  The man asks whether Mom wants a tow truck.  Mom replies that he should call the police and report an infanticide.
@@ -364,7 +329,6 @@ dailies:
   "19860307":
     transcript: Whap! Smash. Tinkle. Ding. Shatter. Clink. Wow. First try!
     description: Calvin, with bat on shoulder, throws a baseball into the air.  He takes a big swing at it and hits the ball. SMASH!  Glass shatters.  Calvin happily notes that it was only his first try.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.13)"
   "19860308":
     transcript: Downtown tokyo! Aarrghhgh! Godzilla.
     description: Calvin is in the sandbox happily making a sand city.  He declares it downtown Tokyo.  He yells and stomps through the sand city.  He declares it Godzilla.
@@ -395,7 +359,6 @@ dailies:
   "19860317":
     transcript: Do you love me dad? Of course I do Calvin. Would you still love me if I did something bad? Well of course I would. I mean something really really ... Calvin, what did you do?!
     description: Calvin comes to Dad looking for reassurance that he's loved.  Dad tells him yes.  Calvin wonders if that would be true if he did something bad, something really, really bad.  Suspicious, Dad wants to know what Calvin has done.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.00)"
   "19860318":
     transcript: Well Dad, your polls are real high this week. I'm glad to hear that. Yep, those polled think you are doing a fine job as a Dad. In fact, with a little push today, your political stock could reach a record high. Nice try. Go help your Mom with the dishes. Ooh Dad! Suicide! Ooh! Ooh!
     description: Calvin informs Dad his poll results are high and that Dad's political stock could reach a record high with a little push.  Dad tells Calvin to go help Mom with the dishes.  Calvin laments the political suicide of Dad's decision.
@@ -432,7 +395,6 @@ dailies:
   "19860329":
     transcript: Hey Dad, will you buy me a flame thrower? Of course not. Don't be silly. Even if I didn't use it in the house?
     description: Calvin asks Dad if he will buy him a flamethrower.  Dad tells Calvin not to be silly.  Calvin fumes, then asks Dad if he'll buy it if Calvin doesn't use it in the house.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19860330":
     transcript: Did you ask your Mom if you could jump off the roof? Questions I know the answers to I don't need to ask right? Is this blanket big enough? Perfect! See, I'll just grab all the corners and make a parachute! You can watch as I float to the ground, gently as a leaf. Geronimo!! Crunch! His Mom's going to have a fit about those rose bushes.
     description: Hobbes grabs Calvin's blanket so a parachute can be made.  Calvin jumps out his window, planning to float gently to the ground.  Instead, he plummets to the ground and crashes.  Hobbes figures Mom will have a fit about the rose bushes.
@@ -451,11 +413,9 @@ dailies:
   "19860404":
     transcript: I don't think I'll go to school today. I think you will. I think I won't. Rats.
     description: Calvin, lying in bed, tells Mom he doesn't think he'll go to school today.  Mom replies that she does think he'll go.  Calvin reiterates that he doesn't think he'll go.  Calvin, standing at the bus stop, says "Rats".
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19860405":
     transcript: Good night, Hobbes. Good night. Do you believe in ghosts?
     description: Calvin and Hobbes, lying in their sleeping bags in their tent, wish each other a good night.  As we look at the tent in the moonlight, one of them asks if the other believes in ghosts.  We then see both of them, wide-eyed and teeth clenched, with a baseball bat awaiting the daylight.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.07)"
   "19860406":
     transcript: What do you have for lunch Susie? Maybe I'll trade you. Ugh! A cross section of a dachshund. No, thanks. It's bologna! I wonder what I have for lunch today. Its lunch time! Ha ha ha! I think I'll have this little kid!! Help! I'm being eaten alive by my own lunch! Somebody get me a fork! He's got me!! Aaarrrgghh! Wham wham wham! Ha! I killed it with my thermos! See? It's bleeding jelly! No wonder this seat wasn't taken.
     description: Calvin's lunch bag attacks him.  After a titanic struggle, Calvin kills it with his thermos.  He shows Susie that the lunch is bleeding jelly.  Susie now realizes why the seat next to Calvin wasn't taken.
@@ -549,14 +509,12 @@ dailies:
   "19860506":
     transcript: Do you think there's a god? Well, somebody's out to get me.
     description: Calvin and Hobbes are lying on their backs on the hill.  Hobbes asks if Calvin believes there is a God.  Calvin thinks about it, and decides that somebody's out to get him.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19860507":
     transcript: Spaceman Spiff closes in on the alient vessel! The alien being unnaturally stupid, is blissfully ignorant of it's imminent doom! Our hero locks onto target and warms up his frap-ray blaster! Miss Wormwood!! Zounds! A Gorkon death station appears! Evasive action!
     description: Spaceman Spiff closes in on the alien vehicle.  The alien is unaware of its imminent doom.  Spiff readies his frap-ray blaster.  Calvin has a book in his hand, standing on his desk, ready to smack Susie on the head.  Susie calls for Miss Wormwood.  Calvin calls for evasive action from the Gorkon death station.
   "19860508":
     transcript: Whack! Wow! Another hole in one!
     description: Calvin lines up his tee shot.  He hits the ball.  He goes to see the result and notes that he got another hole-in-one.  The shot has been made easier by the shovel sitting next to the enlarged hole.
-    review: "no transcript: never examined, and no source has been checked for this date"
   "19860509":
     transcript: Wow! Three new magazines for me today. Yesterday I got five. I love getting all this mail. How come you receive all these magazines? I went to the library and filled out all the subscription cards that said "Bill me later."
     description: Calvin pulls three new magazines out of the mailbox.  He tells Hobbes that he got five more the day before. Calvin loves getting all this mail.  Hobbes asks why he's getting all these magazines.  Calvin explains that he went to the library and filled out all the cards that said "Bill Me Later".
@@ -662,7 +620,6 @@ dailies:
   "19860612":
     transcript: The water's too cold! Now it's too hot. Now it's too cold. Now it's too deep.
     description: Calvin is taking a bath and complains the water is too cold.  After an adjustment, the water is too hot.  After another adjustment, the water is too cold again.  One more adjustment, but now it's too deep.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19860613":
     transcript: The fearsome shark senses distress in the waves above him! He circles up, closer and closer to the terrified victim! Hey! Yahh! Snap! Thrash! You know, for someone who hates baths as much as you do, you're not making this go any faster! Another gruesome kill.
     description: The fearsome shark senses distress in the water above.  He circles in closer to the victim.  Calvin rises up from the tub, teeth snapping, splashing water all over Mom.  She comments that for someone who hates baths, he's not making things go any faster.
@@ -726,7 +683,6 @@ dailies:
   "19860703":
     transcript: Where are you going? I'm going to walk to the other side of the lake. What's the bucket for? To drain the lake.
     description: Calvin is walking by with a bucket in his hand.  Hobbes asks where he's going.  Calvin replies he's going to the other side of the lake.  Hobbes asks what the bucket is for.  Calvin tells him it's to drain the lake.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19860704":
     transcript: You know what I like about summer days? They're just made for doing things ... even if it's nothing. Especially if it's nothing.
     description: Lying under a tree, Hobbes tells Calvin that what he likes most about summer days is that they're made for doing things.  They continue to lie under the tree as Hobbes says even if it's nothing.  Calvin adds that it's the case especially if it's nothing.
@@ -766,7 +722,6 @@ dailies:
   "19860716":
     transcript: Gzzzzzzzz! Waaauughhhh! Sploosh.
     description: Calvin is ready to cast his fishing line.  His hook has caught on the back of his pants.  As he sends the line out, he goes with it.  He splashes into the water.  But out of the water he comes with a fish in his hands, a smile on his face.
-    review: "no transcript: never examined, and no source has been checked for this date"
   "19860717":
     transcript: Stomp Stomp Stomp Stomp. Whap Whap Whap Whap. I don't like food cooked out, do you? Ugh. It all tastes the same.
     description: Calvin and Hobbes are sitting on a log roasting wieners.  The hot dogs catch fire.  Calvin stomps on his hot dog, while Hobbes smacks his into the ground to put out the fires.  Hobbes says he doesn't like food that's cooked outside. Calvin thinks it all tastes the same.
@@ -839,7 +794,6 @@ dailies:
   "19860809":
     transcript: Hot day, isn't it? I'll say. But it's the humidity that really gets to me. You don't like it when it's humid? Not at all. Then you'd better get out quick.
     description: Hobbes pushes Calvin down the hill in the wagon.  Calvin comments on how hot it is.  Hobbes agrees with him, saying he dislikes the humidity.  After Calvin clarifies that Hobbes doesn't like humidity, he suggests Hobbes get out of the wagon quickly.  The wagon is about two feet away from rolling into the water.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.14)"
   "19860810":
     transcript: Go on "three" ok? One ... Two ... Two and a half ... Ready ... Set ... Go! Pit Pat Pit Pat Pit Pat Pit Pat. Pittida Dittida Pittida Dittida. Chooga Chooga Chooga. Eeewyeeowww. Gasp. I can't believe it! No sonic boom! Not even a 'pop'! I heard a pop. But I think it was my lungs.
     description: Calvin and Hobbes have a foot race.  Faster and faster they go until, finally, they lie on the grass exhausted. Calvin can't believe it.  There was no sonic boom, not even a "pop".  Hobbes disagrees, saying he heard a pop but thinks it was his lungs.
@@ -918,7 +872,6 @@ dailies:
   "19860904":
     transcript: Crash! It jumped me!!
     description: Calvin sneaks up to his bicycle.  He reaches out for it.  CRASH! The bike falls on Calvin.  He cries out "It jumped me!"
-    review: "no transcript: never examined, and no source has been checked for this date"
   "19860905":
     transcript: Look, there's a frog! C'mon, let's catch it! I'm not getting near it. Why not? They drink water all day just in case someone picks them up.
     description: Calvin sees a frog in the water and asks Hobbes to help him catch it.  Hobbes doesn't want to get near it. Calvin asks why not.  Hobbes informs him they drink water all day in case someone picks them up.
@@ -940,7 +893,6 @@ dailies:
   "19860911":
     transcript: Z. Yawn! Ta daa! Sheesh.
     description: Hobbes is curled up sleeping.  Calvin approaches.  When Hobbes yawns, Calvin sticks his head in Hobbes' mouth and says "Ta daa!"  Hobbes is unimpressed.
-    review: "no transcript: never examined, and no source has been checked for this date"
   "19860912":
     transcript: Calvin, I don't want you up in that ree. Why not? Some of the branches are dead and they might break. Come on down. Mom spoils everything. This isn't quite the same, is it?
     description: Mom tells Calvin she doesn't want him up in the tree.  Calvin, sitting on a branch with Hobbes, asks why not. She explains some of the branches are dead and might break.  As Calvin climbs down, he comments that Mom spoils everything.  As they sit on top of a ladder, Hobbes comments that it just isn't the same.
@@ -1007,7 +959,6 @@ dailies:
   "19861003":
     transcript: Yahh! Oof! Grrr! Rgh! Rr! Rrr! Uh! Uh! Rrr! Umph! Touchdown! Let's play something else.
     description: Calvin and Hobbes are playing football.  Calvin jumps on Hobbes to tackle him.  He continues to try to bring Hobbes down, without success, while Hobbes walks down the field and scores a touchdown.  Calvin wants to play something else.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.14)"
   "19861004":
     transcript: Are there any monsters under my bed tonight? No. Nope. No. If there were any monsters under my bed, how big would they be? Very small. Go to sleep. Momm!
     description: Calvin asks if there are any monsters under his bed.  Three replies of no come from beneath the bed.  Calvin then asks how big they would be if there were any monsters.  He gets a reply saying very small and to go to sleep.  Calvin yells for Mom.
@@ -1029,7 +980,6 @@ dailies:
   "19861010":
     transcript: Psst ... Susie! What's 12 + 7? A billion. Thanks! Wait a minute. That can't be right ... that's what she said 3+4 was.
     description: While taking a test, Calvin asks Susie what 12 + 7 is.  Susie tells him a billion.  Calvin realizes that can't be right, since that's what Susie said 3 + 4 was.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19861011":
     transcript: I just read this great science fiction story. It's about how machines take control of humans and turn them into zombie slaves! So instead of us controlling machines, they control us? Pretty scary idea. I'll say, hey! What time is it?? My TV show is on!
     description: Calvin tells Hobbes he's just read a great science fiction story.  He says it's about machines who take control of humans and make them zombie slaves.  Hobbes clarifies by stating that instead of us controlling machines, they control us. He says that's a scary idea.  Calvin agrees, then notices his TV show is on.
@@ -1168,7 +1118,6 @@ dailies:
   "19861125":
     transcript: Ta-daaa!!
     description: Calvin is walking along.  He trips, flips over and lands on his rear.  He stands up saying "Ta-daaa!".
-    review: "no transcript: never examined, and no source has been checked for this date"
   "19861126":
     transcript: How do they know the load limit on bridges Dad? They drive bigger and bigger trucks over the bridge until it breaks. Then they weigh the last truck and rebuild the bridge. Oh. I should've guessed. Dear, if you don't know the answer. Just tell him!
     description: Calvin asks how they know the load limits on bridges.  Dad tells him they keep driving bigger and bigger trucks over the bridge until it breaks.  He tells Calvin they then weigh the last truck and rebuild the bridge.  Mom tells Dad that if he doesn't know the answer, he should just tell him.
@@ -1292,7 +1241,6 @@ dailies:
   "19870105":
     transcript: Watcha doin'? I'm writing my autobiography. But you're just six years old. I've only got one sheet of paper.
     description: Hobbes comes up to Calvin, who's sitting at his desk writing.  Hobbes asks what he's doing.  Calvin replies he's writing his autobiography.  When Hobbes points out that he's only six years old, Calvin points out that he only has one sheet of paper.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19870106":
     transcript: Hi, Hobbes. are you reading that book I gave you? Yes. It's very good. You like it? Sure, I think it's ... wait a minute. Would you mind writing it in two pages for me by tomorrow morning?
     description: Hobbes is lying in bed reading a book.  Calvin asks if it's the book he gave him.  Hobbes replies yes, and starts to explain why.  Calvin stops him.  He brings paper and a pencil over and asks Hobbes if he'd mind writing it in two pages for Calvin by tomorrow morning.
@@ -1309,7 +1257,6 @@ dailies:
   "19870110":
     transcript: Galosh. Galosh. Galosh.
     description: Calvin is getting his coat and boots on to go outside.  As Calvin walks along, he hears "Galosh, galosh, galosh".
-    review: "no transcript: never examined, and no source has been checked for this date"
   "19870111":
     transcript: Boy, is this hill big! We'll have a good long ride down! Provided we improve our steering. Hobbes, do you think human nature is good or evil? Watch out for those trees. I mean, do you think people are basically good, with a few bad tendencies, or basically bad, with a few good tendencies? There's a rock up ahead! Look out! Or, as a third possibility. Do you think people are just crazy, and who knows why they do anything? Not so close to the ledge! Well? What do you think? Are people good, bad or crazy? Aughh! I can't look! Wump! You know, it's very rude of you to keep changing the subject after every sentence. I choose crazy.
     description: As they come down the hill on the sled, Calvin asks Hobbes whether he thinks human nature is good or evil. Hobbes wants Calvin to watch out for the trees.  Calvin clarifies about being basically good, with bad tendencies or basically bad, with good tendencies.  Hobbes wants his to watch out for the rock.  Calvin offers a third choice, that people are basically crazy.  Hobbes thinks they're too close to the edge.  Calvin wants to know what Hobbes thinks.  Hobbes can't watch as they crash into a tree.  Calvin thinks it's rude for Hobbes to change the subject after each sentence.  Hobbes chooses crazy.
@@ -1410,7 +1357,6 @@ dailies:
   "19870212":
     transcript: Where do we keep all our chainsaws Mom? We don't have any chainsaws, Calvin. We don't? Not any? Nope. How am I ever going to learn how to juggle?
     description: Calvin asks Mom where they keep all their chainsaws.  Mom tells him they don't have any chainsaws.  Calvin asks if they don't have any, and Mom says no.  Calvin walks off wondering how he's ever going to learn to juggle.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19870213":
     transcript: The giant amoebae slides along the kitchen floor. Extending a cytoplasmic pseudopod, the protozoan engulfs a package of oatmeal cookies. Nice try. Put them back.
     description: A giant amoeba slides across the kitchen floor.  Extending a cytoplasmic pseudopod, the protozoan engulfs a package of oatmeal cookies.  Mom looks over as the cookies are being eaten.  She pulls the blanket off Calvin, telling him "Nice try. Put them back".
@@ -1549,7 +1495,6 @@ dailies:
   "19870330":
     transcript: So Calvin, what's it like to be a tiger now? Kinda fuzzy, but not that different. So! What do you want to talk about? Do we eat soon?
     description: Hobbes asks Calvin what it's like to be a tiger.  Calvin replies that it's kinda fuzzy, but not much different.  They look at each other and Hobbes asks what Calvin wants to talk about.  Calvin asks if they eat soon.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19870331":
     transcript: Hi, Mom! Will you make Hobbes and me a big tuna sandwich? I thought you hated tuna fish. Not anymore. I'm a tiger now. I thought Hobbes was your tiger. Now I'm one too. I transmogrified. Oh, I see. My, she's taking this well, but the strain will surely crack her soon.
     description: Calvin comes into the kitchen and asks Mom if she'll make him and Hobbes a tuna fish sandwich.  Mom says she thought Calvin didn't like tuna fish.  Calvin tells her that he does now, because he's a tiger.  Mom asks if Hobbes is a tiger. Calvin says yes, and he is since he transmogrified.  Mom understands.  Calvin, the tiger, thinks she's bearing up well under the strain but that she'll crack soon.
@@ -1640,7 +1585,6 @@ dailies:
   "19870429":
     transcript: When in Rome ...
     description: Calvin stalks past Hobbes with his arms out and face contorted.  Hobbes looks at him strangely.  Hobbes makes a face and hold his arms out.  Calvin continues on.  Hobbes follows him thinking "When in Rome...".
-    review: "no transcript: never examined, and no source has been checked for this date"
   "19870430":
     transcript: Gkpthh! Heh heh ... thpkk! Hee hee. Hee hee ha ha ha ho ho hee hee hoo hoo ha ha ho heh heh ... of course. Real zombies never get the giggles by looking at each other.
     description: Calvin and Hobbes look at each other with their twisted faces and arms raised.  They start giggling at each other, then break out into laughter.  Calvin clarifies that real zombies never get the giggles by looking at each other.
@@ -1650,7 +1594,6 @@ dailies:
   "19870502":
     transcript: Aauughhhhh
     description: Calvin is coming down the hill on his skateboard.  Hobbes is looking at a plank set up against a rock that Calvin is using for a ramp.  As Calvin reaches the plank, Hobbes jumps up on the far end.  Calvin goes sailing off into the air.
-    review: "no transcript: never examined, and no source has been checked for this date"
   "19870503":
     transcript: Gosh it's perfect kite flying weather! But why let the stupid kite have all the fun? You've got your tail on? Yep, just let out some string and start running. That's it! Faster! Faster! I'm flying! I'm fl-ooof! Ow! Ack! Ooh! Are you ok? Boy, you were almost up there. I know! (ow) We just need a little more wind. Ok, here's another breeze! Let 'er rip! Oomph! Yow! Maybe you're too heavy. Gee, I hadn't thought of that. Hmm ... how can I get lighter? Mrs. Carroll says a naked kid tied to a stuffed animal is running through her yard. You handle it, I got the little nudist out of her bird bath remember?
     description: Calvin ties himself up and Hobbes takes off running.  Calvin is trying to fly like a kite.  He crashes to the ground.  Calvin thinks they need a bit more wind.  Again he tries.  Again he crashes.  Hobbes suggests Calvin might be too heavy.  Calvin wonders what he can do to make himself lighter.  Mom answers a phone call from Mrs. Carroll.  There is a naked kid tied to a stuffed tiger is running through her yard.
@@ -1729,11 +1672,9 @@ dailies:
   "19870528":
     transcript: I'm home! Hello? Hobbes?? six ... five ... four ...
     description: Calvin yells that he's home as he waves his hand into the house.  Nothing happens.  He peeks in and says "Hello?".  Nothing happens.  He tiptoes into the house calling Hobbes' name.  Hobbes' paws are on the edge of the front door. He's been standing behind it all along.  He begins a mental countdown to pounce on the unsuspecting Calvin.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.08)"
   "19870529":
     transcript: I'm home. I'm home. I'm home! Wellll? So you're home.
     description: Calvin peeks in the front door and says he's home.  He steps in the house and says he's home in a louder voice.  He walks through the house yelling that he's home.  Hobbes is sitting in bed, reading a comic book.  Calvin yells "WELL??".  Hobbes replies "So you're home".
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.00)"
   "19870530":
     transcript: Calvin steps up to the plate and the outfield heads for the bleachers. It's sure to be another homer folks. Here's the pitch! Bonk! Not surprisingly the pitcher decides to walk Calvin.
     description: Calvin has a bat and ball and announces that he's stepping to the plate.  The outfield heads to the bleachers. It's sure to be another home run.  Calvin tosses the ball up.  There's the pitch.  BONK!   The ball hits Calvin on the head.  He wobbles along, saying the pitcher has decided to walk Calvin.
@@ -1749,15 +1690,12 @@ dailies:
   "19870603":
     transcript: Hey Dad, how does a carburetor work? I can't tell you. Why not? It's a secret. No it isn't! you just don't know!
     description: Dad is washing the car, and Calvin asks how a carburetor works.  Dad tells him he can't tell him.  When Calvin asks why not, Dad says it's a secret.  Calvin yells that it is not, that Dad just doesn't know.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19870604":
     transcript: This is a job for ... aackk! Waaughhh!! For? ... someone else.
     description: Calvin, wearing a cape, says "This is a job for..." and starts to pull his cape around himself.  It gets stuck.  Then it trips him, and he crashes to the floor.  Hobbes asks "for...?".  Calvin, completely wrapped up in his cape, says "someone else".
-    review: "unresolved: our transcript disagrees with the sources; needs checking against the strip"
   "19870605":
     transcript: Time for bed, Calvin. It's a free country. I can do what I want. Good night. Communists!
     description: Mom tells Calvin that it's time for bed.  Calvin replies that it's a free country, and he'll do what he wants.  Mom puts him to bed and walks off.  Calvin yells "Communists!".
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19870606":
     transcript: Oh no, I have to go to the bathroom! The monsters will get me as soon as I set foot on the floor! I know! Put your pillow down as a decoy. While they're eating that, you can slip out! Great idea! I'm coming out of bed now! I'm coming out of bed now! Here I am, all fat and squishy! They took it! Man, look at those feathers fly! You'd better hurry! No, I've decided to stay here and wet the bed. But it's ok with me if you don't want to stay.
     description: Calvin wakes up during the night and has to go to the bathroom.  He knows the monsters will get him when he sets foot on the floor.  Hobbes suggests putting a pillow on the floor as a decoy, then slipping out while the monsters eat the pillow.  Calvin puts the pillow down and says coming out of bed, all fat and squishy.  Feathers fly up as Hobbes tells him to look at the feathers fly.  He tells Calvin he better hurry.  Calvin hides under the blanket and says he's decided to stay and wet the bed.  It's okay with Calvin if Hobbes doesn't want to stay.
@@ -1824,7 +1762,6 @@ dailies:
   "19870627":
     transcript: Do you have any money? Nope. Hmm ... how can we get some? Who do we know that we could sue?
     description: Calvin asks Hobbes if he has any money.  Hobbes says no.  Calvin asks how they can get some.  They think for a little bit, then Calvin asks who Hobbes knows that they can sue.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19870628":
     transcript: What's wrong with you, fish? Why won't you eat this big, fat, juicy worm? Besides the obvious, I mean. Boy I hate fishing, this is so boring! Look, I can see a whole bunch of fish down there, but they're not biting! Lousy fish! By golly, I'm not going to sit here all day waiting for them to get hungry! Here, help me carry this rock. We'll dump it in the water and blast the fish out. Then we can just pick them up. Heave! Kabloosh! Ok, it was a bad idea! But I got wet too, right? No, no your idea was fine! We just didn't throw in a big enough object.
     description: Calvin is sitting on the pier fishing.  He's complaining that it's too boring.  He sees fish in the water, but they're not biting.  He's not going to sit there all day waiting for them to get hungry.  He and Hobbes grab a huge rock.  He figures he and Hobbes can throw the rock into the water and blast the fish out.  Then, they can just pick the fish up.  They heave the rock into the pond.  WHOOSH!  A huge water splash drenches Calvin and Hobbes on the pier.  Calvin tells Hobbes that it was a bad idea, but that he got wet too.  Hobbes grabs Calvin to toss him into the water.  Hobbes says the idea was good, but they didn't throw a big enough object into the water.
@@ -1834,7 +1771,6 @@ dailies:
   "19870630":
     transcript: What a perfect day! If something doesn't happen here soon, I'm gonna wack out.
     description: Calvin and Hobbes are lying under a tree.  Hobbes says it's a perfect day.  They lie there looking around. After a bit, Calvin tells Hobbes that if something doesn't happen soon, he's going to wack out.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19870701":
     transcript: Look a firefly! Your rear hasn't lit, if that's what you're wondering. I can't even tell what muscle to flex.
     description: Calvin points out a firefly to Hobbes.  Calvin clenches his teeth and bends forward.  He looks at his rear end. Hobbes tells him his rear wasn't lit, if that's what he was wondering.  Calvin says he can't even tell what muscle to flex.
@@ -1847,7 +1783,6 @@ dailies:
   "19870704":
     transcript: Bang! Kapwinngg! Up up and awaaayy!
     description: Dad is sitting in his chair reading the paper.  He hears a bang from the other room.  Calvin races in, climbs up on the arm of the chair, and makes the bullet bounce off him.  He races off saying "up, up and awaaayy".
-    review: "no transcript: never examined, and no source has been checked for this date"
   "19870705":
     transcript: The dreaded scum beings fire! Spaceman Spiff is hit! It never fails. I just washed and waxed this thing. Our hero, the intrepid Spaceman Spiff, struggles with the controls of his damaged spacecraft! The freem propulsion blasters are useless! Spiff crashes onto the surface of an alien planet! Unscathed, the fearless space explorer emerges from the smoldering wreckage! He is marooned on a hostile world! Scorched by twin suns, the planet is nothing but barren rock and methane! There's no hope of finding food or water. Spiff collapses! Oh, no. a hideous alien spots him! In his weakened state, Spiff is no match for the monster! This could be the end!! Lunchtime! I brought you a sandwich and some lemonade. Bring the dishes back when you're done, ok? ... oh well. Thanks Mom.
     description: Spaceman Spiff fights the controls of his spacecraft.  He crashes on an alien planet.  He's marooned on a hostile planet.  He sees there is no hope for food and water.  A hideous alien approaches.  In his weakened state, Spiff is no match for the monster.  The monster hands Spiff a sandwich and some lemonade.  Mom tells him to bring the dishes in when he's done.
@@ -1891,10 +1826,9 @@ dailies:
     transcript: My best friend betrays me! Susie drenched me with my own teammate's water balloon! Some buddy you are, you Benedict Arnold! Hmph, I'd do it again in a minute. Susie likes my jams. Don't even talk to me! You and I are through! Ha! Promises, promises! Um ... I take it the game is over. Get this traitor off me. He cheats when he fights, too.
     description: Calvin continues to complain to Hobbes, who is standing with arms crossed and a stern look on his face. Calvin says his best friend betrayed him, and he got soaked with his teammate's own water balloon.  Calvin calls him a Benedict Arnold.  Hobbes says he'd do it again.  Susie likes his Jams.  Calvin tells him not to talk to him.  Hobbes sticks his tongue out at Calvin and says "Promises, promises".  Susie walks over to Calvin, who is lying on the ground with Hobbes lying on top of him.  Calvin tells Susie to get the traitor off of him, and that he cheats when he fights, too.
   "19870719":
-    transcript: Can you believe this? Some idiot tossed garbage here in this beautiful spot. I'll bet future civilizations find out more about us than we'd like them to know. Look, another can thrown on the ground! Boy, this makes me mad! By golly, if people aren't burying toxic wastes or testing nuclear weapons, they're throwing trash everywhere! You'd think planets like this were a dime a dozen! Now I've got to carry this gross thing. You know, there are times when it's a source of personal pride to not be human. I'm with you.
-    description: Calvin sees a can on the ground.  He complains that if people aren't burying toxic wastes or testing nuclear weapons, they're throwing trash everywhere.  Hobbes declares that there are times when it's a source of personal pride not to be human.  They walk along, then Calvin takes his clothes off.  They continue to walk as Calvin says "I'm with you".
+    transcript: That's it, you climb up and then help me up! Tigers are natural-born tree climbers. Of course we usually have grappling hooks, ropes and utility belts. Hey, here's a great tree for climbing! Let me get on your shoulders so I can reach the first branch, ok? Geez, how many bricks do you have in your pockets?! Whoa! Hold steady, you weakling. I've almost got it! Move up, move up! Hurry and grab it before my spine telescopes. Got it! Hey, don't let go! Hold me up! Forget it! You can support your own weight, bowling ball butt.  Mmph! Mmph! I can't get up! Give me a boost! Hey! What are you doing?! Don't take off my shoes! Are you nuts? Hey, stop! Aack! Oh no! don't tickle! Pbth! Eek! Hee hee ha ha! Stop it! I can't hold on! Hee hee hoo hoo! Aaugh! Nice landing. I'm probably paralyzed. All except your mouth obviously. I'm not sorry at all. Give me back my shoes. No.
+    description: Calvin asks Hobbes to put him on his shoulders so he can climb into a tree.  Hobbes asks how many bricks he has in his pockets.  Calvin tells him to hold steady.  Hobbes tells him to hurry up before his spine telescopes.  Calvin is hanging from a branch.  He asks Hobbes to help hold him up.  Hobbes takes off Calvin's shoes and starts tickling him.  Calvin falls from the tree.  He lands on Hobbes.  Hobbes tells him he's paralyzed.  Calvin replies that he's not sorry at all and to give his shoes back.
     source: s-anand
-    review: "settled: a source dates a different strip here; the original text was restored on the maintainer's check"
   "19870720":
     transcript: Aren't these long summer days great? No responsibilities at all! We have the whole day to ourselves. Don't you wish it could be like this all year, forever? No school. No job, no anything? Yeah. Just gloat about it, why don't you!!
     description: Calvin is telling Hobbes the long summer days are great.  There are no responsibilities, and they have the whole day to themselves.  He asks Hobbes if he wishes it could be like that all year, no school, no job, no anything.  Hobbes looks at Calvin with a smile on his face.  As Hobbes skips merrily away, Calvin yells to him "Just gloat about it, why don't you".
@@ -1914,10 +1848,9 @@ dailies:
     transcript: Ring ring. Hello? May I speak with your father please? Hec, you don't need my permission! Be my guest! What a weirdo. Ring ring.
     description: Calvin picks up the ringing phone.  The caller asks to speak with Dad.  Calvin tells the caller to be his guest. They don't need his permission.  Calvin walks away saying the caller is a weirdo.  The phone rings again.
   "19870726":
-    transcript: That's it, you climb up and then help me up! Tigers are natural-born tree climbers. Of course we usually have grappling hooks, ropes and utility belts. Hey, here's a great tree for climbing! Let me get on your shoulders so I can reach the first branch, ok? Geez, how many bricks do you have in your pockets?! Whoa! Hold steady, you weakling. I've almost got it! Move up, move up! Hurry and grab it before my spine telescopes. Got it! Hey, don't let go! Hold me up! Forget it! You can support your own weight, bowling ball butt.  Mmph! Mmph! I can't get up! Give me a boost! Hey! What are you doing?! Don't take off my shoes! Are you nuts? Hey, stop! Aack! Oh no! don't tickle! Pbth! Eek! Hee hee ha ha! Stop it! I can't hold on! Hee hee hoo hoo! Aaugh! Nice landing. I'm probably paralyzed. All except your mouth obviously. I'm not sorry at all. Give me back my shoes. No.
-    description: Calvin asks Hobbes to put him on his shoulders so he can climb into a tree.  Hobbes asks how many bricks he has in his pockets.  Calvin tells him to hold steady.  Hobbes tells him to hurry up before his spine telescopes.  Calvin is hanging from a branch.  He asks Hobbes to help hold him up.  Hobbes takes off Calvin's shoes and starts tickling him.  Calvin falls from the tree.  He lands on Hobbes.  Hobbes tells him he's paralyzed.  Calvin replies that he's not sorry at all and to give his shoes back.
+    transcript: Can you believe this? Some idiot tossed garbage here in this beautiful spot. I'll bet future civilizations find out more about us than we'd like them to know. Look, another can thrown on the ground! Boy, this makes me mad! By golly, if people aren't burying toxic wastes or testing nuclear weapons, they're throwing trash everywhere! You'd think planets like this were a dime a dozen! Now I've got to carry this gross thing. You know, there are times when it's a source of personal pride to not be human. I'm with you.
+    description: Calvin sees a can on the ground.  He complains that if people aren't burying toxic wastes or testing nuclear weapons, they're throwing trash everywhere.  Hobbes declares that there are times when it's a source of personal pride not to be human.  They walk along, then Calvin takes his clothes off.  They continue to walk as Calvin says "I'm with you".
     source: s-anand
-    review: "settled: a source dates a different strip here; the original text was restored on the maintainer's check"
   "19870727":
     transcript: I can't believe how dull my life is. It's so boring here. Nothing ever changes around here. Nothing ever happens. It seems as if (hang on) everybody but me gets to have an exciting life. Actually, I'd like less excitement in my life. Why? Are you doing fun things when I'm not around?? Huh? Are you?!
     description: As they ride down the hill in the wagon, Calvin can't believe how dull his life is.  Nothing ever changes.  As they fly into the air after the wagon crashes into the stream, Calvin says everybody but him gets to have an exciting life.  Hobbes shakes water out of his ear and says he'd like a little less excitement in his.  Calvin accuses Hobbes of doing fun things when he's not around.
@@ -1942,7 +1875,6 @@ dailies:
   "19870803":
     transcript: ""
     description: Calvin is dressed like an Indian, armed with bow and arrow.  Hobbes has an arrow hit right next to him.  He walks over to Calvin, who shrugs his shoulders innocently.  Hobbes sticks Calvin up high on the side of the house with the arrow.
-    review: "wordless: no dialogue in either source; assessed by agent, not verified against the strip"
   "19870804":
     transcript: What a perfect day! Isn't it great to be on summer vacation? To be able to enjoy all this with no school and no responsibilities? ... ahhhhhhh ... I can't believe there's nothing on TV but repeats.
     description: Calvin tells Hobbes it's a perfect day.  He's on summer vacation and can enjoy the day with no school or responsibilities.  He and Hobbes sniff the air.  Then, Calvin complains there is nothing on TV but repeats.
@@ -1958,7 +1890,6 @@ dailies:
   "19870808":
     transcript: Yawn. Waauughh! For the last time, get out of bed! We're going to be late. I'm trying. I'm trying.
     description: Calvin yawns and hops out of bed.  The covers reach out and grab him.  They pull him back into bed.  Mom comes in and tells him to get out of bed.  They're going to be late.  Calvin says he's trying.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.00)"
   "19870809":
     transcript: That run doesn't count! You didn't touch third base! That's 'cause third base crawled to the outfield! Wap! Ha ha! Easy out! Hey! Where are you going?! You have to stay on the base line, you cheater! Yeah? Prove it! This isn't fair! You can't run anywhere! Just watch me! If  we had a first baseman, you'd've been out a long time ago! But we don't, do we? Gotcha! You're out! Ok, I'm up to bat again! What fun! Two man baseball is a real sport! A real sport for idiots. Next time I'm going to tag you out with the bat instead of the ball.
     description: Hobbes hits the ball, and Calvin chases him to tag him out.  Hobbes runs off the basepath.  He keeps running through the woods.  Calvin chases him saying he can't run anywhere he wants.  Calvin continues to chase Hobbes and yells that he'd have been out if they had a first baseman.  Hobbes replies that they don't and sticks his tongue out at Calvin.  Finally, Calvin catches Hobbes and tackles him in a big cloud of dust.  Hobbes gets up and says he's still up to bat.  He says two-man baseball is a real sport.  Calvin says it's a real sport for idiots.  He says the next time he'll tag Hobbes out with a bat instead of the ball.
@@ -2007,7 +1938,6 @@ dailies:
   "19870824":
     transcript: The end of summer is always hard on me. Trying to cram all the goofing off I've been meaning to do.
     description: Calvin and Hobbes are lying under a tree.  Calvin says the end of summer is always hard on him, cramming in all the goofing off he's been meaning to do.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19870825":
     transcript: How come you're still home? Why aren't you at work? I took the day off. Say, Dad, can I have a look at the classified section? As soon as I'm through with it. Gosh Dad, I'd sure like to borrow that section right this minute. Why don't you read the editorials? "New dad wanted. Frequent traveler preferred. Liberal views on discipline a must, ask for Calvin during normal work hours."
     description: Calvin asks Dad why he's still home.  Dad tells him he took the day off.  Calvin looks horrified.  He asks to see the classified section of the newspaper.  Dad tells him he can have it when he's done.  Calvin wants to see it right away and asks Dad if he'd rather read the editorials.  Dad starts reading an ad.  New Dad wanted, frequent traveler preferred.  Liberal views on discipline a must.  Contact Calvin during normal work hours.
@@ -2021,7 +1951,6 @@ dailies:
     transcript: Wap wap wap. Wipity wappity wipity wappity. Bipita bipita bipita bipita bipita.
     description: Calvin is jumping rope.  He goes faster and faster.  Hobbes comes up behind him with a stick in his hands.  He puts the stick in the way of Calvin's jump rope and he gets all tangled up.
     source: seligman
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.00)"
   "19870829":
     transcript: I'm never gonna get married are you? Hmm ... I suppose if the right person came along, I might. Somebody with green eyes and a nice laugh, who I could call "pooty pie". Pooty pie?? Or "Bitsy Pookums." I think that would affect my stomach a lot more than my heart. "Bitsy Pookums." I'd say "Yes Snoogy Woogy." She'd reply ...
     description: Calvin tells Hobbes he's never going to get married.  Hobbes thinks he would, if the right person came along. Hobbes is looking for someone with green eyes, a nice laugh, and that he can call "pooty pie".  Either that or "bitsy pookums". Calvin thinks that would affect his stomach more than his heart.
@@ -2214,7 +2143,6 @@ dailies:
   "19871031":
     transcript: Lurch your way to the car, kid. You need a haircut.
     description: Calvin bulges an eye and hunches his shoulder.  He's changing into a hairy beast, making snarling noises.  He gets larger, with fangs and huge paws.  Mom tells Calvin to lurch his way to the car, he needs a haircut.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.14)"
   "19871101":
     transcript: Your dad's working, so try not to bother him, ok? Dad, I have a question. Yes? Do people ever spontaneously combust? Uh ... not that I know of, no. That's a relief. Thanks, Dad. You're welcome. Pow! Did I fool you? If you're having trouble thinking of ways to make yourself useful. I'll give you some suggestions.
     description: Calvin asks Dad if people ever spontaneously combust.  Dad doesn't think so.  Calvin is relieved and walks off.  Dad rolls his eyes.  He keeps working, then POW!  Papers fly off his desk as he jumps out of his chair.  He angrily looks around.  Calvin has a popped balloon in his hands.  He asks Dad if he fooled him.  Dad angrily suggests he has some ideas of how Calvin could make himself useful.
@@ -2351,7 +2279,6 @@ dailies:
   "19871215":
     transcript: Anything yet? Not one snowflake.
     description: Calvin dances back and forth.  He asks Hobbes whether there is anything yet.  Hobbes looks out the window and tells him there isn't one snowflake.
-    review: "no transcript: never examined, and no source has been checked for this date"
   "19871216":
     transcript: Dear Santa. Attached is my Christmas list for this year. Last year I did not receive several items from my list. For your convenience, I have grouped those items together on page 12. Please check them carefully, and include them with the rest of my loot this year. That's the problem with this guy. He's gotten sloppy without any competition.
     description: Calvin is writing to Santa Claus.  He tells Santa he didn't get several things from his list last year.  For Santa's convenience, Calvin has grouped those items together on page 12.  Calvin asks Santa to please check them carefully and include them with the rest of this year's loot.  While Hobbes reads the note, Calvin tells him that Santa's gotten sloppy without competition.
@@ -2469,7 +2396,6 @@ dailies:
   "19880123":
     transcript: Are you just going to stay inside all day? You should go play outside and get some fresh air!
     description: Calvin and Hobbes are sitting on the floor playing checkers.  Dad asks if he's just going to sit inside all day. Dad tells Calvin he should go outside to play and to get some fresh air.  Calvin and Hobbes get bundled up, go outside, and sit on the ground playing checkers.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19880124":
     transcript: Seven, eight, nine, net! That's my square! Ha ha! you owe me money! Uh eleven! Just a minute! What are you doing? You can't just take money from the bank! You've got hotels on every piece of property you own. I can't afford to pay you, so I'm sticking up the bank, it's a robbery! You can't do that! I'm the banker, right? Am I going my life over a few thousands dollars? The rules don't say you can rob the bank. That's cheating. Do the rules say you can't rob the bank? Huh? Do they? Just roll the dice and accept this is a tragic turn of events, ok? Ok, if that's how we're playing, then I'm robbing you! Ha! I'll steal your deeds to Park Place and Boardwalk! Yeah? Well, I'm taking all the houses and hotels, and putting them on Baltic. Where you just landed! You owe me $250,000! That's what you think you, you. Isn't it cute how Calvin plays both sides of Monopoly with his stuffed tiger? I dunno, I overheard him using words he didn't learn in this household.
     description: Hobbes is playing Monopoly with Calvin.  Hobbes tells Calvin he can't just take money from the bank.  Calvin explains that Hobbes has hotels on all his properties, so Calvin can't afford to pay him.  Calvin is robbing a bank.  Hobbes tells him he can't do that.  Calvin replies he's the banker, and he's not going to risk his life for a couple thousand dollars.  Hobbes shows the rules don't say you can rob the bank.  Calvin retorts the rules don't show that you can't.  He tells Hobbes to just roll the dice and accept this tragic turn of events.  Hobbes says if that's how Calvin's going to play, Hobbes will rob Calvin.  Calvin steals the deeds to Boardwalk and Park Place.  Hobbes angrily takes all the houses and hotels and puts them on Baltic Avenue, where Calvin landed.  Calvin owes Hobbes $250,000.  In the other room, Mom comments how cute it is that Calvin plays both sides of the Monopoly board.  Dad isn't so sure.  He's heard Calvin using words he didn't learn in their household.
@@ -2536,11 +2462,9 @@ dailies:
   "19880214":
     transcript: There! Now we're both transmogrified. We're even! Even?? We would be even only if turning a tiger into a duck was an improvement. This wasn't at all what I had in mind when I asked you to transmogrify me into a pterodactyl. Pterodactyls are big! So you turned me into a duck. Is that it? Fair's fair. Ok, I'll take the transmogrifier and fix you up right. Zap! Why you gimmie that gun! Thbbt! Zap! An insult! This is worse than before!! Zap! Zap! Zap! Great, just great. Which one of us is Calvin and which is Hobbes, huh? Well I hope Calvin is you, because his mom's going to have a fit when she sees this.
     description: They bicker with each other.  Hobbes grabs the transmogrifier gun and says he'll fix Calvin up right.  ZAP!  He turns Calvin into a big pig.  Outraged, Calvin turns Hobbes into a monkey.  Insulted, Hobbes zaps Calvin into a flower. Hobbes gets zapped into being an alligator.  ZAP!  Calvin is now an aardvark.  Much later, they rest.  Calvin is an owl, and Hobbes is a purple monster.  The owl can't remember who is who.  The purple monster tells him he hopes Calvin is the owl, because his Mom is going to have a fit when she sees this.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.07)"
   "19880215":
     transcript: Look, I'll transmogrify you back to a tiger if you transmogrify me back to a kid, ok? Ok. Zap! Ahh, that's much better. Now do me. Click ... click ... click. What's wrong?? I'm not transmogrifying! Boy, I'm glad we did me first.
     description: They agree to change each other back to their original selves.  Calvin, the owl, zaps the purple monster back into Hobbes.  Hobbes points the gun at Calvin and....click...click...click.  Calvin says he's not changing.  Hobbes is glad they did him first.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.13)"
   "19880216":
     transcript: What's wrong with the transmogrifier? Why won't it work?? You invented it. You tell me. Don't tell me I'm stuck as an owl for the rest of my life! I think owls mostly eat mice. I suppose we could catch some in the yard. This is awful! What am I going to do?! Uggh, I could never eat a mouse raw. Their little feet are probably real cold going down. Will you forget the stupid mice and help me think? I wonder if pet stores will sell you a mouse if  you know you're going to eat it?
     description: Calvin wonders why it won't work.  Hobbes says that since Calvin invented it, he should tell Hobbes.  Calvin worries about being stuck as an owl.  Hobbes figures they can catch mice in the back yard for Calvin to eat.  Calvin wonders what he'll do.  Hobbes goes on to say he couldn't eat a mouse raw.  He thinks their little feet are real cold going down.  Calvin yells for Hobbes to forget about the mice and help him think.  Hobbes scratches his head and wonders if a pet store will sell you a mouse if they know you're going to eat it.
@@ -2559,7 +2483,6 @@ dailies:
   "19880221":
     transcript: ""
     description: Calvin is getting dressed to go outside.  He puts his scarf on, his jacket, hat and boots.  Out the door he goes. He stops, comes back in.  He takes off his hat, scarf, jacket and boots.  Into the bathroom he goes.
-    review: "wordless: no dialogue in either source; assessed by agent, not verified against the strip"
   "19880222":
     transcript: Ding dong. I'll get it. Hobbes quick, close the curtains and help me prop furniture against the door! It's Rosalyn!
     description: The doorbell rings, and Calvin comes down the stairs to get it.  He peeks out the window, then turns in horror. He calls for Hobbes to help him close the curtains and prop furniture against the door....it's Rosalyn.
@@ -2581,7 +2504,6 @@ dailies:
   "19880228":
     transcript: My dad is a big ... hey! I think we'd better get that kid to a psychologist.
     description: Calvin is busily making snowmen in the yard.  Calvin finishes them and leaves.  Mom and Dad go out to the car, only to find three snowmen looking at the broken body of a fourth.  Calvin built them in front on the car, to make it look like the car hit the snowman.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.00)"
   "19880229":
     transcript: I'll get it. I think it's for me. Hello? Hi Charlie, thanks for calling. Yeah, this little freaks driving me up the wall ... what? No. Charlie, this is Calvin on the other phone! Listen to me! Your girlfriend's a sadistic kid-hater! Don't ever marry her! She'd be a terrible mother! She, uh oh. Gotta go! After Charlie dumps you, he'll thank me!
     description: The phone rings, and Rosalyn answers it.  It's her boyfriend, Charlie.  She starts telling him Calvin is driving her up the wall.  Calvin gets on the upstairs extension and tells Charlie that Rosalyn is a sadistic kid-hater.  He warns Charlie not to marry her, she'd be a terrible mother.  Calvin, after being sent to bed, yells that after Charlie dumps her, he'll thank Calvin.
@@ -2633,7 +2555,6 @@ dailies:
   "19880316":
     transcript: I don't believe you even have a secret. That's right, I don't. yes you do! Tell me it! Pleeeze? No! why not? Why can't you tell me? It's about you. Aaahhh! What is it? Tell me! Tell me! I've said too much already.
     description: Calvin doesn't even believe Hobbes has a secret, and Hobbes agrees that he doesn't.  Calvin says that Hobbes really does and again begs Hobbes to tell him.  Calvin asks why Hobbes won't tell him, and Hobbes says the secret is about him.  That just makes things worse as Calvin grabs Hobbes' leg and wails for him to tell the secret.  Hobbes says he's said too much already.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19880317":
     transcript: If you won't tell me your secret, I won't be your friend anymore. I'll give you a hint, how's that? Ok! Shoot. The flea market. The flea market? What kind of lousy hint is that? Do you know how your parents got you? I was ... why? What are you saying? No more hints.
     description: Calvin tells Hobbes that if he doesn't tell the secret, Calvin will stop being Hobbes' friend.  Hobbes offers a hint, "the flea market".  Calvin asks what kind of a hint is that.  Then Hobbes asks if Calvin knows how his parents got him. Calvin starts to answer, but stops and asks what Hobbes is saying.  Hobbes won't give any more hints.
@@ -2697,7 +2618,6 @@ dailies:
   "19880406":
     transcript: Hey Mom, can we go out for hamburgers tonight? Not tonight, dear. Aw, Mom! Why not? Because I'm already fixing something for dinner. Yeah ... I know.
     description: Calvin asks Mom if they can go out for hamburgers tonight.  Mom says no.  Calvin asks why not.  Mom replies that she's already fixing something for dinner.  Calvin replies that he knows.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19880407":
     transcript: Why does the sun set? It's because hot air rises. The sun's hot in the middle of the day, so it rises high in the sky. In the evening then, it cools down and sets. Why does it go from east to west? Solar wind. Dear!
     description: Calvin asks Dad why the sun sets.  Dad explains that hot air rises, so the sun rises in the middle of the day.  In the evening, it cools down and sets.  Calvin asks why it goes from east to west.  Dad replies "solar wind".  Mom yells at Dad.
@@ -2728,7 +2648,6 @@ dailies:
   "19880416":
     transcript: Eight, nine, ten! Here I come, ready or not! All right, give 'em back!
     description: Calvin and Hobbes are playing hide-and-seek.  Hobbes counts to ten, while Calvin hides behind a barrel. After some time, Calvin realizes.  He goes back into the house to catch Hobbes sitting on the floor reading comic books.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.00)"
   "19880417":
     transcript: I call this 'lookout' hill. Yes, you can certainly see far from up here. I call it 'lookout' hill because that's what you yell whenever we go down it. You know, sometimes it seems things go by too quickly. We're so busy watching out for what's just ahead of us that we don't take the time to enjoy where we are. Days go by and we hardly notice them. Life becomes a blur. Often it takes some calamity to make us live in the present. Then suddenly we wake up and see all the mistakes we've made. But it's too late to change anything. It's like ... it's like ... It's like what? It's like SOMEthing ... I just can't think of it.
     description: Calvin and Hobbes are riding their wagon down the hill.  Calvin says sometimes things go by too quickly as they roll down the hill.  They're so busy watching where they're going to enjoy where they are as they watch the path of the wagon.  They don't notice days going by.  It's all a blur as they gain speed down the hill.  It often takes a calamity to make them live in the present as they sail off the hill.  Then Calvin says they see their mistakes, but it's too late to change anything as the wagon falls off below them.  Calvin says "it's like..." as they fall from the sky.  Hobbes asks what it's like.  Calvin says "it's like something, but he can't think of it".
@@ -2775,7 +2694,6 @@ dailies:
     transcript: C'mom Hobbes, let me up into the tree fort. Say the password. No! You know it's me! Let me up! You may be some other kid in disguise. It's me, Calvin! Let me up, you hairball barfer! An insult! Well, you can just stay down there forever Mr. Stinker. Oh, no! Here comes Susie! Let me up quick, so we can throw things at her! Hurry! Let down the rope! La de da dum doo. She's coming! Quick! Let down the rope! I'm sorry I insulted you! Ok! See, I said I was sorry! Can't you let down the rope?! You have to say the password. tigers are perfect the e-pit-o-me of good looks and grace and quiet..uh..um..dignity.. Susie I was going to ask you to come over and play house but I think you'd be a weird example for our children. One of these days I'm going to make you into a rug! You hear me?? A rug!
     description: Hobbes is in the tree fort.  Calvin tells Hobbes to let him up.  Hobbes says he might be some other kid in disguise.  Calvin calls Hobbes a hairball barfer.  Hobbes says he can stay down on the ground forever.  Calvin sees Susie coming and wants to be let up so they can throw things at her.  Calvin apologizes for insulting Hobbes.  He wants the rope dropped down.  Hobbes tells him he has to say the password.  Susie comes up behind him as he's on the seventh verse of the poem password.  Susie says she was going to ask him to come over and play house, but she thinks he'd be a weird example for their children.  Calvin yells up to Hobbes saying one of these days he'll make Hobbes into a rug.
     source: miraheze
-    review: "verified: checked against a source outside the corpus by the maintainer"
   "19880502":
     transcript: Can I use the garden shovel? What do you want it for? Hobbes and I are going on an archealogical expedition. If you're looking for fossilized remains, you should dig through your room. Ha ha. Someday I'll name an Australopithecus woman after you.
     description: Calvin asks Mom if he can use a garden shovel.  She asks why.  He and Hobbes are going on an archeological expedition.  Mom suggests that if he's looking for fossilized remains, he could dig through his room.  Calvin doesn't think that's too funny.  He says he'll name an Australopithicus woman after her.
@@ -2812,7 +2730,6 @@ dailies:
   "19880513":
     transcript: Psst ... Susie! Can I copy your paper? NO. CALVIN!
     description: Calvin whispers to Susie, who's sitting in the desk ahead of Calvin.  He wants to copy her paper.  She tells him no.  He sits and pouts.  Then, he reaches into his desk for something.  The teacher shouts his name when she sees him holding a periscope, looking over Susie's shoulder at her paper.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.09)"
   "19880514":
     transcript: AAAUGHH! I SKINNED MY KNEE! OOH! OW! AAUGHHH! OW! OW!
     description: Calvin is holding his knee and yelling that he skinned it.  He seems to be in real pain.  He looks around and doesn't see anyone.  He walks home, opens the door, then starts yelling again that he is hurting.  Mom is sitting at the kitchen table.
@@ -2837,7 +2754,6 @@ dailies:
   "19880521":
     transcript: Maybe you should tell your MOM about the binoculars. And she can help somehow. Tell Mom?!? Are you crazy?? Now way! Why not? You've got to tell SOMEONE. Maybe she can think of something. At times like these, all Mom can think of is how long she was in labor with me.
     description: Hobbes suggests telling Mom about the binoculars to see if she can help.  Calvin tells him no way.  Hobbes tells him he has to tell someone.  Maybe Mom can think of something.  Calvin tells him that at times like this, all Mom can think of is how long she was in labor with him.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19880522":
     transcript: I got a hit! I got a hit! Only because I LET you! Ha ha! A home run! You didn't touch all the bases! I did too. No, you didn't. You didn't touch seventh base. Yes I did! I touched the water barrel right after the front porch. That's not seventh base. That's twelfth base! I thought the garage door was the twelfth. The garage door is the twenty-third base. You touched them all out of order. And you still didn't touch the secret base. The SECRET base?? What's the secret base?! I can't tell you. It's a secret. I can't believe this moronic sport is our national pastime. You're out. Give me a dollar.
     description: Calvin and Hobbes are playing baseball.  Calvin scores.  Hobbes accuses him of not touching all the bases. Calvin says that he did.  Hobbes states Calvin didn't touch seventh base.  Calvin points out that he did touch the water barrel after he touched the front porch.  Hobbes clarifies that the barrel is twelfth base.  Calvin thought the garage door was twelfth base.  Hobbes informs him the garage door is twenty-third base.  He accuses Calvin of touching all the bases out of order. Plus, he didn't touch the secret base.  Calvin asks what that is.  Hobbes won't tell him, because it's a secret.  Calvin can't believe this moronic sport is our national pastime.  Hobbes tags him out and tells Calvin to give him a dollar.
@@ -2883,7 +2799,6 @@ dailies:
   "19880605":
     transcript: FWOOSH As if life isn't short enough.
     description: Calvin fills a water balloon with an evil grin on his face.  He sneaks behind a tree.  He sneaks over behind a barrel.  He comes up behind the tree Hobbes is sleeping under.  Calvin lifts the water balloon, and Hobbes says "As if life isn't short enough" without opening his eyes.  Calvin stops, sets the balloon down, an lies down under the tree with a frown on his face.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.09)"
   "19880606":
     transcript: You know what we need, Hobbes? We need an attitude. An attitude? Yeah. You can't be cool if you don't have an attitude. Really? Sure. They're all the rage. Now what kind of attitude could WE have? We could be courteously deferential. Oh, good. That's REAL cool.
     description: Calvin tells Hobbes they need an attitude.  Calvin goes on to explain you can't be cool if you don't have an attitude.  Hobbes is puzzled.  Calvin tells him they're all the rage.  He wonders what kind of attitude they could have.  Hobbes suggests being courteously deferential.  Calvin rolls his eyes and sarcastically says "that's real cool".
@@ -2971,7 +2886,6 @@ dailies:
   "19880704":
     transcript: This probably just goes to show something, but I sure don't know what.
     description: Calvin is standing there holding a balloon on a string.  He starts floating up into the air.  Higher and higher he goes as he clutches the string with both hands.  As he floats along in the sky, he says this  probably just goes to show you something, but he sure doesn't know what.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.00)"
   "19880705":
     transcript: There's quite a breeze up here. I'm really moving. There's the river and the town triangle. HEY, DOWN THERE! My name is Calvin! Tell my tiger, Hobbes, I'm blowing away on a balloon! CAN ANYONE HERE ME? TELL HOBBES HE CAN'T READ MY COMIC BOOKS JUST 'CAUSE I'M NOT AROUND, OK? ... OH YEAH, TELL MY PARENTS WHAT HAPPENED TOO, ALL RIGHT? HELLO? HELLO?
     description: Calvin is really moving with his balloon.  He sees the river and the town triangle below.  Calvin yells down for someone to tell his tiger that he's blowing away on a balloon.  He yells to see if anyone can hear him.  He adds to tell Hobbes that he can't read Calvin's comic books, just because he isn't there.  Finally, he adds to tell his parents what happened.
@@ -3017,7 +2931,6 @@ dailies:
   "19880719":
     transcript: How come alligators are in this big pit? So they don't get out and eat people. Does the zoo ever throw anyone in? Don't be silly. Of course not. How soon until we got hom?
     description: Dad holds Calvin up so he can see into the alligator pit.  Calvin asks why they're in a pit.  Dad explains it's so they don't get out and eat people.  Calvin asks if the zoo ever throws anyone in.  Dad tells him no.  Calvin looks a little longer. Dad puts him down, and Calvin asks how soon until they go home.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19880720":
     transcript: Look! Monkeys! See how they use their tails and feet to climb? Zoos let people see how wild animals really behave. Hey, look what THAT monkey's doing! Right in public, too! Ha ha! That's gross! How come I'M not allowed to do that?! Come look at the birds over here, Calvin.
     description: Calvin runs over to the monkey cage.  Mom shows him how monkeys use their tails and feet to climb.  She says zoos let people see how wild animals really behave.  Calvin's eyes get wide and he points at the cage.  He says to look what the monkey is doing in public.  He laughs, says that's gross, and asks how come he's not allowed to do that.  Mom tells Calvin to come look at the birds.
@@ -3033,7 +2946,6 @@ dailies:
   "19880724":
     transcript: Rustle rustle zing! WHAM! We tigers just LIVE for that! Not for long, you won't!
     description: Hobbes sneaks behind a tree, then through some tall grass.  He crouches, ready to attack.  Calvin is unsuspectingly playing in his sandbox.  He's covered in shadow, and he looks up.  Hobbes crashes down on him.  Hobbes brushes off his arms and says tigers just live for that.  Calvin, peeking up from the sand, says that he won't for long.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.00)"
   "19880725":
     transcript: Here's Hobbes, but where's Calvin? I don't see him. Where could he have gone? We just turned our backs for a minute. And why didn't he take Hobbes? You stay here in case he comes back, and I'll go look for him. OK. (sigh) Being a parent is wanting to hug and strangle your kid at the same time.
     description: Mom and Dad look around for Calvin.  Mom says they just turned their backs for a minute.  Dad wonders why he didn't take Hobbes.  Dad tells Mom to stay at the bench in case Calvin returns.  He's going to go look for him.  Dad complains that being a parent is wanting to hug and strangle your kid at the same time.
@@ -3043,7 +2955,6 @@ dailies:
   "19880727":
     transcript: I know! Maybe Calvin't at the tiger pit, since he likes tigers so much. Ha ha, maybe Calvin's IN the tiger pit, since he likes tigers so much.
     description: Dad gets an idea.  He thinks Calvin might be at the tiger pit, because he likes them so much.  He starts walking.  He chuckles as he thinks maybe Calvin will be in the tiger pit, since he likes them so much.  He starts running.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19880728":
     transcript: You found him! Thank goodness! Where was he? Looking at the tigers. I followed another lady, thinking it was Mom, and then when I realized I was lost, I went to ask the tigers if they'd seen Hobbes. Next time, you should ask a PERSON for help. ... Oh ... that never occurred to me. Only next time, there won't BE a next time, because we're just going to tie you to a stake in the yard ever weekend. Dear! A fat lot of help your compatriots were, I might add.
     description: Mom is overjoyed to see Dad with Calvin.  She asks where he was.  Dad tells her he was looking at the tigers. Calvin explains that he followed another lady, thinking it was Mom.  Then, when he realized he was lost, he went to ask the tigers if they'd seen Hobbes.  Mom tells him to ask a person for help next time.  Dad says that there won't be a next time, because they're going to tie him to a stake in the yard every weekend.  Calvin tells Hobbes his compatriots were a fat lot of help.
@@ -3074,7 +2985,6 @@ dailies:
   "19880806":
     transcript: BIP WHEEEE.
     description: Calvin blows a soap bubble.  He watches it start to float off.  Then it pops, "BIP".  Calvin says "Wheeee".
-    review: "no transcript: never examined, and no source has been checked for this date"
   "19880807":
     transcript: The race will finish at that trr, OK? This tree? Right. Readysetgo, I win! On your mark ... get set ... Go! Hey! Leggo! OW! Stop that! MMF RRG PUFF PUFF FINISH! Oof. Ten minutes! That's our best time yet for the 50-yard dash!
     description: Calvin and Hobbes line up for a race.  When Calvin take a lead, Hobbes holds the back of his shirt.  When Hobbes gets a lead, Calvin pulls his tail.  Hobbes pounces on Calvin, and they fight.  As they're wrestling with each other, Hobbes finally gets to the finish line.  Calvin, lying on Hobbes' back, says ten minutes is their best time yet for the 50-yard dash.
@@ -3102,7 +3012,6 @@ dailies:
   "19880815":
     transcript: What's all that water I hear? I'm coming in! Oh my gosh! ACKPBT! WHAT'S GOING ON?!? SPLUTB! BPLPTH! There! I got the water off. ALL RIGHT, CALVIN, WHERE ARE YOU?! H-hi, Dad. It's the end of the world, Calvin.
     description: Dad hears the water, and he comes into the bathroom.  He walks into the spraying water.  He sputters about what's going on.  He shuts the water off and looks for Calvin, who's hiding behind the shower curtain.  Dad tells Calvin it's the end of the world.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.00)"
   "19880816":
     transcript: Look at this bathroom! What on earth were you DOING?! Nothing, Dad! I was just here looking for some dental floss, when PLOOIE! The faucet handle blows sky high all by itself! It ... it ... uh ... What I mean is, Hobbes was fooling around with your tools. I tried to stop him, but he wouldn't listen, and sure enough, he went and ... and ... One more try. Aliens, Dad! Big, evil, bug-eyed monsters from Pluto! They did it, and made me swear not to tell!
     description: Dad asks Calvin what he was doing.  Calvin tells him he was looking for dental floss and the handle blew sky high by itself.  He changes his story to Hobbes playing around with Dad's tools.  Calvin tried to stop Hobbes, but he wouldn't listen.  Dad gives Calvin one more try.  Calvin tells him big, bug-eyed monsters from Pluto did it and made him swear not to tell.
@@ -3115,7 +3024,6 @@ dailies:
   "19880819":
     transcript: ""
     description: Calvin has a bat on his shoulder and flips a baseball into the air.  He swings and misses, as the ball falls to the ground.  Calvin storms off dragging his bat on the ground behind him.  He comes back with a golf club and prepares to hit the ball lying on the ground.
-    review: "wordless: no dialogue in either source; assessed by agent, not verified against the strip"
   "19880820":
     transcript: Give me some cookies, or I light the fuse and send us all to kingdom come. What did you do, stick a piece of string into a hot dog? For heaven't sake, don't waste food, Calvin. Give me that. Can I have any cookies? No. Go play outside. I sure wish I could get my hands on some REAL dynamite. Can I have the hot dog, or did your Mom take it?
     description: Calvin tells Mom to give him some cookies or he'll light the fuse and send them all to kingdom come.  He has something in his hand.  Mom looks at him and sees he tied a string to a hot dog.  She tells him not to waste food and takes the hot dog from Calvin.  He asks if he can have some cookies.  Mom says no.  Calvin says he wishes he could get his hands on some real dynamite.  Hobbes asks if he can have the hot dog, or did Mom take it.
@@ -3137,7 +3045,6 @@ dailies:
   "19880826":
     transcript: OK, I feel one coming. Are you ready? Ready. ACHOOO POOF Did you get it? Yep! See, here it comes. Boy, that's a good one! Why can't my school portraits ever look like this?
     description: Calvin feels one coming.  He tells Hobbes to get ready.  As he sneezes, Hobbes shoots the picture.  Calvin asks if he got it.  Hobbes shows him the picture.  Calvin has his mouth open, sneezing.  Calvin wonders why his school pictures can't look like that.
-    review: "description unverified: the transcript is corroborated, but the description does not correspond to it (0.00)"
   "19880827":
     transcript: Don't come in here! Why not? I'm roasting. You'll get hair in the water. Go do something else. HEY! Stop that! HEY! HEY! You think you've won, huh? Well, I'm not even going to TELL you what I did. ACKPTH!
     description: Calvin is in the toy pool.  He tells Hobbes not to get in.  Hobbes is roasting.  Calvin tells him he'll get hair in the water.  Hobbes deliberately rubs some hair into the pool.  Calvin yells for him to stop that.  Calvin gets out of the pool. Hobbes climbs in.  With an evil look on his face, Calvin asks Hobbes if he thinks he won.  He says he's not even going to tell Hobbes what he did in the pool.  Hobbes gets a horrified look.
@@ -3147,7 +3054,6 @@ dailies:
   "19880829":
     transcript: TRIP BAP WHACK BAP
     description: Calvin trips over a rock and falls face first to the ground.  He gets up angrily, and he kicks the rock.  He starts to walk off.  The rock hits something and bounces back, hitting Calvin in the head, knocking him face first to the ground.
-    review: "no transcript: never examined, and no source has been checked for this date"
   "19880830":
     transcript: I'm hungry. Too bad. Breakfast isn't until tomorrow. My tummy's growling. Hush. Most people don't sleep well next to a hungry tiger. Sometimes I sure wish I had a dog. More tuna and less mayonnaise.
     description: Calvin and Hobbes are in bed.  Hobbes is hungry.  Calvin tells him breakfast isn't until tomorrow.  Hobbes' stomach is growling.  Calvin tells him to be quiet.  Hobbes reminds him most people don't sleep well next to a hungry tiger. Calvin's eyes open.  In the kitchen, he's making Hobbes a sandwich.  He says sometimes he wishes he had a dog.  Hobbes tells him more tuna and less mayonnaise.
@@ -3184,12 +3090,10 @@ dailies:
   "19880910":
     transcript: Yes, Calvin? May I be excused, please? Again? I have to go. Bad. All right. Thank you. What are YOU doing home?! I had to go.
     description: Calvin asks Miss Wormwood if he could be excused.  He says he has to go, bad.  Miss Wormwood lets him go.  Mom opens the door and asks Calvin what he's doing home.  Calvin tells her he had to go.
-    review: "description unverified: the transcript is corroborated, but the description cannot be scored against it"
   "19880911":
     transcript: School's out! Free at last! And just six precious hours before bed to forget everything I learned today. I hate coming home from school. I never know if Hobbes is waiting to pounce on me. Maybe I can stand off to the side here, and push the door open with a stick. I'm home! What do you do, wait until you see the whites of my eyes?!? Boy, you should've seen them! They were as big as dinner plates! Hoo hoo hoo!
     description: Calvin stops at his front door worried about Hobbes pouncing on him.  He pushes the door open with a stick. He says he's home.  Nothing happens.  He peeks in, and Hobbes crashes into him.  Calvin asks if he waits until he sees the whites of his eyes.  Hobbes, laughing, says he should have seen them.  They were as big as dinner plates.
     source: miraheze
-    review: "verified: checked against a source outside the corpus by the maintainer"
   "19880912":
     transcript: Have you been reading the papers? Grown-ups really have the world fouled up. Acid rain, toxic wastes, holes in the ozone, sewage in the oceans, and on and on! The only bright side to all this is that eventually there may not be a piece of the planet worth fighting over.
     description: Calvin asks Hobbes if he's read the papers lately.  He says grown-ups really have fouled the world up.  Acid rain, toxic waste, holes in the ozone, sewage in the ocean, on and on.  They walk a little further, and Calvin says the only bright side is that eventually there may not be a piece of the planet worth fighting for.
@@ -6433,7 +6337,7 @@ dailies:
     transcript: I don't need a bath! I can stay clean without one! Look, I'll LICK myself clean! That's what Hobbes does! See, I'm getting clean just like him! Nice going.
     description: Calvin runs from Mom, saying he doesn't need a bath.  He says he'll lick himself clean.  He says that's what Hobbes does.  He says he's getting clean like him.  Later, Calvin is wrapped in a towel, having had a bath.  Hobbes looks out from the wash machine, where he, also, has been cleaned.  He tells Calvin, "Nice going".
   "19920329":
-    transcript: ... so if we subtract five from... OUIR FEARLESS HERO ESCAPES! We join the valiant Spaceman Spiff as he flees his bloatoid captors! Our hero scrambles into his waiting spacecraft! Spiff pressurizes the magnetronic altitude-o-lators and hits the turbo hyper-thrust drive! Instantly our hero blasts to escape velocity! Half a micromoment later, Spiff is just another speck in the infinite sea of outer space! Alone and free in an endless frontier! Free to roam the heavens in man's noble quest to investigate the weirdness of the universe! Whee, what fun! I'm glad you could come home so early! C'mon ol' buddy! Let's go exploring and find some gross bugs! Hello? ... speaking... HE WHAT?!
+    transcript: "... so if we subtract five from... OUIR FEARLESS HERO ESCAPES! We join the valiant Spaceman Spiff as he flees his bloatoid captors! Our hero scrambles into his waiting spacecraft! Spiff pressurizes the magnetronic altitude-o-lators and hits the turbo hyper-thrust drive! Instantly our hero blasts to escape velocity! Half a micromoment later, Spiff is just another speck in the infinite sea of outer space! Alone and free in an endless frontier! Free to roam the heavens in man's noble quest to investigate the weirdness of the universe! Whee, what fun! I'm glad you could come home so early! C'mon ol' buddy! Let's go exploring and find some gross bugs! Hello? ... speaking... HE WHAT?!"
     description: Calvin darts out of the classroom.  Spaceman Spiff flees his Bloatoid captors.  He scrambles into his spacecraft.  He hits the hyper-thrust drive.  He's soon just another speck in the infinite sea of outer space.  He's free to roam the heavens in man's noble quest to investigate the weirdness of the universe.  Outside, Hobbes is happy Calvin could come home so early.  Calvin suggests they go exploring and find some gross bugs.  Inside, Mom answers the phone.  The school tells her what happened.
     source: s-anand+seligman+miraheze
   "19920330":
@@ -8122,7 +8026,7 @@ dailies:
     transcript: Calvin, would you set the table for me please? Mm... I don't think so. I'm not enthusiastic about setting the table. I don't think you should have to do something unless you're enthusiastic about it.
     description: Mom asks Calvin to help her set the table.  Calvin doesn't think so.  He's not enthusiastic about setting the table.  As Calvin helps set the table, he says he doesn't think you should have to do something unless you're enthusiastic about it.
   "19930905":
-    transcript: ... SIGHHH... Three plus two... Calvin?
+    transcript: "... SIGHHH... Three plus two... Calvin?"
     description: The numeral '3' turns into a pterodactyl.  It flies past a brontosaurus, whose neck forms the numeral '2'.  Calvin sits at his school desk while the teacher asks what three plus two is.
     source: s-anand+seligman
     review: "verified: checked against a source outside the corpus by the maintainer"
