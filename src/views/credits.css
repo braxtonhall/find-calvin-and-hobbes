@@ -7,7 +7,7 @@
 	max-width: 600px;
 }
 
-.credits-back {
+.credits-home {
 	display: inline-block;
 	font-family: var(--font);
 	font-size: 14px;
@@ -20,12 +20,7 @@
 	margin-bottom: 24px;
 }
 
-.credits-back--disabled {
-	opacity: 0.25;
-	cursor: default;
-}
-
-.credits-back:not(.credits-back--disabled):hover {
+.credits-home:hover {
 	background: var(--grey);
 }
 

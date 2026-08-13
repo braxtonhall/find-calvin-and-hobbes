@@ -18,6 +18,13 @@
 	top: 8px;
 }
 
+/* Shared by every Home button, whichever view builds it. */
+.home-icon {
+	display: inline-block;
+	position: relative;
+	top: -1px;
+}
+
 .copy-link-btn {
 	display: inline-flex;
 	align-items: center;

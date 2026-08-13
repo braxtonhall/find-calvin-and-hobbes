@@ -42,12 +42,6 @@
 	margin-bottom: 20px;
 }
 
-.home-icon {
-	display: inline-block;
-	position: relative;
-	top: -1px;
-}
-
 .nav-btn {
 	display: inline-flex;
 	align-items: center;

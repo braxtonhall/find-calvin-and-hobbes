@@ -1,11 +1,11 @@
 import "./credits.css";
 
-import { attachBackButtonHandler, buildBackButton } from "./nav-buttons";
+import { attachHomeButtonHandler, buildHomeButton } from "./nav-buttons";
 
 export function renderCredits(): void {
 	const element = document.getElementById("view-credits")!;
 	element.innerHTML = `<div class="credits-container">
-		${buildBackButton("credits-back")}
+		${buildHomeButton("credits-home")}
 		<h2 class="credits-heading">Credits</h2>
 
 		<p class="credits-section">
@@ -16,8 +16,10 @@ export function renderCredits(): void {
 		</p>
 
 		<p class="credits-section">
-			<strong>Comic transcripts</strong> sourced from the
-			<a href="https://web.archive.org/web/20210706165719/http://www.s-anand.net/comic.calvin.jsz" target="_blank" rel="noopener">Calvin and Hobbes transcript search</a> (s-anand.net).
+			<strong>Transcripts</strong> from the
+			<a href="https://web.archive.org/web/20210706165719/http://www.s-anand.net/comic.calvin.jsz" target="_blank" rel="noopener">Calvin and Hobbes transcript search</a>, the
+			<a href="https://calvinandhobbes.miraheze.org/wiki/Main_Page" target="_blank" rel="noopener">Calvin and Hobbes Miraheze Wiki</a>, and
+			<a href="https://seligman.github.io/comics/calvin_and_hobbes.html" target="_blank" rel="noopener">Calvin and Hobbes Search</a>.
 		</p>
 
 		<p class="credits-section">
@@ -61,5 +63,5 @@ export function renderCredits(): void {
 		<p class="credits-footer">Please send corrections, fixes, and ideas to Braxton Hall through <a href="https://github.com/braxtonhall/find-calvin-and-hobbes" target="_blank" rel="noopener">GitHub</a>.</p>
 	</div>`;
 
-	attachBackButtonHandler(element, "credits-back");
+	attachHomeButtonHandler(element, "credits-home");
 }

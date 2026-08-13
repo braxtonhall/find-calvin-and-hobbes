@@ -11,12 +11,20 @@ export function attachBackButtonHandler(element: HTMLElement, className: string)
 	if (backButton) backButton.addEventListener("click", () => history.back());
 }
 
+export function buildHomeButton(className: string): string {
+	return `<button class="${className}"><span class="home-icon">&#8962;</span> Home</button>`;
+}
+
+export function attachHomeButtonHandler(element: HTMLElement, className: string): void {
+	element.querySelector(`button.${className}`)!.addEventListener("click", () => navigate("#/"));
+}
+
 export function buildBackAndHomeButtons(): string {
 	return `${buildBackButton("detail-back")}
-		<button class="detail-home"><span class="home-icon">&#8962;</span> Home</button>`;
+		${buildHomeButton("detail-home")}`;
 }
 
 export function attachBackAndHomeHandlers(element: HTMLElement): void {
 	attachBackButtonHandler(element, "detail-back");
-	element.querySelector(".detail-home")!.addEventListener("click", () => navigate("#/"));
+	attachHomeButtonHandler(element, "detail-home");
 }
