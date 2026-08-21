@@ -29,7 +29,7 @@ export const SUGGESTED_QUERIES: readonly string[] = [
 	"yukon",
 	"water balloon",
 	"waiting for the school bus",
-	"@month:december @day:25",
+	"@month:december @day:24",
 	"@year:1988",
 	"@date:1985/11/18",
 	"@sunday calvinball",

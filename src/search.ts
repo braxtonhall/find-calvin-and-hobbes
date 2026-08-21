@@ -207,9 +207,9 @@ export const TUNING: Tuning = {
  * real result set into the faintest grid shade.
  *
  * `narrow` at 1.5 is the band the strongest single keywords occupy — a good text match, not a
- * great one, for the 31 strips of a month or the 11 of an `august 3`. It is close to
- * unfalsifiable in this archive: `august 1988`, `august 3` and `november 28 1985` all return no
- * text results at all, so nothing competes with it.
+ * great one, for the 31 strips of a month or the 52 Sundays of a `sunday 1988`. It is close to
+ * unfalsifiable in this archive: `august 1988` and `november 28 1985` return no text results at
+ * all, so nothing competes with it.
  *
  * `broad` at 0.8 is below a strong text match, which is what a bare year should be, and it is the
  * one rung the archive can actually demonstrate. `1988` matches 366 strips by date and exactly

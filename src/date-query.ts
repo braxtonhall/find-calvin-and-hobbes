@@ -18,6 +18,11 @@ import { FILTER_SPECS } from "./filter-spec";
  *   query, and it is cheaper and more honest than trying to find a date inside a sentence.
  * - **Nothing is left over.** `1988 3` is not "year 1988, ignore the 3". Every token must be
  *   placed, or there is no date.
+ * - **A date is written from the year down.** `1988`, `august 1988` and `august 3 1988` are dates;
+ *   `august 3` and `9/3` are not. A reader may say more than the year but never less, because a
+ *   day with no year is a thing to filter by rather than a date — `@month:august @day:3` is how
+ *   they ask for the third of August in every year, and it says so where a bare `august 3` would
+ *   have to be guessed at.
  * - **A year a reader typed must be one the archive could have.** The range comes from
  *   `RANGE_START` and `RANGE_END`, so `2001-09-11` and `1812` stay text queries rather than
  *   becoming dates with nothing behind them. A filter value is exempt — see `DateSource`.
@@ -97,9 +102,9 @@ export interface DateCandidate {
 }
 
 /**
- * Held as a disjunction rather than as a date range, for two reasons: an ambiguous numeric date
- * is genuinely two readings, and `august 3` is one day in every year, which no single range can
- * express.
+ * Held as a disjunction rather than as a date range, because an ambiguous numeric date is
+ * genuinely two readings: `9/3/1988` is two days with half a year between them, which no range
+ * can express without also naming everything in between.
  */
 export interface DateExpression {
 	candidates: DateCandidate[];
@@ -147,9 +152,9 @@ function weekdayOf(date: string): number {
 
 /**
  * A two-digit year is read as the century that lands inside the archive, and every value in that
- * band exceeds 31 — so there is no day-versus-year ambiguity to resolve. `august 12` is the
- * twelfth; `august 90` is 1990. A filter may name a year outside the archive, and there the
- * century falls back to the archive's own, since the whole strip ran in the 1900s.
+ * band exceeds 31 — so `aug 90` is 1990, and nothing in the band could have been meant as a day.
+ * A filter may name a year outside the archive, and there the century falls back to the archive's
+ * own, since the whole strip ran in the 1900s.
  */
 function resolveYear(numeric: Numeric, source: DateSource): number | null {
 	if (numeric.ordinal) return null;
@@ -157,8 +162,8 @@ function resolveYear(numeric: Numeric, source: DateSource): number | null {
 		if (source === "filter") return numeric.value;
 		return numeric.value >= MIN_YEAR && numeric.value <= MAX_YEAR ? numeric.value : null;
 	}
-	// Exactly two, not "at most two": a single digit is a day, never a year, and letting one
-	// through would read `august 3` as August 1903 the moment the range stopped saying otherwise.
+	// Exactly two, not "at most two": a single digit is never a year, and letting one through
+	// would read `aug 3` as August 1903 the moment the range stopped saying otherwise.
 	if (numeric.digits !== 2) return null;
 	for (const century of [1900, 2000]) {
 		const year = century + numeric.value;
@@ -167,9 +172,9 @@ function resolveYear(numeric: Numeric, source: DateSource): number | null {
 	return source === "filter" ? 1900 + numeric.value : null;
 }
 
-/** February 29th with no year given is a real date, so an unknown year is probed as a leap one. */
-function isRealDate(year: number | undefined, month: number, day: number): boolean {
-	const probe = new Date(Date.UTC(year ?? 2000, month - 1, day));
+/** Every date that gets this far names its year, so February 29th is decided rather than guessed. */
+function isRealDate(year: number, month: number, day: number): boolean {
+	const probe = new Date(Date.UTC(year, month - 1, day));
 	return probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
 }
 
@@ -251,23 +256,15 @@ function fromNumbers(numbers: Numeric[], source: DateSource): DateCandidate[] {
 	// `aug 3 '88` — has something else beside it, and `88` alone collides with prose.
 	if (numbers.length === 1) return numbers[0].digits === 4 ? collect(numbers, [["year"]], source) : [];
 
+	// One of the pair has to be the year, and a year cannot be mistaken for a month, so `1988-08`
+	// and `8/1988` are both August 1988 and neither is ambiguous. A pair of small numbers — `9/3` —
+	// is a month and a day with no year, which is not a date.
 	if (numbers.length === 2) {
-		// A year cannot be mistaken for a month or a day, so `1988-08` and `8/1988` are already
-		// unambiguous; only a pair of small numbers is genuinely two dates.
-		const withYear = collect(
+		return collect(
 			numbers,
 			[
 				["year", "month"],
 				["month", "year"],
-			],
-			source,
-		);
-		if (withYear.length > 0) return withYear;
-		return collect(
-			numbers,
-			[
-				["month", "day"],
-				["day", "month"],
 			],
 			source,
 		);
@@ -292,11 +289,11 @@ function fromNumbers(numbers: Numeric[], source: DateSource): DateCandidate[] {
 }
 
 function fromMonthName(month: number, numbers: Numeric[], source: DateSource): DateCandidate[] {
+	// The one number beside a month name is its year. `august 3` names a day in every year, which
+	// `@month:august @day:3` asks for and a date cannot.
 	if (numbers.length === 1) {
 		const year = resolveYear(numbers[0], source);
-		if (year !== null) return [{ month, year }];
-		const rest = assign(numbers, ["day"], source);
-		return rest === null ? [] : [{ ...rest, month }];
+		return year === null ? [] : [{ month, year }];
 	}
 
 	if (numbers.length === 2) {
@@ -317,18 +314,13 @@ function fromMonthName(month: number, numbers: Numeric[], source: DateSource): D
 	return [];
 }
 
+/** Every candidate carries a year, so precision is a question of what was said beyond it. */
 function precisionOf(candidates: DateCandidate[]): DatePrecision {
-	if (candidates.every((candidate) => candidate.day !== undefined && candidate.month !== undefined)) {
-		return candidates.every((candidate) => candidate.year !== undefined) ? "exact" : "narrow";
-	}
+	if (candidates.every((candidate) => candidate.day !== undefined && candidate.month !== undefined)) return "exact";
 	// A year on its own is the whole of that year. A year with a weekday is one day in seven of
 	// it, which is a different kind of answer and does not belong at the same strength.
 	const bare = candidates.every(
-		(candidate) =>
-			candidate.year !== undefined &&
-			candidate.month === undefined &&
-			candidate.day === undefined &&
-			candidate.weekday === undefined,
+		(candidate) => candidate.month === undefined && candidate.day === undefined && candidate.weekday === undefined,
 	);
 	return bare ? "broad" : "narrow";
 }
@@ -372,8 +364,9 @@ export function parseDateExpression(text: string, source: DateSource = "query"):
 
 	const valid: DateCandidate[] = [];
 	for (const candidate of candidates) {
-		// A month alone, a day alone and a weekday alone are ordinary words, not dates.
-		if (candidate.year === undefined && (candidate.month === undefined || candidate.day === undefined)) continue;
+		// Nothing is a date without its year: a month, a day and a weekday are ordinary words on
+		// their own, and a month with a day is a filter's business rather than a date.
+		if (candidate.year === undefined) continue;
 		if (
 			candidate.day !== undefined &&
 			candidate.month !== undefined &&
@@ -386,7 +379,7 @@ export function parseDateExpression(text: string, source: DateSource = "query"):
 		}
 		// Where the whole date is known the weekday is decidable now, and disagreement kills that
 		// reading. Where it is not, the weekday rides along and narrows the strips that match.
-		if (candidate.year !== undefined && candidate.month !== undefined && candidate.day !== undefined) {
+		if (candidate.month !== undefined && candidate.day !== undefined) {
 			if (weekdayOf(dateToString(candidate.year, candidate.month, candidate.day)) !== weekday) continue;
 			valid.push({ ...candidate, weekday });
 			continue;
@@ -402,8 +395,7 @@ function matchesCandidate(candidate: DateCandidate, date: string): boolean {
 	if (candidate.year !== undefined && candidate.year !== Number(date.slice(0, 4))) return false;
 	if (candidate.month !== undefined && candidate.month !== Number(date.slice(5, 7))) return false;
 	if (candidate.day !== undefined && candidate.day !== Number(date.slice(8, 10))) return false;
-	if (candidate.weekday !== undefined && candidate.weekday !== weekdayOf(date)) return false;
-	return true;
+	return !(candidate.weekday !== undefined && candidate.weekday !== weekdayOf(date));
 }
 
 export function matchesExpression(expression: DateExpression, date: string): boolean {

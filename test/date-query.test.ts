@@ -77,12 +77,6 @@ test("an ambiguous numeric date means both readings", async (suite) => {
 		assert.deepEqual(reach("12/25/1988"), ["1988-12-25"]);
 	});
 
-	await suite.test("without a year, both readings run through every year", () => {
-		assert.deepEqual(reach("9/3").slice(0, 4), ["1985-03-09", "1985-09-03", "1986-03-09", "1986-09-03"]);
-		assert.equal(reach("9/3").length, 22);
-		assert.equal(reach("12/25").length, 11);
-	});
-
 	// 1988-09-03 was a Saturday and 1988-03-09 a Wednesday, so the weekday is not decoration
 	// here — it is the thing that decides which date was meant.
 	await suite.test("a weekday disambiguates rather than merely agreeing", () => {
@@ -98,12 +92,6 @@ test("a partial date reaches every strip it could name", async (suite) => {
 			assert.equal(reach(form)[0], "1988-08-01", form);
 			assert.equal(parsed(form).precision, "narrow", form);
 		}
-	});
-
-	await suite.test("a month and a day, in every year", () => {
-		assert.deepEqual(reach("august 3").length, 11);
-		assert.equal(reach("august 3")[0], "1985-08-03");
-		assert.equal(parsed("august 3").precision, "narrow");
 	});
 
 	// Separator identity is gone by the time the tokens are assembled, so a month and year written
@@ -127,8 +115,8 @@ test("a partial date reaches every strip it could name", async (suite) => {
 		assert.ok(sundays.every((date) => new Date(`${date}T00:00:00Z`).getUTCDay() === 0));
 	});
 
-	await suite.test("february 29th is a real date with no year given", () => {
-		assert.deepEqual(reach("february 29"), ["1988-02-29", "1992-02-29"]);
+	await suite.test("february 29th exists in the years that had one", () => {
+		assert.deepEqual(reach("february 29 1988"), ["1988-02-29"]);
 		assert.equal(parseDateExpression("february 29 1989"), null);
 	});
 });
@@ -140,6 +128,12 @@ test("what is not a date", async (suite) => {
 		["march", "and the one that is also a noun"],
 		["sunday", "a bare weekday is an ordinary word"],
 		["3rd", "a bare day names nothing"],
+		["august 3", "a month and a day name a day in every year, which is `@month:august @day:3`"],
+		["august 3rd", "however it is spelled"],
+		["9/3", "and however it is written"],
+		["12/25", "christmas every year is a filter, not a date"],
+		["february 29", "a real day, but in no year in particular"],
+		["sunday august 3", "a weekday cannot supply the missing year either"],
 		["88", "a bare two-digit number collides with prose"],
 		["rosalyn", "an ordinary query"],
 		["1988 rosalyn", "one stray word is enough"],
@@ -212,6 +206,16 @@ test("filters", async (suite) => {
 		assert.ok(passesFilters("1988-08-01", filters!), "a Monday, and the first");
 		assert.ok(!passesFilters("1988-08-08", filters!), "a Monday, not the first");
 		assert.ok(!passesFilters("1988-05-01", filters!), "the first, a Sunday");
+	});
+
+	// A date only ever gets more specific, so `august 3` is not one. This is where a reader says
+	// which fields they meant, and it is the reason nothing is lost by rejecting the bare form.
+	await suite.test("a day in every year is what the filters are for", () => {
+		const { filters } = parseDateFilters("@month:august @day:3");
+		assert.ok(passesFilters("1988-08-03", filters!));
+		assert.ok(passesFilters("1989-08-03", filters!));
+		assert.ok(!passesFilters("1988-08-04", filters!));
+		assert.ok(!passesFilters("1988-09-03", filters!));
 	});
 
 	await suite.test("the archive's own vocabulary", () => {

@@ -23,7 +23,9 @@ weekend, while `@day:1 @day:monday` is the Mondays that fell on the first. Filte
 ordinary words, so `@year:1988 snowman` searches 1988 alone.
 
 Filter values are read year first — `@date:1988/9/3` is September 3rd, never March 9th — and take
-no spaces. A bare date typed on its own (`august 3 1988`) is understood without any `@`.
+no spaces. A bare date typed on its own is understood without any `@`, as long as it starts from
+the year: `1988`, `august 1988` and `august 3 1988` are all dates, while a day in every year is
+what `@month:august @day:3` is for.
 
 ## Build
 
