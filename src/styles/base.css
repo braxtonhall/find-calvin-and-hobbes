@@ -24,16 +24,23 @@
 	--orange-dim: #fcc490;
 	--grey-dim: #f0edea;
 
-	/* Search-confidence ramp. Tier 5 is --golden/--orange, and the step past tier 1 is the
-	   *-dim non-result colour, so a weak match stays visibly a match. */
-	--golden-t4: #f7ba2e;
-	--golden-t3: #f7c248;
-	--golden-t2: #f8cb63;
-	--golden-t1: #f8d37d;
-	--orange-t4: #fe881d;
-	--orange-t3: #fd973a;
-	--orange-t2: #fda656;
-	--orange-t1: #fcb573;
+	/* Search-confidence ramp, spaced evenly in OKLab rather than in sRGB so the steps look as
+	   even as they measure. It reads as three bands, not one gradient:
+	     1. a high-confidence match, --golden/--orange alone;
+	     2. every other match, tiers 4..1 packed one unit apart;
+	     3. no match at all, the *-dim colour.
+	   Each ramp is nine units wide and the two band boundaries take three units apiece, so both
+	   are about three times a step inside the cluster. That contrast is what makes them read as
+	   boundaries rather than as further notches; the four clustered tiers only need to be told
+	   apart end to end, not neighbour by neighbour. */
+	--golden-t4: #f7c053;
+	--golden-t3: #f8c560;
+	--golden-t2: #f8c96c;
+	--golden-t1: #f8ce78;
+	--orange-t4: #ff9448;
+	--orange-t3: #ff9c56;
+	--orange-t2: #ffa462;
+	--orange-t1: #feac6e;
 }
 
 html,

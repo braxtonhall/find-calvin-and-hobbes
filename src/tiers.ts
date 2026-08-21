@@ -24,7 +24,7 @@ export type TierMode = "steps" | "fifths" | "stretch" | "quantile";
  *              spans the whole ramp. Maximum contrast, at the cost of pulling near-ties apart.
  * - `quantile` by rank rather than by score: equal-sized groups, ties held together.
  */
-export const TIER_MODE: TierMode = "fifths";
+export const TIER_MODE: TierMode = "steps";
 
 const THRESHOLDS: Record<"steps" | "fifths", readonly number[]> = {
 	steps: [0.85, 0.7, 0.55, 0.4],
