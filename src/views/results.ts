@@ -2,7 +2,7 @@ import "./results.css";
 
 import { state } from "../state";
 import { SortMode } from "../types";
-import { search } from "../search";
+import { search, SearchResult } from "../search";
 import { assignTiers } from "../tiers";
 import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
 import { buildSearchHash, navigate, replaceSearch } from "../router";
@@ -14,6 +14,15 @@ const DATE_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" st
 const RANK_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
 	<path d="M3 3v10M3 13l-2-2M3 13l2-2M7.5 4h7M7.5 8h5M7.5 12h3" />
 </svg>`;
+
+// A transcript match carries no label, as it always has: it is the default, and naming it would
+// put a badge on nearly every row. A date match is the one that needs saying, because nothing in
+// the text it shows is why it matched.
+const SOURCE_LABELS: Record<SearchResult["source"], string> = {
+	transcript: "",
+	description: "Description",
+	date: "Date",
+};
 
 export function renderResults(query: string, sort: SortMode): void {
 	const element = document.getElementById("view-results")!;
@@ -58,7 +67,8 @@ export function renderResults(query: string, sort: SortMode): void {
 				timeZone: "UTC",
 			});
 			const highlighted = highlightRanges(text, ranges);
-			const sourceTag = source === "description" ? `<span class="result-source">Description</span>` : ``;
+			const label = SOURCE_LABELS[source];
+			const sourceTag = label ? `<span class="result-source">${label}</span>` : ``;
 
 			html += `<div class="result-row${comic.image ? "" : " result-row--no-image"}" data-date="${comic.date}" tabindex="0" role="button" aria-label="View comic from ${dateFormatted}">
 				<div class="result-header">${dateFormatted}${sourceTag}</div>

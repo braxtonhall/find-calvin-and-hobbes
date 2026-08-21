@@ -496,3 +496,189 @@ test("a literal query is ordered the same way as a ranked one", () => {
 	// Rank order leads with the three-hit special, then falls back to chronology for the tie.
 	assert.deepEqual(keys(search("!!!", "rank")), ["2000-01-01/s", "2000-01-01/", "2000-01-02/"]);
 });
+
+// Date search. Note every fixture above uses dates in 2000 and `buildArchive`'s fillers sit in
+// 1980, both outside the archive's own 1985-1995 span — so no existing test can pick up a date
+// match by accident, and these need in-range dates to work at all.
+const DATED: Entry[] = [
+	{ date: "1988-08-03", transcript: "A tiger appears out of nowhere.", description: "Hobbes pounces on Calvin." },
+	{ date: "1988-08-10", transcript: "The sandbox is a wasteland.", description: "Calvin digs a hole." },
+	{ date: "1989-08-03", transcript: "Snow goons are on the march.", description: "Calvin builds a snowman." },
+	{
+		date: "1988-10-27",
+		transcript: "Just think, 1988 was a fine year for dust.",
+		description: "Calvin lectures Hobbes.",
+	},
+];
+
+test("a date finds a strip that nothing in the query matches", () => {
+	install(buildArchive(DATED));
+	const result = search("august 3 1988", "rank").find((candidate) => candidate.comic.date === "1988-08-03");
+	assert.ok(result, "expected the strip published that day");
+	assert.equal(result.source, "date");
+	assert.deepEqual(result.ranges, [], "nothing in the text is why it matched, so nothing is highlighted");
+	assert.equal(result.text, "A tiger appears out of nowhere.");
+});
+
+test("every spelling of one date finds the same strip", () => {
+	install(buildArchive(DATED));
+	const forms = [
+		"1988-08-03",
+		"1988/8/3",
+		"19880803",
+		"aug 3, 1988",
+		"august 3rd 1988",
+		"3 august 1988",
+		"wednesday, august 3, 1988",
+		"aug 3 '88",
+	];
+	for (const form of forms) {
+		// The text search still runs, and one fixture strip says "1988" out loud, so the list is
+		// not always a single row — what every spelling must agree on is which strip the date names
+		// and that it leads.
+		const results = search(form, "rank");
+		assert.equal(results[0].comic.date, "1988-08-03", form);
+		const byDate = results.filter((result) => result.source === "date").map((result) => result.comic.date);
+		assert.deepEqual(byDate, ["1988-08-03"], form);
+	}
+});
+
+test("an ambiguous date offers both strips, and the unambiguous form does not", () => {
+	install(
+		buildArchive([
+			{ date: "1988-09-03", transcript: "Rituals are important." },
+			{ date: "1988-03-09", transcript: "I wish I was a tiger." },
+		]),
+	);
+	assert.deepEqual(ranked("9/3/1988"), ["1988-03-09", "1988-09-03"]);
+	assert.deepEqual(ranked("1988/9/3"), ["1988-09-03"]);
+	// 1988-03-09 was the Wednesday of the two, so the weekday picks it out.
+	assert.deepEqual(ranked("wednesday 9/3/1988"), ["1988-03-09"]);
+});
+
+test("a date carrying two strips returns both, the daily first", () => {
+	installShuffled([
+		{ date: "1988-08-03", transcript: "A tiger appears.", id: "special" },
+		{ date: "1988-08-03", transcript: "A tiger appears." },
+	]);
+	for (const sort of ["date", "rank"] as const) {
+		assert.deepEqual(keys(search("1988-08-03", sort)), ["1988-08-03/", "1988-08-03/special"], sort);
+	}
+});
+
+test("how precisely the date was named decides its strength", () => {
+	install(buildArchive(DATED));
+	const exact = scoreOf("1988-08-03", "1988-08-03");
+	const narrow = scoreOf("august 1988", "1988-08-03");
+	const broad = scoreOf("1988", "1988-08-03");
+	assert.ok(exact > narrow, `expected ${exact} > ${narrow}`);
+	assert.ok(narrow > broad, `expected ${narrow} > ${broad}`);
+
+	// An exact date outranks the best a text match can do, and a bare year does not.
+	install(buildArchive([...DATED, { date: "1990-01-01", transcript: "Snow snow snow snow snow snow." }]));
+	const text = scoreOf("snow", "1990-01-01");
+	assert.ok(scoreOf("1988-08-03", "1988-08-03") > text, "an exact date leads");
+	assert.ok(scoreOf("1988", "1988-08-03") < text, "a bare year does not");
+});
+
+test("a strip matched by both the date and the text keeps its text row", () => {
+	install(buildArchive(DATED));
+	const result = search("1988", "rank").find((candidate) => candidate.comic.date === "1988-10-27");
+	assert.ok(result);
+	assert.equal(result.source, "transcript", "the highlight is the more useful thing to show");
+	assert.ok(result.ranges.length > 0);
+	// It matched two independent ways, so it must outscore both the year alone and its own text.
+	assert.ok(result.score > scoreOf("1988", "1988-08-03"), "above the strips that matched by date only");
+	assert.equal(sourceOf("august 3 1988", "1988-08-03"), "date", "and a date-only row still says so");
+});
+
+test("only a whole query is read as a date", () => {
+	install(buildArchive(DATED));
+	for (const query of ["august", "sunday", "1812", "1988 august tiger", "tiger 1988"]) {
+		const dated = search(query, "rank").filter((result) => result.source === "date");
+		assert.deepEqual(dated, [], `"${query}" is an ordinary text query`);
+	}
+});
+
+test("a filter restricts a search and never adds to it", () => {
+	install(buildArchive(DATED));
+	const all = ranked("tiger");
+	const filtered = ranked("@year:1988 tiger");
+	assert.ok(all.length > 0);
+	assert.ok(
+		filtered.every((date) => all.includes(date)),
+		"a filter cannot introduce a result",
+	);
+	assert.ok(filtered.every((date) => date.startsWith("1988")));
+	assert.deepEqual(ranked("@year:1999 tiger"), [], "a filter that excludes everything returns nothing");
+	assert.ok(
+		ranked("@year:1988 tiger").every((date) => sourceOf("@year:1988 tiger", date) !== "date"),
+		"filtered text matches keep their own source",
+	);
+});
+
+test("a filter with nothing beside it returns everything it passes", () => {
+	install(buildArchive(DATED));
+	assert.deepEqual(ranked("@year:1988").sort(), ["1988-08-03", "1988-08-10", "1988-10-27"]);
+	for (const date of ranked("@year:1988")) {
+		assert.equal(sourceOf("@year:1988", date), "date");
+	}
+	assert.deepEqual(ranked("@month:8 @day:3").sort(), ["1988-08-03", "1989-08-03"]);
+	assert.deepEqual(ranked("@year:1988 @day:wednesday").sort(), ["1988-08-03", "1988-08-10"]);
+	assert.deepEqual(ranked("@year:1988 @day:thursday"), ["1988-10-27"]);
+	// Unscoped, a weekday reaches the whole archive — including the fillers, which really are
+	// Wednesdays. A filter constrains only what it names.
+	assert.ok(ranked("@day:wednesday").length > ranked("@year:1988 @day:wednesday").length);
+});
+
+test("a filter composes with an implicit date and with the literal path", () => {
+	install(buildArchive(DATED));
+	// The residual is still wholly a date, so both mechanisms apply: 1988, then only Wednesdays.
+	assert.deepEqual(ranked("@day:wednesday 1988").sort(), ["1988-08-03", "1988-08-10"]);
+
+	install(
+		buildArchive([
+			{ date: "1988-08-03", transcript: "Wow!!!" },
+			{ date: "1990-08-03", transcript: "Wow!!!" },
+		]),
+	);
+	assert.deepEqual(ranked("@year:1988 !!!"), ["1988-08-03"]);
+});
+
+test("an unknown filter is ordinary text, and a broken one finds nothing", () => {
+	install(buildArchive(DATED));
+	assert.deepEqual(ranked("@foo:tiger"), ranked("foo tiger"));
+	for (const query of ["@month:13", "@year:2001", "@day:funday"]) {
+		assert.deepEqual(ranked(query), [], query);
+	}
+});
+
+// A filter lifted out from between two words must not join them. Punctuation is ignored outright
+// (see "punctuation between the query words does not break the phrase bonus" above); a filter is
+// not punctuation, it is an excision, and the words either side were never adjacent.
+test("a filter in the middle of a query breaks the contiguous-phrase bonus", () => {
+	install(
+		buildArchive([
+			{ date: "1988-01-01", transcript: "Clean your room, Calvin!" },
+			{ date: "1988-01-02", transcript: "Clean it. Your room is a disaster." },
+		]),
+	);
+
+	// The bonus is withheld rather than a penalty levied, and scores are normalised by the best
+	// multiplier the query actually reached — which is the contiguous strip itself. So the break
+	// shows up as the gap closing: the scattered strip stops being marked down for missing a
+	// phrase the reader never wrote.
+	const phrase = "clean your room";
+	const broken = "clean @year:1988 your room";
+	assert.ok(scoreOf(phrase, "1988-01-01") > scoreOf(phrase, "1988-01-02"), "the phrase earns its bonus");
+	assert.equal(
+		scoreOf(broken, "1988-01-01"),
+		scoreOf(broken, "1988-01-02"),
+		"with the filter between them, neither strip matched a phrase the reader typed",
+	);
+	assert.ok(scoreOf(broken, "1988-01-02") > scoreOf(phrase, "1988-01-02"));
+
+	// A leading filter leaves one segment, so there is no break and nothing changes.
+	assert.equal(scoreOf("@year:1988 clean your room", "1988-01-01"), scoreOf(phrase, "1988-01-01"));
+	assert.equal(scoreOf("@year:1988 clean your room", "1988-01-02"), scoreOf(phrase, "1988-01-02"));
+});
