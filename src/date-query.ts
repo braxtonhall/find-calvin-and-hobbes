@@ -1,5 +1,6 @@
 import { RANGE_END, RANGE_START } from "./constants";
 import { dateToString } from "./date-utils";
+import { FILTER_SPECS } from "./filter-spec";
 
 /**
  * Searching by when a strip ran rather than by what it says.
@@ -38,7 +39,7 @@ import { dateToString } from "./date-utils";
 const MIN_YEAR = Number(RANGE_START.slice(0, 4));
 const MAX_YEAR = Number(RANGE_END.slice(0, 4));
 
-const MONTHS = new Map<string, number>([
+export const MONTHS = new Map<string, number>([
 	["january", 1],
 	["jan", 1],
 	["february", 2],
@@ -65,7 +66,7 @@ const MONTHS = new Map<string, number>([
 	["dec", 12],
 ]);
 
-const WEEKDAYS = new Map<string, number>([
+export const WEEKDAYS = new Map<string, number>([
 	["sunday", 0],
 	["sun", 0],
 	["monday", 1],
@@ -428,10 +429,12 @@ export interface DateFilters {
 	impossible: boolean;
 }
 
-const VALUED_FILTERS = new Set(["year", "month", "day", "date", "before", "after"]);
-// `@sunday` is the colour Sunday strips and `@daily` the black-and-white dailies — the archive's
-// own vocabulary, and `@daily` has no `@day:` spelling because "not Sunday" is not a weekday.
-const FLAG_FILTERS = new Set(["sunday", "daily"]);
+// Derived from `FILTER_SPECS` rather than written out again, so the parser and the autocomplete
+// menu cannot disagree about which names exist. `@sunday` is the colour Sunday strips and
+// `@daily` the black-and-white dailies — the archive's own vocabulary, and `@daily` has no
+// `@day:` spelling because "not Sunday" is not a weekday.
+const VALUED_FILTERS = new Set(FILTER_SPECS.filter((spec) => spec.kind === "valued").map((spec) => spec.name));
+const FLAG_FILTERS = new Set(FILTER_SPECS.filter((spec) => spec.kind === "flag").map((spec) => spec.name));
 const FILTER_PATTERN = /@([a-zA-Z]+)(?::(\S+))?/g;
 
 function emptyFilters(): DateFilters {
@@ -553,6 +556,55 @@ function minOf(one: string, other: string): string {
 	return one <= other ? one : other;
 }
 
+/** One recognised filter, and where it sits in the text it was found in. */
+export interface FilterMatch {
+	name: string;
+	value?: string;
+	/** Offsets covering the whole `@name:value` run, so a caller can paint over it or replace it. */
+	start: number;
+	end: number;
+	/** A recognised name whose value `applyFilter` could actually use. */
+	valid: boolean;
+}
+
+/**
+ * Every recognised filter in the text, in order, with its span.
+ *
+ * This is the scan `parseDateFilters` performs anyway, exposed because the search box needs the
+ * same answer for a different purpose: to tint a filter where it stands, and to say which one is
+ * malformed. A second scanner would be a second opinion about what counts as a filter and the two
+ * would eventually disagree, so there is only this one and both callers read it.
+ *
+ * An unrecognised name is not a match. `@` and `:` are not word characters, so `@foo:bar` reaches
+ * the tokenizer as `foo bar` and searches for those words — which is what it did before any of
+ * this existed. A *recognised* name with an unusable value is a different case: it is consumed
+ * and reported as invalid, because `@month:13` is a statement of intent that should return
+ * nothing rather than quietly become a search for the word "month".
+ */
+export function scanFilters(text: string): FilterMatch[] {
+	const matches: FilterMatch[] = [];
+
+	FILTER_PATTERN.lastIndex = 0;
+	for (let match = FILTER_PATTERN.exec(text); match !== null; match = FILTER_PATTERN.exec(text)) {
+		const name = match[1].toLowerCase();
+		if (!VALUED_FILTERS.has(name) && !FLAG_FILTERS.has(name)) continue;
+		const value = match[2]?.toLowerCase();
+		// Validity is whatever `applyFilter` makes of the value, read back off a throwaway set
+		// rather than judged a second time here. There is one definition of a usable value.
+		const probe = emptyFilters();
+		applyFilter(probe, name, value);
+		matches.push({
+			name,
+			value,
+			start: match.index,
+			end: match.index + match[0].length,
+			valid: !probe.impossible,
+		});
+	}
+
+	return matches;
+}
+
 /**
  * Pulls every recognised filter out of the query.
  *
@@ -560,30 +612,20 @@ function minOf(one: string, other: string): string {
  * out of the middle of a query must not join the words either side of it, or `clean @year:1988
  * your room` would earn the contiguous-phrase bonus for a phrase nobody typed. `search` turns
  * those boundaries into breaks in the run bonus.
- *
- * An unrecognised name is left alone. `@` and `:` are not word characters, so `@foo:bar` reaches
- * the tokenizer as `foo bar` and searches for those words — which is what it did before this
- * existed. A *recognised* name with an unusable value is a different case: it is consumed and
- * marked impossible, because `@month:13` is a statement of intent that should return nothing
- * rather than quietly become a search for the word "month".
  */
 export function parseDateFilters(text: string): { filters: DateFilters | null; residual: string; segments: string[] } {
+	const matches = scanFilters(text);
+	if (matches.length === 0) return { filters: null, residual: text, segments: [text] };
+
 	const filters = emptyFilters();
 	const pieces: string[] = [];
-	let recognised = false;
 	let cursor = 0;
 
-	FILTER_PATTERN.lastIndex = 0;
-	for (let match = FILTER_PATTERN.exec(text); match !== null; match = FILTER_PATTERN.exec(text)) {
-		const name = match[1].toLowerCase();
-		if (!VALUED_FILTERS.has(name) && !FLAG_FILTERS.has(name)) continue;
-		recognised = true;
-		applyFilter(filters, name, match[2]?.toLowerCase());
-		pieces.push(text.slice(cursor, match.index));
-		cursor = match.index + match[0].length;
+	for (const match of matches) {
+		applyFilter(filters, match.name, match.value);
+		pieces.push(text.slice(cursor, match.start));
+		cursor = match.end;
 	}
-
-	if (!recognised) return { filters: null, residual: text, segments: [text] };
 
 	pieces.push(text.slice(cursor));
 	const segments = pieces.map((piece) => piece.trim()).filter(Boolean);

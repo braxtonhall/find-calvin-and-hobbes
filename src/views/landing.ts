@@ -1,6 +1,7 @@
 import "./landing.css";
 
 import { buildSearchHash, navigate } from "../router";
+import { attachQueryInput } from "./query-input";
 
 export function renderLanding(): void {
 	const element = document.getElementById("view-landing")!;
@@ -23,6 +24,7 @@ export function renderLanding(): void {
 	`;
 
 	const input = document.getElementById("landing-input") as HTMLInputElement;
+	attachQueryInput(input);
 	input.focus();
 
 	document.getElementById("landing-form")!.addEventListener("submit", (event) => {

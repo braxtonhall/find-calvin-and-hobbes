@@ -1,0 +1,169 @@
+.query-field {
+	display: block;
+	position: relative;
+	min-width: 0;
+}
+
+/* Takes over the growing that `.results-input` used to do as a flex item itself. */
+.results-search-bar > .query-field {
+	flex: 1;
+}
+
+.query-box {
+	position: relative;
+}
+
+.query-box > input {
+	position: relative;
+	width: 100%;
+	/* The mirror behind carries the fill, so its rounded corners are the ones on show. */
+	background: transparent;
+}
+
+/*
+ * The pills, painted behind the input's own text.
+ *
+ * The mirror holds the same string with transparent glyphs, so the text is drawn exactly once —
+ * by the input — and a sub-pixel disagreement about font metrics shows up as a slightly wide
+ * pill rather than as ghosting. Everything that decides where a glyph lands is copied off the
+ * input at runtime by `syncMetrics`, because the two inputs this attaches to are deliberately
+ * styled differently: 18px text in a 2px border on the landing page, 15px in 1px in the results
+ * bar, 16px on a phone.
+ */
+.query-highlights {
+	position: absolute;
+	inset: 0;
+	overflow: hidden;
+	white-space: pre;
+	color: transparent;
+	background: var(--bg-sidebar);
+	border-style: solid;
+	border-color: transparent;
+	pointer-events: none;
+}
+
+/*
+ * How far along a filter is, told by the extent of its pill rather than by a fourth colour: gold
+ * covers what has settled, grey covers what is still being typed, and the two close up into one
+ * gold pill on the keystroke that makes the filter parse. Red is the only other state, and it
+ * means no amount of typing will save this one — see `filterSpans`.
+ */
+.query-pill {
+	background: var(--golden-dim);
+	border-radius: 3px;
+}
+
+.query-pill--pending {
+	background: var(--grey);
+	border-radius: 0 3px 3px 0;
+}
+
+/* Half of a pair, so only its outer corners are round. */
+.query-pill--head {
+	border-radius: 3px 0 0 3px;
+}
+
+.query-pill--invalid {
+	background: #fbd7d7;
+}
+
+/*
+ * The reason a filter will not work, said again for a reader who cannot hover a tooltip.
+ *
+ * Announced when it changes and given no space of its own: a line under the box grows the search
+ * bar and shoves the whole page of results down every time a value is half-typed, which is
+ * exactly what the floating tooltip exists to avoid.
+ */
+.query-note {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	overflow: hidden;
+	clip-path: inset(50%);
+	white-space: nowrap;
+}
+
+/* Anchored to the pill it explains, and never in the way of the pointer that summoned it. */
+.query-tip {
+	position: fixed;
+	z-index: 10001;
+	max-width: 320px;
+	padding: 6px 9px;
+	font-family: var(--font);
+	font-size: 12px;
+	color: #fff;
+	background: rgba(0, 0, 0, 0.85);
+	border-radius: 4px;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.1s;
+}
+
+.query-tip--visible {
+	opacity: 1;
+}
+
+.query-menu {
+	position: fixed;
+	z-index: 10000;
+	max-height: 280px;
+	overflow-y: auto;
+	padding: 4px;
+	font-family: var(--font);
+	font-size: 13px;
+	background: var(--bg-sidebar);
+	border: 1px solid var(--grey);
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.12s;
+}
+
+.query-menu--visible {
+	opacity: 1;
+	visibility: visible;
+}
+
+.query-menu-row {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 6px 8px;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+/* A value shape is there to be read, not chosen — see `Row.insert`. */
+.query-menu-row[aria-disabled="true"] {
+	cursor: default;
+}
+
+.query-menu-row--active {
+	background: var(--golden-dim);
+}
+
+.query-menu-row:not(.query-menu-row--active):not([aria-disabled="true"]):hover {
+	background: var(--grey-dim);
+}
+
+.query-menu-syntax {
+	font-weight: 600;
+	color: var(--text);
+	white-space: nowrap;
+}
+
+/* The slot to fill, set apart from the name that is already settled. */
+.query-menu-template {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-style: italic;
+	font-weight: 400;
+	color: var(--golden-half);
+}
+
+.query-menu-hint {
+	margin-left: auto;
+	padding-left: 8px;
+	text-align: right;
+	color: var(--text-muted);
+}

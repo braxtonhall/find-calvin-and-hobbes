@@ -6,6 +6,7 @@ import {
 	parseDateExpression,
 	parseDateFilters,
 	passesFilters,
+	scanFilters,
 } from "../src/date-query";
 import { DESCRIBED, RECITED } from "./fixtures/golden";
 import { loadGenerated } from "./helpers/queries";
@@ -360,4 +361,87 @@ test("no query in the evaluation fixtures is a date or carries a filter", () => 
 		assert.equal(filters, null, `"${query}" now carries a filter; eval.test.ts measures a different engine`);
 		assert.equal(residual, query);
 	}
+});
+
+// `scanFilters` is what `parseDateFilters` is built on, and it is also what paints the query box.
+// These pin the two things the box needs and the parser never had to expose: where a filter sits,
+// and which one of them is the broken one.
+test("scanning filters", async (suite) => {
+	await suite.test("a filter is reported with the span it occupies", () => {
+		const query = "clean @year:1988 your room";
+		const matches = scanFilters(query);
+		assert.equal(matches.length, 1);
+		assert.equal(query.slice(matches[0].start, matches[0].end), "@year:1988");
+		assert.equal(matches[0].name, "year");
+		assert.equal(matches[0].value, "1988");
+		assert.ok(matches[0].valid);
+	});
+
+	await suite.test("every filter is reported, in the order it was written", () => {
+		const matches = scanFilters("@sunday @year:1988 snowman @month:aug");
+		assert.deepEqual(
+			matches.map((match) => match.name),
+			["sunday", "year", "month"],
+		);
+		assert.ok(matches.every((match) => match.valid));
+	});
+
+	await suite.test("a flag is reported with no value", () => {
+		const [match] = scanFilters("@daily");
+		assert.equal(match.value, undefined);
+		assert.ok(match.valid);
+	});
+
+	// The same list `parseDateFilters` calls impossible, one entry at a time, so the box can point
+	// at the filter that did it rather than at the whole query.
+	await suite.test("a filter the parser cannot use is reported invalid", () => {
+		for (const query of [
+			"@month:13",
+			"@year:abc",
+			"@year:199",
+			"@day:32",
+			"@day:funday",
+			"@before:august-3",
+			"@sunday:yes",
+			"@year",
+		]) {
+			const matches = scanFilters(query);
+			assert.equal(matches.length, 1, query);
+			assert.equal(matches[0].valid, false, query);
+		}
+	});
+
+	await suite.test("an unrecognised name is not a filter at all", () => {
+		assert.deepEqual(scanFilters("@foo:bar"), []);
+		assert.deepEqual(scanFilters("snowman"), []);
+		assert.deepEqual(scanFilters(""), []);
+	});
+
+	await suite.test("a valid filter beside a broken one is still valid", () => {
+		const matches = scanFilters("@year:1988 @month:13");
+		assert.deepEqual(
+			matches.map((match) => match.valid),
+			[true, false],
+		);
+	});
+
+	// Two callers, one scan: whatever the box paints as a filter is what the search will excise.
+	await suite.test("the spans account for exactly what parseDateFilters removes", () => {
+		const query = "clean @year:1988 your @sunday room";
+		const matches = scanFilters(query);
+		let cursor = 0;
+		const pieces: string[] = [];
+		for (const match of matches) {
+			pieces.push(query.slice(cursor, match.start));
+			cursor = match.end;
+		}
+		pieces.push(query.slice(cursor));
+		assert.equal(
+			pieces
+				.map((piece) => piece.trim())
+				.filter(Boolean)
+				.join(" "),
+			parseDateFilters(query).residual,
+		);
+	});
 });

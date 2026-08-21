@@ -6,6 +6,7 @@ import { search, SearchResult } from "../search";
 import { assignTiers } from "../tiers";
 import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
 import { buildSearchHash, navigate, replaceSearch } from "../router";
+import { attachQueryInput, syncQueryInput } from "./query-input";
 
 const DATE_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
 	<rect x="2" y="3.5" width="12" height="10" rx="1.5" /><path d="M2 6.5h12M5.5 2v3M10.5 2v3" />
@@ -24,87 +25,53 @@ const SOURCE_LABELS: Record<SearchResult["source"], string> = {
 	date: "Date",
 };
 
-export function renderResults(query: string, sort: SortMode): void {
-	const element = document.getElementById("view-results")!;
-	const results = search(query, sort);
+/**
+ * What the search bar's own handlers act on.
+ *
+ * The bar outlives any one render — see `renderResults` — so its listeners cannot close over the
+ * arguments of the render that happened to build them, or the sort button would still be flipping
+ * the sort the view opened with.
+ */
+let currentQuery = "";
+let currentSort: SortMode = "rank";
 
-	const sortIsRank = sort === "rank";
-	const sortLabel = sortIsRank
+function sortLabelFor(sort: SortMode): string {
+	return sort === "rank"
 		? "Sorted by relevance — click to sort by date"
 		: "Sorted by date — click to sort by relevance";
+}
 
-	let html = `<div class="results-search-bar">
+/**
+ * Builds the search bar and wires it, once.
+ *
+ * Kept out of the per-query render because typing in a box that is being replaced underneath you
+ * is the whole problem: it used to cost a snapshot-and-restore of the value and the selection on
+ * every keystroke, and it left nowhere for the autocomplete menu to keep its state. The bar now
+ * survives, so the caret survives with it and `attachQueryInput` can own what it knows.
+ */
+function buildSearchBar(element: HTMLElement): void {
+	element.innerHTML = `<div class="results-search-bar">
 		<input
 			type="text"
 			class="results-input"
 			id="results-input"
-			value="${escHtml(query)}"
 			placeholder="Search comics..."
 			autocomplete="off"
 		/>
 		<button class="results-clear" id="results-clear" aria-label="Clear search">&times;</button>
-		<button
-			class="results-sort"
-			id="results-sort"
-			title="${sortLabel}"
-			aria-label="${sortLabel}"
-			aria-pressed="${sortIsRank}"
-		>${sortIsRank ? RANK_ICON : DATE_ICON}</button>
-	</div>`;
-
-	if (results.length === 0) {
-		html += `<div class="results-empty">No comics found for &ldquo;${escHtml(query)}&rdquo;</div>`;
-	} else {
-		html += `<div style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">${results.length} result${results.length !== 1 ? "s" : ""} for &ldquo;${escHtml(query)}&rdquo;</div>`;
-		for (const { comic, text, ranges, source } of results) {
-			const [year, month, day] = comic.date.split("-").map(Number);
-			const dateObject = new Date(Date.UTC(year, month - 1, day));
-			const dateFormatted = dateObject.toLocaleDateString("en-US", {
-				weekday: "long",
-				year: "numeric",
-				month: "long",
-				day: "numeric",
-				timeZone: "UTC",
-			});
-			const highlighted = highlightRanges(text, ranges);
-			const label = SOURCE_LABELS[source];
-			const sourceTag = label ? `<span class="result-source">${label}</span>` : ``;
-
-			html += `<div class="result-row${comic.image ? "" : " result-row--no-image"}" data-date="${comic.date}" tabindex="0" role="button" aria-label="View comic from ${dateFormatted}">
-				<div class="result-header">${dateFormatted}${sourceTag}</div>
-				<div class="result-body">
-					<div class="result-text">${highlighted}</div>
-					${comic.image ? `<div class="result-image-wrap"><img class="result-image" src="${escHtml(comic.image)}" alt="Comic from ${dateFormatted}" onload="this.classList.add('loaded')" onerror="this.style.display='none'" /></div>` : ``}
-				</div>
-			</div>`;
-		}
-	}
-
-	const previousInput = document.getElementById("results-input") as HTMLInputElement | null;
-	const carried =
-		previousInput && document.activeElement === previousInput && previousInput.value.trim() === query
-			? {
-					value: previousInput.value,
-					start: previousInput.selectionStart ?? previousInput.value.length,
-					end: previousInput.selectionEnd ?? previousInput.value.length,
-					direction: previousInput.selectionDirection ?? "none",
-				}
-			: null;
-
-	element.innerHTML = html;
-
-	state.searchResultTiers = assignTiers(results);
+		<button class="results-sort" id="results-sort"></button>
+	</div>
+	<div id="results-list"></div>`;
 
 	const input = document.getElementById("results-input") as HTMLInputElement;
-	const clearButton = document.getElementById("results-clear")!;
-	const sortButton = document.getElementById("results-sort")!;
+	attachQueryInput(input);
 
 	input.addEventListener("input", () => {
 		if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
 		const inputQuery = input.value.trim();
 		state.resultsDebounceTimer = window.setTimeout(() => {
 			if (inputQuery) {
-				replaceSearch(buildSearchHash(inputQuery, sort));
+				replaceSearch(buildSearchHash(inputQuery, currentSort));
 			} else {
 				navigate("#/");
 			}
@@ -118,23 +85,76 @@ export function renderResults(query: string, sort: SortMode): void {
 			const inputQuery = input.value.trim();
 			if (!inputQuery) {
 				navigate("#/");
-			} else if (inputQuery !== query) {
-				replaceSearch(buildSearchHash(inputQuery, sort));
+			} else if (inputQuery !== currentQuery) {
+				replaceSearch(buildSearchHash(inputQuery, currentSort));
 			}
 		}
 	});
 
-	clearButton.addEventListener("click", () => {
+	document.getElementById("results-clear")!.addEventListener("click", () => {
 		navigate("#/");
 	});
 
-	sortButton.addEventListener("click", () => {
+	document.getElementById("results-sort")!.addEventListener("click", () => {
 		if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
-		const inputQuery = input.value.trim() || query;
-		if (inputQuery) replaceSearch(buildSearchHash(inputQuery, sortIsRank ? "date" : "rank"));
+		const inputQuery = input.value.trim() || currentQuery;
+		if (inputQuery) replaceSearch(buildSearchHash(inputQuery, currentSort === "rank" ? "date" : "rank"));
 	});
 
-	element.querySelectorAll<HTMLElement>(".result-row").forEach((row) => {
+	element.addEventListener("focusin", (event) => {
+		const row = (event.target as HTMLElement).closest(".result-row") as HTMLElement | null;
+		if (!row) return;
+		if (state.hoveredCell) {
+			state.hoveredCell.classList.remove("cell--hover-highlight");
+		}
+		document
+			.querySelectorAll(".result-row--highlight")
+			.forEach((highlightedRow) => highlightedRow.classList.remove("result-row--highlight"));
+
+		row.classList.add("result-row--highlight");
+		const cell = document.querySelector(`.cell[data-date="${row.dataset.date}"]`);
+		if (cell) {
+			cell.classList.add("cell--hover-highlight");
+			scrollCellIntoViewIfNeeded(cell as HTMLElement);
+			state.hoveredCell = cell as HTMLElement;
+		}
+		state.keyboardNavActive = true;
+	});
+}
+
+function resultsHtml(query: string, results: SearchResult[]): string {
+	if (results.length === 0) {
+		return `<div class="results-empty">No comics found for &ldquo;${escHtml(query)}&rdquo;</div>`;
+	}
+
+	let html = `<div style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">${results.length} result${results.length !== 1 ? "s" : ""} for &ldquo;${escHtml(query)}&rdquo;</div>`;
+	for (const { comic, text, ranges, source } of results) {
+		const [year, month, day] = comic.date.split("-").map(Number);
+		const dateObject = new Date(Date.UTC(year, month - 1, day));
+		const dateFormatted = dateObject.toLocaleDateString("en-US", {
+			weekday: "long",
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+			timeZone: "UTC",
+		});
+		const highlighted = highlightRanges(text, ranges);
+		const label = SOURCE_LABELS[source];
+		const sourceTag = label ? `<span class="result-source">${label}</span>` : ``;
+
+		html += `<div class="result-row${comic.image ? "" : " result-row--no-image"}" data-date="${comic.date}" tabindex="0" role="button" aria-label="View comic from ${dateFormatted}">
+			<div class="result-header">${dateFormatted}${sourceTag}</div>
+			<div class="result-body">
+				<div class="result-text">${highlighted}</div>
+				${comic.image ? `<div class="result-image-wrap"><img class="result-image" src="${escHtml(comic.image)}" alt="Comic from ${dateFormatted}" onload="this.classList.add('loaded')" onerror="this.style.display='none'" /></div>` : ``}
+			</div>
+		</div>`;
+	}
+	return html;
+}
+
+function attachRowHandlers(list: HTMLElement): void {
+	list.querySelectorAll<HTMLElement>(".result-row").forEach((row) => {
 		const textElement = row.querySelector<HTMLElement>(".result-text")!;
 		if (textElement.scrollHeight > textElement.clientHeight) {
 			textElement.classList.add("result-text--overflow");
@@ -181,11 +201,11 @@ export function renderResults(query: string, sort: SortMode): void {
 		});
 	});
 
-	element.querySelectorAll<HTMLElement>(".result-row").forEach((row, index) => {
+	list.querySelectorAll<HTMLElement>(".result-row").forEach((row, index) => {
 		row.addEventListener("keydown", (event) => {
 			if (event.key === "ArrowDown" || event.key === "ArrowUp") {
 				event.preventDefault();
-				const rows = element.querySelectorAll<HTMLElement>(".result-row");
+				const rows = list.querySelectorAll<HTMLElement>(".result-row");
 				const next = event.key === "ArrowDown" ? index + 1 : index - 1;
 				if (next >= 0 && next < rows.length) {
 					if (state.hoveredCell) {
@@ -214,32 +234,44 @@ export function renderResults(query: string, sort: SortMode): void {
 			}
 		});
 	});
+}
 
-	element.addEventListener("focusin", (event) => {
-		const row = (event.target as HTMLElement).closest(".result-row") as HTMLElement | null;
-		if (!row) return;
-		if (state.hoveredCell) {
-			state.hoveredCell.classList.remove("cell--hover-highlight");
-		}
-		document
-			.querySelectorAll(".result-row--highlight")
-			.forEach((highlightedRow) => highlightedRow.classList.remove("result-row--highlight"));
+export function renderResults(query: string, sort: SortMode): void {
+	const element = document.getElementById("view-results")!;
+	currentQuery = query;
+	currentSort = sort;
 
-		row.classList.add("result-row--highlight");
-		const cell = document.querySelector(`.cell[data-date="${row.dataset.date}"]`);
-		if (cell) {
-			cell.classList.add("cell--hover-highlight");
-			scrollCellIntoViewIfNeeded(cell as HTMLElement);
-			state.hoveredCell = cell as HTMLElement;
-		}
-		state.keyboardNavActive = true;
-	});
+	const firstBuild = element.querySelector(".results-search-bar") === null;
+	if (firstBuild) buildSearchBar(element);
 
-	input.focus();
-	if (carried) {
-		input.value = carried.value;
-		input.setSelectionRange(carried.start, carried.end, carried.direction);
-	} else {
+	const input = document.getElementById("results-input") as HTMLInputElement;
+	const sortButton = document.getElementById("results-sort")!;
+	const label = sortLabelFor(sort);
+	sortButton.innerHTML = sort === "rank" ? RANK_ICON : DATE_ICON;
+	sortButton.title = label;
+	sortButton.setAttribute("aria-label", label);
+	sortButton.setAttribute("aria-pressed", String(sort === "rank"));
+
+	// Only when the query arriving is not the one the box already holds — a followed link, the back
+	// button — because assigning to the box moves the caret to the end of it. Compared trimmed,
+	// since the box is what trimmed the query on its way into the URL: a reader who typed a
+	// trailing space is still holding the query that came back, and that space has a job to do
+	// after a flag.
+	if (input.value.trim() !== query) {
+		input.value = query;
+		input.setSelectionRange(query.length, query.length);
+		syncQueryInput(input);
+	}
+
+	const results = search(query, sort);
+	const list = document.getElementById("results-list")!;
+	list.innerHTML = resultsHtml(query, results);
+	state.searchResultTiers = assignTiers(results);
+	attachRowHandlers(list);
+
+	// Arriving from another view, rather than typing here or stepping through the rows.
+	if (!element.contains(document.activeElement)) {
+		input.focus();
 		input.setSelectionRange(input.value.length, input.value.length);
 	}
 }
