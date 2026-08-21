@@ -23,6 +23,17 @@
 	--golden-dim: #f9db98;
 	--orange-dim: #fcc490;
 	--grey-dim: #f0edea;
+
+	/* Search-confidence ramp. Tier 5 is --golden/--orange, and the step past tier 1 is the
+	   *-dim non-result colour, so a weak match stays visibly a match. */
+	--golden-t4: #f7ba2e;
+	--golden-t3: #f7c248;
+	--golden-t2: #f8cb63;
+	--golden-t1: #f8d37d;
+	--orange-t4: #fe881d;
+	--orange-t3: #fd973a;
+	--orange-t2: #fda656;
+	--orange-t1: #fcb573;
 }
 
 html,

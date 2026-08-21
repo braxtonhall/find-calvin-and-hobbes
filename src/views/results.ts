@@ -3,6 +3,7 @@ import "./results.css";
 import { state } from "../state";
 import { SortMode } from "../types";
 import { search } from "../search";
+import { assignTiers } from "../tiers";
 import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
 import { buildSearchHash, navigate, replaceSearch } from "../router";
 
@@ -82,7 +83,7 @@ export function renderResults(query: string, sort: SortMode): void {
 
 	element.innerHTML = html;
 
-	state.searchResultsDateSet = new Set(results.map((result) => result.comic.date));
+	state.searchResultTiers = assignTiers(results);
 
 	const input = document.getElementById("results-input") as HTMLInputElement;
 	const clearButton = document.getElementById("results-clear")!;

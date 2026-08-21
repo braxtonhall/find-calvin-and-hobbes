@@ -189,7 +189,7 @@ test("an alternate transcript is searched and does not inflate document frequenc
 	assert.match(results[0].text, /second version/);
 });
 
-test("date sort keeps archive order and rank sort orders by score", () => {
+test("date sort orders chronologically and rank sort orders by score", () => {
 	install(buildArchive(CLEAN_ROOM));
 	const byDate = search("clean your room", "date").map((result) => result.comic.date);
 	assert.deepEqual(byDate, [...byDate].sort());
@@ -427,4 +427,72 @@ test("the description mass gate is a sum until normalized, and then a mean", () 
 	const meaned: Tuning = { ...TUNING, descriptionMinMass: 4, descriptionMassNormalization: 1 };
 	assert.deepEqual(ranked("snowman", meaned), ["2000-01-01"]);
 	assert.deepEqual(ranked("snowman sandbox porch driveway", meaned), [], "diluted by its own vaguer words");
+});
+
+function keys(results: { comic: { date: string; id?: string } }[]): string[] {
+	return results.map((result) => `${result.comic.date}/${result.comic.id ?? ""}`);
+}
+
+// Two strips sharing a date, deliberately built in the wrong order so the sort has to do the
+// work rather than inheriting whatever order the index happened to visit them in.
+const SHARED_DATE: Entry[] = [
+	{ date: "2000-01-03", transcript: "The wagon rolls down the hill." },
+	{ date: "2000-01-01", transcript: "The wagon rolls down the hill.", id: "b" },
+	{ date: "2000-01-01", transcript: "The wagon rolls down the hill.", id: "a" },
+	{ date: "2000-01-02", transcript: "The wagon rolls slowly down the long steep hill and then some." },
+];
+
+function installShuffled(entries: Entry[]): void {
+	const archive = buildArchive(entries);
+	// A deterministic derangement of the archive order.
+	archive.comics.reverse();
+	install(archive);
+}
+
+test("date order is chronological and ignores the score", () => {
+	installShuffled(SHARED_DATE);
+	const byDate = search("wagon rolls down the hill", "date");
+	assert.deepEqual(keys(byDate), ["2000-01-01/a", "2000-01-01/b", "2000-01-02/", "2000-01-03/"]);
+
+	// The weakest match sits in the middle by date, so this ordering cannot have come from scores.
+	const scores = byDate.map((result) => result.score);
+	assert.ok(scores[2] < scores[1], "the 01-02 strip scores below the 01-01 strips");
+	assert.ok(scores[2] < scores[3], "the 01-02 strip scores below the 01-03 strip");
+});
+
+test("rank order breaks score ties by date, then by id", () => {
+	installShuffled(SHARED_DATE);
+	const byRank = search("wagon rolls down the hill", "rank");
+
+	// The three identical transcripts tie exactly; the fourth is padded and scores lower.
+	const [first, second, third, last] = byRank;
+	assert.equal(first.score, second.score);
+	assert.equal(second.score, third.score);
+	assert.ok(last.score < third.score, `expected ${last.score} < ${third.score}`);
+
+	assert.deepEqual(keys(byRank), ["2000-01-01/a", "2000-01-01/b", "2000-01-03/", "2000-01-02/"]);
+});
+
+test("a daily sorts ahead of a special sharing its date", () => {
+	installShuffled([
+		{ date: "2000-01-01", transcript: "The wagon rolls down the hill.", id: "zzz" },
+		{ date: "2000-01-01", transcript: "The wagon rolls down the hill." },
+	]);
+	for (const sort of ["date", "rank"] as const) {
+		assert.deepEqual(keys(search("wagon rolls down the hill", sort)), ["2000-01-01/", "2000-01-01/zzz"], sort);
+	}
+});
+
+test("a literal query is ordered the same way as a ranked one", () => {
+	installShuffled(SHARED_DATE);
+	assert.deepEqual(keys(search("!!!", "date")), []);
+	installShuffled([
+		{ date: "2000-01-02", transcript: "Wow!!! Look at that." },
+		{ date: "2000-01-01", transcript: "Wow!!! Look!!! At that!!!", id: "s" },
+		{ date: "2000-01-01", transcript: "Wow!!! Look at that." },
+	]);
+	// Date order is chronological even though the 01-01 special has the most hits.
+	assert.deepEqual(keys(search("!!!", "date")), ["2000-01-01/", "2000-01-01/s", "2000-01-02/"]);
+	// Rank order leads with the three-hit special, then falls back to chronology for the tie.
+	assert.deepEqual(keys(search("!!!", "rank")), ["2000-01-01/s", "2000-01-01/", "2000-01-02/"]);
 });

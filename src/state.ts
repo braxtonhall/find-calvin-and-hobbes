@@ -5,7 +5,7 @@ export interface AppState {
 	comicsByDate: Map<string, Comic[]>;
 	descriptions: Map<string, string> | null;
 	allDays: Day[];
-	searchResultsDateSet: Set<string> | null;
+	searchResultTiers: Map<string, number> | null;
 	collectionDateSet: Set<string> | null;
 	hoveredCell: HTMLElement | null;
 	collectionIndex: CollectionIndex | null;
@@ -23,7 +23,7 @@ export const state: AppState = {
 	comicsByDate: new Map(),
 	descriptions: null,
 	allDays: [],
-	searchResultsDateSet: null,
+	searchResultTiers: null,
 	collectionDateSet: null,
 	hoveredCell: null,
 	collectionIndex: null,

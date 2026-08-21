@@ -84,6 +84,40 @@
 	background: var(--orange);
 }
 
+/* Confidence tiers, strongest first. These are single-class selectors so they must sit after
+   .cell--has-comic to win; the bookmarked variants are two-class and beat them in turn. */
+.cell--search-t5 {
+	background: var(--golden);
+}
+.cell--search-t4 {
+	background: var(--golden-t4);
+}
+.cell--search-t3 {
+	background: var(--golden-t3);
+}
+.cell--search-t2 {
+	background: var(--golden-t2);
+}
+.cell--search-t1 {
+	background: var(--golden-t1);
+}
+
+.cell--search-t5.cell--bookmarked {
+	background: var(--orange);
+}
+.cell--search-t4.cell--bookmarked {
+	background: var(--orange-t4);
+}
+.cell--search-t3.cell--bookmarked {
+	background: var(--orange-t3);
+}
+.cell--search-t2.cell--bookmarked {
+	background: var(--orange-t2);
+}
+.cell--search-t1.cell--bookmarked {
+	background: var(--orange-t1);
+}
+
 .cell--search-nonmatch {
 	background: var(--golden-dim);
 }

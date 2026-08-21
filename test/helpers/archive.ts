@@ -54,6 +54,9 @@ export interface Entry {
 	transcript: string;
 	alternate?: string;
 	description?: string;
+	// Only specials carry an id in the real archive, and it is what separates two strips that
+	// share a date.
+	id?: string;
 }
 
 const FILLER_SUBJECTS = ["sandbox", "cardboard", "sidewalk", "kitchen", "cupboard", "driveway", "porch", "attic"];
@@ -79,8 +82,9 @@ export function buildArchive(entries: Entry[], fillerCount = 60): Archive {
 	for (const entry of entries) {
 		const comic: Comic = { date: entry.date, transcript: entry.transcript };
 		if (entry.alternate) comic.alternate = entry.alternate;
+		if (entry.id) comic.id = entry.id;
 		comics.push(comic);
-		if (entry.description) descriptions.set(entry.date, entry.description);
+		if (entry.description) descriptions.set(entry.id || entry.date, entry.description);
 	}
 
 	for (let index = 0; index < fillerCount; index++) {

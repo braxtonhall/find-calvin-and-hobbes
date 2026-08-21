@@ -158,7 +158,17 @@ export function updateGridState(route: Route): void {
 
 	const allCells = document.querySelectorAll(".cell");
 	for (const cell of allCells) {
-		cell.classList.remove("cell--search-match", "cell--search-nonmatch", "cell--selected", "cell--bookmarked");
+		cell.classList.remove(
+			"cell--search-match",
+			"cell--search-nonmatch",
+			"cell--search-t1",
+			"cell--search-t2",
+			"cell--search-t3",
+			"cell--search-t4",
+			"cell--search-t5",
+			"cell--selected",
+			"cell--bookmarked",
+		);
 	}
 
 	for (const cell of allCells) {
@@ -169,16 +179,17 @@ export function updateGridState(route: Route): void {
 	}
 
 	if (route.view === "landing") {
-		state.searchResultsDateSet = null;
+		state.searchResultTiers = null;
 		return;
 	}
 
 	if (route.view === "results") {
-		if (!state.searchResultsDateSet) return;
+		if (!state.searchResultTiers) return;
 		for (const cell of allCells) {
 			const date = (cell as HTMLElement).dataset.date;
-			if (date && state.searchResultsDateSet.has(date)) {
-				cell.classList.add("cell--search-match");
+			const tier = date ? state.searchResultTiers.get(date) : undefined;
+			if (tier !== undefined) {
+				cell.classList.add("cell--search-match", `cell--search-t${tier}`);
 			} else {
 				cell.classList.add("cell--search-nonmatch");
 			}

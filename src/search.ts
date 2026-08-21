@@ -796,11 +796,25 @@ export function search(query: string, sort: SortMode, tuning: Tuning = TUNING): 
 
 	const results = sequence.length === 0 ? literalSearch(loweredQuery) : rankedSearch(sequence, tuning);
 
+	// Date order is purely chronological: the score decided which strips are here, not where they
+	// sit. Rank order puts the score first and falls back to the same chronology for ties.
 	if (sort === "rank") {
-		results.sort((a, b) => b.score - a.score || a.comic.date.localeCompare(b.comic.date));
+		results.sort((a, b) => b.score - a.score || compareChronologically(a, b));
+	} else {
+		results.sort(compareChronologically);
 	}
 
 	return results;
+}
+
+/**
+ * The archive's own ordering, mirroring `build-chain/exportComicsJson.ts`: date, then comic id.
+ * Only specials carry an id, so the empty string keeps a daily ahead of a special sharing its
+ * date. Without the id the two strips on 1985-11-28 would be left in whatever order the index
+ * happened to visit them.
+ */
+function compareChronologically(a: SearchResult, b: SearchResult): number {
+	return a.comic.date.localeCompare(b.comic.date) || (a.comic.id || "").localeCompare(b.comic.id || "");
 }
 
 function rankedSearch(sequence: string[], tuning: Tuning): SearchResult[] {
