@@ -157,6 +157,14 @@
 	color: var(--text-muted);
 }
 
+.detail-links {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 16px;
+	margin-top: 12px;
+}
+
 .detail-read-link {
 	display: inline-flex;
 	align-items: center;
@@ -164,7 +172,6 @@
 	font-size: 13px;
 	color: var(--text-muted);
 	text-decoration: none;
-	margin-top: 12px;
 }
 
 .detail-read-link:hover {

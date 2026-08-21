@@ -217,7 +217,9 @@ function buildComicBodiesHtml(date: string, dateFormatted: string, isSunday: boo
 		if (!comic.id) {
 			const [year, month, dayOfMonth] = date.split("-");
 			const gocomicsUrl = `https://www.gocomics.com/calvinandhobbes/${year}/${month}/${dayOfMonth}`;
-			readLinkHtml = `<a class="detail-read-link" href="${escHtml(gocomicsUrl)}" target="_blank" rel="noopener">Read <svg class="detail-read-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></a>`;
+			const licensingUrl = `https://licensing.andrewsmcmeel.com/features/ch?date=${date}`;
+			const linkIconSvg = `<svg class="detail-read-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+			readLinkHtml = `<div class="detail-links"><a class="detail-read-link" href="${escHtml(gocomicsUrl)}" target="_blank" rel="noopener">Read ${linkIconSvg}</a><a class="detail-read-link" href="${escHtml(licensingUrl)}" target="_blank" rel="noopener">License ${linkIconSvg}</a></div>`;
 		}
 
 		const aspectRatio = getAspectRatio(comic, isSunday);
