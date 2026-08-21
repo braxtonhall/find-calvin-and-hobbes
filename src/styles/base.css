@@ -134,6 +134,8 @@ mark {
 	.detail-collections,
 	.detail-collections-heading,
 	.results-search-bar,
+	.query-menu,
+	.query-tip,
 	.skip-link {
 		display: none !important;
 	}

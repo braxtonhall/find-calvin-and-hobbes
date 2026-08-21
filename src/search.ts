@@ -2,13 +2,22 @@ import { Comic, SortMode } from "./types";
 import { state } from "./state";
 import { COMPOUNDS } from "./compounds";
 import { stem } from "./stem";
+import {
+	DateExpression,
+	DateFilters,
+	DatePrecision,
+	matchesExpression,
+	parseDateExpression,
+	parseDateFilters,
+	passesFilters,
+} from "./date-query";
 
 export interface SearchResult {
 	comic: Comic;
 	text: string;
 	ranges: [number, number][];
 	score: number;
-	source: "transcript" | "description";
+	source: "transcript" | "description" | "date";
 }
 
 // Transcripts and descriptions are searched with the same query but different scoring.
@@ -171,6 +180,45 @@ export const TUNING: Tuning = {
 	descriptionPreference: 0.7,
 	agreementBonus: 0.15,
 };
+
+/**
+ * What a date match is worth, by how precisely the reader named the date.
+ *
+ * Deliberately not part of `Tuning`. Every number in that block is measured against
+ * `test/fixtures`, and no query in either fixture contains a date — `test/date-query.test.ts`
+ * asserts as much — so `test/tune.ts` would be sweeping these against noise. They are calibrated
+ * against the range text scores actually reach instead, which is a different kind of evidence and
+ * belongs somewhere else. Do not add them to `CANDIDATES`.
+ *
+ * The ceiling a text score can reach is knowable from the code rather than guessed at:
+ * `transcriptScore` is `strength * multiplier / normalizer` with `normalizer` at least
+ * `1 + sequenceWeight`, so the multiplier can never lift a score above `strength`; `strength` is
+ * `base / ceiling` with each term capped at its own ceiling, so only repetition can push it past
+ * 1, at `1 + transcriptRepeatWeight * log2(repeats)`; and the agreement bonus adds at most 15%
+ * more. Measured 2026-08-21 over the real archive, the highest score any query reaches is 2.316
+ * (`i`), then 2.239 (`the`, `a`), 2.107 (`you`), 1.993 (`snow`), 1.702 (`calvin`), 1.499
+ * (`rosalyn`). Across the 528 generated fixture queries the top score is p50 0.617, p90 1.158,
+ * p99 1.318, max 1.574.
+ *
+ * `exact` at 3 clears all of that, and reaching it by repetition alone would take one query word
+ * said 87 times in a single strip. A reader who wrote a whole date named one day, so it leads.
+ * The cost is bounded: because the expression must be the entire query, an exact date can only
+ * ever sit beside a handful of incidental text matches, so there is no case where it flattens a
+ * real result set into the faintest grid shade.
+ *
+ * `narrow` at 1.5 is the band the strongest single keywords occupy — a good text match, not a
+ * great one, for the 31 strips of a month or the 11 of an `august 3`. It is close to
+ * unfalsifiable in this archive: `august 1988`, `august 3` and `november 28 1985` all return no
+ * text results at all, so nothing competes with it.
+ *
+ * `broad` at 0.8 is below a strong text match, which is what a bare year should be, and it is the
+ * one rung the archive can actually demonstrate. `1988` matches 366 strips by date and exactly
+ * two by dialogue — 1988-10-27 at 1.107 and 1987-06-22 at 1.103, the only strips in the archive
+ * whose text contains a year — and those two are what the reader wants first. Not lower: the year
+ * then lands at 0.65 of the top score, tier 3 of 5, so the calendar lights up legibly instead of
+ * at the faintest shade.
+ */
+export const DATE_STRENGTH: Record<DatePrecision, number> = { exact: 3, narrow: 1.5, broad: 0.8 };
 
 const WORD_PATTERN = /[\p{L}\p{N}']+/gu;
 
@@ -640,8 +688,16 @@ function summarise(hits: FieldHits, ceilings: Float64Array, repeatWeight: number
 /**
  * Weighted longest common subsequence of the query against the matched field positions,
  * plus the longest stretch of it that is contiguous in the field.
+ *
+ * `breaks` holds the positions in `order` where the query itself was not continuous, because an
+ * `@` filter was lifted out from between two words. A run may not cross one: the reader did not
+ * write those words side by side, so a field that says them side by side has not matched a
+ * phrase they typed. Only contiguity is affected — a filter reorders nothing, so the subsequence
+ * is indifferent to it — and `order.length` is unchanged, so this withholds a bonus rather than
+ * levying a penalty. That makes a filter a stronger separator than punctuation, which is ignored
+ * outright; the asymmetry is the point, since punctuation is text and a filter is an excision.
  */
-function orderedSubsequence(order: number[], hits: FieldHits): { lcs: number; run: number } {
+function orderedSubsequence(order: number[], hits: FieldHits, breaks: Set<number>): { lcs: number; run: number } {
 	const rows = order.length;
 	const columns = hits.positions.length;
 	let previous = new Float64Array(columns + 1);
@@ -651,11 +707,12 @@ function orderedSubsequence(order: number[], hits: FieldHits): { lcs: number; ru
 	let run = 0;
 
 	for (let row = 1; row <= rows; row++) {
+		const continues = !breaks.has(row - 1);
 		for (let column = 1; column <= columns; column++) {
 			const weight = hits.terms[column - 1] === order[row - 1] ? hits.weights[column - 1] : 0;
 			if (weight > 0) {
 				current[column] = Math.max(previous[column - 1] + weight, previous[column], current[column - 1]);
-				const adjacent = column > 1 && hits.positions[column - 2] === hits.positions[column - 1] - 1;
+				const adjacent = continues && column > 1 && hits.positions[column - 2] === hits.positions[column - 1] - 1;
 				currentRun[column] = (adjacent ? previousRun[column - 1] : 0) + weight;
 				if (currentRun[column] > run) run = currentRun[column];
 			} else {
@@ -696,6 +753,7 @@ function scoreTranscript(
 	ceilings: Float64Array,
 	required: number,
 	order: number[],
+	breaks: Set<number>,
 	tuning: Tuning,
 ): TranscriptMatch | null {
 	const hits = collectHits(field, expansions);
@@ -705,7 +763,7 @@ function scoreTranscript(
 	if (summary.ceiling === 0 || summary.coverage < required) return null;
 	if (summary.literalShare < tuning.transcriptLiteralShare) return null;
 
-	const { lcs, run } = orderedSubsequence(order, hits);
+	const { lcs, run } = orderedSubsequence(order, hits, breaks);
 	const proportionalRun = run / order.length;
 
 	return {
@@ -790,11 +848,25 @@ export function search(query: string, sort: SortMode, tuning: Tuning = TUNING): 
 	}
 
 	const loweredQuery = trimmed.toLowerCase();
-	// The query is decomposed the same way the index is, so `order`, `effectiveTerms` and the
-	// coverage denominators are all derived from the split form and the two sides agree.
-	const sequence = [...loweredQuery.matchAll(WORD_PATTERN)].flatMap((match) => decompose(match[0]));
+	const { filters, residual, segments } = parseDateFilters(loweredQuery);
 
-	const results = sequence.length === 0 ? literalSearch(loweredQuery) : rankedSearch(sequence, tuning);
+	let results: SearchResult[];
+	if (residual === "") {
+		// Filters with nothing left to search: the filter is the whole query, so everything that
+		// passes it is a result. This is the only place a filter produces a row instead of removing
+		// one.
+		results = filterOnlyResults(filters!);
+	} else {
+		results = searchText(segments, residual, tuning);
+		// Implicit date search is all or nothing: `parseDateExpression` returns null unless the whole
+		// residual is a date, so the text query is never rewritten and the coverage arithmetic in
+		// `rankedSearch` never sees a stray year or day number.
+		const expression = parseDateExpression(residual);
+		if (expression !== null) results = withDateMatches(results, expression, tuning);
+		// Filters restrict the finished set. Applied before the union, they would let a date match
+		// through that the reader had explicitly excluded.
+		if (filters !== null) results = results.filter((result) => passesFilters(result.comic.date, filters));
+	}
 
 	// Date order is purely chronological: the score decided which strips are here, not where they
 	// sit. Rank order puts the score first and falls back to the same chronology for ties.
@@ -808,6 +880,80 @@ export function search(query: string, sort: SortMode, tuning: Tuning = TUNING): 
 }
 
 /**
+ * The query is decomposed the same way the index is, so `order`, `effectiveTerms` and the
+ * coverage denominators are all derived from the split form and the two sides agree. One segment
+ * per stretch of the query between `@` filters, so the ranked path can tell where the reader's
+ * own words were not continuous.
+ */
+function searchText(segments: string[], residual: string, tuning: Tuning): SearchResult[] {
+	const sequences = segments.map((segment) =>
+		[...segment.matchAll(WORD_PATTERN)].flatMap((match) => decompose(match[0])),
+	);
+	if (sequences.every((sequence) => sequence.length === 0)) return literalSearch(residual);
+	return rankedSearch(sequences, tuning);
+}
+
+/** The transcript a date match shows. A wordless strip has none, so it shows its description. */
+function dateText(indexed: IndexedComic): string {
+	return indexed.comic.transcript || indexed.description?.text || "";
+}
+
+/**
+ * Adds the strips the date names to whatever the text search found.
+ *
+ * A strip that matched both keeps its text row: the highlight is the more useful thing to show,
+ * and the date is already in the header either way. Only the score combines, the same way a
+ * transcript and a description combine, because it is the same question — two independent kinds
+ * of evidence agreeing. So `source: "date"` marks the rows that matched by date and nothing else,
+ * which is what makes the label worth reading.
+ */
+function withDateMatches(textResults: SearchResult[], expression: DateExpression, tuning: Tuning): SearchResult[] {
+	const strength = DATE_STRENGTH[expression.precision];
+	// Keyed on the comic itself rather than on its date: two strips can share a date, and
+	// `rankedSearch` returns the very objects the index holds, so identity is exact and free.
+	const matched = new Set<Comic>();
+	for (const indexed of indexedComics) {
+		if (matchesExpression(expression, indexed.comic.date)) matched.add(indexed.comic);
+	}
+
+	const results: SearchResult[] = [];
+	const covered = new Set<Comic>();
+	for (const result of textResults) {
+		covered.add(result.comic);
+		if (!matched.has(result.comic)) {
+			results.push(result);
+			continue;
+		}
+		const score = Math.max(result.score, strength) + tuning.agreementBonus * Math.min(result.score, strength);
+		results.push({ ...result, score });
+	}
+
+	for (const indexed of indexedComics) {
+		if (!matched.has(indexed.comic) || covered.has(indexed.comic)) continue;
+		results.push({ comic: indexed.comic, text: dateText(indexed), ranges: [], score: strength, source: "date" });
+	}
+
+	return results;
+}
+
+function filterOnlyResults(filters: DateFilters): SearchResult[] {
+	const results: SearchResult[] = [];
+	for (const indexed of indexedComics) {
+		if (!passesFilters(indexed.comic.date, filters)) continue;
+		// Every row ties, and `assignTiers` normalises on the top score, so the number only has to
+		// be positive; `broad` is the honest one, because a filter restricts rather than ranks.
+		results.push({
+			comic: indexed.comic,
+			text: dateText(indexed),
+			ranges: [],
+			score: DATE_STRENGTH.broad,
+			source: "date",
+		});
+	}
+	return results;
+}
+
+/**
  * The archive's own ordering, mirroring `build-chain/exportComicsJson.ts`: date, then comic id.
  * Only specials carry an id, so the empty string keeps a daily ahead of a special sharing its
  * date. Without the id the two strips on 1985-11-28 would be left in whatever order the index
@@ -817,10 +963,21 @@ function compareChronologically(a: SearchResult, b: SearchResult): number {
 	return a.comic.date.localeCompare(b.comic.date) || (a.comic.id || "").localeCompare(b.comic.id || "");
 }
 
-function rankedSearch(sequence: string[], tuning: Tuning): SearchResult[] {
+function rankedSearch(sequences: string[][], tuning: Tuning): SearchResult[] {
+	const sequence = sequences.flat();
 	const terms = [...new Set(sequence)];
 	const termIndices = new Map(terms.map((term, index) => [term, index]));
 	const order = sequence.map((term) => termIndices.get(term)!);
+
+	// Where one segment of the query ends and the next begins, because a filter sat between them.
+	// A segment that tokenized to nothing contributes no boundary of its own.
+	const breaks = new Set<number>();
+	let boundary = 0;
+	for (const segment of sequences) {
+		if (segment.length === 0) continue;
+		if (boundary > 0) breaks.add(boundary);
+		boundary += segment.length;
+	}
 
 	const transcriptExpansions = terms.map((term) =>
 		expandTerm(transcriptCorpus, term, tuning, 0, tuning.transcriptInflectionWeight),
@@ -863,6 +1020,7 @@ function rankedSearch(sequence: string[], tuning: Tuning): SearchResult[] {
 				transcriptCeilings,
 				transcriptRequired,
 				order,
+				breaks,
 				tuning,
 			);
 			if (match === null) continue;
