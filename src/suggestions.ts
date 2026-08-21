@@ -1,3 +1,8 @@
+const now = new Date();
+
+const month = now.toLocaleString("en-US", { month: "short" }).toLowerCase();
+const day = now.getDate();
+
 /**
  * What the search box offers when it is empty and the reader clicks the die.
  *
@@ -36,6 +41,7 @@ export const SUGGESTED_QUERIES: readonly string[] = [
 	"@sunday snowman",
 	"@sunday @year:1986",
 	"@year:1985",
+	`@month:${month} @day:${day}`,
 ];
 
 /**
