@@ -5,7 +5,7 @@ pub_year: 2015
 pub_month: 2
 isbn:
   - 1-4494-6036-6
-colour: false
+colour: true
 notes:
   - Exhibition catalogue with interview by Jenny Robb. Unordered.
 alterations: {}
