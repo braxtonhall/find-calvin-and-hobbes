@@ -1,8 +1,9 @@
 /*
  * The second row of the sticky block: the count on the left, the dropdowns on the right.
  *
- * It wraps rather than scrolls or hides, count first. Four short labels and a count fit on a phone,
- * so there is nothing here worth putting behind a "more" control.
+ * It wraps rather than scrolls or hides, count first, and only when it must: four short labels and a
+ * count fit on one line down to most phone widths, so there is nothing here worth putting behind a
+ * "more" control — and nothing worth breaking the row for while it still fits.
  */
 .filter-bar {
 	display: flex;
@@ -13,17 +14,31 @@
 	margin-top: 6px;
 }
 
+/* The same box as a `filter-drop`, so the count and the labels line up by their glyphs whether they
+   share a line or the row has broken and the first label is sitting under the count. */
 .filter-count {
+	padding: 3px 7px;
 	font-size: 13px;
 	color: var(--text-muted);
 }
 
+/*
+ * `flex-shrink: 0` is what makes the row break as a block: the group asks for the full width of its
+ * four buttons, so when that no longer fits beside the count the bar's own `flex-wrap` drops the
+ * whole group to a second line instead of squeezing the buttons in beside it. `max-width` is the
+ * floor under that — where the four alone are wider than the bar, they wrap among themselves rather
+ * than run off the page.
+ *
+ * No `margin-left: auto`: the bar is `space-between` already, which is the same right edge on a
+ * shared line, and the left edge — not the right — on a line of their own.
+ */
 .filter-fields {
 	display: flex;
 	align-items: center;
 	flex-wrap: wrap;
+	flex-shrink: 0;
 	gap: 6px;
-	margin-left: auto;
+	max-width: 100%;
 }
 
 /*
@@ -205,18 +220,4 @@
 
 .filter-menu-clear[data-cursor] {
 	box-shadow: inset 0 0 0 2px var(--golden);
-}
-
-@media (max-width: 768px) {
-	/* The row breaks in two rather than squeezing: the count keeps its line, the fields take theirs. */
-	.filter-fields {
-		width: 100%;
-		margin-left: 0;
-	}
-
-	/* Stacked, the count and the first label are one column, so they line up by their glyphs rather
-	   than by the button's own padding. */
-	.filter-count {
-		padding: 3px 7px;
-	}
 }
