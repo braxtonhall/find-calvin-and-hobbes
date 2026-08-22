@@ -134,6 +134,10 @@
 .filter-option {
 	border-radius: 4px;
 	cursor: pointer;
+	/* The click in here is no longer always swallowed, so a drag across the rows would otherwise take
+	   their labels with it as a text selection. */
+	-webkit-user-select: none;
+	user-select: none;
 }
 
 .filter-option--list {
@@ -157,8 +161,8 @@
 
 /*
  * A check beside the label says a list row is on; a grid cell has no room for one, so it is filled
- * instead. The keyboard cursor is a ring, because it has to be able to sit on a row that is already
- * checked and still be visible there.
+ * instead. Neither is the focus ring's job: it has to be able to sit on a row that is already
+ * checked and still be visible there, which is why it is a ring and not a fill.
  */
 .filter-option-check {
 	width: 14px;
@@ -190,9 +194,15 @@
 	background: var(--golden-dim);
 }
 
-/* The same gold the focus ring on the button is drawn in — one colour for "the keys are here". */
-.filter-option--cursor {
-	box-shadow: inset 0 0 0 2px var(--golden);
+/*
+ * The ring is the page's one focus rule in `base.css`, gold and 2px, and these rows want every bit
+ * of that. Only its offset is wrong for them: drawn outside the box it would be clipped on the first
+ * and last rows by the options' own `overflow-y`, and in the day grid it would land squarely in the
+ * 2px gap and over the cells either side. Drawn inside, it clears both.
+ */
+.filter-option:focus-visible,
+.filter-menu-clear:focus-visible {
+	outline-offset: -2px;
 }
 
 /* The one row that is an action rather than a value, so it sits apart from the list. */
@@ -216,8 +226,4 @@
 .filter-menu-clear:hover {
 	color: var(--text);
 	background: var(--grey-dim);
-}
-
-.filter-menu-clear[data-cursor] {
-	box-shadow: inset 0 0 0 2px var(--golden);
 }

@@ -26,6 +26,14 @@ import { editQueryInput } from "./query-input";
  * `?sort=date` in the URL rather than a filter, and the one control here a reader could never learn
  * to type. The rest of the decisions — what a click is worth in characters, which checkmarks a
  * query lights up — are in `query-edit.ts`, where they are testable. What is left here is DOM.
+ *
+ * The menu's rows are focused, not tracked. There is no cursor of this module's own: the arrows
+ * move the real focus onto a real `role="option"`, so the ring is the browser's `:focus-visible`
+ * and the page's one focus rule in `base.css` draws it. Which is the point — these rows show a ring
+ * to the keyboard and none to the pointer for the same reason every other control on the page does,
+ * rather than because this file remembered to. One thing pays for it, and it is load-bearing rather
+ * than tidy: an open menu is repainted in place rather than rebuilt, because a rebuild would detach
+ * the row the reader is standing on.
  */
 
 const CHEVRON_ICON = `<svg class="filter-drop-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -39,6 +47,14 @@ const CHECK_ICON = `<svg class="filter-option-check" viewBox="0 0 16 16" fill="n
 /** How many columns the day grid is laid out in, which is what makes it read as a calendar. */
 const GRID_COLUMNS = 7;
 
+/**
+ * The one row that is an action rather than a value, so it sits apart from the list rather than in
+ * it — and is offered only where there is something to clear. A real `<button>`, which is what has
+ * it announce itself as one, and `tabindex="-1"` so the arrows reach it on the same walk as the
+ * values rather than a Tab that would close the menu on its way out.
+ */
+const CLEAR_HTML = `<button type="button" class="filter-menu-clear" tabindex="-1">Clear</button>`;
+
 interface Dropdown {
 	field: FilterField;
 	button: HTMLButtonElement;
@@ -50,8 +66,6 @@ let dropdowns: Dropdown[] = [];
 let count: HTMLElement | null = null;
 let menu: HTMLDivElement | null = null;
 let open: Dropdown | null = null;
-/** The keyboard cursor, as an index into the open menu's rows. `-1` is no cursor at all. */
-let cursor = -1;
 let selected = new Set<string>();
 
 function menuElement(): HTMLDivElement {
@@ -66,23 +80,20 @@ function menuElement(): HTMLDivElement {
 	document.body.appendChild(menu);
 
 	menu.addEventListener("mousedown", (event) => {
-		// Never let the focus move: the blur would tear the menu down before the click resolved, and
-		// the caret would leave the query the reader is adding a filter to.
-		event.preventDefault();
 		const element = event.target as HTMLElement;
 		if (element.closest(".filter-menu-clear") !== null) {
-			// The cursor follows the pointer here as it does on any other row, which is what takes
-			// the ring off the value that was checked a moment ago. `Clear` goes with the last
-			// checkmark it clears, so what the cursor lands on is nothing at all — and nothing is
-			// the right thing to be pointing at once there is nothing left in the field.
-			if (open !== null) cursor = open.field.options.length;
 			clearOpenField();
 			return;
 		}
 		const row = element.closest<HTMLElement>(".filter-option");
 		if (row === null || open === null) return;
-		cursor = Number(row.dataset.index);
-		toggle(open.field.options[cursor]);
+		toggle(open.field.options[Number(row.dataset.index)]);
+	});
+
+	// Bound here as well as on the button, because while the reader is arrowing around the menu the
+	// focus is genuinely inside it, and a listener on the button would not hear a key of it.
+	menu.addEventListener("keydown", (event) => {
+		if (open !== null) handleKey(open, event);
 	});
 
 	return menu;
@@ -90,27 +101,37 @@ function menuElement(): HTMLDivElement {
 
 function optionHtml(field: FilterField, option: FilterOption, index: number): string {
 	const checked = selected.has(option.token);
-	const classes = [
-		"filter-option",
-		`filter-option--${field.shape}`,
-		checked ? "filter-option--checked" : "",
-		index === cursor ? "filter-option--cursor" : "",
-	]
+	const classes = ["filter-option", `filter-option--${field.shape}`, checked ? "filter-option--checked" : ""]
 		.filter(Boolean)
 		.join(" ");
 	// A check beside the label in a list; in the grid there is no room for one, so a checked cell
 	// says so by being filled.
 	const check = field.shape === "grid" ? "" : CHECK_ICON;
+	// Focusable, and never by Tab: the arrows are what walk this list, and a Tab that stepped
+	// through thirty-one days on its way to the next control would be a trap with a door.
 	return `<div
 			class="${classes}"
 			role="option"
-			id="filter-option-${index}"
 			aria-selected="${checked}"
 			data-index="${index}"
+			tabindex="-1"
 		>${check}<span class="filter-option-label">${escHtml(option.label)}</span></div>`;
 }
 
-function renderMenu(): void {
+/** Whether the field has anything in it to clear, which is the only thing `Clear` is offered for. */
+function hasClearable(field: FilterField): boolean {
+	return field.options.some((option) => selected.has(option.token));
+}
+
+/**
+ * The menu from scratch, which only a newly opened dropdown needs.
+ *
+ * Everything after that goes through `paintMenu`, and the split is what lets the ring in here be
+ * real focus: reassigning this `innerHTML` under an open menu would detach the row the reader is
+ * standing on, and a focus that drops to `document.body` halfway through ticking a checkmark is a
+ * ring gone out and a screen reader that has lost its place.
+ */
+function buildMenu(): void {
 	const element = menuElement();
 	if (open === null) {
 		element.classList.remove("filter-menu--visible");
@@ -120,27 +141,44 @@ function renderMenu(): void {
 	const { field } = open;
 	const heading = field.heading === undefined ? "" : `<div class="filter-menu-heading">${escHtml(field.heading)}</div>`;
 	const rows = field.options.map((option, index) => optionHtml(field, option, index)).join("");
-	// Offered only where there is something to clear, and as the one row that is an action rather
-	// than a value — so it sits apart from the list rather than in it.
-	const clear = field.options.some((option) => selected.has(option.token))
-		? `<button type="button" class="filter-menu-clear" id="filter-menu-clear"${cursor === field.options.length ? ` data-cursor="true"` : ""}>Clear</button>`
-		: "";
-
 	element.innerHTML = `${heading}<div
 			class="filter-menu-options filter-menu-options--${field.shape}"
 			role="listbox"
 			aria-multiselectable="true"
 			aria-label="${escHtml(field.heading ?? field.label)}"
-		>${rows}</div>${clear}`;
+		>${rows}</div>${hasClearable(field) ? CLEAR_HTML : ""}`;
 	element.classList.add("filter-menu--visible");
 	positionMenu();
+}
 
-	const active = element.querySelector(".filter-option--cursor") ?? element.querySelector("[data-cursor]");
-	if (active === null) open.button.removeAttribute("aria-activedescendant");
-	else {
-		open.button.setAttribute("aria-activedescendant", active.id);
-		active.scrollIntoView({ block: "nearest" });
+/**
+ * The two things that change under an open menu — which rows are checked, and whether there is
+ * anything left to clear — written onto the nodes that are already standing.
+ */
+function paintMenu(): void {
+	if (open === null) return;
+	const element = menuElement();
+	const { field } = open;
+
+	for (const row of element.querySelectorAll<HTMLElement>(".filter-option")) {
+		const checked = selected.has(field.options[Number(row.dataset.index)].token);
+		row.classList.toggle("filter-option--checked", checked);
+		row.setAttribute("aria-selected", String(checked));
 	}
+
+	const clear = element.querySelector<HTMLButtonElement>(".filter-menu-clear");
+	const wanted = hasClearable(field);
+	if (wanted && clear === null) element.insertAdjacentHTML("beforeend", CLEAR_HTML);
+	else if (!wanted && clear !== null) {
+		// `Clear` goes with the last checkmark it clears. A reader standing on it gets the button
+		// the menu hangs from back, rather than the focus falling to `document.body`.
+		if (document.activeElement === clear) open.button.focus();
+		clear.remove();
+	}
+
+	// `Clear` arriving or leaving changes the height, and a menu that had to flip above its button
+	// is placed from its bottom edge.
+	positionMenu();
 }
 
 /**
@@ -161,21 +199,37 @@ function positionMenu(): void {
 	element.style.left = `${Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8))}px`;
 }
 
-function openMenu(dropdown: Dropdown, from: number): void {
+/**
+ * `at` is the row the keyboard should land on, or `null` for a menu the pointer opened — where
+ * moving the focus in would take the caret out of the query box and leave a ring sitting on a row
+ * nobody is typing at.
+ */
+function openMenu(dropdown: Dropdown, at: number | null): void {
 	if (open !== null && open !== dropdown) closeMenu();
 	open = dropdown;
-	cursor = from;
 	dropdown.button.setAttribute("aria-expanded", "true");
-	renderMenu();
+	buildMenu();
+	if (at !== null) focusStops()[at]?.focus();
 }
 
-function closeMenu(): void {
+/**
+ * `restore` hands the focus back to the button the menu belongs to, which is where a reader who
+ * pressed Escape or Tab expects to find it. The pointer paths do not ask for it: they leave the
+ * focus wherever the click put it, and programmatically pulling it to the button would light a ring
+ * on it that no key was pressed for. Nor does the router's teardown — the view that button is in is
+ * on its way out, and the focus belongs in the one arriving.
+ */
+function closeMenu(restore = false): void {
 	if (open === null) return;
-	open.button.setAttribute("aria-expanded", "false");
-	open.button.removeAttribute("aria-activedescendant");
+	const element = menuElement();
+	const { button } = open;
+	// Read before the menu is hidden: nothing inside a `visibility: hidden` subtree can hold the
+	// focus, so asking afterwards would only be asking about `document.body`.
+	const held = element.contains(document.activeElement);
+	button.setAttribute("aria-expanded", "false");
 	open = null;
-	cursor = -1;
-	menuElement().classList.remove("filter-menu--visible");
+	element.classList.remove("filter-menu--visible");
+	if (held && restore) button.focus();
 }
 
 /**
@@ -202,87 +256,118 @@ function clearOpenField(): void {
 	write(clearField(target.value, open.field));
 }
 
-/** Where the cursor lands when the menu is opened from the keyboard: the first checked row. */
+/** Where the focus lands when the menu is opened from the keyboard: the first checked row. */
 function firstChecked(field: FilterField): number {
 	const index = field.options.findIndex((option) => selected.has(option.token));
 	return index < 0 ? 0 : index;
 }
 
-function moveCursor(dropdown: Dropdown, step: number): void {
-	// The Clear button, where there is one, is the row after the last option — reachable by the
-	// same arrows rather than by a Tab that would close the menu on its way out.
-	const rows = dropdown.field.options.length + (menuElement().querySelector(".filter-menu-clear") === null ? 0 : 1);
-	// From no cursor at all — a menu opened by the pointer, or one whose `Clear` row left with the
-	// checkmarks it cleared — the first step lands on an end of the list rather than one past it.
-	if (cursor < 0 || cursor >= rows) cursor = step > 0 ? 0 : rows - 1;
-	else cursor = (cursor + step + rows) % rows;
-	renderMenu();
+/**
+ * Every row the arrows visit, in the order they visit them: the values, and the `Clear` after them
+ * where there is one. Document order, which is the order they read in.
+ */
+function focusStops(): HTMLElement[] {
+	return [...menuElement().querySelectorAll<HTMLElement>(".filter-option, .filter-menu-clear")];
 }
 
-function activateCursor(dropdown: Dropdown): void {
-	const option = dropdown.field.options[cursor];
+function moveFocus(step: number): void {
+	const stops = focusStops();
+	if (stops.length === 0) return;
+	const current = stops.indexOf(document.activeElement as HTMLElement);
+	// From outside the menu — one the pointer opened, whose button still holds the focus — the first
+	// step lands on an end of the list rather than one past it.
+	const next = current < 0 ? (step > 0 ? 0 : stops.length - 1) : (current + step + stops.length) % stops.length;
+	// Native focus scrolls its row into the options' own scroller on the way, which is the one thing
+	// a cursor of our own had to do for itself.
+	stops[next].focus();
+}
+
+/** Whatever the focus is standing on: a value to toggle, or the `Clear` below them. */
+function activateFocused(): void {
+	if (open === null) return;
+	const active = document.activeElement as HTMLElement | null;
+	const row = active === null ? null : active.closest<HTMLElement>(".filter-option");
 	// Toggling never closes the menu: these are multi-selects, and a reader picking two years
 	// should not have to open the same dropdown twice.
-	if (option === undefined) clearOpenField();
-	else toggle(option);
+	if (row !== null) toggle(open.field.options[Number(row.dataset.index)]);
+	// Nothing at all when the focus is still on the button, which is a menu the pointer opened and
+	// a reader who has not said which row they mean yet.
+	else if (active?.classList.contains("filter-menu-clear") === true) clearOpenField();
+}
+
+/**
+ * One handler for both the places the focus can be while a dropdown is live — the button, and a row
+ * of the open menu — because the keys mean the same thing from either.
+ */
+function handleKey(dropdown: Dropdown, event: KeyboardEvent): void {
+	const isOpen = open === dropdown;
+	const { field } = dropdown;
+
+	if (event.key === "Escape") {
+		// Only the menu, and the focus comes back to the button it hangs from. With it shut, Escape
+		// goes back to meaning "leave this view", which is what the global handler in `index.ts` does.
+		if (!isOpen) return;
+		event.preventDefault();
+		event.stopPropagation();
+		closeMenu(true);
+		return;
+	}
+
+	if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+		event.preventDefault();
+		event.stopPropagation();
+		if (!isOpen) openMenu(dropdown, firstChecked(field));
+		// A grid steps by a row rather than by a cell, which is what its shape promises.
+		else moveFocus((event.key === "ArrowDown" ? 1 : -1) * (field.shape === "grid" ? GRID_COLUMNS : 1));
+		return;
+	}
+
+	if (isOpen && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
+		if (field.shape !== "grid") return;
+		event.preventDefault();
+		event.stopPropagation();
+		moveFocus(event.key === "ArrowRight" ? 1 : -1);
+		return;
+	}
+
+	if (event.key === "Enter" || event.key === " ") {
+		event.preventDefault();
+		if (!isOpen) openMenu(dropdown, firstChecked(field));
+		else activateFocused();
+		return;
+	}
+
+	if (event.key === "Tab" && isOpen) {
+		// From a row the Tab is spent getting out, because the menu is floated on `document.body`
+		// and the focus in it has no page order to carry on from. From the button it is left alone
+		// and goes on to the next control, exactly as it did before there was a menu to close.
+		if (menuElement().contains(document.activeElement)) event.preventDefault();
+		closeMenu(true);
+	}
 }
 
 function attachDropdown(dropdown: Dropdown): void {
-	const { field, button } = dropdown;
+	const { button } = dropdown;
 
 	button.addEventListener("click", () => {
+		// Opened without the focus going in: no ring on a row the reader is not typing at, and the
+		// caret stays in the query box, which in Safari and Firefox is where it still is.
 		if (open === dropdown) closeMenu();
-		else openMenu(dropdown, -1);
+		else openMenu(dropdown, null);
 	});
 
-	button.addEventListener("keydown", (event) => {
-		const isOpen = open === dropdown;
-
-		if (event.key === "Escape") {
-			// Only the menu, and the focus stays where it already is. With it shut, Escape goes back
-			// to meaning "leave this view", which is what the global handler in `index.ts` does.
-			if (!isOpen) return;
-			event.preventDefault();
-			event.stopPropagation();
-			closeMenu();
-			return;
-		}
-
-		if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-			event.preventDefault();
-			event.stopPropagation();
-			if (!isOpen) openMenu(dropdown, firstChecked(field));
-			// A grid steps by a row rather than by a cell, which is what its shape promises.
-			else moveCursor(dropdown, (event.key === "ArrowDown" ? 1 : -1) * (field.shape === "grid" ? GRID_COLUMNS : 1));
-			return;
-		}
-
-		if (isOpen && (event.key === "ArrowRight" || event.key === "ArrowLeft")) {
-			if (field.shape !== "grid") return;
-			event.preventDefault();
-			event.stopPropagation();
-			moveCursor(dropdown, event.key === "ArrowRight" ? 1 : -1);
-			return;
-		}
-
-		if (event.key === "Enter" || event.key === " ") {
-			event.preventDefault();
-			if (!isOpen) openMenu(dropdown, firstChecked(field));
-			else if (cursor >= 0) activateCursor(dropdown);
-			return;
-		}
-
-		if (event.key === "Tab" && isOpen) closeMenu();
-	});
+	button.addEventListener("keydown", (event) => handleKey(dropdown, event));
 }
 
 /*
  * A click anywhere that is not this menu or another dropdown's button is a click that means to be
  * reading results again.
  *
- * In the capture phase, which is load-bearing rather than tidy: a click on a row repaints the menu,
- * and by the time a bubbling listener ran, the row it was told about would be a detached node with
- * no `.filter-menu` above it any more — so the menu would close on every checkmark.
+ * In the capture phase, which is load-bearing rather than tidy: clicking `Clear` takes `Clear` out
+ * of the menu along with the last checkmark it cleared, and by the time a bubbling listener ran, the
+ * node it was told about would be detached with no `.filter-menu` above it any more — so the menu
+ * would close on the one click with the most reason to leave it open. The value rows are safe now
+ * that they are repainted rather than rebuilt, but `Clear` still comes and goes.
  */
 document.addEventListener(
 	"mousedown",
@@ -333,7 +418,7 @@ function paint(): void {
 		dropdown.button.setAttribute("aria-label", label);
 	}
 
-	if (open !== null) renderMenu();
+	paintMenu();
 }
 
 /**
@@ -378,6 +463,16 @@ export function buildFilterBar(input: HTMLInputElement): HTMLElement {
  */
 export function closeFilterMenu(): void {
 	closeMenu();
+}
+
+/**
+ * Whether the focus is inside the open menu, which `renderResults` has to ask because its "did the
+ * reader arrive from another view" test is `contains` on the results element — and this menu is
+ * floated on `document.body`, out of its reach. Without it, the search that follows a checkmark
+ * 200ms later would take the focus off the row the reader is standing on.
+ */
+export function filterMenuHasFocus(): boolean {
+	return open !== null && menuElement().contains(document.activeElement);
 }
 
 /** The two things a render has left to say: how many strips matched, and which boxes are ticked. */

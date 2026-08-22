@@ -6,7 +6,7 @@ import { search, SearchResult } from "../search";
 import { assignTiers } from "../tiers";
 import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
 import { buildSearchHash, navigate, replaceSearch } from "../router";
-import { buildFilterBar, syncFilterBar } from "./filter-bar";
+import { buildFilterBar, filterMenuHasFocus, syncFilterBar } from "./filter-bar";
 import { attachQueryInput, syncQueryInput } from "./query-input";
 
 const DATE_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
@@ -284,8 +284,11 @@ export function renderResults(query: string, sort: SortMode): void {
 	state.searchResultTiers = assignTiers(results);
 	attachRowHandlers(list);
 
-	// Arriving from another view, rather than typing here or stepping through the rows.
-	if (!element.contains(document.activeElement)) {
+	// Arriving from another view, rather than typing here or stepping through the rows. The filter
+	// menu counts as being here: it is floated on `document.body` rather than nested in this element,
+	// so `contains` cannot see a reader who is standing on one of its rows — and the search that
+	// follows a checkmark comes back through here 200ms later.
+	if (!element.contains(document.activeElement) && !filterMenuHasFocus()) {
 		input.focus();
 		input.setSelectionRange(input.value.length, input.value.length);
 	}
