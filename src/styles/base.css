@@ -133,8 +133,9 @@ mark {
 	.credits-home,
 	.detail-collections,
 	.detail-collections-heading,
-	.results-search-bar,
+	.results-sticky,
 	.query-menu,
+	.filter-menu,
 	.query-tip,
 	.skip-link {
 		display: none !important;

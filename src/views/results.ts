@@ -6,6 +6,7 @@ import { search, SearchResult } from "../search";
 import { assignTiers } from "../tiers";
 import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
 import { buildSearchHash, navigate, replaceSearch } from "../router";
+import { buildFilterBar, syncFilterBar } from "./filter-bar";
 import { attachQueryInput, syncQueryInput } from "./query-input";
 
 const DATE_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
@@ -50,21 +51,26 @@ function sortLabelFor(sort: SortMode): string {
  * survives, so the caret survives with it and `attachQueryInput` can own what it knows.
  */
 function buildSearchBar(element: HTMLElement): void {
-	element.innerHTML = `<div class="results-search-bar">
-		<input
-			type="text"
-			class="results-input"
-			id="results-input"
-			placeholder="Search comics..."
-			autocomplete="off"
-		/>
-		<button class="results-clear" id="results-clear" aria-label="Clear search">&times;</button>
-		<button class="results-sort" id="results-sort"></button>
+	element.innerHTML = `<div class="results-sticky">
+		<div class="results-search-bar">
+			<input
+				type="text"
+				class="results-input"
+				id="results-input"
+				placeholder="Search comics..."
+				autocomplete="off"
+			/>
+			<button class="results-clear" id="results-clear" aria-label="Clear search">&times;</button>
+			<button class="results-sort" id="results-sort"></button>
+		</div>
 	</div>
 	<div id="results-list"></div>`;
 
 	const input = document.getElementById("results-input") as HTMLInputElement;
 	attachQueryInput(input);
+	// Attached to the search bar rather than built beside it: the two rows are one block, and the
+	// filter bar has to outlive `resultsHtml` for the same reason the input does.
+	element.querySelector(".results-sticky")!.appendChild(buildFilterBar(input));
 
 	input.addEventListener("input", () => {
 		if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
@@ -122,12 +128,20 @@ function buildSearchBar(element: HTMLElement): void {
 	});
 }
 
-function resultsHtml(query: string, results: SearchResult[]): string {
+/**
+ * The rows, and nothing about the query.
+ *
+ * The count moved to the filter bar and dropped the query on the way — `12 results`, not
+ * `12 results for "snow goons"`, and `No comics found` rather than `No comics found for …`. Both
+ * were restating the query that is sitting in the input one line up, and the widest line on the
+ * page is worth more than a second copy of it.
+ */
+function resultsHtml(results: SearchResult[]): string {
 	if (results.length === 0) {
-		return `<div class="results-empty">No comics found for &ldquo;${escHtml(query)}&rdquo;</div>`;
+		return `<div class="results-empty">No comics found</div>`;
 	}
 
-	let html = `<div style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">${results.length} result${results.length !== 1 ? "s" : ""} for &ldquo;${escHtml(query)}&rdquo;</div>`;
+	let html = "";
 	for (const { comic, text, ranges, source } of results) {
 		const [year, month, day] = comic.date.split("-").map(Number);
 		const dateObject = new Date(Date.UTC(year, month - 1, day));
@@ -264,8 +278,9 @@ export function renderResults(query: string, sort: SortMode): void {
 	}
 
 	const results = search(query, sort);
+	syncFilterBar(results.length);
 	const list = document.getElementById("results-list")!;
-	list.innerHTML = resultsHtml(query, results);
+	list.innerHTML = resultsHtml(results);
 	state.searchResultTiers = assignTiers(results);
 	attachRowHandlers(list);
 

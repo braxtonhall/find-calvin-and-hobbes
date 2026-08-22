@@ -40,14 +40,7 @@
 	color: var(--text-muted);
 }
 
-/*
- * Search when there is something to search for, and a die when there is not.
- *
- * Both icons are in the button at once, stacked in one grid cell, and the class on the button
- * decides which of them is showing. That is what makes the swap animate: the icon leaving turns
- * and shrinks out while the icon arriving turns and grows in, on the keystroke that emptied or
- * filled the box.
- */
+/* An ordinary submit button, in the room the input's own right padding reserves for it. */
 .landing-submit {
 	position: absolute;
 	top: 50%;
@@ -74,23 +67,8 @@
 }
 
 .landing-submit > svg {
-	grid-area: 1 / 1;
 	width: 19px;
 	height: 19px;
-	transition:
-		opacity 0.12s,
-		transform 0.12s;
-}
-
-.landing-submit-die,
-.landing-submit--die .landing-submit-search {
-	opacity: 0;
-	transform: rotate(90deg) scale(0.6);
-}
-
-.landing-submit--die .landing-submit-die {
-	opacity: 1;
-	transform: none;
 }
 
 .landing-credits {

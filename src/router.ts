@@ -6,6 +6,7 @@ import { renderResults } from "./views/results";
 import { renderDetail } from "./views/detail";
 import { renderCollection } from "./views/collection";
 import { renderCredits } from "./views/credits";
+import { closeFilterMenu } from "./views/filter-bar";
 
 export function parseRoute(): Route {
 	const hash = location.hash;
@@ -91,6 +92,11 @@ export function handleRoute(): void {
 		viewElement.classList.remove("active");
 		viewElement.removeAttribute("style");
 	});
+
+	// The filter dropdowns float on the body, so hiding the results view does not hide them. Every
+	// other route leaves them behind; the results view keeps whichever one is open, because a search
+	// re-rendered on a keystroke comes through here too.
+	if (route.view !== "results") closeFilterMenu();
 
 	if (!state.dataLoaded && route.view !== "landing") {
 		showLoadingView(route);

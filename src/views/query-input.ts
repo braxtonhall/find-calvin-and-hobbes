@@ -61,6 +61,15 @@ interface Widget {
 const widgets = new Set<Widget>();
 /** Whichever widget has the focus, and so the one the single shared menu belongs to. */
 let owner: Widget | null = null;
+/**
+ * Set while `editQueryInput` is writing, and read by the widget's own `input` listener.
+ *
+ * An edit made by something other than the reader's keyboard must not arm the completion menu: a
+ * filter dropdown writing `@year:1990` down the same path as a keystroke would leave the menu
+ * hanging open over the results the reader was about to read. The flag carries whether the text is
+ * still arriving, which is the other thing the listener would otherwise have assumed.
+ */
+let editing: { arriving: boolean } | null = null;
 let menu: HTMLDivElement | null = null;
 let tip: HTMLDivElement | null = null;
 
@@ -172,6 +181,29 @@ function rowHtml(row: Row, index: number, active: boolean): string {
 export function syncQueryInput(input: HTMLInputElement): void {
 	for (const widget of widgets) {
 		if (widget.input === input) widget.refresh();
+	}
+}
+
+/**
+ * Write a value into the box on the reader's behalf — a filter dropdown, a query typing itself out
+ * on the landing page.
+ *
+ * The `input` event is dispatched, because the point of these edits is that the view follows them:
+ * the results search for what was just written, and the pills land on it as it arrives. What does
+ * not follow is the completion menu, which answers typing and only typing — see `armed`.
+ *
+ * `arriving` says there is more text on its way, which buys a half-written value the same benefit
+ * of the doubt a reader typing it would get: `@year:19` wears the pending pill on its way to
+ * `@year:1995` rather than flashing red at every keystroke of the animation.
+ */
+export function editQueryInput(input: HTMLInputElement, value: string, arriving = false): void {
+	editing = { arriving };
+	try {
+		input.value = value;
+		input.setSelectionRange(value.length, value.length);
+		input.dispatchEvent(new Event("input", { bubbles: true }));
+	} finally {
+		editing = null;
 	}
 }
 
@@ -417,8 +449,15 @@ export function attachQueryInput(input: HTMLInputElement): void {
 	);
 
 	input.addEventListener("input", () => {
-		armed = true;
-		writing = true;
+		if (editing === null) {
+			armed = true;
+			writing = true;
+		} else {
+			// Disarmed rather than merely left alone: a menu the reader opened by typing has no
+			// business staying up over an edit they made by clicking something else.
+			armed = false;
+			writing = editing.arriving;
+		}
 		refresh();
 	});
 

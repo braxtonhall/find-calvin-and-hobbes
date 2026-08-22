@@ -1,0 +1,222 @@
+/*
+ * The second row of the sticky block: the count on the left, the dropdowns on the right.
+ *
+ * It wraps rather than scrolls or hides, count first. Four short labels and a count fit on a phone,
+ * so there is nothing here worth putting behind a "more" control.
+ */
+.filter-bar {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 6px;
+}
+
+.filter-count {
+	font-size: 13px;
+	color: var(--text-muted);
+}
+
+.filter-fields {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-left: auto;
+}
+
+/*
+ * Just the noun, and the same noun whatever the dropdown is holding — no `Year: 1988`, no count
+ * badge, no border, and no tint for a field that is in use.
+ *
+ * Everything that was tried there restated something the query box is already saying a line above,
+ * and paid for it in the one currency this row has none of: four outlined, coloured, resizing
+ * buttons turn the quietest corner of the page into a toolbar. Hover and open are the only states
+ * left, because those two are about the pointer rather than about the query.
+ */
+.filter-drop {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	padding: 3px 7px;
+	font-family: var(--font);
+	font-size: 13px;
+	color: var(--text-muted);
+	background: none;
+	border: none;
+	border-radius: 5px;
+	cursor: pointer;
+}
+
+.filter-drop:hover,
+.filter-drop[aria-expanded="true"] {
+	color: var(--text);
+	background: var(--grey-dim);
+}
+
+.filter-drop-chevron {
+	width: 12px;
+	height: 12px;
+}
+
+.filter-drop[aria-expanded="true"] .filter-drop-chevron {
+	transform: rotate(180deg);
+}
+
+/*
+ * On the body and floated, like `query-menu`, so the sticky row it hangs from cannot clip it.
+ *
+ * A column, because only the values scroll: eleven years and a `Clear` are taller than the menu is
+ * allowed to be, and a `Clear` below the fold is a `Clear` nobody finds.
+ */
+.filter-menu {
+	position: fixed;
+	z-index: 10000;
+	display: flex;
+	flex-direction: column;
+	/* Tall enough for the eleven years and the twelve months to arrive whole, and never taller
+	   than the window it is floating over. */
+	max-height: min(380px, calc(100vh - 96px));
+	padding: 4px;
+	font-family: var(--font);
+	font-size: 13px;
+	background: var(--bg-sidebar);
+	border: 1px solid var(--grey);
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.12s;
+}
+
+.filter-menu--visible {
+	opacity: 1;
+	visibility: visible;
+}
+
+/* Says which half of `@day:` is in here, since the weekday half deliberately is not. */
+.filter-menu-heading {
+	padding: 6px 8px 4px 8px;
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
+.filter-menu-options {
+	overflow-y: auto;
+}
+
+.filter-menu-options--grid {
+	display: grid;
+	grid-template-columns: repeat(7, 1fr);
+	gap: 2px;
+	min-width: 224px;
+}
+
+.filter-option {
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.filter-option--list {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	white-space: nowrap;
+}
+
+.filter-option--grid {
+	display: grid;
+	place-items: center;
+	height: 28px;
+	font-variant-numeric: tabular-nums;
+}
+
+.filter-option:hover {
+	background: var(--grey-dim);
+}
+
+/*
+ * A check beside the label says a list row is on; a grid cell has no room for one, so it is filled
+ * instead. The keyboard cursor is a ring, because it has to be able to sit on a row that is already
+ * checked and still be visible there.
+ */
+.filter-option-check {
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
+	color: var(--golden-half);
+	visibility: hidden;
+}
+
+.filter-option--checked .filter-option-check {
+	visibility: visible;
+}
+
+.filter-option--checked {
+	background: var(--golden-dim);
+}
+
+/*
+ * The one place a checked row is set in bold, and only because a grid cell has no check beside it
+ * to say so. A list row must not: the menu is as wide as its widest label, and `September` in bold
+ * is wider than `September` — so ticking it would widen the whole dropdown under the pointer.
+ * The grid is seven equal columns, which cannot move whatever weight the numbers are set in.
+ */
+.filter-option--grid.filter-option--checked {
+	font-weight: 600;
+}
+
+.filter-option--checked:hover {
+	background: var(--golden-dim);
+}
+
+/* The same gold the focus ring on the button is drawn in — one colour for "the keys are here". */
+.filter-option--cursor {
+	box-shadow: inset 0 0 0 2px var(--golden);
+}
+
+/* The one row that is an action rather than a value, so it sits apart from the list. */
+.filter-menu-clear {
+	display: block;
+	flex-shrink: 0;
+	width: 100%;
+	margin-top: 4px;
+	padding: 6px 8px;
+	font-family: var(--font);
+	font-size: 12px;
+	text-align: left;
+	color: var(--text-muted);
+	background: none;
+	border: none;
+	border-top: 1px solid var(--grey);
+	border-radius: 0 0 4px 4px;
+	cursor: pointer;
+}
+
+.filter-menu-clear:hover {
+	color: var(--text);
+	background: var(--grey-dim);
+}
+
+.filter-menu-clear[data-cursor] {
+	box-shadow: inset 0 0 0 2px var(--golden);
+}
+
+@media (max-width: 768px) {
+	/* The row breaks in two rather than squeezing: the count keeps its line, the fields take theirs. */
+	.filter-fields {
+		width: 100%;
+		margin-left: 0;
+	}
+
+	/* Stacked, the count and the first label are one column, so they line up by their glyphs rather
+	   than by the button's own padding. */
+	.filter-count {
+		padding: 3px 7px;
+	}
+}

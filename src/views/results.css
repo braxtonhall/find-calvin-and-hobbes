@@ -3,17 +3,24 @@
 	padding: 20px;
 }
 
+/*
+ * The search box and the filter bar are one block: they stick together, and they share the border
+ * that used to sit under the search box alone.
+ */
+.results-sticky {
+	position: sticky;
+	top: 0;
+	margin-bottom: 20px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid var(--grey);
+	background: var(--bg);
+	z-index: 2;
+}
+
 .results-search-bar {
 	display: flex;
 	align-items: center;
 	gap: 8px;
-	margin-bottom: 24px;
-	padding-bottom: 16px;
-	border-bottom: 1px solid var(--grey);
-	position: sticky;
-	top: 0;
-	background: var(--bg);
-	z-index: 2;
 }
 
 .results-input {
