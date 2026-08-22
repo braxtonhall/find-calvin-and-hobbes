@@ -5,7 +5,13 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -37,7 +43,18 @@ jobs:
         env:
           SITE_URL: ${{ vars.SITE_URL }}
 
-      - name: deploy
-        uses: JamesIves/github-pages-deploy-action@v4
+      - name: upload artifact
+        uses: actions/upload-pages-artifact@v5
         with:
-          folder: dist
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
