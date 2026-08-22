@@ -222,7 +222,7 @@ function mixed(numbers: string[], names: readonly string[]): string[] {
 }
 
 const YEAR_VALUES = YEARS.map(String);
-const MONTH_VALUES = mixed(counting(1, 12), MONTH_NAMES);
+const MONTH_VALUES = [...MONTH_NAMES, ...counting(1, 12)];
 const DAY_VALUES = mixed(counting(1, 31), WEEKDAY_NAMES);
 
 /**
