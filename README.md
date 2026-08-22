@@ -39,6 +39,19 @@ yarn install
 yarn build
 ```
 
+### Domain
+
+The site's own URL is optional at build time. Set `SITE_URL` to have the build
+emit the `og:url` meta tag, a `robots.txt` sitemap pointer, `sitemap.xml`,
+and a `CNAME` file for a GitHub Pages custom domain.
+
+```sh
+cp .env.sample .env
+# then edit .env and uncomment/set SITE_URL
+```
+
+Leave `SITE_URL` unset to build without those files.
+
 ### Images
 
 Comic strip images go in `assets/comics/` named by date as `YYYYMMDD.ext` (e.g. `assets/comics/19851118.gif`). Collection cover images go directly in `assets/` (e.g. `assets/book1.png`). The webpack build discovers these automatically and copies them into `dist/assets/`.

@@ -28,11 +28,17 @@ jobs:
       - name: test
         run: yarn test
 
+      - name: check site url
+        run: |
+          if [ -z "${{ vars.SITE_URL }}" ]; then
+            echo "::error::SITE_URL is not set. Add it under Settings > Secrets and variables > Actions > Variables."
+            exit 1
+          fi
+
       - name: build
         run: yarn build
-
-      - name: cname
-        run: echo "${{ secrets.CNAME }}" > dist/CNAME
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
 
       - name: deploy
         uses: JamesIves/github-pages-deploy-action@v4

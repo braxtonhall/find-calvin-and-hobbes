@@ -3,9 +3,12 @@ import { Configuration, WebpackOptionsNormalized } from "webpack";
 import HtmlWebpackPlugin from "html-webpack-plugin";
 import HtmlInlineScriptPlugin from "html-inline-script-webpack-plugin";
 import CopyWebpackPlugin from "copy-webpack-plugin";
+import SiteFilesPlugin from "./build-chain/SiteFilesPlugin";
+import { loadSiteConfig } from "./build-chain/siteConfig";
 import YamlToJsonPlugin from "./build-chain/YamlToJsonPlugin";
 
 const srcDir = path.join(__dirname, "src");
+const staticDir = path.join(__dirname, "static");
 const outputDir = path.join(__dirname, "dist");
 
 module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configuration => ({
@@ -49,9 +52,11 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 			template: path.join(srcDir, "index.html"),
 			chunks: ["index"],
 			cache: false,
+			templateParameters: () => ({ siteUrl: loadSiteConfig()?.siteUrl ?? "" }),
 		}),
 		new HtmlInlineScriptPlugin({
 			scriptMatchPattern: [/index/],
 		}),
+		new SiteFilesPlugin(staticDir),
 	],
 });

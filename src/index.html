@@ -22,7 +22,9 @@
 			property="og:image"
 			content="https://upload.wikimedia.org/wikipedia/commons/9/96/Calvin_and_Hobbes_title.png"
 		/>
-		<meta property="og:url" content="https://findcalvinandhobbes.com/" />
+		<% if (siteUrl) { %>
+		<meta property="og:url" content="<%= siteUrl %>/" />
+		<% } %>
 		<meta name="twitter:card" content="summary" />
 	</head>
 	<body>
