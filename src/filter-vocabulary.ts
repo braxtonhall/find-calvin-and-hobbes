@@ -2,13 +2,13 @@
  * The values of a filter whose vocabulary arrives with the archive.
  *
  * `@year:` and `@month:` know their values from a constant; `@in:` cannot. The books are loaded
- * data, and three separate places need to agree about them: the parser in `date-query.ts`, which
+ * data, and three separate places need to agree about them: the parser in `filter-query.ts`, which
  * decides whether `@in:snowman` is a mistake; the completion menu, which offers the ids and their
  * titles; and the filter bar, which fills a dropdown with them. None of the three may fetch
  * anything, so the list is injected here once at boot and read from this one place — the same
  * reasoning `filter-spec.ts` gives for being the single table of filter names.
  *
- * Dependency-free, and for the same reason that file is: `date-query.ts` imports it, so anything
+ * Dependency-free, and for the same reason that file is: `filter-query.ts` imports it, so anything
  * here that reached back into the parser would be a cycle.
  *
  * One rule runs through it:

@@ -1,4 +1,4 @@
-import { FilterMatch, parseQueryFilters, scanFilters } from "./date-query";
+import { FilterMatch, parseQueryFilters, scanFilters } from "./filter-query";
 import { terms } from "./filter-vocabulary";
 import { MONTH_NAMES, YEARS } from "./vocabulary";
 

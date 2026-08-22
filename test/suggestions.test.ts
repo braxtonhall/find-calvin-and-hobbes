@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { SUGGESTED_QUERIES, randomQuery } from "../src/suggestions";
-import { parseQueryFilters } from "../src/date-query";
+import { parseQueryFilters } from "../src/filter-query";
 import { registerVocabulary } from "../src/filter-vocabulary";
 import { loadCollectionData } from "../build-chain/collectionPages";
 import { generateCollectionIndex } from "../build-chain/generateCollectionIndex";

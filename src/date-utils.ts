@@ -71,6 +71,11 @@ export function lastDayOf(year: number, month: number): number {
 	return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
+/** Which day of the week an ISO date fell on, 0 for Sunday. */
+export function weekdayOf(date: string): number {
+	return new Date(`${date}T00:00:00Z`).getUTCDay();
+}
+
 export function dateToString(year: number, month: number, day: number): string {
 	return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }

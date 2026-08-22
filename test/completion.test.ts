@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { Completion, Row, completionsAt, describeInvalid, filterSpans } from "../src/completion";
 import { FILTER_SPECS } from "../src/filter-spec";
 import { registerVocabulary } from "../src/filter-vocabulary";
-import { parseQueryFilters, passesFilters, scanFilters } from "../src/date-query";
+import { parseQueryFilters, passesFilters, scanFilters } from "../src/filter-query";
 import { RANGE_END, RANGE_START } from "../src/constants";
 import { isSabbatical } from "../src/date-utils";
 import { MONTH_NAMES, WEEKDAY_NAMES, YEARS } from "../src/vocabulary";

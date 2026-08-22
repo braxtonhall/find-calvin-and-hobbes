@@ -7,8 +7,8 @@ import { MONTHS, WEEKDAYS } from "./date-query";
  *
  * Both the filter bar and the completion menu need these lists — the bar to put a row in a
  * dropdown, the menu to offer a value to accept — and neither should be the one that owns them.
- * Not in `filter-spec.ts`, which is dependency-free on purpose because `date-query.ts` imports it;
- * this module is downstream of the parser instead, and derives rather than restates.
+ * Not in `filter-spec.ts`, which is dependency-free on purpose because `filter-query.ts` imports it;
+ * this module is downstream of the parsers instead, and derives rather than restates.
  */
 
 const FIRST_YEAR = Number(RANGE_START.slice(0, 4));

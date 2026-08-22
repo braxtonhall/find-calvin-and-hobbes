@@ -2,15 +2,8 @@ import { Comic, SortMode } from "./types";
 import { state } from "./state";
 import { COMPOUNDS } from "./compounds";
 import { stem } from "./stem";
-import {
-	DateExpression,
-	QueryFilters,
-	DatePrecision,
-	matchesExpression,
-	parseDateExpression,
-	parseQueryFilters,
-	passesFilters,
-} from "./date-query";
+import { DateExpression, DatePrecision, matchesExpression, parseDateExpression } from "./date-query";
+import { QueryFilters, parseQueryFilters, passesFilters } from "./filter-query";
 
 export interface SearchResult {
 	comic: Comic;
@@ -190,7 +183,7 @@ export const TUNING: Tuning = {
  * What a date match is worth, by how precisely the reader named the date.
  *
  * Deliberately not part of `Tuning`. Every number in that block is measured against
- * `test/fixtures`, and no query in either fixture contains a date — `test/date-query.test.ts`
+ * `test/fixtures`, and no query in either fixture contains a date — `test/filter-query.test.ts`
  * asserts as much — so `test/tune.ts` would be sweeping these against noise. They are calibrated
  * against the range text scores actually reach instead, which is a different kind of evidence and
  * belongs somewhere else. Do not add them to `CANDIDATES`.

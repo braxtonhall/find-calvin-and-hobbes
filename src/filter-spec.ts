@@ -1,12 +1,12 @@
 /**
  * The `@name:value` vocabulary, as data.
  *
- * Three things need to agree about what a filter is: the parser in `date-query.ts`, the
+ * Three things need to agree about what a filter is: the parser in `filter-query.ts`, the
  * autocomplete menu, and the validation note under the search box. This table is what they agree
  * on, so adding a filter is an edit here plus a branch in `applyFilter` — never a third copy of
  * the name list.
  *
- * Deliberately dependency-free. `date-query.ts` imports it to derive its own name sets, so
+ * Deliberately dependency-free. `filter-query.ts` imports it to derive its own name sets, so
  * anything here that reached back into the parser would be a cycle. The predicates that decide
  * whether a half-typed value fits a template therefore live in `completion.ts`, which is allowed
  * to know about both.

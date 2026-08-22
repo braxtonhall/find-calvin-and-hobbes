@@ -22,7 +22,8 @@
  */
 
 import { RANGE_END, RANGE_START } from "./constants";
-import { FilterMatch, MONTHS, WEEKDAYS, parseDateExpression, scanFilters } from "./date-query";
+import { MONTHS, WEEKDAYS, parseDateExpression } from "./date-query";
+import { FilterMatch, scanFilters } from "./filter-query";
 import { dateToString, isSabbatical, lastDayOf } from "./date-utils";
 import { FILTER_SPECS, FilterSpec, ValueTemplate, filterSpec } from "./filter-spec";
 import { terms } from "./filter-vocabulary";
