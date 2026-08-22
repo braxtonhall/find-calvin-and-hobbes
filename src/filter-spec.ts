@@ -31,6 +31,12 @@ export interface FilterSpec {
 	hint: string;
 	/** Empty for a flag. Order is the order the menu shows them in. */
 	templates: readonly ValueTemplate[];
+	/**
+	 * The values are a vocabulary that arrives with the archive rather than a shape spelled out
+	 * here, so the menu asks `filter-vocabulary.ts` what they are and the "could this still become
+	 * that" predicates defer to it. Still no dependency: this is a flag, not a list.
+	 */
+	vocabulary?: true;
 }
 
 const YEAR_FIRST: readonly ValueTemplate[] = [
@@ -41,7 +47,9 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
 
 /**
  * Ordered as a reader would reach for them — the three calendar fields, then the date forms, then
- * the bounds, then the two flags. Not alphabetically: `@after` is not the thing to meet first.
+ * the bounds, then the two flags, and last the one filter that is not about time at all. Not
+ * alphabetically: `@after` is not the thing to meet first, and `@in` is not the thing to meet
+ * second.
  */
 export const FILTER_SPECS: readonly FilterSpec[] = [
 	{
@@ -91,6 +99,15 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 	},
 	{ name: "sunday", kind: "flag", hint: "Sunday strips only", templates: [] },
 	{ name: "daily", kind: "flag", hint: "Weekday strips only", templates: [] },
+	{
+		// The value is the book's id rather than its title, because `scanFilters` takes no spaces —
+		// so the label is the word `book` and the title rides along as each row's hint instead.
+		name: "in",
+		kind: "valued",
+		hint: "Strips printed in one book",
+		vocabulary: true,
+		templates: [{ label: "book", hint: "a book of the archive" }],
+	},
 ];
 
 const BY_NAME = new Map(FILTER_SPECS.map((spec) => [spec.name, spec]));

@@ -8,8 +8,26 @@ import {
 	passesFilters,
 	scanFilters,
 } from "../src/date-query";
+import { registerVocabulary } from "../src/filter-vocabulary";
+import { Comic } from "../src/types";
 import { DESCRIBED, RECITED } from "./fixtures/golden";
 import { loadGenerated } from "./helpers/queries";
+
+/**
+ * The books `@in:` is allowed to name, for the whole file.
+ *
+ * Registered here rather than per case because the parser is otherwise data-free, and this is the
+ * one filter it is not: a value off the list is a mistake, and there is no list until something says
+ * so. The one case that cares about the other state — nothing registered yet — swaps in an empty
+ * list of its own and puts this one back.
+ */
+const BOOKS = ["book1", "book3", "book5", "lazysunday"].map((value) => ({ value, hint: value }));
+registerVocabulary("in", () => BOOKS);
+
+/** A strip, for the one filter a date cannot answer. */
+function strip(date: string, ...books: string[]): Comic {
+	return { date, transcript: "", appearances: books.map((collection) => ({ collection, pages: [] })) };
+}
 
 function parsed(query: string): DateExpression {
 	const expression = parseDateExpression(query);
@@ -173,6 +191,73 @@ test("filters", async (suite) => {
 		}
 	});
 
+	await suite.test("@in names a book by its id", () => {
+		const { filters } = parseDateFilters("@in:book3");
+		assert.deepEqual([...filters!.collections], ["book3"]);
+		// Nothing about a book is a date, so no calendar field hears it.
+		assert.equal(filters!.years.size + filters!.months.size + filters!.monthDays.size, 0);
+		assert.deepEqual([...parseDateFilters("@IN:BOOK3").filters!.collections], ["book3"]);
+	});
+
+	await suite.test("books of one filter union", () => {
+		const { filters } = parseDateFilters("@in:book1 @in:book3");
+		assert.deepEqual([...filters!.collections].sort(), ["book1", "book3"]);
+		assert.ok(passesFilters(strip("1988-06-01", "book1"), filters!));
+		assert.ok(passesFilters(strip("1988-06-01", "book3"), filters!));
+		assert.ok(!passesFilters(strip("1988-06-01", "book5"), filters!));
+	});
+
+	await suite.test("a book intersects a date", () => {
+		const { filters } = parseDateFilters("@in:book3 @year:1988");
+		assert.ok(passesFilters(strip("1988-06-01", "book3"), filters!));
+		assert.ok(!passesFilters(strip("1989-06-01", "book3"), filters!));
+		assert.ok(!passesFilters(strip("1988-06-01", "book5"), filters!));
+	});
+
+	// A strip is usually in several books at once, and any one of them answers for it.
+	await suite.test("a strip in several books answers for each of them", () => {
+		const printed = strip("1988-06-01", "book3", "lazysunday");
+		assert.ok(passesFilters(printed, parseDateFilters("@in:book3").filters!));
+		assert.ok(passesFilters(printed, parseDateFilters("@in:lazysunday").filters!));
+		assert.ok(!passesFilters(printed, parseDateFilters("@in:book1").filters!));
+	});
+
+	await suite.test("a strip in no book at all is in no book", () => {
+		const loose: Comic = { date: "1985-11-28", transcript: "" };
+		assert.ok(!passesFilters(loose, parseDateFilters("@in:book3").filters!));
+		assert.ok(passesFilters(loose, parseDateFilters("@year:1985").filters!));
+	});
+
+	/*
+	 * The subject of `passesFilters` widened so that `@in:` could be answered at all, and this is
+	 * what keeps that from quietly changing the seven filters that came before it: a date still
+	 * answers every one of them. It cannot answer `@in:`, and says so rather than guessing — two
+	 * strips ran on 1985-11-28 and only one is in a book, so a day cannot decide it even in
+	 * principle.
+	 */
+	await suite.test("a date still answers every filter that is about dates", () => {
+		assert.ok(passesFilters("1988-08-03", parseDateFilters("@year:1988 @month:aug").filters!));
+		assert.ok(!passesFilters("1988-08-03", parseDateFilters("@in:book3").filters!));
+	});
+
+	/*
+	 * The books arrive over the network, after the box is already typeable, and that fetch can
+	 * fail. A parser holding `@in:book3` to a list that had not arrived would call a reader's own
+	 * query a mistake and then take it back — so an empty list means "no opinion", and the filter
+	 * goes on working either way, because membership is read off the strips and not off the index.
+	 */
+	await suite.test("with no books registered, any book is taken on trust", () => {
+		try {
+			registerVocabulary("in", () => []);
+			const { filters } = parseDateFilters("@in:whatever");
+			assert.ok(!filters!.impossible);
+			assert.ok(passesFilters(strip("1988-06-01", "whatever"), filters!));
+			assert.ok(!passesFilters(strip("1988-06-01", "book3"), filters!));
+		} finally {
+			registerVocabulary("in", () => BOOKS);
+		}
+	});
+
 	await suite.test("values of one field union", () => {
 		const { filters } = parseDateFilters("@year:1988 @year:1989");
 		assert.deepEqual([...filters!.years].sort(), [1988, 1989]);
@@ -322,8 +407,12 @@ test("filters", async (suite) => {
 			"@day:32",
 			"@day:funday",
 			"@before:august-3",
+			// A book that is not one of the archive's is a typo rather than a place to look — unlike
+			// `@year:2001`, which is a real coordinate that honestly holds nothing.
 			"@sunday:yes",
 			"@year",
+			"@in",
+			"@in:snowman",
 		]) {
 			assert.ok(parseDateFilters(query).filters!.impossible, query);
 			assert.ok(!passesFilters("1988-08-03", parseDateFilters(query).filters!), query);
@@ -408,6 +497,8 @@ test("scanning filters", async (suite) => {
 			"@before:august-3",
 			"@sunday:yes",
 			"@year",
+			"@in",
+			"@in:snowman",
 		]) {
 			const matches = scanFilters(query);
 			assert.equal(matches.length, 1, query);

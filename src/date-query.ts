@@ -1,9 +1,16 @@
 import { RANGE_END, RANGE_START } from "./constants";
 import { dateToString, lastDayOf } from "./date-utils";
 import { FILTER_SPECS } from "./filter-spec";
+import { knows } from "./filter-vocabulary";
+import { Comic } from "./types";
 
 /**
- * Searching by when a strip ran rather than by what it says.
+ * Reading the query for everything that is not a word to look up.
+ *
+ * Almost all of it is about when a strip ran rather than what it says, and the file is named for
+ * that. `@in:` is the exception — where a strip was *printed* is not a date at all — so the shared
+ * machinery below (the one scanner, the one notion of a usable value, the one predicate) is the
+ * whole `@name:value` vocabulary, of which the date filters are most but no longer all.
  *
  * Two mechanisms live here, and they are deliberately different things. `parseDateExpression`
  * answers "is this whole query a date", which is what a reader who types `august 3 1988` means;
@@ -413,6 +420,11 @@ export interface DateFilters {
 	months: Set<number>;
 	monthDays: Set<number>;
 	weekdays: Set<number>;
+	/**
+	 * The books a strip was printed in — a field like any other, and the one field here that is not
+	 * a fact about the day. See `printedIn` for why that costs `passesFilters` its date-only subject.
+	 */
+	collections: Set<string>;
 	windows: DateExpression[];
 	/** Strictly after this date, and strictly before the other — see `parseDateFilters`. */
 	after: string | null;
@@ -435,6 +447,7 @@ function emptyFilters(): DateFilters {
 		months: new Set(),
 		monthDays: new Set(),
 		weekdays: new Set(),
+		collections: new Set(),
 		windows: [],
 		after: null,
 		before: null,
@@ -501,6 +514,17 @@ function applyFilter(filters: DateFilters, name: string, value: string | undefin
 		}
 		const monthDay = /^\d{1,2}$/.test(value) ? Number(value) : NaN;
 		if (monthDay >= 1 && monthDay <= 31) filters.monthDays.add(monthDay);
+		else filters.impossible = true;
+		return;
+	}
+
+	if (name === "in") {
+		// A book the archive does not have is a typo rather than a place to look — unlike
+		// `@year:2001`, which is a real coordinate that honestly holds nothing. The difference is
+		// that a year is an open domain and the books are a closed vocabulary of proper nouns, so
+		// being off the list is evidence of a mistake. Until the list arrives every id is taken on
+		// trust; see `knows`, where that is the whole point rather than a concession.
+		if (knows("in", value)) filters.collections.add(value);
 		else filters.impossible = true;
 		return;
 	}
@@ -620,8 +644,29 @@ export function parseDateFilters(text: string): { filters: DateFilters | null; r
 	return { filters, residual: segments.join(" "), segments };
 }
 
-export function passesFilters(date: string, filters: DateFilters): boolean {
+/**
+ * Where a strip was printed, which only a strip can answer.
+ *
+ * A date cannot stand in for one, and returning false rather than true is the honest reading of
+ * that: two strips ran on 1985-11-28 and only one of them is in any book, so a day is not enough to
+ * decide the question even in principle. A caller with a date in hand and an `@in:` filter to
+ * satisfy is asking something it has not brought the evidence for.
+ */
+function printedIn(subject: string | Comic, wanted: Set<string>): boolean {
+	if (typeof subject === "string") return false;
+	return (subject.appearances ?? []).some((appearance) => wanted.has(appearance.collection));
+}
+
+/**
+ * Whether one strip survives the filters.
+ *
+ * The subject is a strip or, where every filter in play is about the calendar, just the day it ran
+ * on — which every caller here in the search pipeline could give, and which the tests and the
+ * completion menu still do. `@in:` is the one field that wants more than the date; see `printedIn`.
+ */
+export function passesFilters(subject: string | Comic, filters: DateFilters): boolean {
 	if (filters.impossible) return false;
+	const date = typeof subject === "string" ? subject : subject.date;
 	if (filters.years.size > 0 && !filters.years.has(Number(date.slice(0, 4)))) return false;
 	if (filters.months.size > 0 && !filters.months.has(Number(date.slice(5, 7)))) return false;
 	if (filters.monthDays.size > 0 && !filters.monthDays.has(Number(date.slice(8, 10)))) return false;
@@ -629,5 +674,5 @@ export function passesFilters(date: string, filters: DateFilters): boolean {
 	if (filters.windows.length > 0 && !filters.windows.some((window) => matchesExpression(window, date))) return false;
 	if (filters.after !== null && date <= filters.after) return false;
 	if (filters.before !== null && date >= filters.before) return false;
-	return true;
+	return !(filters.collections.size > 0 && !printedIn(subject, filters.collections));
 }

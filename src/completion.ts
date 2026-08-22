@@ -15,12 +15,17 @@
  * is there: `RANGE_START`, `RANGE_END` and `SABBATICALS` are static constants, so nothing about
  * reading them costs this module its purity. The comic index — which individual days are missing —
  * is data, and stays out.
+ *
+ * The books are data too, and they do not stay out — but they arrive through `filter-vocabulary.ts`
+ * rather than being imported, so the purity survives: with nothing registered every list is empty,
+ * which is a state this file handles anyway and every test here runs in.
  */
 
 import { RANGE_END, RANGE_START } from "./constants";
 import { FilterMatch, MONTHS, WEEKDAYS, parseDateExpression, scanFilters } from "./date-query";
 import { dateToString, isSabbatical, lastDayOf } from "./date-utils";
 import { FILTER_SPECS, FilterSpec, ValueTemplate, filterSpec } from "./filter-spec";
+import { terms } from "./filter-vocabulary";
 import { MONTH_NAMES, WEEKDAY_NAMES, YEARS } from "./vocabulary";
 
 /** One row of the menu. */
@@ -77,6 +82,18 @@ function open(digits: string, field: Field): boolean {
 	return /^\d+$/.test(digits) && Number(digits + "0") <= field.high;
 }
 
+/**
+ * Whether typing more could turn this into one of a vocabulary's values.
+ *
+ * An empty value always could: a filter that has been named and not yet valued is not a mistake
+ * yet, whatever list it draws from. That is what keeps the pending pill on `@in:` before the
+ * archive's index has arrived, and it is the same benefit of the doubt `open("")` gives `@year:`.
+ */
+function beginsATerm(spec: FilterSpec, value: string): boolean {
+	if (value === "") return true;
+	return terms(spec.name).some((term) => term.value.length > value.length && term.value.startsWith(value));
+}
+
 /** Whether a name slot could still be typed out into one of the names it takes. */
 function beginsAName(names: Map<string, number>, value: string): boolean {
 	for (const name of names.keys()) {
@@ -122,6 +139,7 @@ function beginsADate(value: string, fields: number): boolean {
  * `@year:19` is both a legitimate two-digit year and the start of a four-digit one.
  */
 function begins(spec: FilterSpec, template: ValueTemplate, value: string): boolean {
+	if (spec.vocabulary === true) return beginsATerm(spec, value);
 	if (spec.name === "year") return open(value, template.label === "YYYY" ? YEAR_LONG : YEAR_SHORT);
 	if (spec.name === "month") return template.label === "MM" ? open(value, MONTH) : beginsAName(MONTHS, value);
 	if (spec.name === "day") return template.label === "DD" ? open(value, MONTH_DAY) : beginsAName(WEEKDAYS, value);
@@ -147,6 +165,9 @@ function inRange(value: string, low: number, high: number): boolean {
  * three slots all the same.
  */
 function fills(spec: FilterSpec, template: ValueTemplate, value: string): boolean {
+	// A listed value is filled by being on the list. There is no shape to measure it against,
+	// because the list is the whole of what the vocabulary is — and an empty value is on no list.
+	if (spec.vocabulary === true) return terms(spec.name).some((term) => term.value === value);
 	if (value === "") return false;
 	// A trailing separator has begun a field that has not been filled. The parser reads `1988/` as
 	// the year 1988 and the pill says so, but there is nothing finished here to offer to accept.
@@ -191,9 +212,6 @@ const VALUE_LIMIT = 40;
  */
 const MIXED_LEAD = 3;
 
-/** The values a filter takes, in the order the menu offers them. */
-export type Candidates = () => readonly string[];
-
 function counting(from: number, to: number): string[] {
 	return Array.from({ length: to - from + 1 }, (_, offset) => String(from + offset));
 }
@@ -209,22 +227,16 @@ const DAY_VALUES = mixed(counting(1, 31), WEEKDAY_NAMES);
 /**
  * Which filters have a list of values to offer, as against the ones built a field at a time.
  *
- * A thunk rather than an array because of what is coming: a filter over collection names has ~29
- * proper nouns for values and is unusable without completion, and those names are loaded data that
- * this module cannot import without giving up being pure. So the list is asked for when the menu
- * opens, and a filter whose values arrive with the archive registers them from the app's boot —
- * with no edit here, and with nothing to register in a test.
+ * Every list here is derived from a constant, so it can be an array. The other kind — a vocabulary
+ * of proper nouns that arrives with the archive, which this module cannot import without giving up
+ * being pure — lives behind `filter-vocabulary.ts` and is reached through `spec.vocabulary`
+ * instead. That is the filter this file was once anticipating; it has arrived, and it is `@in`.
  */
-const CANDIDATES = new Map<string, Candidates>([
-	["year", () => YEAR_VALUES],
-	["month", () => MONTH_VALUES],
-	["day", () => DAY_VALUES],
+const CANDIDATES = new Map<string, readonly string[]>([
+	["year", YEAR_VALUES],
+	["month", MONTH_VALUES],
+	["day", DAY_VALUES],
 ]);
-
-/** Teach the menu a filter's values, for a vocabulary that arrives with the data. */
-export function registerCandidates(name: string, candidates: Candidates): void {
-	CANDIDATES.set(name, candidates);
-}
 
 /**
  * Every spelling a value answers to.
@@ -378,6 +390,8 @@ interface Offer {
 	value: string;
 	/** The shape it is an example of, whose hint the row carries. */
 	shape?: ValueTemplate;
+	/** A hint the value brought with it, which outranks the shape's — see `rowsFor`. */
+	hint?: string;
 	/**
 	 * Whether accepting it finishes the filter off.
 	 *
@@ -399,15 +413,19 @@ function rowsFor(spec: FilterSpec, offers: Offer[]): Row[] {
 	const rows: Row[] = [];
 	let said = "";
 	for (const offer of offers.slice(0, VALUE_LIMIT)) {
-		const hint = offer.shape?.hint ?? spec.hint;
+		const shared = offer.shape?.hint ?? spec.hint;
+		// A hint the value brought with it is never repetition — it is the value's own name, and the
+		// dedupe would have two books with similar titles blank each other out, leaving the second
+		// reading as though it belonged to the row above. Only a shape's hint is said once per run.
+		const hint = offer.hint ?? (shared === said ? "" : shared);
 		rows.push({
 			name: spec.name,
 			template: offer.shape?.label,
 			value: offer.value,
-			hint: hint === said ? "" : hint,
+			hint,
 			insert: `@${spec.name}:${offer.value}${offer.commits ? " " : ""}`,
 		});
-		said = hint;
+		said = offer.hint ?? shared;
 	}
 	return rows;
 }
@@ -488,9 +506,22 @@ function builtOffers(spec: FilterSpec, value: string, parses: boolean): Offer[] 
  * back to someone who can do nothing with them.
  */
 function valueRows(spec: FilterSpec, value: string, parses: boolean): Row[] {
+	if (spec.vocabulary === true) {
+		// Every value is a leaf and every one is real, so there is no shape to carry and nothing to
+		// fall back on: a value on no list gets no row at all, and the menu closes. That is the right
+		// answer for `@in:snowman` and the same news the red pill carries — and it is the opposite of
+		// what `@year:2001` gets, because a year outside the archive is still a year.
+		return rowsFor(
+			spec,
+			terms(spec.name)
+				.filter((term) => term.value.startsWith(value))
+				.map((term) => ({ value: term.value, hint: term.hint, commits: true })),
+		);
+	}
+
 	const candidates = CANDIDATES.get(spec.name);
 	if (candidates !== undefined) {
-		const offers = listedOffers(spec, candidates(), value);
+		const offers = listedOffers(spec, candidates, value);
 		// Nothing on the list fits, which is usually a value nothing would fit — but not always,
 		// and `@year:2001` is the exception `builtOffers` explains.
 		const shape = spec.templates.find((template) => parses && fills(spec, template, value));
@@ -652,5 +683,7 @@ export function describeInvalid(match: FilterMatch): string {
 
 	const shapes = spec.templates.map((template) => template.label).join(" or ");
 	if (match.value === undefined) return `@${spec.name} needs a value — ${shapes}`;
+	// "expected book" would be true and useless. A vocabulary is never malformed, only unheard of.
+	if (spec.vocabulary === true) return `@${spec.name}:${match.value} — not a ${shapes} the archive has`;
 	return `@${spec.name}:${match.value} — expected ${shapes}`;
 }

@@ -24,6 +24,9 @@ const SOURCE_LABELS: Record<SearchResult["source"], string> = {
 	transcript: "",
 	description: "Description",
 	date: "Date",
+	// Nothing: a filter-only query is every row it let through, so a badge on all of them says only
+	// what the query in the box above already says, and `@in:book3` rows are not date matches.
+	filter: "",
 };
 
 /**

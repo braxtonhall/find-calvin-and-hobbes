@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { search, TUNING, Tuning } from "../src/search";
+import { registerVocabulary } from "../src/filter-vocabulary";
 import { buildArchive, Entry, install } from "./helpers/archive";
 
 function ranked(query: string, tuning?: Tuning): string[] {
@@ -621,7 +622,9 @@ test("a filter with nothing beside it returns everything it passes", () => {
 	install(buildArchive(DATED));
 	assert.deepEqual(ranked("@year:1988").sort(), ["1988-08-03", "1988-08-10", "1988-10-27"]);
 	for (const date of ranked("@year:1988")) {
-		assert.equal(sourceOf("@year:1988", date), "date");
+		// `filter` rather than `date`: these rows are what the filters let through, not strips whose
+		// date the reader named. The distinction is invisible here and load-bearing for `@in:`.
+		assert.equal(sourceOf("@year:1988", date), "filter");
 	}
 	assert.deepEqual(ranked("@month:8 @day:3").sort(), ["1988-08-03", "1989-08-03"]);
 	assert.deepEqual(ranked("@year:1988 @day:wednesday").sort(), ["1988-08-03", "1988-08-10"]);
@@ -681,4 +684,52 @@ test("a filter in the middle of a query breaks the contiguous-phrase bonus", () 
 	// A leading filter leaves one segment, so there is no break and nothing changes.
 	assert.equal(scoreOf("@year:1988 clean your room", "1988-01-01"), scoreOf(phrase, "1988-01-01"));
 	assert.equal(scoreOf("@year:1988 clean your room", "1988-01-02"), scoreOf(phrase, "1988-01-02"));
+});
+
+/**
+ * `@in:`, which is the one filter that asks about a strip rather than about the day it ran.
+ *
+ * Both paths through `search` are covered here, because they reach the predicate differently: a
+ * filter with nothing beside it walks the index directly, while a filter beside a word narrows
+ * whatever the text search returned. Filler strips are printed in nothing, so they cannot leak in.
+ */
+test("a filter over the books a strip was printed in", () => {
+	const PRINTED: Entry[] = [
+		{ date: "1988-08-03", transcript: "A tiger in the snow.", books: ["book3", "complete"] },
+		{ date: "1988-08-10", transcript: "A tiger on the sidewalk.", books: ["complete"] },
+		{ date: "1989-08-03", transcript: "A tiger in the snow again.", books: ["book4", "complete"] },
+		{ date: "1990-08-03", transcript: "A tiger nobody reprinted." },
+	];
+	const BOOKS = ["book3", "book4", "complete"].map((value) => ({ value, hint: value }));
+
+	install(buildArchive(PRINTED));
+	try {
+		registerVocabulary("in", () => BOOKS);
+
+		// The filter is the whole query, so every strip that passes it is a row.
+		assert.deepEqual(ranked("@in:book3"), ["1988-08-03"]);
+		assert.deepEqual(ranked("@in:complete").sort(), ["1988-08-03", "1988-08-10", "1989-08-03"]);
+		assert.equal(sourceOf("@in:book3", "1988-08-03"), "filter");
+
+		// Beside a word it narrows what the text search found, and adds nothing to it.
+		assert.deepEqual(ranked("@in:book3 tiger"), ["1988-08-03"]);
+		assert.ok(ranked("tiger").length > ranked("@in:book3 tiger").length);
+
+		// One filter, two books: the values union, exactly as two years do.
+		assert.deepEqual(ranked("@in:book3 @in:book4").sort(), ["1988-08-03", "1989-08-03"]);
+
+		// Two filters: the fields intersect.
+		assert.deepEqual(ranked("@in:complete @year:1989"), ["1989-08-03"]);
+		assert.deepEqual(ranked("@in:book3 @year:1989"), []);
+
+		// A strip in no book is in no book, however much of the query it otherwise answers.
+		assert.deepEqual(ranked("@in:complete @year:1990"), []);
+		assert.deepEqual(ranked("@year:1990 tiger"), ["1990-08-03"]);
+
+		// A book the archive does not have is a filter nothing satisfies, not a search for a word.
+		assert.deepEqual(ranked("@in:snowman"), []);
+		assert.deepEqual(ranked("@in:snowman tiger"), []);
+	} finally {
+		registerVocabulary("in", () => []);
+	}
 });

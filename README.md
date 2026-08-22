@@ -16,10 +16,16 @@ Type words to search transcripts. Type `@` in the search box for the list of fil
 | `@after:`  | `@after:1987`                  | strips after that date, excluding it     |
 | `@sunday`  |                                | Sunday strips only                       |
 | `@daily`   |                                | weekday strips only                      |
+| `@in:`     | `@in:book3`, `@in:complete`    | strips printed in that book              |
 
 Repeating a filter widens; combining different ones narrows. `@day:saturday @day:sunday` is the
 weekend, while `@day:1 @day:monday` is the Mondays that fell on the first. Filters combine with
 ordinary words, so `@year:1988 snowman` searches 1988 alone.
+
+`@in:` takes a book's id rather than its title, because a filter value takes no spaces. Type `@in:`
+and the menu lists every book the archive indexes with its title beside it, so `@in:book3` is _Yukon
+Ho!_ and `@in:complete` is the whole Complete. A book that is not on that list matches nothing and
+says so.
 
 Filter values are read year first — `@date:1988/9/3` is September 3rd, never March 9th — and take
 no spaces. A bare date typed on its own is understood without any `@`, as long as it starts from

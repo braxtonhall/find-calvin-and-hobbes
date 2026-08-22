@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Completion, Row, completionsAt, describeInvalid, filterSpans, registerCandidates } from "../src/completion";
+import { Completion, Row, completionsAt, describeInvalid, filterSpans } from "../src/completion";
 import { FILTER_SPECS } from "../src/filter-spec";
+import { registerVocabulary } from "../src/filter-vocabulary";
 import { parseDateFilters, passesFilters, scanFilters } from "../src/date-query";
 import { RANGE_END, RANGE_START } from "../src/constants";
 import { isSabbatical } from "../src/date-utils";
@@ -32,6 +33,11 @@ function completions(marked: string): (string | undefined)[] {
 /** What each row offers to write, which past the colon is the whole of what the reader sees. */
 function values(marked: string): (string | undefined)[] {
 	return (at(marked)?.rows ?? []).map((row) => row.value);
+}
+
+/** What each row says the value is, which for a vocabulary is the whole reason the row is legible. */
+function hints(marked: string): string[] {
+	return (at(marked)?.rows ?? []).map((row) => row.hint);
 }
 
 /** Only the rows of one shape, for the assertions that are about one field's worth of choices. */
@@ -432,15 +438,17 @@ test("how long the list gets", async (suite) => {
 		assert.equal(values("@date:1988/9|").length, 31);
 	});
 
+	// The cap exists for exactly this: a vocabulary that arrives with the data and turns out to be
+	// longer than any list the calendar could produce. Eighteen books are well under it; sixty are not.
 	await suite.test("a longer vocabulary than the calendar's is cut off", () => {
-		const many = Array.from({ length: 60 }, (_, index) => `19${index}`);
+		const many = Array.from({ length: 60 }, (_, index) => ({ value: `book${index}`, hint: `Book ${index}` }));
 		try {
-			registerCandidates("year", () => many);
-			assert.equal(values("@year:19|").length, 40);
+			registerVocabulary("in", () => many);
+			assert.equal(values("@in:book|").length, 40);
 		} finally {
-			registerCandidates("year", () => YEARS.map(String));
+			registerVocabulary("in", () => []);
 		}
-		assert.equal(values("@year:19|").length, YEARS.length);
+		assert.equal(at("@in:book|"), null);
 	});
 });
 
@@ -551,6 +559,9 @@ test("explaining a filter that will not work", async (suite) => {
 
 	await suite.test("a missing value says so", () => {
 		assert.equal(reason("@year"), "@year needs a value — YYYY or YY");
+		// True of a vocabulary too — a filter with no value has not reached the question of whether
+		// the value is one the archive has.
+		assert.equal(reason("@in"), "@in needs a value — book");
 	});
 
 	await suite.test("a flag carrying a value says so", () => {
@@ -594,5 +605,142 @@ test("finding the token", async (suite) => {
 	await suite.test("a token that is not a filter shape has no menu", () => {
 		assert.equal(at("@year1990|"), null);
 		assert.equal(at("email@example.com|"), null);
+	});
+});
+
+/**
+ * `@in:`, whose values are neither a shape nor a constant but the books of the archive.
+ *
+ * Every case registers them and puts the empty list back, and the reset is load-bearing rather
+ * than tidy: `everyValueOffered` above walks all of `FILTER_SPECS`, and `namesRealStrips` answers
+ * by date — so a registration left standing would have the menu offering `book3` to a test asking
+ * which day of the archive it names.
+ */
+test("a vocabulary that arrives with the data", async (suite) => {
+	const BOOKS = [
+		{ value: "book3", hint: "Yukon Ho!" },
+		{ value: "book4", hint: "Weirdos From Another Planet!" },
+		{ value: "complete", hint: "The Complete Calvin and Hobbes" },
+		{ value: "lazysunday", hint: "The Calvin and Hobbes Lazy Sunday Book" },
+	];
+
+	function withBooks(check: () => void): void {
+		try {
+			registerVocabulary("in", () => BOOKS);
+			check();
+		} finally {
+			registerVocabulary("in", () => []);
+		}
+	}
+
+	// The one row before the colon still shows a shape, because there is nothing to fill in yet —
+	// and `book` is a word rather than a slot, which is the whole of what the filter takes.
+	await suite.test("the name row says the filter takes a book", () => {
+		assert.deepEqual(names("@i|"), ["in"]);
+		assert.deepEqual(templates("@in|"), ["book"]);
+		assert.deepEqual(completions("@in|"), ["@in:"]);
+	});
+
+	await suite.test("a bare colon offers every book, in the order they were registered", () => {
+		withBooks(() => {
+			assert.deepEqual(values("@in:|"), ["book3", "book4", "complete", "lazysunday"]);
+		});
+	});
+
+	/*
+	 * The id is what the filter takes and the title is what a reader recognises, so the row has to
+	 * carry both. Which means the hint dedupe has to be off here: it exists so that twenty rows do
+	 * not all read "1 to 31, a day of the month", and a title is not that kind of hint. Two books
+	 * whose titles happened to match would otherwise blank the second one out, leaving it reading as
+	 * though it belonged to the row above — so a value's own hint is never treated as repetition.
+	 */
+	await suite.test("every row is hinted with its own book, not with the shape", () => {
+		withBooks(() => {
+			assert.deepEqual(
+				hints("@in:|"),
+				BOOKS.map((book) => book.hint),
+			);
+			assert.equal(
+				hints("@in:|").filter((hint) => hint === "").length,
+				0,
+				"a blanked hint would read as belonging to the row above",
+			);
+		});
+	});
+
+	await suite.test("a prefix narrows the list", () => {
+		withBooks(() => {
+			assert.deepEqual(values("@in:book|"), ["book3", "book4"]);
+			assert.deepEqual(values("@in:book3|"), ["book3"]);
+			assert.deepEqual(values("@in:c|"), ["complete"]);
+			assert.deepEqual(values("@in:l|"), ["lazysunday"]);
+		});
+	});
+
+	// Every book is a leaf: there is nothing deeper to reach, so accepting one finishes the filter
+	// off and brings the committing space with it.
+	await suite.test("accepting a book commits the filter", () => {
+		withBooks(() => {
+			assert.deepEqual(completions("@in:book3|"), ["@in:book3 "]);
+			assert.deepEqual(completions("@in:c|"), ["@in:complete "]);
+		});
+	});
+
+	/*
+	 * The opposite of what `@year:2001` gets, and deliberately: a year outside the archive is still
+	 * a year, so the menu offers it and it honestly matches nothing. A book that is not one of the
+	 * archive's is not a book at all, and a row offering it would be a row that could only lie.
+	 */
+	await suite.test("a value on no list is offered by nothing and closes the menu", () => {
+		withBooks(() => {
+			assert.equal(at("@in:snowman|"), null);
+			assert.equal(at("@in:book9|"), null);
+		});
+	});
+
+	await suite.test("the pill follows the book rather than a shape", () => {
+		withBooks(() => {
+			assert.deepEqual(spans("@in:book3|"), [["match", "@in:book3"]]);
+			// Half-typed under the caret: the name is settled and the rest is on its way to `book3`.
+			assert.deepEqual(spans("@in:boo|"), [
+				["name", "@in"],
+				["pending", ":boo"],
+			]);
+			// The same text with the caret elsewhere is the mistake it looks like.
+			assert.deepEqual(spans("@in:boo"), [["invalid", "@in:boo"]]);
+			assert.deepEqual(spans("@in:snowman"), [["invalid", "@in:snowman"]]);
+		});
+	});
+
+	await suite.test("a colon with nothing after it is pending, not wrong", () => {
+		withBooks(() => {
+			assert.deepEqual(spans("@in:|"), [
+				["name", "@in"],
+				["pending", ":"],
+			]);
+			assert.deepEqual(spans("@in:"), [["invalid", "@in:"]]);
+		});
+	});
+
+	await suite.test("the reason names the list rather than a shape", () => {
+		withBooks(() => {
+			const [broken] = filterSpans("@in:snowman", null);
+			assert.equal(broken.reason, "@in:snowman — not a book the archive has");
+		});
+	});
+
+	/*
+	 * The state every load starts in and a failed fetch stays in. The affordances go quiet — no
+	 * menu, and `views/filter-bar.ts` disables the button — but nothing calls the reader wrong, and
+	 * a pasted `@in:book3` goes on working, because membership is read off the strips rather than
+	 * off the index that did not arrive.
+	 */
+	await suite.test("before the books arrive, the filter is quiet rather than broken", () => {
+		assert.equal(at("@in:|"), null);
+		assert.equal(at("@in:book3|"), null);
+		// The name is still offered: it comes from the static table, not from the archive.
+		assert.deepEqual(templates("@in|"), ["book"]);
+		assert.deepEqual(spans("@in:book3|"), [["match", "@in:book3"]]);
+		assert.deepEqual(spans("@in:snowman|"), [["match", "@in:snowman"]]);
 	});
 });

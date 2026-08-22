@@ -1,6 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { registerVocabulary } from "../src/filter-vocabulary";
 import { FILTER_FIELDS, FilterField, clearField, insertToken, removeToken, selectedTokens } from "../src/query-edit";
+
+/**
+ * The `Book` field's rows are loaded data, so a test that wants them has to say so. Registered for
+ * the whole file rather than per case: nothing here depends on the field being empty, and the one
+ * case that does — a bar built before the archive arrived — registers an empty list of its own.
+ */
+const BOOKS = [
+	{ value: "book3", hint: "Yukon Ho!" },
+	{ value: "book4", hint: "Weirdos From Another Planet!" },
+	{ value: "lazysunday", hint: "The Calvin and Hobbes Lazy Sunday Book" },
+];
+
+registerVocabulary("in", () => BOOKS);
 
 function field(name: string): FilterField {
 	const found = FILTER_FIELDS.find((each) => each.name === name);
@@ -13,7 +27,10 @@ function checked(text: string): Record<string, string[]> {
 	const selected = selectedTokens(text);
 	const painted: Record<string, string[]> = {};
 	for (const each of FILTER_FIELDS) {
-		const labels = each.options.filter((option) => selected.has(option.token)).map((option) => option.label);
+		const labels = each
+			.options()
+			.filter((option) => selected.has(option.token))
+			.map((option) => option.label);
 		if (labels.length > 0) painted[each.name] = labels;
 	}
 	return painted;
@@ -23,7 +40,7 @@ test("the fields", async (suite) => {
 	await suite.test("no token is reachable from two dropdowns", () => {
 		const seen = new Set<string>();
 		for (const each of FILTER_FIELDS) {
-			for (const option of each.options) {
+			for (const option of each.options()) {
 				assert.equal(seen.has(option.token), false, `${option.token} twice`);
 				seen.add(option.token);
 			}
@@ -31,15 +48,38 @@ test("the fields", async (suite) => {
 	});
 
 	await suite.test("every value is one the archive could hold", () => {
-		assert.equal(field("year").options[0].label, "1985");
-		assert.equal(field("year").options.at(-1)!.label, "1995");
-		assert.equal(field("month").options.length, 12);
-		assert.equal(field("day").options.length, 31);
+		assert.equal(field("year").options()[0].label, "1985");
+		assert.equal(field("year").options().at(-1)!.label, "1995");
+		assert.equal(field("month").options().length, 12);
+		assert.equal(field("day").options().length, 31);
+	});
+
+	await suite.test("a book reads as its title and writes as its id", () => {
+		assert.deepEqual(field("book").options(), [
+			{ token: "@in:book3", label: "Yukon Ho!" },
+			{ token: "@in:book4", label: "Weirdos From Another Planet!" },
+			{ token: "@in:lazysunday", label: "The Calvin and Hobbes Lazy Sunday Book" },
+		]);
+	});
+
+	// The bar is built with the results view and the collection index lands after it, so this is the
+	// state every first paint is in — and `views/filter-bar.ts` reads it as a disabled button.
+	await suite.test("a field whose values have not arrived is empty rather than wrong", () => {
+		try {
+			registerVocabulary("in", () => []);
+			assert.deepEqual(field("book").options(), []);
+			assert.deepEqual(checked("@in:book3"), {});
+			assert.equal(insertToken("snowman", "@in:book3"), "snowman");
+		} finally {
+			registerVocabulary("in", () => BOOKS);
+		}
 	});
 
 	await suite.test("months are offered by their long spelling", () => {
 		assert.deepEqual(
-			field("month").options.map((option) => option.token),
+			field("month")
+				.options()
+				.map((option) => option.token),
 			[
 				"@month:january",
 				"@month:february",
@@ -74,6 +114,14 @@ test("projection: query text to checkmarks", async (suite) => {
 		assert.deepEqual(checked("@DAY:03"), { day: ["3"] });
 	});
 
+	await suite.test("a book checks its own box", () => {
+		assert.deepEqual(checked("@in:book3"), { book: ["Yukon Ho!"] });
+		assert.deepEqual(checked("@IN:BOOK3"), { book: ["Yukon Ho!"] });
+		assert.deepEqual(checked("@in:book3 @in:lazysunday"), {
+			book: ["Yukon Ho!", "The Calvin and Hobbes Lazy Sunday Book"],
+		});
+	});
+
 	await suite.test("repeating a filter checks both", () => {
 		assert.deepEqual(checked("@year:1988 @year:1990"), { year: ["1988", "1990"] });
 	});
@@ -88,6 +136,8 @@ test("projection: query text to checkmarks", async (suite) => {
 		assert.deepEqual(checked("@date:1988/9/3"), {});
 		assert.deepEqual(checked("@before:1990 @after:1987"), {});
 		assert.deepEqual(checked("@year:2001"), {});
+		// A book the archive does not have is not a filter at all, so it is not a checkmark either.
+		assert.deepEqual(checked("@in:snowman"), {});
 		// A flag carrying a value is a misreading of the syntax, not a narrower query.
 		assert.deepEqual(checked("@sunday:yes"), {});
 		assert.deepEqual(checked("snow goons"), {});
@@ -108,6 +158,10 @@ test("insert: checkmarks to query text", async (suite) => {
 	await suite.test("a second year lands beside the first, not at the end of the sentence", () => {
 		assert.equal(insertToken("@year:1988 snow goons", "@year:1990"), "@year:1988 @year:1990 snow goons");
 		assert.equal(insertToken("@year:88 snow goons", "@year:1990"), "@year:88 @year:1990 snow goons");
+	});
+
+	await suite.test("books collect beside books", () => {
+		assert.equal(insertToken("@in:book3 snowman", "@in:book4"), "@in:book3 @in:book4 snowman");
 	});
 
 	await suite.test("a field collects beside its own name and no other", () => {
@@ -159,6 +213,7 @@ test("clear: the whole field at once", async (suite) => {
 	await suite.test("every token the field has a box for", () => {
 		assert.equal(clearField("@year:1988 @year:90 snow @month:august goons", field("year")), "snow @month:august goons");
 		assert.equal(clearField("@sunday @daily snowman", field("format")), "snowman");
+		assert.equal(clearField("@in:book3 @year:1988 @in:book4", field("book")), "@year:1988");
 	});
 
 	await suite.test("and nothing it merely shares a name with", () => {

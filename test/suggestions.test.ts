@@ -2,6 +2,23 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { SUGGESTED_QUERIES, randomQuery } from "../src/suggestions";
 import { parseDateFilters } from "../src/date-query";
+import { registerVocabulary } from "../src/filter-vocabulary";
+import { loadCollectionData } from "../build-chain/collectionPages";
+import { generateCollectionIndex } from "../build-chain/generateCollectionIndex";
+import { CollectionIndex } from "../src/types";
+
+/*
+ * The books, read out of the very index the app boots with.
+ *
+ * Without this the guard below would not bite on `@in:` at all: an unregistered vocabulary takes
+ * every value on trust — see `src/filter-vocabulary.ts` — so `@in:sundaypage` would sail through the
+ * one test whose whole job is to catch a typo in the pool. Every other filter in here is checked
+ * against a constant, and this is what puts `@in:` on the same footing.
+ */
+const index: CollectionIndex = JSON.parse(generateCollectionIndex(loadCollectionData(process.cwd())));
+registerVocabulary("in", () =>
+	index.collections.map((collection) => ({ value: collection.id, hint: collection.name })),
+);
 
 test("the suggestion pool", async (suite) => {
 	await suite.test("holds no duplicates and nothing that needs trimming", () => {

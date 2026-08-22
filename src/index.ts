@@ -2,12 +2,21 @@ import "./styles/base.css";
 import "./styles/components.css";
 
 import { getBookmarkedDates } from "./bookmarks";
+import { registerVocabulary } from "./filter-vocabulary";
 import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
 import { handleRoute, markInitialHistoryEntry, navigate, parseRoute } from "./router";
 import { getAdjacentComicDate, getSameDayComicDate } from "./views/detail";
 
 async function initialize(): Promise<void> {
+	// The one filter whose values are loaded data. A thunk, so this can be registered before the
+	// collection index has been fetched and answer with the books the moment it has — nothing has to
+	// notice when that happens, and an index that never arrives leaves an empty list, which every
+	// reader of it already treats as "no opinion". See `filter-vocabulary.ts`.
+	registerVocabulary("in", () =>
+		(state.collectionIndex?.collections ?? []).map((collection) => ({ value: collection.id, hint: collection.name })),
+	);
+
 	try {
 		state.bookmarkedDates = await getBookmarkedDates();
 	} catch {

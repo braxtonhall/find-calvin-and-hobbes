@@ -42,6 +42,7 @@ export const SUGGESTED_QUERIES: readonly string[] = [
 	"@sunday @year:1986",
 	"@year:1985",
 	`@month:${month} @day:${day}`,
+	"@in:sundaypages",
 ];
 
 /**

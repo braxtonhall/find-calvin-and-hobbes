@@ -1,4 +1,5 @@
 import { FilterMatch, parseDateFilters, scanFilters } from "./date-query";
+import { terms } from "./filter-vocabulary";
 import { MONTH_NAMES, YEARS } from "./vocabulary";
 
 /**
@@ -25,6 +26,13 @@ import { MONTH_NAMES, YEARS } from "./vocabulary";
  * The bar is deliberately a subset. `@date:`, `@before:`, `@after:` and the weekday half of
  * `@day:` are not in it and not represented by it: it covers what is worth clicking, and the rest
  * stay in the language for a reader who has learned it — which is what the bar is for.
+ *
+ * `Book` is the one field whose rows are not knowable from a constant, which is why every field's
+ * options are a thunk rather than an array: the books arrive with the collection index, after this
+ * module has been evaluated and after the bar has been built. Until they do the list is empty, and
+ * an empty list is a disabled button — see `paint` in `views/filter-bar.ts`. It earns its place in a
+ * bar that is otherwise a subset because eighteen proper nouns is exactly the case where nobody
+ * guesses the syntax: a reader knows the book by its title and has no idea it answers to `book3`.
  */
 
 /** One row of a dropdown: the token a click writes, and how the row reads. */
@@ -45,7 +53,8 @@ export interface FilterField {
 	heading?: string;
 	/** The filter names this field is allowed to touch. Disjoint across fields, by construction. */
 	owns: readonly string[];
-	options: readonly FilterOption[];
+	/** Asked for rather than held, because one field's values arrive with the archive. */
+	options: () => readonly FilterOption[];
 	/** 31 rows in a column is a bad list, so `Day` is laid out as a calendar instead. */
 	shape: "list" | "grid";
 }
@@ -67,20 +76,29 @@ function range(from: number, to: number): number[] {
  * It is a strip format that merely coincides with a weekday, which is why it reads as its own
  * field rather than as a shape of `@day:`.
  */
+// Built once here rather than inside the thunks, which `paint` calls on every keystroke.
+const YEAR_OPTIONS = YEARS.map((year) => ({ token: `@year:${year}`, label: String(year) }));
+const MONTH_OPTIONS = MONTH_NAMES.map((month) => ({ token: `@month:${month}`, label: titled(month) }));
+const DAY_OPTIONS = range(1, 31).map((day) => ({ token: `@day:${day}`, label: String(day) }));
+const FORMAT_OPTIONS = [
+	{ token: "@sunday", label: "Sundays" },
+	{ token: "@daily", label: "Dailies" },
+];
+
 export const FILTER_FIELDS: readonly FilterField[] = [
 	{
 		name: "year",
 		label: "Year",
 		owns: ["year"],
 		shape: "list",
-		options: YEARS.map((year) => ({ token: `@year:${year}`, label: String(year) })),
+		options: () => YEAR_OPTIONS,
 	},
 	{
 		name: "month",
 		label: "Month",
 		owns: ["month"],
 		shape: "list",
-		options: MONTH_NAMES.map((month) => ({ token: `@month:${month}`, label: titled(month) })),
+		options: () => MONTH_OPTIONS,
 	},
 	{
 		name: "day",
@@ -90,23 +108,36 @@ export const FILTER_FIELDS: readonly FilterField[] = [
 		heading: "Day of the month",
 		owns: ["day"],
 		shape: "grid",
-		options: range(1, 31).map((day) => ({ token: `@day:${day}`, label: String(day) })),
+		options: () => DAY_OPTIONS,
 	},
 	{
 		name: "format",
 		label: "Format",
 		owns: ["sunday", "daily"],
 		shape: "list",
-		options: [
-			{ token: "@sunday", label: "Sundays" },
-			{ token: "@daily", label: "Dailies" },
-		],
+		options: () => FORMAT_OPTIONS,
+	},
+	{
+		name: "book",
+		label: "Book",
+		owns: ["in"],
+		shape: "list",
+		// The one field whose label and token cannot be the same string: an id takes no spaces and a
+		// title is nothing but spaces, so the row reads as the title and writes as the id. Which is
+		// also the whole argument for the field existing — see the note at the top of the file.
+		options: () => terms("in").map(({ value, hint }) => ({ token: `@in:${value}`, label: hint })),
 	},
 ];
 
-const FIELD_BY_TOKEN = new Map<string, FilterField>();
-for (const field of FILTER_FIELDS) {
-	for (const option of field.options) FIELD_BY_TOKEN.set(option.token, field);
+/**
+ * The field a token belongs to, or none.
+ *
+ * Scanned rather than looked up in a map built at module load, because one field's options are not
+ * knowable then. Five fields of at most thirty-one rows, asked once per filter in the query — the
+ * cost is nothing, and the alternative is a cache with its own question about when to invalidate.
+ */
+function fieldFor(token: string): FilterField | undefined {
+	return FILTER_FIELDS.find((field) => field.options().some((option) => option.token === token));
 }
 
 function single<Value>(values: Set<Value>, format: (value: Value) => string): string | null {
@@ -133,12 +164,15 @@ function single<Value>(values: Set<Value>, format: (value: Value) => string): st
 function tokenOf(text: string, match: FilterMatch): string | null {
 	if (!match.valid) return null;
 	if (match.name === "sunday" || match.name === "daily") return `@${match.name}`;
-	if (match.name !== "year" && match.name !== "month" && match.name !== "day") return null;
+	if (match.name !== "year" && match.name !== "month" && match.name !== "day" && match.name !== "in") return null;
 
 	const probe = parseDateFilters(text.slice(match.start, match.end)).filters;
 	if (probe === null) return null;
 	if (match.name === "year") return single(probe.years, (year) => `@year:${year}`);
 	if (match.name === "month") return single(probe.months, (month) => `@month:${MONTH_NAMES[month - 1]}`);
+	// A book needs no canonicalising — the id is the only spelling there is — but it goes through the
+	// probe all the same, so that whether a value counts stays `applyFilter`'s single opinion.
+	if (match.name === "in") return single(probe.collections, (id) => `@in:${id}`);
 	return single(probe.monthDays, (day) => `@day:${day}`);
 }
 
@@ -152,7 +186,7 @@ export function selectedTokens(text: string): Set<string> {
 	const selected = new Set<string>();
 	for (const match of scanFilters(text)) {
 		const token = tokenOf(text, match);
-		if (token !== null && FIELD_BY_TOKEN.has(token)) selected.add(token);
+		if (token !== null && fieldFor(token) !== undefined) selected.add(token);
 	}
 	return selected;
 }
@@ -164,7 +198,7 @@ export function selectedTokens(text: string): Set<string> {
  * reader typed keep their order and their single spaces either way.
  */
 export function insertToken(text: string, token: string): string {
-	const field = FIELD_BY_TOKEN.get(token);
+	const field = fieldFor(token);
 	if (field === undefined) return text;
 
 	let anchor: number | null = null;
@@ -194,7 +228,7 @@ export function removeToken(text: string, token: string): string {
 export function clearField(text: string, field: FilterField): string {
 	return removeTokens(
 		text,
-		field.options.map((option) => option.token),
+		field.options().map((option) => option.token),
 	);
 }
 

@@ -17,7 +17,12 @@ export interface SearchResult {
 	text: string;
 	ranges: [number, number][];
 	score: number;
-	source: "transcript" | "description" | "date";
+	/**
+	 * Why this row is here. `date` is a strip the reader's own date expression named; `filter` is one
+	 * a filter admitted when there was nothing else in the query to match — a different claim, and
+	 * `@in:book3` is what makes the difference worth drawing.
+	 */
+	source: "transcript" | "description" | "date" | "filter";
 }
 
 // Transcripts and descriptions are searched with the same query but different scoring.
@@ -865,7 +870,7 @@ export function search(query: string, sort: SortMode, tuning: Tuning = TUNING): 
 		if (expression !== null) results = withDateMatches(results, expression, tuning);
 		// Filters restrict the finished set. Applied before the union, they would let a date match
 		// through that the reader had explicitly excluded.
-		if (filters !== null) results = results.filter((result) => passesFilters(result.comic.date, filters));
+		if (filters !== null) results = results.filter((result) => passesFilters(result.comic, filters));
 	}
 
 	// Date order is purely chronological: the score decided which strips are here, not where they
@@ -939,15 +944,20 @@ function withDateMatches(textResults: SearchResult[], expression: DateExpression
 function filterOnlyResults(filters: DateFilters): SearchResult[] {
 	const results: SearchResult[] = [];
 	for (const indexed of indexedComics) {
-		if (!passesFilters(indexed.comic.date, filters)) continue;
+		if (!passesFilters(indexed.comic, filters)) continue;
 		// Every row ties, and `assignTiers` normalises on the top score, so the number only has to
 		// be positive; `broad` is the honest one, because a filter restricts rather than ranks.
+		//
+		// And `filter` rather than `date`, because these rows did not match a date: they are what is
+		// left after the filters had their say. Most of the time that amounts to the same thing and
+		// the old label was near enough — but `@in:book3` is not a date by any reading, and a badge
+		// saying so on all 274 of its rows would be plainly wrong.
 		results.push({
 			comic: indexed.comic,
 			text: dateText(indexed),
 			ranges: [],
 			score: DATE_STRENGTH.broad,
-			source: "date",
+			source: "filter",
 		});
 	}
 	return results;

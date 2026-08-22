@@ -57,6 +57,11 @@ export interface Entry {
 	// Only specials carry an id in the real archive, and it is what separates two strips that
 	// share a date.
 	id?: string;
+	/**
+	 * The books this strip was printed in, which is what `@in:` reads. Page numbers are what the real
+	 * appearances carry beyond this and nothing about a filter looks at them, so they are left empty.
+	 */
+	books?: readonly string[];
 }
 
 const FILLER_SUBJECTS = ["sandbox", "cardboard", "sidewalk", "kitchen", "cupboard", "driveway", "porch", "attic"];
@@ -83,6 +88,7 @@ export function buildArchive(entries: Entry[], fillerCount = 60): Archive {
 		const comic: Comic = { date: entry.date, transcript: entry.transcript };
 		if (entry.alternate) comic.alternate = entry.alternate;
 		if (entry.id) comic.id = entry.id;
+		if (entry.books) comic.appearances = entry.books.map((collection) => ({ collection, pages: [] }));
 		comics.push(comic);
 		if (entry.description) descriptions.set(entry.id || entry.date, entry.description);
 	}

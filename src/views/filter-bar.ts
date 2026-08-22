@@ -96,7 +96,7 @@ function menuElement(): HTMLDivElement {
 		}
 		const row = element.closest<HTMLElement>(".filter-option");
 		if (row === null || open === null) return;
-		toggle(open.field.options[Number(row.dataset.index)]);
+		toggle(open.field.options()[Number(row.dataset.index)]);
 	});
 
 	// Bound here as well as on the button, because while the reader is arrowing around the menu the
@@ -129,7 +129,7 @@ function optionHtml(field: FilterField, option: FilterOption, index: number): st
 
 /** Whether the field has anything in it to clear, which is the only thing `Clear` is offered for. */
 function hasClearable(field: FilterField): boolean {
-	return field.options.some((option) => selected.has(option.token));
+	return field.options().some((option) => selected.has(option.token));
 }
 
 /**
@@ -149,7 +149,10 @@ function buildMenu(): void {
 
 	const { field } = open;
 	const heading = field.heading === undefined ? "" : `<div class="filter-menu-heading">${escHtml(field.heading)}</div>`;
-	const rows = field.options.map((option, index) => optionHtml(field, option, index)).join("");
+	const rows = field
+		.options()
+		.map((option, index) => optionHtml(field, option, index))
+		.join("");
 	element.innerHTML = `${heading}<div
 			class="filter-menu-options filter-menu-options--${field.shape}"
 			role="listbox"
@@ -170,7 +173,7 @@ function paintMenu(): void {
 	const { field } = open;
 
 	for (const row of element.querySelectorAll<HTMLElement>(".filter-option")) {
-		const checked = selected.has(field.options[Number(row.dataset.index)].token);
+		const checked = selected.has(field.options()[Number(row.dataset.index)].token);
 		row.classList.toggle("filter-option--checked", checked);
 		row.setAttribute("aria-selected", String(checked));
 	}
@@ -268,7 +271,7 @@ function clearOpenField(): void {
 
 /** Where the focus lands when the menu is opened from the keyboard: the first checked row. */
 function firstChecked(field: FilterField): number {
-	const index = field.options.findIndex((option) => selected.has(option.token));
+	const index = field.options().findIndex((option) => selected.has(option.token));
 	return index < 0 ? 0 : index;
 }
 
@@ -299,7 +302,7 @@ function activateFocused(): void {
 	const row = active === null ? null : active.closest<HTMLElement>(".filter-option");
 	// Toggling never closes the menu: these are multi-selects, and a reader picking two years
 	// should not have to open the same dropdown twice.
-	if (row !== null) toggle(open.field.options[Number(row.dataset.index)]);
+	if (row !== null) toggle(open.field.options()[Number(row.dataset.index)]);
 	// Nothing at all when the focus is still on the button, which is a menu the pointer opened and
 	// a reader who has not said which row they mean yet.
 	else if (active?.classList.contains("filter-menu-clear") === true) clearOpenField();
@@ -425,7 +428,15 @@ function paint(): void {
 	selected = selectedTokens(target.value);
 
 	for (const dropdown of dropdowns) {
-		const chosen = dropdown.field.options.filter((option) => selected.has(option.token)).length;
+		const options = dropdown.field.options();
+		// A field whose values have not arrived has nothing to open. `Book` is the only one this can
+		// happen to, and it happens on every first paint — the bar is built with the results view and
+		// the collection index lands after it — so the state is set here rather than in the markup,
+		// and the button enables itself on the paint that follows the fetch.
+		const empty = options.length === 0;
+		dropdown.button.disabled = empty;
+		if (empty && open === dropdown) closeMenu();
+		const chosen = options.filter((option) => selected.has(option.token)).length;
 		const label = chosen === 0 ? dropdown.field.label : `${dropdown.field.label}, ${chosen} selected`;
 		dropdown.button.setAttribute("aria-label", label);
 	}
