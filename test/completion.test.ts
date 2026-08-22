@@ -407,7 +407,7 @@ test("the two vocabularies", async (suite) => {
 		assert.ok(shown.includes("1"), "no numbers");
 		assert.ok(shown.includes("monday"), "no names");
 		assert.deepEqual(shown.slice(0, 4), ["1", "2", "3", WEEKDAY_NAMES[0]]);
-		assert.deepEqual(values("@month:|").slice(0, 4), ["1", "2", "3", MONTH_NAMES[0]]);
+		assert.deepEqual(values("@month:|").slice(0, MONTH_NAMES.length + 3), [...MONTH_NAMES, "1", "2", "3"]);
 	});
 
 	// Which is the only screen that needs the mixing rule: digits and letters are disjoint, so the
