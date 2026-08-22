@@ -174,7 +174,7 @@ export const TUNING: Tuning = {
 	// Not higher: at 1 an inflection is worth as much as the word itself and held-out MRR
 	// falls from 0.931 to 0.911.
 	transcriptInflectionWeight: 0,
-	descriptionInflectionWeight: 0.7,
+	descriptionInflectionWeight: 0,
 	descriptionPreference: 0.7,
 	agreementBonus: 0.15,
 };
@@ -221,15 +221,13 @@ export const DATE_STRENGTH: Record<DatePrecision, number> = { exact: 3, narrow: 
 const WORD_PATTERN = /[\p{L}\p{N}']+/gu;
 
 const EXACT_WEIGHT = 1;
-const PREFIX_WEIGHT = 0.85;
+const PREFIX_WEIGHT = 0;
 const DISTANCE_WEIGHTS = [1, 0.7, 0.55];
 
 const MAX_CACHED_EXPANSIONS = 400;
 
-function maxDistanceFor(term: string): number {
-	if (term.length <= 3) return 0;
-	if (term.length <= 7) return 1;
-	return 2;
+function maxDistanceFor(_term: string): number {
+	return 0;
 }
 
 interface IndexedField {
