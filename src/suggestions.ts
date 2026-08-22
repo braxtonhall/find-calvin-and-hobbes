@@ -36,7 +36,7 @@ export const SUGGESTED_QUERIES: readonly string[] = [
 	"waiting for the school bus",
 	"@month:december @day:24 @sunday",
 	"@year:1988",
-	"@date:1985/11/18",
+	"november 18 1985",
 	"@sunday calvinball",
 	"@sunday snowman",
 	"@sunday @year:1986",
