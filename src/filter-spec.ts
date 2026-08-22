@@ -73,7 +73,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 	{
 		name: "date",
 		kind: "valued",
-		hint: "Strips on a date, at whatever precision you give",
+		hint: "Strips on a date",
 		templates: YEAR_FIRST,
 	},
 	{
