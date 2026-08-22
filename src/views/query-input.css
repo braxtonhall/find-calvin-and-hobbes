@@ -126,6 +126,10 @@
 	visibility: visible;
 }
 
+/*
+ * One line, always: the five rows `MENU_HEIGHT` budgets for are five rows of the same height, so a
+ * long hint is cut short rather than allowed to wrap and push the rest of the list out of view.
+ */
 .query-menu-row {
 	display: flex;
 	align-items: baseline;
@@ -143,7 +147,9 @@
 	background: var(--grey-dim);
 }
 
+/* What the row would insert, and so the half that keeps its full width when the two compete. */
 .query-menu-syntax {
+	flex: 0 0 auto;
 	font-weight: 600;
 	color: var(--text);
 	white-space: nowrap;
@@ -165,9 +171,14 @@
 	color: var(--golden-half);
 }
 
+/* The half that gives way: `min-width: 0` is what lets a flex item shrink past its text at all. */
 .query-menu-hint {
+	min-width: 0;
 	margin-left: auto;
 	padding-left: 8px;
+	overflow: hidden;
 	text-align: right;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 	color: var(--text-muted);
 }

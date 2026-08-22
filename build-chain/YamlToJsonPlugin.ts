@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
 import { loadCollectionData } from "./collectionPages";
@@ -6,6 +8,21 @@ import { exportDescriptions } from "./exportDescriptions";
 import { generateCollectionIndex } from "./generateCollectionIndex";
 
 const PLUGIN_NAME = "YamlToJsonPlugin";
+
+/**
+ * Tells webpack which data files this plugin read, so `--watch` rebuilds when they change.
+ * The collections directory itself is a dependency too, so added and removed files are noticed.
+ */
+function watchDataFiles(compilation: Compilation, projectDir: string): void {
+	const collectionsDir = path.join(projectDir, "collections");
+	compilation.fileDependencies.add(path.join(projectDir, "comics.yaml"));
+	compilation.contextDependencies.add(collectionsDir);
+	for (const file of fs.readdirSync(collectionsDir)) {
+		if (file.endsWith(".yaml")) {
+			compilation.fileDependencies.add(path.join(collectionsDir, file));
+		}
+	}
+}
 
 class YamlToJsonPlugin {
 	apply(compiler: Compiler): void {
@@ -17,6 +34,7 @@ class YamlToJsonPlugin {
 				},
 				() => {
 					const projectDir = compiler.context;
+					watchDataFiles(compilation, projectDir);
 					const collectionData = loadCollectionData(projectDir);
 
 					const comicsJson = exportComicsJson(projectDir, collectionData);

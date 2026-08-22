@@ -8,6 +8,7 @@ import { attachBackAndHomeHandlers, buildBackAndHomeButtons } from "./nav-button
 function getTypeLabel(type: string): string {
 	const typeLabels: Record<string, string> = {
 		collection: "Collection",
+		compendium: "Compendium",
 		treasury: "Treasury",
 		complete: "Complete Collection",
 		special: "Special Book",
