@@ -14,7 +14,7 @@ import { Comic } from "./types";
  *
  * Two mechanisms live here, and they are deliberately different things. `parseDateExpression`
  * answers "is this whole query a date", which is what a reader who types `august 3 1988` means;
- * `parseDateFilters` reads the `@year:1988` syntax, which restricts an ordinary text search.
+ * `parseQueryFilters` reads the `@year:1988` syntax, which restricts an ordinary text search.
  * Neither ever rewrites the query — `search` hands the same string to the text pipeline it
  * always did, so nothing here can change what an existing query returns.
  *
@@ -35,7 +35,7 @@ import { Comic } from "./types";
  *   becoming dates with nothing behind them. A filter value is exempt — see `DateSource`.
  * - **An ambiguous numeric date means both readings.** `9/3/1988` is September 3rd *and*
  *   March 9th; no locale convention is imposed. A reader who wants one writes `1988/9/3`.
- *   Filter values are the exception — see `parseDateFilters`.
+ *   Filter values are the exception — see `parseQueryFilters`.
  * - **A weekday narrows rather than decorates.** `wednesday 9/3/1988` keeps only the March 9th
  *   reading, because that is the one that was a Wednesday, and a weekday that agrees with
  *   nothing makes the whole expression null.
@@ -415,7 +415,7 @@ export function matchesExpression(expression: DateExpression, date: string): boo
  * `@day:saturday @day:sunday` is the weekend; `@day:1 @day:monday` is the Mondays that fell on
  * the first, because a day of the month and a day of the week are two fields under one name.
  */
-export interface DateFilters {
+export interface QueryFilters {
 	years: Set<number>;
 	months: Set<number>;
 	monthDays: Set<number>;
@@ -426,7 +426,7 @@ export interface DateFilters {
 	 */
 	collections: Set<string>;
 	windows: DateExpression[];
-	/** Strictly after this date, and strictly before the other — see `parseDateFilters`. */
+	/** Strictly after this date, and strictly before the other — see `parseQueryFilters`. */
 	after: string | null;
 	before: string | null;
 	/** A recognised filter whose value could not be read. Nothing satisfies it. */
@@ -441,7 +441,7 @@ const VALUED_FILTERS = new Set(FILTER_SPECS.filter((spec) => spec.kind === "valu
 const FLAG_FILTERS = new Set(FILTER_SPECS.filter((spec) => spec.kind === "flag").map((spec) => spec.name));
 const FILTER_PATTERN = /@([a-zA-Z]+)(?::(\S+))?/g;
 
-function emptyFilters(): DateFilters {
+function emptyFilters(): QueryFilters {
 	return {
 		years: new Set(),
 		months: new Set(),
@@ -472,7 +472,7 @@ function windowBounds(expression: DateExpression): { from: string; to: string } 
 	return { from: exact, to: exact };
 }
 
-function applyFilter(filters: DateFilters, name: string, value: string | undefined): void {
+function applyFilter(filters: QueryFilters, name: string, value: string | undefined): void {
 	if (FLAG_FILTERS.has(name)) {
 		// A flag carrying a value is a misunderstanding of the syntax, not a broader query.
 		if (value !== undefined) filters.impossible = true;
@@ -582,7 +582,7 @@ export interface FilterMatch {
 /**
  * Every recognised filter in the text, in order, with its span.
  *
- * This is the scan `parseDateFilters` performs anyway, exposed because the search box needs the
+ * This is the scan `parseQueryFilters` performs anyway, exposed because the search box needs the
  * same answer for a different purpose: to tint a filter where it stands, and to say which one is
  * malformed. A second scanner would be a second opinion about what counts as a filter and the two
  * would eventually disagree, so there is only this one and both callers read it.
@@ -625,7 +625,11 @@ export function scanFilters(text: string): FilterMatch[] {
  * your room` would earn the contiguous-phrase bonus for a phrase nobody typed. `search` turns
  * those boundaries into breaks in the run bonus.
  */
-export function parseDateFilters(text: string): { filters: DateFilters | null; residual: string; segments: string[] } {
+export function parseQueryFilters(text: string): {
+	filters: QueryFilters | null;
+	residual: string;
+	segments: string[];
+} {
 	const matches = scanFilters(text);
 	if (matches.length === 0) return { filters: null, residual: text, segments: [text] };
 
@@ -664,7 +668,7 @@ function printedIn(subject: string | Comic, wanted: Set<string>): boolean {
  * on — which every caller here in the search pipeline could give, and which the tests and the
  * completion menu still do. `@in:` is the one field that wants more than the date; see `printedIn`.
  */
-export function passesFilters(subject: string | Comic, filters: DateFilters): boolean {
+export function passesFilters(subject: string | Comic, filters: QueryFilters): boolean {
 	if (filters.impossible) return false;
 	const date = typeof subject === "string" ? subject : subject.date;
 	if (filters.years.size > 0 && !filters.years.has(Number(date.slice(0, 4)))) return false;

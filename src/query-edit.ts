@@ -1,4 +1,4 @@
-import { FilterMatch, parseDateFilters, scanFilters } from "./date-query";
+import { FilterMatch, parseQueryFilters, scanFilters } from "./date-query";
 import { terms } from "./filter-vocabulary";
 import { MONTH_NAMES, YEARS } from "./vocabulary";
 
@@ -19,7 +19,7 @@ import { MONTH_NAMES, YEARS } from "./vocabulary";
  * - **The bar is token-level, not semantic.** A field reflects tokens of its own name and nothing
  *   else, and no two fields own the same token. `@date:1988/9/3` does not check 1988 in `Year`, and
  *   `@day:saturday` checks nothing anywhere; both are left alone and left unrepresented. Reading
- *   the checkmarks off the parsed `DateFilters` instead would look tidier and is a trap — `@sunday`,
+ *   the checkmarks off the parsed `QueryFilters` instead would look tidier and is a trap — `@sunday`,
  *   `@daily` and `@day:saturday` all write into the same `weekdays` set, so a semantic bar would
  *   have to guess which token an uncheck meant to remove.
  *
@@ -166,7 +166,7 @@ function tokenOf(text: string, match: FilterMatch): string | null {
 	if (match.name === "sunday" || match.name === "daily") return `@${match.name}`;
 	if (match.name !== "year" && match.name !== "month" && match.name !== "day" && match.name !== "in") return null;
 
-	const probe = parseDateFilters(text.slice(match.start, match.end)).filters;
+	const probe = parseQueryFilters(text.slice(match.start, match.end)).filters;
 	if (probe === null) return null;
 	if (match.name === "year") return single(probe.years, (year) => `@year:${year}`);
 	if (match.name === "month") return single(probe.months, (month) => `@month:${MONTH_NAMES[month - 1]}`);

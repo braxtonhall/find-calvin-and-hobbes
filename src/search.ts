@@ -4,11 +4,11 @@ import { COMPOUNDS } from "./compounds";
 import { stem } from "./stem";
 import {
 	DateExpression,
-	DateFilters,
+	QueryFilters,
 	DatePrecision,
 	matchesExpression,
 	parseDateExpression,
-	parseDateFilters,
+	parseQueryFilters,
 	passesFilters,
 } from "./date-query";
 
@@ -853,7 +853,7 @@ export function search(query: string, sort: SortMode, tuning: Tuning = TUNING): 
 	}
 
 	const loweredQuery = trimmed.toLowerCase();
-	const { filters, residual, segments } = parseDateFilters(loweredQuery);
+	const { filters, residual, segments } = parseQueryFilters(loweredQuery);
 
 	let results: SearchResult[];
 	if (residual === "") {
@@ -941,7 +941,7 @@ function withDateMatches(textResults: SearchResult[], expression: DateExpression
 	return results;
 }
 
-function filterOnlyResults(filters: DateFilters): SearchResult[] {
+function filterOnlyResults(filters: QueryFilters): SearchResult[] {
 	const results: SearchResult[] = [];
 	for (const indexed of indexedComics) {
 		if (!passesFilters(indexed.comic, filters)) continue;

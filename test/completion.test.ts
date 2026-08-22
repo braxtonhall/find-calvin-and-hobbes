@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { Completion, Row, completionsAt, describeInvalid, filterSpans } from "../src/completion";
 import { FILTER_SPECS } from "../src/filter-spec";
 import { registerVocabulary } from "../src/filter-vocabulary";
-import { parseDateFilters, passesFilters, scanFilters } from "../src/date-query";
+import { parseQueryFilters, passesFilters, scanFilters } from "../src/date-query";
 import { RANGE_END, RANGE_START } from "../src/constants";
 import { isSabbatical } from "../src/date-utils";
 import { MONTH_NAMES, WEEKDAY_NAMES, YEARS } from "../src/vocabulary";
@@ -76,7 +76,7 @@ for (let stamp = Date.parse(RANGE_START); stamp <= Date.parse(RANGE_END); stamp 
  */
 function namesRealStrips(name: string, value: string): boolean {
 	const spelled = name === "before" || name === "after" ? "date" : name;
-	const { filters } = parseDateFilters(`@${spelled}:${value}`);
+	const { filters } = parseQueryFilters(`@${spelled}:${value}`);
 	return filters !== null && ARCHIVE.some((date) => passesFilters(date, filters));
 }
 

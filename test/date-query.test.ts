@@ -4,7 +4,7 @@ import {
 	DateExpression,
 	matchesExpression,
 	parseDateExpression,
-	parseDateFilters,
+	parseQueryFilters,
 	passesFilters,
 	scanFilters,
 } from "../src/date-query";
@@ -178,7 +178,7 @@ test("what is not a date", async (suite) => {
 
 test("filters", async (suite) => {
 	await suite.test("a filter is lifted out and the rest is the query", () => {
-		const { filters, residual } = parseDateFilters("@year:1988 rosalyn");
+		const { filters, residual } = parseQueryFilters("@year:1988 rosalyn");
 		assert.ok(filters);
 		assert.deepEqual([...filters.years], [1988]);
 		assert.equal(residual, "rosalyn");
@@ -186,21 +186,21 @@ test("filters", async (suite) => {
 
 	await suite.test("a month is named or numbered", () => {
 		for (const value of ["8", "08", "aug", "august"]) {
-			const { filters } = parseDateFilters(`@month:${value}`);
+			const { filters } = parseQueryFilters(`@month:${value}`);
 			assert.deepEqual([...filters!.months], [8], value);
 		}
 	});
 
 	await suite.test("@in names a book by its id", () => {
-		const { filters } = parseDateFilters("@in:book3");
+		const { filters } = parseQueryFilters("@in:book3");
 		assert.deepEqual([...filters!.collections], ["book3"]);
 		// Nothing about a book is a date, so no calendar field hears it.
 		assert.equal(filters!.years.size + filters!.months.size + filters!.monthDays.size, 0);
-		assert.deepEqual([...parseDateFilters("@IN:BOOK3").filters!.collections], ["book3"]);
+		assert.deepEqual([...parseQueryFilters("@IN:BOOK3").filters!.collections], ["book3"]);
 	});
 
 	await suite.test("books of one filter union", () => {
-		const { filters } = parseDateFilters("@in:book1 @in:book3");
+		const { filters } = parseQueryFilters("@in:book1 @in:book3");
 		assert.deepEqual([...filters!.collections].sort(), ["book1", "book3"]);
 		assert.ok(passesFilters(strip("1988-06-01", "book1"), filters!));
 		assert.ok(passesFilters(strip("1988-06-01", "book3"), filters!));
@@ -208,7 +208,7 @@ test("filters", async (suite) => {
 	});
 
 	await suite.test("a book intersects a date", () => {
-		const { filters } = parseDateFilters("@in:book3 @year:1988");
+		const { filters } = parseQueryFilters("@in:book3 @year:1988");
 		assert.ok(passesFilters(strip("1988-06-01", "book3"), filters!));
 		assert.ok(!passesFilters(strip("1989-06-01", "book3"), filters!));
 		assert.ok(!passesFilters(strip("1988-06-01", "book5"), filters!));
@@ -217,15 +217,15 @@ test("filters", async (suite) => {
 	// A strip is usually in several books at once, and any one of them answers for it.
 	await suite.test("a strip in several books answers for each of them", () => {
 		const printed = strip("1988-06-01", "book3", "lazysunday");
-		assert.ok(passesFilters(printed, parseDateFilters("@in:book3").filters!));
-		assert.ok(passesFilters(printed, parseDateFilters("@in:lazysunday").filters!));
-		assert.ok(!passesFilters(printed, parseDateFilters("@in:book1").filters!));
+		assert.ok(passesFilters(printed, parseQueryFilters("@in:book3").filters!));
+		assert.ok(passesFilters(printed, parseQueryFilters("@in:lazysunday").filters!));
+		assert.ok(!passesFilters(printed, parseQueryFilters("@in:book1").filters!));
 	});
 
 	await suite.test("a strip in no book at all is in no book", () => {
 		const loose: Comic = { date: "1985-11-28", transcript: "" };
-		assert.ok(!passesFilters(loose, parseDateFilters("@in:book3").filters!));
-		assert.ok(passesFilters(loose, parseDateFilters("@year:1985").filters!));
+		assert.ok(!passesFilters(loose, parseQueryFilters("@in:book3").filters!));
+		assert.ok(passesFilters(loose, parseQueryFilters("@year:1985").filters!));
 	});
 
 	/*
@@ -236,8 +236,8 @@ test("filters", async (suite) => {
 	 * principle.
 	 */
 	await suite.test("a date still answers every filter that is about dates", () => {
-		assert.ok(passesFilters("1988-08-03", parseDateFilters("@year:1988 @month:aug").filters!));
-		assert.ok(!passesFilters("1988-08-03", parseDateFilters("@in:book3").filters!));
+		assert.ok(passesFilters("1988-08-03", parseQueryFilters("@year:1988 @month:aug").filters!));
+		assert.ok(!passesFilters("1988-08-03", parseQueryFilters("@in:book3").filters!));
 	});
 
 	/*
@@ -249,7 +249,7 @@ test("filters", async (suite) => {
 	await suite.test("with no books registered, any book is taken on trust", () => {
 		try {
 			registerVocabulary("in", () => []);
-			const { filters } = parseDateFilters("@in:whatever");
+			const { filters } = parseQueryFilters("@in:whatever");
 			assert.ok(!filters!.impossible);
 			assert.ok(passesFilters(strip("1988-06-01", "whatever"), filters!));
 			assert.ok(!passesFilters(strip("1988-06-01", "book3"), filters!));
@@ -259,7 +259,7 @@ test("filters", async (suite) => {
 	});
 
 	await suite.test("values of one field union", () => {
-		const { filters } = parseDateFilters("@year:1988 @year:1989");
+		const { filters } = parseQueryFilters("@year:1988 @year:1989");
 		assert.deepEqual([...filters!.years].sort(), [1988, 1989]);
 		assert.ok(passesFilters("1988-06-01", filters!));
 		assert.ok(passesFilters("1989-06-01", filters!));
@@ -267,7 +267,7 @@ test("filters", async (suite) => {
 	});
 
 	await suite.test("fields intersect", () => {
-		const { filters } = parseDateFilters("@year:1988 @month:8");
+		const { filters } = parseQueryFilters("@year:1988 @month:8");
 		assert.ok(passesFilters("1988-08-03", filters!));
 		assert.ok(!passesFilters("1988-09-03", filters!));
 		assert.ok(!passesFilters("1989-08-03", filters!));
@@ -276,16 +276,16 @@ test("filters", async (suite) => {
 	// `@day` carries two kinds of value, and they are two fields under one name: same kind
 	// unions, different kinds intersect. Anything else makes the weekend inexpressible.
 	await suite.test("@day takes a day of the month or a day of the week", () => {
-		assert.deepEqual([...parseDateFilters("@day:3").filters!.monthDays], [3]);
-		assert.equal(parseDateFilters("@day:3").filters!.weekdays.size, 0);
-		assert.deepEqual([...parseDateFilters("@day:mon").filters!.weekdays], [1]);
-		assert.deepEqual([...parseDateFilters("@day:monday").filters!.weekdays], [1]);
-		assert.deepEqual([...parseDateFilters("@day:saturday @day:sunday").filters!.weekdays].sort(), [0, 6]);
-		assert.deepEqual([...parseDateFilters("@day:1 @day:15").filters!.monthDays].sort(), [1, 15]);
+		assert.deepEqual([...parseQueryFilters("@day:3").filters!.monthDays], [3]);
+		assert.equal(parseQueryFilters("@day:3").filters!.weekdays.size, 0);
+		assert.deepEqual([...parseQueryFilters("@day:mon").filters!.weekdays], [1]);
+		assert.deepEqual([...parseQueryFilters("@day:monday").filters!.weekdays], [1]);
+		assert.deepEqual([...parseQueryFilters("@day:saturday @day:sunday").filters!.weekdays].sort(), [0, 6]);
+		assert.deepEqual([...parseQueryFilters("@day:1 @day:15").filters!.monthDays].sort(), [1, 15]);
 	});
 
 	await suite.test("a day of the month and a day of the week narrow each other", () => {
-		const { filters } = parseDateFilters("@day:1 @day:monday");
+		const { filters } = parseQueryFilters("@day:1 @day:monday");
 		assert.deepEqual([...filters!.monthDays], [1]);
 		assert.deepEqual([...filters!.weekdays], [1]);
 		assert.ok(passesFilters("1988-08-01", filters!), "a Monday, and the first");
@@ -296,7 +296,7 @@ test("filters", async (suite) => {
 	// A date only ever gets more specific, so `august 3` is not one. This is where a reader says
 	// which fields they meant, and it is the reason nothing is lost by rejecting the bare form.
 	await suite.test("a day in every year is what the filters are for", () => {
-		const { filters } = parseDateFilters("@month:august @day:3");
+		const { filters } = parseQueryFilters("@month:august @day:3");
 		assert.ok(passesFilters("1988-08-03", filters!));
 		assert.ok(passesFilters("1989-08-03", filters!));
 		assert.ok(!passesFilters("1988-08-04", filters!));
@@ -304,29 +304,29 @@ test("filters", async (suite) => {
 	});
 
 	await suite.test("the archive's own vocabulary", () => {
-		assert.deepEqual([...parseDateFilters("@sunday").filters!.weekdays], [0]);
-		assert.deepEqual([...parseDateFilters("@daily").filters!.weekdays].sort(), [1, 2, 3, 4, 5, 6]);
+		assert.deepEqual([...parseQueryFilters("@sunday").filters!.weekdays], [0]);
+		assert.deepEqual([...parseQueryFilters("@daily").filters!.weekdays].sort(), [1, 2, 3, 4, 5, 6]);
 	});
 
 	// A filter is deliberate syntax, so it may demand an unambiguous order instead of guessing.
 	await suite.test("@date values are year first, never ambiguous", () => {
-		const settled = parseDateFilters("@date:1988/9/3").filters!;
+		const settled = parseQueryFilters("@date:1988/9/3").filters!;
 		assert.ok(passesFilters("1988-09-03", settled));
 		assert.ok(!passesFilters("1988-03-09", settled));
-		assert.ok(passesFilters("1988-09-03", parseDateFilters("@date:1988-sep-3").filters!));
-		assert.ok(parseDateFilters("@date:9/3/1988").filters!.impossible);
+		assert.ok(passesFilters("1988-09-03", parseQueryFilters("@date:1988-sep-3").filters!));
+		assert.ok(parseQueryFilters("@date:9/3/1988").filters!.impossible);
 	});
 
 	await suite.test("@date accepts a year, a month or a day", () => {
-		assert.ok(passesFilters("1988-08-03", parseDateFilters("@date:1988").filters!));
-		assert.ok(passesFilters("1988-08-03", parseDateFilters("@date:1988-08").filters!));
-		assert.ok(!passesFilters("1988-09-03", parseDateFilters("@date:1988-08").filters!));
-		assert.ok(passesFilters("1988-08-03", parseDateFilters("@date:19880803").filters!));
+		assert.ok(passesFilters("1988-08-03", parseQueryFilters("@date:1988").filters!));
+		assert.ok(passesFilters("1988-08-03", parseQueryFilters("@date:1988-08").filters!));
+		assert.ok(!passesFilters("1988-09-03", parseQueryFilters("@date:1988-08").filters!));
+		assert.ok(passesFilters("1988-08-03", parseQueryFilters("@date:19880803").filters!));
 	});
 
 	// The pair that settles the exclusive reading: "after 1987 and before 1990" is 1989.
 	await suite.test("@before and @after exclude the whole span they name", () => {
-		const { filters } = parseDateFilters("@after:1987 @before:1990");
+		const { filters } = parseQueryFilters("@after:1987 @before:1990");
 		assert.ok(passesFilters("1989-01-01", filters!));
 		assert.ok(passesFilters("1989-12-31", filters!));
 		assert.ok(!passesFilters("1987-12-31", filters!));
@@ -337,19 +337,19 @@ test("filters", async (suite) => {
 	// the widest wins, and the order they were typed in cannot change the answer.
 	await suite.test("repeated bounds union to the widest, whatever order they come in", () => {
 		for (const query of ["@before:1990 @before:1993", "@before:1993 @before:1990"]) {
-			const { filters } = parseDateFilters(query);
+			const { filters } = parseQueryFilters(query);
 			assert.ok(passesFilters("1992-06-01", filters!), query);
 			assert.ok(!passesFilters("1993-06-01", filters!), query);
 		}
 
 		for (const query of ["@after:1990 @after:1987", "@after:1987 @after:1990"]) {
-			const { filters } = parseDateFilters(query);
+			const { filters } = parseQueryFilters(query);
 			assert.ok(passesFilters("1988-06-01", filters!), query);
 			assert.ok(!passesFilters("1987-06-01", filters!), query);
 		}
 
 		// Different fields still intersect, which is what makes a window expressible at all.
-		const window = parseDateFilters("@after:1986 @after:1988 @before:1993 @before:1991").filters!;
+		const window = parseQueryFilters("@after:1986 @after:1988 @before:1993 @before:1991").filters!;
 		assert.ok(passesFilters("1990-06-01", window));
 		assert.ok(passesFilters("1992-06-01", window), "the wider @before wins");
 		assert.ok(passesFilters("1988-06-01", window), "and so does the wider @after");
@@ -358,7 +358,7 @@ test("filters", async (suite) => {
 	});
 
 	await suite.test("an unknown filter is left to the text search", () => {
-		const { filters, residual, segments } = parseDateFilters("@foo:bar");
+		const { filters, residual, segments } = parseQueryFilters("@foo:bar");
 		assert.equal(filters, null);
 		assert.equal(residual, "@foo:bar");
 		assert.deepEqual(segments, ["@foo:bar"]);
@@ -367,31 +367,31 @@ test("filters", async (suite) => {
 	// A filter says where to look, not that something is there, so a year outside the archive is
 	// a valid thing to write. `@after:1984` is how you say "from the beginning".
 	await suite.test("a filter year need not be one the archive holds", () => {
-		const early = parseDateFilters("@after:1984").filters!;
+		const early = parseQueryFilters("@after:1984").filters!;
 		assert.ok(!early.impossible);
 		assert.ok(passesFilters("1985-11-18", early));
 		assert.ok(passesFilters("1995-12-31", early));
 
-		const window = parseDateFilters("@after:1984 @before:1987").filters!;
+		const window = parseQueryFilters("@after:1984 @before:1987").filters!;
 		assert.ok(passesFilters("1985-11-18", window));
 		assert.ok(passesFilters("1986-06-01", window));
 		assert.ok(!passesFilters("1987-01-01", window));
 
 		// Valid but empty, rather than malformed: the two are indistinguishable to a reader, and
 		// this way the rule is simply "a filter names a span".
-		const future = parseDateFilters("@year:2001").filters!;
+		const future = parseQueryFilters("@year:2001").filters!;
 		assert.ok(!future.impossible);
 		// The predicate is about the date, not the archive — a 2001 date does pass a 2001 filter.
 		// What makes the query empty is that the archive holds no such strip.
 		assert.ok(!passesFilters("1988-08-03", future));
 		assert.ok(passesFilters("2001-09-11", future));
-		assert.ok(!parseDateFilters("@date:2001-09-11").filters!.impossible);
-		assert.ok(!parseDateFilters("@before:2024").filters!.impossible);
-		assert.ok(passesFilters("1988-08-03", parseDateFilters("@before:2024").filters!));
+		assert.ok(!parseQueryFilters("@date:2001-09-11").filters!.impossible);
+		assert.ok(!parseQueryFilters("@before:2024").filters!.impossible);
+		assert.ok(passesFilters("1988-08-03", parseQueryFilters("@before:2024").filters!));
 
 		// A two-digit year still reads as the 1900s, which is the only century the strip ran in.
-		assert.deepEqual([...parseDateFilters("@year:88").filters!.years], [1988]);
-		assert.deepEqual([...parseDateFilters("@year:84").filters!.years], [1984]);
+		assert.deepEqual([...parseQueryFilters("@year:88").filters!.years], [1988]);
+		assert.deepEqual([...parseQueryFilters("@year:84").filters!.years], [1984]);
 	});
 
 	// A reader's own query is still held to the archive, which is what keeps `1812` text.
@@ -414,21 +414,21 @@ test("filters", async (suite) => {
 			"@in",
 			"@in:snowman",
 		]) {
-			assert.ok(parseDateFilters(query).filters!.impossible, query);
-			assert.ok(!passesFilters("1988-08-03", parseDateFilters(query).filters!), query);
+			assert.ok(parseQueryFilters(query).filters!.impossible, query);
+			assert.ok(!passesFilters("1988-08-03", parseQueryFilters(query).filters!), query);
 		}
 	});
 
 	// A filter lifted out of the middle of a query must not join the words either side of it.
 	await suite.test("segments record where the filter was", () => {
-		const middle = parseDateFilters("clean @year:1988 your room");
+		const middle = parseQueryFilters("clean @year:1988 your room");
 		assert.deepEqual(middle.segments, ["clean", "your room"]);
 		assert.equal(middle.residual, "clean your room");
 
-		const leading = parseDateFilters("@year:1988 clean your room");
+		const leading = parseQueryFilters("@year:1988 clean your room");
 		assert.deepEqual(leading.segments, ["clean your room"]);
 
-		const none = parseDateFilters("clean your room");
+		const none = parseQueryFilters("clean your room");
 		assert.deepEqual(none.segments, ["clean your room"]);
 	});
 });
@@ -450,13 +450,13 @@ test("no query in the evaluation fixtures is a date or carries a filter", () => 
 			null,
 			`"${query}" now parses as a date; eval.test.ts measures a different engine`,
 		);
-		const { filters, residual } = parseDateFilters(query);
+		const { filters, residual } = parseQueryFilters(query);
 		assert.equal(filters, null, `"${query}" now carries a filter; eval.test.ts measures a different engine`);
 		assert.equal(residual, query);
 	}
 });
 
-// `scanFilters` is what `parseDateFilters` is built on, and it is also what paints the query box.
+// `scanFilters` is what `parseQueryFilters` is built on, and it is also what paints the query box.
 // These pin the two things the box needs and the parser never had to expose: where a filter sits,
 // and which one of them is the broken one.
 test("scanning filters", async (suite) => {
@@ -485,7 +485,7 @@ test("scanning filters", async (suite) => {
 		assert.ok(match.valid);
 	});
 
-	// The same list `parseDateFilters` calls impossible, one entry at a time, so the box can point
+	// The same list `parseQueryFilters` calls impossible, one entry at a time, so the box can point
 	// at the filter that did it rather than at the whole query.
 	await suite.test("a filter the parser cannot use is reported invalid", () => {
 		for (const query of [
@@ -521,7 +521,7 @@ test("scanning filters", async (suite) => {
 	});
 
 	// Two callers, one scan: whatever the box paints as a filter is what the search will excise.
-	await suite.test("the spans account for exactly what parseDateFilters removes", () => {
+	await suite.test("the spans account for exactly what parseQueryFilters removes", () => {
 		const query = "clean @year:1988 your @sunday room";
 		const matches = scanFilters(query);
 		let cursor = 0;
@@ -536,7 +536,7 @@ test("scanning filters", async (suite) => {
 				.map((piece) => piece.trim())
 				.filter(Boolean)
 				.join(" "),
-			parseDateFilters(query).residual,
+			parseQueryFilters(query).residual,
 		);
 	});
 });

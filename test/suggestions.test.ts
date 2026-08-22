@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { SUGGESTED_QUERIES, randomQuery } from "../src/suggestions";
-import { parseDateFilters } from "../src/date-query";
+import { parseQueryFilters } from "../src/date-query";
 import { registerVocabulary } from "../src/filter-vocabulary";
 import { loadCollectionData } from "../build-chain/collectionPages";
 import { generateCollectionIndex } from "../build-chain/generateCollectionIndex";
@@ -31,7 +31,7 @@ test("the suggestion pool", async (suite) => {
 	// `impossible` is exactly how the parser reports a filter nothing can satisfy.
 	await suite.test("asks for nothing the parser cannot satisfy", () => {
 		for (const query of SUGGESTED_QUERIES) {
-			const { filters } = parseDateFilters(query);
+			const { filters } = parseQueryFilters(query);
 			assert.notEqual(filters?.impossible, true, query);
 		}
 	});
