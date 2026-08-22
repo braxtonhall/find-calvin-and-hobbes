@@ -10,17 +10,14 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node: [22.x]
     steps:
       - name: checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: install node ${{ matrix.node }}
-        uses: actions/setup-node@v4
+      - name: install node 24.x
+        uses: actions/setup-node@v7
         with:
-          node-version: ${{ matrix.node }}
+          node-version: 24.x
 
       - name: install packages
         run: yarn install
