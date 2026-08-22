@@ -31,6 +31,8 @@
 }
 
 .detail-home {
+	display: inline-block;
+	text-decoration: none;
 	font-family: var(--font);
 	font-size: 14px;
 	color: var(--text);
@@ -51,6 +53,7 @@
 	font-family: var(--font);
 	font-size: 14px;
 	color: var(--text-muted);
+	text-decoration: none;
 	background: none;
 	border: 1px solid var(--grey);
 	border-radius: 4px;
@@ -224,6 +227,7 @@
 }
 
 .collection-book {
+	display: block;
 	height: 64px;
 	position: relative;
 	cursor: pointer;

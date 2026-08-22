@@ -1,10 +1,11 @@
 import "./credits.css";
 
-import { attachHomeButtonHandler, buildHomeButton } from "./nav-buttons";
+import { attachBackButtonHandler, buildBackButton, buildHomeButton } from "./nav-buttons";
 
 export function renderCredits(): void {
 	const element = document.getElementById("view-credits")!;
 	element.innerHTML = `<div class="credits-container">
+		${buildBackButton("credits-back")}
 		${buildHomeButton("credits-home")}
 		<h2 class="credits-heading">Credits</h2>
 
@@ -63,5 +64,5 @@ export function renderCredits(): void {
 		<p class="credits-footer">Please send corrections, fixes, and ideas to Braxton Hall through <a href="https://github.com/braxtonhall/find-calvin-and-hobbes" target="_blank" rel="noopener">GitHub</a>.</p>
 	</div>`;
 
-	attachHomeButtonHandler(element, "credits-home");
+	attachBackButtonHandler(element, "credits-back");
 }

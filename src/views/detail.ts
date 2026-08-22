@@ -6,7 +6,7 @@ import { escHtml } from "../utils";
 import { dateToCompact } from "../date-utils";
 import { getDescription, loadDescriptions } from "../details";
 import { isBookmarked, toggleBookmark } from "../bookmarks";
-import { navigate, parseRoute } from "../router";
+import { buildCollectionHash, buildComicHash, parseRoute } from "../router";
 import { attachBackAndHomeHandlers, buildBackAndHomeButtons } from "./nav-buttons";
 
 export function getAdjacentComicDate(date: string, direction: -1 | 1, jump: number = 1): string | null {
@@ -146,7 +146,7 @@ function buildCoverBoxHtml(
 	const alteration = collection.alterations && collection.alterations[alterationKey];
 	const badge = alteration ? '<div class="collection-book__badge">*</div>' : "";
 
-	return `<div class="collection-book${bwClass}" data-collection-id="${escHtml(collection.id)}" data-bw="${isBlackAndWhite ? "1" : "0"}" data-alteration="${escHtml(alteration || "")}" data-pages="${escHtml(tooltipLines.join("\n"))}" style="aspect-ratio: ${collection.aspectRatio}"><img src="${escHtml(collection.image)}" alt="${escHtml(collection.name)}" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${badge}</div>`;
+	return `<a class="collection-book${bwClass}" href="${escHtml(buildCollectionHash(collection.id))}" data-collection-id="${escHtml(collection.id)}" data-bw="${isBlackAndWhite ? "1" : "0"}" data-alteration="${escHtml(alteration || "")}" data-pages="${escHtml(tooltipLines.join("\n"))}" style="aspect-ratio: ${collection.aspectRatio}"><img src="${escHtml(collection.image)}" alt="${escHtml(collection.name)}" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${badge}</a>`;
 }
 
 function wrapCollectionSection(inner: string): string {
@@ -336,13 +336,10 @@ function attachCollectionTooltipFollowers(): void {
 }
 
 function attachCollectionBookHandlers(element: HTMLElement): void {
+	// The cover's href does the navigating. This only clears the tooltip out of the way of whatever
+	// the click turns out to be — including a cmd-click, which leaves this page standing.
 	element.querySelectorAll<HTMLElement>(".collection-book").forEach((book) => {
-		book.addEventListener("click", () => {
-			const collectionId = book.dataset.collectionId;
-			if (!collectionId) return;
-			hideCollectionTooltip();
-			navigate("#/collection/" + collectionId);
-		});
+		book.addEventListener("click", hideCollectionTooltip);
 	});
 
 	if (!state.collectionTooltip) return;
@@ -377,17 +374,17 @@ export function renderDetail(date: string): void {
 	const nextDate = getAdjacentComicDate(date, 1);
 
 	const prevButtonHtml = prevDate
-		? `<button class="nav-btn" id="nav-prev" data-date="${prevDate}" title="Previous comic">&larr;</button>`
+		? `<a class="nav-btn" id="nav-prev" href="${buildComicHash(prevDate)}" data-date="${prevDate}" title="Previous comic">&larr;</a>`
 		: `<span class="nav-btn nav-btn--disabled" title="First comic">&larr;</span>`;
 	const nextButtonHtml = nextDate
-		? `<button class="nav-btn" id="nav-next" data-date="${nextDate}" title="Next comic">&rarr;</button>`
+		? `<a class="nav-btn" id="nav-next" href="${buildComicHash(nextDate)}" data-date="${nextDate}" title="Next comic">&rarr;</a>`
 		: `<span class="nav-btn nav-btn--disabled" title="Last comic">&rarr;</span>`;
 
 	const headerHtml = `<div class="detail-container">
 		${buildBackAndHomeButtons()}
 		<h2 class="detail-date">${dateFormatted}</h2>
 		<div class="detail-actions">
-			<button class="copy-link-btn" id="copy-link-btn" data-href="${window.location.pathname}#/comic/${date}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark"><svg class="bookmark-icon" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button> ${prevButtonHtml} ${nextButtonHtml}
+			<button class="copy-link-btn" id="copy-link-btn" data-href="${window.location.pathname}${buildComicHash(date)}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark"><svg class="bookmark-icon" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button> ${prevButtonHtml} ${nextButtonHtml}
 		</div>`;
 
 	if (!comicsForDate || comicsForDate.length === 0) {
@@ -408,16 +405,6 @@ export function renderDetail(date: string): void {
 
 	const bookmarkButton = element.querySelector<HTMLButtonElement>("#bookmark-btn");
 	if (bookmarkButton) buildBookmarkButtonHandler(bookmarkButton, date);
-
-	const prevButton = element.querySelector<HTMLButtonElement>("#nav-prev");
-	if (prevButton) {
-		prevButton.addEventListener("click", () => navigate("#/comic/" + prevDate));
-	}
-
-	const nextButton = element.querySelector<HTMLButtonElement>("#nav-next");
-	if (nextButton) {
-		nextButton.addEventListener("click", () => navigate("#/comic/" + nextDate));
-	}
 
 	attachCollectionBookHandlers(element);
 

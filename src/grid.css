@@ -64,6 +64,8 @@
 .cell {
 	border-radius: var(--cell-radius);
 	cursor: pointer;
+	color: inherit;
+	text-decoration: none;
 	transition:
 		background 0.15s,
 		box-shadow 0.15s,

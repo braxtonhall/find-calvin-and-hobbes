@@ -1,4 +1,4 @@
-import { canGoBack, navigate } from "../router";
+import { canGoBack } from "../router";
 
 export function buildBackButton(className: string): string {
 	return canGoBack()
@@ -11,12 +11,10 @@ export function attachBackButtonHandler(element: HTMLElement, className: string)
 	if (backButton) backButton.addEventListener("click", () => history.back());
 }
 
+// A link, because home has an address. Back stays a button: `history.back()` is a step through a
+// list only the browser holds, and there is no URL to put in an href for it.
 export function buildHomeButton(className: string): string {
-	return `<button class="${className}"><span class="home-icon">&#8962;</span> Home</button>`;
-}
-
-export function attachHomeButtonHandler(element: HTMLElement, className: string): void {
-	element.querySelector(`button.${className}`)!.addEventListener("click", () => navigate("#/"));
+	return `<a class="${className}" href="#/"><span class="home-icon">&#8962;</span> Home</a>`;
 }
 
 export function buildBackAndHomeButtons(): string {
@@ -26,5 +24,4 @@ export function buildBackAndHomeButtons(): string {
 
 export function attachBackAndHomeHandlers(element: HTMLElement): void {
 	attachBackButtonHandler(element, "detail-back");
-	attachHomeButtonHandler(element, "detail-home");
 }

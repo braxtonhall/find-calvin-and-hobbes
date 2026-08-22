@@ -5,7 +5,7 @@ import { SortMode } from "../types";
 import { search, SearchResult } from "../search";
 import { assignTiers } from "../tiers";
 import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
-import { buildSearchHash, navigate, replaceSearch } from "../router";
+import { buildComicHash, buildSearchHash, navigate, replaceSearch } from "../router";
 import { buildFilterBar, filterMenuHasFocus, syncFilterBar } from "./filter-bar";
 import { attachQueryInput, syncQueryInput } from "./query-input";
 
@@ -159,13 +159,18 @@ function resultsHtml(results: SearchResult[]): string {
 		const label = SOURCE_LABELS[source];
 		const sourceTag = label ? `<span class="result-source">${label}</span>` : ``;
 
-		html += `<div class="result-row${comic.image ? "" : " result-row--no-image"}" data-date="${comic.date}" tabindex="0" role="button" aria-label="View comic from ${dateFormatted}">
+		// An anchor rather than the `tabindex`/`role="button"` div it used to be: the row goes somewhere
+		// with an address, so the browser can offer to copy it or open it in a second tab, and the
+		// focus and Enter behaviour that had to be spelled out now comes for free — and announces as a
+		// link, which is the truth. `draggable="false"` because dragging from inside an anchor drags the
+		// link instead of selecting text, and the transcript below is text a reader may want to copy.
+		html += `<a class="result-row${comic.image ? "" : " result-row--no-image"}" href="${buildComicHash(comic.date)}" draggable="false" data-date="${comic.date}" aria-label="View comic from ${dateFormatted}">
 			<div class="result-header">${dateFormatted}${sourceTag}</div>
 			<div class="result-body">
 				<div class="result-text">${highlighted}</div>
 				${comic.image ? `<div class="result-image-wrap"><img class="result-image" src="${escHtml(comic.image)}" alt="Comic from ${dateFormatted}" onload="this.classList.add('loaded')" onerror="this.style.display='none'" /></div>` : ``}
 			</div>
-		</div>`;
+		</a>`;
 	}
 	return html;
 }
@@ -182,10 +187,6 @@ function attachRowHandlers(list: HTMLElement): void {
 			const scrollTo = mark.offsetTop - textElement.clientHeight / 2;
 			textElement.scrollTop = Math.max(0, Math.min(scrollTo, maxScroll));
 		}
-
-		row.addEventListener("click", () => {
-			navigate("#/comic/" + row.dataset.date);
-		});
 
 		row.addEventListener("mouseenter", () => {
 			if (state.keyboardNavActive) return;
@@ -245,10 +246,8 @@ function attachRowHandlers(list: HTMLElement): void {
 
 					state.keyboardNavActive = true;
 				}
-			} else if (event.key === "Enter") {
-				event.preventDefault();
-				navigate("#/comic/" + row.dataset.date);
 			}
+			// Enter is the anchor's own: it fires a click, which `attachRouteLinkHandler` picks up.
 		});
 	});
 }

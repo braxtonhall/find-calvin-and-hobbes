@@ -5,7 +5,14 @@ import { getBookmarkedDates } from "./bookmarks";
 import { registerVocabulary } from "./filter-vocabulary";
 import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
-import { handleRoute, markInitialHistoryEntry, navigate, parseRoute } from "./router";
+import {
+	attachRouteLinkHandler,
+	buildComicHash,
+	handleRoute,
+	markInitialHistoryEntry,
+	navigate,
+	parseRoute,
+} from "./router";
 import { getAdjacentComicDate, getSameDayComicDate } from "./views/detail";
 
 async function initialize(): Promise<void> {
@@ -31,6 +38,7 @@ async function initialize(): Promise<void> {
 
 document.addEventListener("DOMContentLoaded", () => {
 	markInitialHistoryEntry();
+	attachRouteLinkHandler();
 
 	initialize();
 
@@ -54,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
 				event.preventDefault();
 				const direction = event.key === "ArrowLeft" ? -1 : 1;
 				const adjacentDate = getAdjacentComicDate(route.date, direction);
-				if (adjacentDate) navigate("#/comic/" + adjacentDate);
+				if (adjacentDate) navigate(buildComicHash(adjacentDate));
 			}
 		}
 
@@ -64,7 +72,7 @@ document.addEventListener("DOMContentLoaded", () => {
 				event.preventDefault();
 				const direction = event.key === "ArrowUp" ? -1 : 1;
 				const adjacentDate = getSameDayComicDate(route.date, direction);
-				if (adjacentDate) navigate("#/comic/" + adjacentDate);
+				if (adjacentDate) navigate(buildComicHash(adjacentDate));
 			}
 		}
 

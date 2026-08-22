@@ -6,7 +6,7 @@ import { dateToString, isSabbatical } from "./date-utils";
 import { scrollCellIntoViewIfNeeded } from "./utils";
 import { state } from "./state";
 import { loadDescriptions } from "./details";
-import { navigate, parseRoute } from "./router";
+import { buildComicHash, isPlainClick, parseRoute } from "./router";
 
 export function updateGridStatesFromData(): void {
 	const cells = document.querySelectorAll(".cell--has-comic");
@@ -173,8 +173,19 @@ export function renderGrid(): void {
 	const cells: HTMLElement[] = [];
 
 	for (const day of state.allDays) {
-		const cell = document.createElement("div");
+		// An anchor, so that cmd-click opens the day in a new tab and right-click offers its address.
+		// `attachRouteLinkHandler` catches the plain click and re-renders in place as it always has.
+		const cell = document.createElement("a");
 		cell.className = `cell cell--${day.state}`;
+		cell.href = buildComicHash(day.date);
+		// Out of the tab order deliberately. There are one of these per day of the run, and the grid
+		// sits ahead of `main`, so a reader tabbing towards the content would walk the whole archive to
+		// reach it. The href is here to be copied and opened, not stepped through; stepping through the
+		// comics is what the arrow keys on a detail page are for.
+		cell.tabIndex = -1;
+		// A ten-pixel link is a drag waiting to happen by accident, and dragging one has no use worth
+		// the misfires.
+		cell.draggable = false;
 		cell.dataset.date = day.date;
 
 		const [year, month, dayOfMonth] = day.date.split("-").map(Number);
@@ -213,14 +224,12 @@ export function renderGrid(): void {
 
 	renderYearRail(cells);
 
+	// The href does the navigating; this is only the scroll that used to ride along with it. Skipped
+	// for a modified click, which is leaving the current page where it stands — including its grid.
 	layout.addEventListener("click", (event) => {
+		if (!isPlainClick(event)) return;
 		const cell = (event.target as HTMLElement).closest<HTMLElement>(".cell");
-		if (!cell) return;
-		const date = cell.dataset.date;
-		if (date) {
-			scrollCellIntoViewIfNeeded(cell);
-			navigate("#/comic/" + date);
-		}
+		if (cell?.dataset.date) scrollCellIntoViewIfNeeded(cell);
 	});
 
 	layout.addEventListener("mouseover", (event) => {

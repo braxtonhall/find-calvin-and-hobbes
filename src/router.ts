@@ -52,6 +52,50 @@ export function buildSearchHash(query: string, sort: SortMode = "rank"): string 
 	return "#/search?q=" + encodeURIComponent(query) + (sort === "date" ? "&sort=date" : "");
 }
 
+export function buildComicHash(date: string): string {
+	return "#/comic/" + date;
+}
+
+export function buildCollectionHash(collectionId: string): string {
+	return "#/collection/" + collectionId;
+}
+
+/**
+ * The primary button with no modifier held.
+ *
+ * A cmd-click, a shift-click or a middle-click is a request for a second tab or window, and the
+ * thing under the cursor is a real link now, so the browser serves that request better than we can.
+ */
+export function isPlainClick(event: MouseEvent): boolean {
+	return event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey;
+}
+
+/**
+ * Sends every in-app anchor through `navigate`, once, for the whole app.
+ *
+ * The anchors carry real hrefs so that cmd-click opens a comic in a new tab and right-click offers
+ * to copy its address — the browser cannot do either for a `<div>` with a click handler. This is
+ * what stops a plain click from being handled natively, and it has to, twice over: a native hash
+ * navigation lands with `history.state === null`, so `canGoBack` reads a depth of 0 and the Back
+ * button on the destination renders disabled, and the render would run from `hashchange` rather
+ * than from us.
+ *
+ * `#/` is the prefix every route shares and no other anchor on the page has: the skip link is
+ * `#main`, and everything leaving the site is absolute.
+ */
+export function attachRouteLinkHandler(): void {
+	document.addEventListener("click", (event) => {
+		if (event.defaultPrevented) return;
+		const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#/"]');
+		if (!link || !isPlainClick(event)) return;
+		if (link.target !== "" && link.target !== "_self") return;
+		// `getAttribute` rather than `.href`, which resolves to an absolute URL — `navigate` puts the
+		// pathname back on itself.
+		event.preventDefault();
+		navigate(link.getAttribute("href")!);
+	});
+}
+
 interface HistoryState {
 	depth: number;
 }
