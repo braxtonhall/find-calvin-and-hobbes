@@ -2,7 +2,10 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!-- `resizes-content` has Chrome shrink the layout viewport for the software keyboard, which
+		is the half of the keyboard problem a browser can solve for us. iOS Safari ignores it, so
+		`placement.ts` measures the visual viewport rather than relying on this. -->
+		<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
 		<title>Find Calvin and Hobbes</title>
 		<link rel="icon" type="image/png" href="https://static.wikitide.net/calvinandhobbeswiki/f/f3/CalvinAndHobbes.png" />
 		<meta name="theme-color" content="#f6b213" />

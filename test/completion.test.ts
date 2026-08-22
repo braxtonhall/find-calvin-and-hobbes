@@ -1,8 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Completion, completionsAt, describeInvalid, filterSpans } from "../src/completion";
+import { Completion, Row, completionsAt, describeInvalid, filterSpans, registerCandidates } from "../src/completion";
 import { FILTER_SPECS } from "../src/filter-spec";
-import { scanFilters } from "../src/date-query";
+import { parseDateFilters, passesFilters, scanFilters } from "../src/date-query";
+import { RANGE_END, RANGE_START } from "../src/constants";
+import { isSabbatical } from "../src/date-utils";
+import { MONTH_NAMES, WEEKDAY_NAMES, YEARS } from "../src/vocabulary";
 
 /**
  * A caret is written into the query as `|`, because every one of these cases is about where the
@@ -26,12 +29,86 @@ function completions(marked: string): (string | undefined)[] {
 	return (at(marked)?.rows ?? []).map((row) => row.insert);
 }
 
+/** What each row offers to write, which past the colon is the whole of what the reader sees. */
+function values(marked: string): (string | undefined)[] {
+	return (at(marked)?.rows ?? []).map((row) => row.value);
+}
+
+/** Only the rows of one shape, for the assertions that are about one field's worth of choices. */
+function ofShape(marked: string, shape: string): (string | undefined)[] {
+	return (at(marked)?.rows ?? []).filter((row) => row.template === shape).map((row) => row.value);
+}
+
+function years(marked: string): (string | undefined)[] {
+	return ofShape(marked, "YYYY");
+}
+
+function months(marked: string): (string | undefined)[] {
+	return ofShape(marked, "YYYY/MM");
+}
+
 /** Each span as the kind it is and the text it covers, which is the whole of what it says. */
 function spans(marked: string): [string, string][] {
 	const caret = marked.indexOf("|");
 	const text = caret === -1 ? marked : marked.slice(0, caret) + marked.slice(caret + 1);
 	return filterSpans(text, caret === -1 ? null : caret).map((span) => [span.kind, text.slice(span.start, span.end)]);
 }
+
+/** Every day the archive holds, which is what an offered value has to be able to name. */
+const ARCHIVE: string[] = [];
+for (let stamp = Date.parse(RANGE_START); stamp <= Date.parse(RANGE_END); stamp += 24 * 60 * 60 * 1000) {
+	const date = new Date(stamp).toISOString().slice(0, 10);
+	if (!isSabbatical(date)) ARCHIVE.push(date);
+}
+
+/**
+ * Whether the value names at least one real strip.
+ *
+ * Asked of `@date:` whichever filter the value came from, because a bound is a different question:
+ * `@before:1985` names a real day of the archive and then honestly matches nothing before it, and
+ * that is the reader's business rather than the menu's.
+ */
+function namesRealStrips(name: string, value: string): boolean {
+	const spelled = name === "before" || name === "after" ? "date" : name;
+	const { filters } = parseDateFilters(`@${spelled}:${value}`);
+	return filters !== null && ARCHIVE.some((date) => passesFilters(date, filters));
+}
+
+/**
+ * Every value the menu will ever offer, over every prefix a reader could be part-way through.
+ *
+ * One character is enough to escape the list's own cap — no candidate has twenty siblings under a
+ * shared first character — so this really does see the uncapped list rather than the first
+ * screenful of it.
+ */
+function everyValueOffered(): { name: string; typed: string; written: string; insert: string }[] {
+	const typed = ["", ...ALPHABET];
+	for (const year of YEARS) {
+		const long = String(year);
+		typed.push(long.slice(0, 2), long.slice(0, 3), long, `${long}/`, `${long}.`, long.slice(2), `${long.slice(2)}/`);
+		for (let month = 1; month <= 12; month++) {
+			typed.push(`${long}/${month}`, `${long}-${String(month).padStart(2, "0")}`, `${long}/${month}/`);
+			typed.push(`${long}${String(month).padStart(2, "0")}`);
+			for (const day of [1, 3, 9, 10, 28, 31]) typed.push(`${long}/${month}/${day}`);
+		}
+	}
+
+	const found: { name: string; typed: string; written: string; insert: string }[] = [];
+	for (const spec of FILTER_SPECS) {
+		if (spec.kind === "flag") continue;
+		for (const value of typed) {
+			const text = `@${spec.name}:${value}`;
+			for (const row of completionsAt(text, text.length)?.rows ?? []) {
+				if (row.value === undefined) continue;
+				found.push({ name: spec.name, typed: value, written: row.value, insert: row.insert.trim() });
+			}
+		}
+	}
+	assert.ok(found.length > 1000, `only ${found.length} values to check`);
+	return found;
+}
+
+const ALPHABET = [..."0123456789", ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(97 + index))];
 
 test("naming a filter", async (suite) => {
 	await suite.test("a bare @ offers every filter there is", () => {
@@ -83,25 +160,24 @@ test("naming a filter", async (suite) => {
 	});
 });
 
-test("offering the value shapes", async (suite) => {
-	await suite.test("@year: offers both year shapes", () => {
-		assert.deepEqual(templates("@year:|"), ["YYYY", "YY"]);
+test("offering the values", async (suite) => {
+	await suite.test("@year: offers every year the archive holds", () => {
+		assert.deepEqual(values("@year:|"), YEARS.map(String));
+		assert.deepEqual(completions("@year:|")[0], "@year:1985 ");
 	});
 
-	await suite.test("@date: offers all three year-first shapes on their own rows", () => {
-		assert.deepEqual(templates("@date:|"), ["YYYY", "YYYY/MM", "YYYY/MM/DD"]);
-		assert.deepEqual(templates("@before:|"), ["YYYY", "YYYY/MM", "YYYY/MM/DD"]);
-		assert.deepEqual(templates("@after:|"), ["YYYY", "YYYY/MM", "YYYY/MM/DD"]);
+	await suite.test("@date: offers every year the strip ran in", () => {
+		assert.deepEqual(years("@date:|"), YEARS.map(String));
+		assert.deepEqual(years("@before:|"), YEARS.map(String));
+		assert.deepEqual(years("@after:|"), YEARS.map(String));
 	});
 
-	await suite.test("@month: and @day: each offer a number and a name", () => {
-		assert.deepEqual(templates("@month:|"), ["MM", "august"]);
-		assert.deepEqual(templates("@day:|"), ["DD", "saturday"]);
-	});
-
-	await suite.test("a shape the value has only begun cannot be accepted", () => {
-		assert.deepEqual(completions("@year:199|"), [undefined]);
-		assert.deepEqual(completions("@date:1988/|"), [undefined, undefined]);
+	// Nobody would guess from a list of years that a month or a day could go in there, so the first
+	// screenful says so — with the narrower shapes of the first row, which agree with it.
+	await suite.test("the narrower shapes ride along under the first row", () => {
+		assert.deepEqual(values("@date:|").slice(0, 4), ["1985", "1985/11", "1985/11/18", "1986"]);
+		assert.deepEqual(values("@date:1985/|"), ["1985/11", "1985/11/18", "1985/12"]);
+		assert.deepEqual(values("@after:19|").slice(0, 4), ["1985", "1985/11", "1985/11/18", "1986"]);
 	});
 
 	await suite.test("a colon after a flag has nothing to offer", () => {
@@ -112,69 +188,259 @@ test("offering the value shapes", async (suite) => {
 	await suite.test("a colon after a name that is not a filter has nothing to offer", () => {
 		assert.equal(at("@nonsense:|"), null);
 	});
+
+	// A row still knows the shape its value is an example of, and the hint beside it says which —
+	// which is how a reader tells the whole year from the month under it.
+	await suite.test("a row knows the shape its value is an example of", () => {
+		assert.deepEqual(templates("@date:1985|"), ["YYYY", "YYYY/MM", "YYYY/MM/DD", "YYYY/MM"]);
+		assert.deepEqual(templates("@date:1985/11/18|"), ["YYYY/MM/DD"]);
+		assert.deepEqual(
+			(at("@date:1985|")?.rows ?? []).map((row) => row.hint),
+			["the whole year", "the whole month", "one day", "the whole month"],
+		);
+	});
+
+	// The whole of the reason the read-only rows are gone: a row nobody can accept is not a row.
+	await suite.test("a value the archive cannot start closes the menu", () => {
+		assert.equal(at("@before:0|"), null);
+		assert.equal(at("@date:0|"), null);
+		assert.equal(at("@month:0|"), null);
+		assert.equal(at("@date:1988/13|"), null);
+	});
+
+	await suite.test("every row offered can be accepted", () => {
+		for (const value of everyValueOffered()) assert.ok(value.insert.startsWith(`@${value.name}:`), value.insert);
+	});
 });
 
-test("narrowing the guide to what could still be typed", async (suite) => {
-	await suite.test("a shape the value can no longer become drops out", () => {
-		assert.deepEqual(templates("@year:1|"), ["YYYY", "YY"]);
-		assert.deepEqual(templates("@year:199|"), ["YYYY"]);
-		assert.deepEqual(templates("@day:4|"), ["DD"]);
-		assert.deepEqual(templates("@month:a|"), ["august"]);
+test("typing the rest of the value in", async (suite) => {
+	// Tab walks a field at a time: every year, then every month of the year that was settled, then
+	// every day of that month.
+	await suite.test("a field's worth of choices at a time", () => {
+		assert.deepEqual(years("@date:19|"), YEARS.map(String));
+		assert.deepEqual(values("@date:1985|"), ["1985", "1985/11", "1985/11/18", "1985/12"]);
+		assert.deepEqual(values("@date:1985/11|").slice(0, 3), ["1985/11", "1985/11/18", "1985/11/19"]);
+		assert.deepEqual(values("@date:1985/11/18|"), ["1985/11/18"]);
 	});
 
-	// Both rows have something to say at this keystroke: 94 is already a year, and it is also two
-	// digits into being a different one.
-	await suite.test("a filled shape stays, alongside whatever the value could still become", () => {
-		assert.deepEqual(templates("@year:94|"), ["YYYY", "YY"]);
-		assert.deepEqual(completions("@year:94|"), [undefined, "@year:94 "]);
+	// A field the digits pin to one value is settled, so the rows drop to the next field down rather
+	// than restating it — and a field they do not pin shows its siblings instead.
+	await suite.test("a settled field is not restated", () => {
+		assert.deepEqual(years("@date:198|"), ["1985", "1986", "1987", "1988", "1989"]);
+		assert.deepEqual(values("@date:1988/9|").slice(0, 2), ["1988/9", "1988/9/1"]);
+		assert.deepEqual(values("@date:1988/1|"), ["1988/1", "1988/1/1", "1988/10", "1988/11", "1988/12"]);
 	});
 
-	await suite.test("a filled shape is the row that can be accepted", () => {
-		assert.deepEqual(completions("@year:1994|"), ["@year:1994 "]);
-		assert.deepEqual(completions("@month:august|"), ["@month:august "]);
-		assert.deepEqual(completions("@day:saturday|"), ["@day:saturday "]);
-		assert.deepEqual(completions("@date:1988/09/03|"), ["@date:1988/09/03 "]);
+	// The rule most likely to be got subtly wrong, so it gets a table of its own: the committing
+	// space comes when there is nothing further Tab could add.
+	await suite.test("the committing space, or not", () => {
+		assert.deepEqual(completions("@month:augus|"), ["@month:august "], "a leaf commits");
+		assert.deepEqual(completions("@date:198|")[0], "@date:1985", "a year with months under it does not");
+		assert.deepEqual(completions("@date:1985|")[0], "@date:1985 ", "the value was already there, so it commits");
+		assert.deepEqual(completions("@year:19|")[0], "@year:1985 ", "a single field is always a leaf");
+		assert.deepEqual(completions("@date:1985/11/18|"), ["@date:1985/11/18 "], "a whole date is as deep as it goes");
+		assert.deepEqual(completions("@date:1988/9|")[1], "@date:1988/9/1 ", "so every day commits");
 	});
 
-	// Accepting finishes the filter off; it never types the shape's own letters into the query.
-	await suite.test("what it accepts is the filter as typed, with a space after it", () => {
+	await suite.test("accepting a non-leaf row twice commits", () => {
+		assert.deepEqual(completions("@date:1988/|")[0], "@date:1988/1");
+		assert.deepEqual(completions("@date:1988/1|")[0], "@date:1988/1 ");
+	});
+
+	await suite.test("a number commits as it was typed, rather than as a name", () => {
 		assert.deepEqual(completions("@month:8|"), ["@month:8 "]);
 		assert.deepEqual(completions("@day:4|"), ["@day:4 "]);
+	});
+
+	// The canonical long spelling, which is the rule the filter bar states: the readable form is the
+	// teachable one.
+	await suite.test("a name is completed to its long spelling", () => {
+		assert.deepEqual(completions("@month:aug|"), ["@month:august "]);
+		assert.deepEqual(completions("@day:sat|"), ["@day:saturday "]);
+		assert.deepEqual(completions("@month:may|"), ["@month:may "]);
+	});
+
+	// A four-digit year is reached by typing either spelling of it, and both write the long one.
+	await suite.test("a short year completes to the long one", () => {
+		assert.deepEqual(values("@year:94|"), ["1994"]);
+		assert.deepEqual(completions("@year:94|"), ["@year:1994 "]);
+	});
+
+	// A row narrower than the one above it is the same value carried deeper, never a different one:
+	// `1985` never sits above `1988/11`.
+	await suite.test("a narrower row extends the one above it", () => {
+		const fields = (row: Row) => (row.template ?? "").split("/").length;
+		for (const marked of ["@date:|", "@date:19|", "@date:1985|", "@date:1988/|", "@date:88|", "@before:9|"]) {
+			const rows = at(marked)!.rows;
+			for (const [index, row] of rows.entries()) {
+				if (index === 0 || fields(row) <= fields(rows[index - 1])) continue;
+				const above = rows[index - 1].value!;
+				assert.ok(row.value!.startsWith(above), `${marked}: ${row.value} under ${above}`);
+			}
+		}
+	});
+
+	// Never a character rewritten that was already right: the reader's own separators, padding and
+	// two-digit years survive being completed.
+	await suite.test("what was typed correctly is left as it was typed", () => {
+		assert.deepEqual(completions("@date:1988/09/03|"), ["@date:1988/09/03 "]);
 		assert.deepEqual(completions("@date:19880903|"), ["@date:19880903 "]);
+		assert.deepEqual(values("@date:1988-09|")[1], "1988-09-1");
+		assert.deepEqual(values("@date:88|").slice(0, 2), ["88", "88/1"]);
 	});
 
-	// A spelling the menu never shows, filling a shape it never spelled out.
-	await suite.test("a compact date fills the shape it fills", () => {
-		assert.deepEqual(templates("@date:19880903|"), ["YYYY/MM/DD"]);
+	// A value the archive cannot honour is still a filter the parser takes — see `DateSource` — so
+	// where there is nothing to offer instead, what the reader typed is what the row accepts.
+	await suite.test("a value outside the archive is still acceptable as typed", () => {
+		assert.deepEqual(completions("@year:2001|"), ["@year:2001 "]);
+		assert.deepEqual(completions("@date:2001|"), ["@date:2001 "]);
+		// May 1994 is a sabbatical from end to end, so there is no day of it to offer.
+		assert.deepEqual(completions("@date:1994/5|"), ["@date:1994/5 "]);
+	});
+});
+
+test("the values the archive can offer", async (suite) => {
+	// The strip starts on the 18th of November 1985, so those are the only two months of that year
+	// and the 18th is the first day of the first of them.
+	await suite.test("only the months and days the strip actually ran", () => {
+		assert.deepEqual(months("@date:1985/|"), ["1985/11", "1985/12"]);
+		assert.deepEqual(values("@date:1985/11|")[1], "1985/11/18");
 	});
 
-	await suite.test("a value nothing could rescue leaves no guide either", () => {
+	await suite.test("a sabbatical is not a month to offer", () => {
+		// Away from the 5th of May 1991 to February 1992: May is offered for the four days before it
+		// starts, and the rest of the year is not there to be offered at all.
+		assert.deepEqual(months("@date:1991/|"), ["1991/1", "1991/2", "1991/3", "1991/4", "1991/5"]);
+		assert.deepEqual(values("@date:1991/5|"), ["1991/5", "1991/5/1", "1991/5/2", "1991/5/3", "1991/5/4"]);
+		assert.deepEqual(months("@date:1994/|"), ["1994/1", "1994/2", "1994/3", "1994/4"]);
+	});
+
+	// Every value the menu came up with itself, as against the reader's own, which the menu accepts
+	// as typed and does not vouch for — see "a value outside the archive".
+	await suite.test("no value the menu offers is a day the archive does not hold", () => {
+		let checked = 0;
+		for (const value of everyValueOffered()) {
+			if (value.written === value.typed) continue;
+			assert.ok(namesRealStrips(value.name, value.written), `@${value.name}:${value.written}`);
+			checked++;
+		}
+		assert.ok(checked > 1000, `only ${checked} values to check`);
+	});
+
+	await suite.test("every value it offers is one the parser takes", () => {
+		for (const value of everyValueOffered()) {
+			const matches = scanFilters(value.insert);
+			assert.equal(matches.length, 1, value.insert);
+			assert.equal(matches[0].valid, true, value.insert);
+		}
+	});
+
+	// The invariant the whole rule exists to guarantee, and the one whose failure mode is a dead
+	// Tab key: accepting the top row over and over ends in a finished filter.
+	await suite.test("accepting the top row repeatedly ends in a committed filter", () => {
+		for (const seed of ["@date:", "@date:19", "@date:9", "@date:1988/", "@year:", "@month:a", "@day:s", "@after:19"]) {
+			let text = seed;
+			let steps = 0;
+			while (!text.endsWith(" ")) {
+				assert.ok(steps++ < 5, `${seed} took more than five steps, at ${text}`);
+				const completion = completionsAt(text, text.length);
+				const row = completion?.rows.find((each) => each.insert !== undefined);
+				assert.ok(row?.insert !== undefined, `${seed} ran out of rows at ${text}`);
+				text = text.slice(0, completion!.start) + row.insert + text.slice(completion!.end);
+			}
+		}
+	});
+});
+
+test("narrowing to what has been typed", async (suite) => {
+	await suite.test("a name narrows by prefix, under its long spelling", () => {
+		assert.deepEqual(values("@month:j|"), ["january", "june", "july"]);
+		assert.deepEqual(values("@day:s|"), ["sunday", "saturday"]);
+		assert.deepEqual(values("@day:m|"), ["monday"]);
+		assert.deepEqual(values("@month:sept|"), ["september"]);
+	});
+
+	await suite.test("a year narrows under both of its spellings", () => {
+		assert.deepEqual(values("@year:9|"), ["1990", "1991", "1992", "1993", "1994", "1995"]);
+		assert.deepEqual(values("@year:8|"), ["1985", "1986", "1987", "1988", "1989"]);
+		assert.deepEqual(values("@year:199|"), ["1990", "1991", "1992", "1993", "1994", "1995"]);
+		assert.deepEqual(values("@year:19|"), YEARS.map(String));
+	});
+
+	await suite.test("a number narrows by prefix", () => {
+		assert.deepEqual(values("@month:1|"), ["1", "10", "11", "12"]);
+		assert.deepEqual(values("@day:3|"), ["3", "30", "31"]);
+	});
+
+	await suite.test("a value nothing could rescue leaves no menu either", () => {
 		assert.equal(at("@year:abc|"), null);
 		assert.equal(at("@month:13|"), null);
 		assert.equal(at("@day:funday|"), null);
 		assert.equal(at("@date:august|"), null);
 	});
 
-	await suite.test("a number keeps the shapes another digit would still fit", () => {
-		assert.deepEqual(templates("@month:1|"), ["MM"]);
-		assert.deepEqual(templates("@day:3|"), ["DD"]);
+	// Which shapes a value could still become is no longer a row of its own, but it still decides
+	// whether there is a menu at all.
+	await suite.test("a value that can become nothing at all closes the menu", () => {
+		assert.equal(at("@date:1988/13|"), null);
+		assert.equal(at("@date:1988/9/32|"), null);
+		assert.equal(at("@date:1985//11|"), null);
 	});
 
-	await suite.test("a name keeps the shape it is spelling out", () => {
-		assert.deepEqual(templates("@month:aug|"), ["august"]);
-		assert.deepEqual(templates("@day:s|"), ["saturday"]);
+	await suite.test("a compact date is read by width, and a whole one is complete", () => {
+		assert.deepEqual(templates("@date:19880903|"), ["YYYY/MM/DD"]);
+		// Its narrower shapes have no separators to write either.
+		assert.deepEqual(values("@date:19880|").slice(0, 3), ["198801", "19880101", "198802"]);
+	});
+});
+
+test("the two vocabularies", async (suite) => {
+	// The one screen where a reader learns that `@day:` takes either kind, so both have to be on it.
+	await suite.test("a bare colon shows numbers and names together", () => {
+		const shown = values("@day:|");
+		assert.ok(shown.includes("1"), "no numbers");
+		assert.ok(shown.includes("monday"), "no names");
+		assert.deepEqual(shown.slice(0, 4), ["1", "2", "3", WEEKDAY_NAMES[0]]);
+		assert.deepEqual(values("@month:|").slice(0, 4), ["1", "2", "3", MONTH_NAMES[0]]);
 	});
 
-	// Nothing in the table is longer than "may", so it can only be the month it already is.
-	await suite.test("a name with no longer spelling behind it is simply filled", () => {
-		assert.deepEqual(completions("@month:may|"), ["@month:may "]);
+	// Which is the only screen that needs the mixing rule: digits and letters are disjoint, so the
+	// first character typed settles the vocabulary on its own.
+	await suite.test("one character settles which vocabulary is in play", () => {
+		assert.ok(values("@day:1|")!.every((value) => /^\d+$/.test(value!)));
+		assert.ok(values("@day:m|")!.every((value) => /^[a-z]+$/.test(value!)));
 	});
 
-	await suite.test("a date narrows a field at a time", () => {
-		assert.deepEqual(templates("@date:1988/|"), ["YYYY/MM", "YYYY/MM/DD"]);
-		assert.deepEqual(templates("@date:1988/09|"), ["YYYY/MM", "YYYY/MM/DD"]);
-		assert.deepEqual(completions("@date:1988/09|"), ["@date:1988/09 ", undefined]);
-		assert.deepEqual(templates("@date:1988/09/03|"), ["YYYY/MM/DD"]);
+	await suite.test("a row carries the hint of the shape it is an example of", () => {
+		const rows = at("@day:|")!.rows;
+		assert.equal(rows[0].hint, "1 to 31, a day of the month");
+		assert.equal(rows[3].hint, "a weekday name or abbreviation");
+		// Said once per run rather than on all twenty rows of it.
+		assert.equal(rows[1].hint, "");
+	});
+});
+
+test("how long the list gets", async (suite) => {
+	// Everything the calendar can offer arrives whole; the menu scrolls, and a list with the value
+	// the reader wants below the fold is better than one that never mentions it.
+	await suite.test("every list the calendar offers arrives whole", () => {
+		assert.equal(values("@day:|").length, 31 + WEEKDAY_NAMES.length);
+		assert.equal(values("@month:|").length, 12 + MONTH_NAMES.length);
+		assert.equal(values("@day:1|").length, 11);
+		assert.equal(values("@year:|").length, YEARS.length);
+		// The whole month, and then every day of it.
+		assert.equal(values("@date:1988/9|").length, 31);
+	});
+
+	await suite.test("a longer vocabulary than the calendar's is cut off", () => {
+		const many = Array.from({ length: 60 }, (_, index) => `19${index}`);
+		try {
+			registerCandidates("year", () => many);
+			assert.equal(values("@year:19|").length, 40);
+		} finally {
+			registerCandidates("year", () => YEARS.map(String));
+		}
+		assert.equal(values("@year:19|").length, YEARS.length);
 	});
 });
 
@@ -212,6 +478,18 @@ test("highlighting what is already there", async (suite) => {
 			["pending", ":"],
 		]);
 		assert.deepEqual(spans("@year: snowman|"), [["invalid", "@year:"]]);
+	});
+
+	// Which is the other half of what `begins` decides, and the half the menu no longer shows: a
+	// date on its way somewhere wears the pending pill, and one that is going nowhere goes red.
+	await suite.test("a date is a pill in two parts until it parses", () => {
+		assert.deepEqual(spans("@date:1988/09|"), [["match", "@date:1988/09"]]);
+		assert.deepEqual(spans("@date:august|"), [["invalid", "@date:august"]]);
+		assert.deepEqual(spans("@date:1988/9/32|"), [["invalid", "@date:1988/9/32"]]);
+		assert.deepEqual(spans("@date:1988/13|"), [
+			["name", "@date"],
+			["pending", ":1988/13"],
+		]);
 	});
 
 	await suite.test("a filter left half-typed is a mistake once the caret has moved on", () => {

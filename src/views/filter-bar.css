@@ -90,9 +90,6 @@
 	z-index: 10000;
 	display: flex;
 	flex-direction: column;
-	/* Tall enough for the eleven years and the twelve months to arrive whole, and never taller
-	   than the window it is floating over. */
-	max-height: min(380px, calc(100vh - 96px));
 	padding: 4px;
 	font-family: var(--font);
 	font-size: 13px;

@@ -1,5 +1,5 @@
 import { RANGE_END, RANGE_START } from "./constants";
-import { dateToString } from "./date-utils";
+import { dateToString, lastDayOf } from "./date-utils";
 import { FILTER_SPECS } from "./filter-spec";
 
 /**
@@ -440,10 +440,6 @@ function emptyFilters(): DateFilters {
 		before: null,
 		impossible: false,
 	};
-}
-
-function lastDayOf(year: number, month: number): number {
-	return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
 /**

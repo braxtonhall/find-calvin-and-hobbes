@@ -10,24 +10,34 @@
  * This module is the one place allowed to know about both the vocabulary table and the parser,
  * which is why the "could this value still become that shape" predicates are here rather than
  * beside the templates themselves — see the note in `filter-spec.ts`.
+ *
+ * It knows the archive's bounds as well, because a menu that offers a value has to offer one that
+ * is there: `RANGE_START`, `RANGE_END` and `SABBATICALS` are static constants, so nothing about
+ * reading them costs this module its purity. The comic index — which individual days are missing —
+ * is data, and stays out.
  */
 
+import { RANGE_END, RANGE_START } from "./constants";
 import { FilterMatch, MONTHS, WEEKDAYS, parseDateExpression, scanFilters } from "./date-query";
+import { dateToString, isSabbatical, lastDayOf } from "./date-utils";
 import { FILTER_SPECS, FilterSpec, ValueTemplate, filterSpec } from "./filter-spec";
+import { MONTH_NAMES, WEEKDAY_NAMES, YEARS } from "./vocabulary";
 
 /** One row of the menu. */
 export interface Row {
 	/** The filter the row is about, without the `@`. */
 	name: string;
-	/** The value shape, shown in the template font. Absent on a flag. */
+	/** The value shape the row is about. Absent on a flag. */
 	template?: string;
-	hint: string;
 	/**
-	 * What to splice over the token when the row is accepted. Absent means the row is there to be
-	 * read rather than chosen: there is nothing useful to insert for `YYYY`, and pretending
-	 * otherwise would put the literal word in the query.
+	 * The shape filled out into a real value — `1985/11`, `august` — which is what the row shows in
+	 * place of the shape, and what accepting it writes. Absent only before the colon, where the
+	 * shape is still there to be read: `@date:YYYY` says what the filter will want.
 	 */
-	insert?: string;
+	value?: string;
+	hint: string;
+	/** What to splice over the token when the row is accepted. Every row can be accepted. */
+	insert: string;
 }
 
 export interface Completion {
@@ -162,6 +172,342 @@ function fills(spec: FilterSpec, template: ValueTemplate, value: string): boolea
 }
 
 /**
+ * How many values one list holds.
+ *
+ * A backstop rather than a window: the menu scrolls, and every list the calendar can produce — the
+ * eleven years, the days of a month, both vocabularies of `@day:` at once — arrives whole and well
+ * under this. It is here for a vocabulary that arrives with the data and turns out to be longer
+ * than anything here anticipated.
+ */
+const VALUE_LIMIT = 40;
+
+/**
+ * How many numbers come before the names start, on the two filters that take either.
+ *
+ * `@day:` and `@month:` are the only place a reader learns that both kinds work, and they learn it
+ * by seeing `monday` sitting under `3` — so the names begin partway down the numbers rather than
+ * after all of them. It only matters at the bare colon: digits and letters are disjoint, so the
+ * first character typed settles which vocabulary is in play and the prefix filter does the rest.
+ */
+const MIXED_LEAD = 3;
+
+/** The values a filter takes, in the order the menu offers them. */
+export type Candidates = () => readonly string[];
+
+function counting(from: number, to: number): string[] {
+	return Array.from({ length: to - from + 1 }, (_, offset) => String(from + offset));
+}
+
+function mixed(numbers: string[], names: readonly string[]): string[] {
+	return [...numbers.slice(0, MIXED_LEAD), ...names, ...numbers.slice(MIXED_LEAD)];
+}
+
+const YEAR_VALUES = YEARS.map(String);
+const MONTH_VALUES = mixed(counting(1, 12), MONTH_NAMES);
+const DAY_VALUES = mixed(counting(1, 31), WEEKDAY_NAMES);
+
+/**
+ * Which filters have a list of values to offer, as against the ones built a field at a time.
+ *
+ * A thunk rather than an array because of what is coming: a filter over collection names has ~29
+ * proper nouns for values and is unusable without completion, and those names are loaded data that
+ * this module cannot import without giving up being pure. So the list is asked for when the menu
+ * opens, and a filter whose values arrive with the archive registers them from the app's boot —
+ * with no edit here, and with nothing to register in a test.
+ */
+const CANDIDATES = new Map<string, Candidates>([
+	["year", () => YEAR_VALUES],
+	["month", () => MONTH_VALUES],
+	["day", () => DAY_VALUES],
+]);
+
+/** Teach the menu a filter's values, for a vocabulary that arrives with the data. */
+export function registerCandidates(name: string, candidates: Candidates): void {
+	CANDIDATES.set(name, candidates);
+}
+
+/**
+ * Every spelling a value answers to.
+ *
+ * A year answers to its last two digits as well as to all four, because `@year:9` is a perfectly
+ * good start on 1995 and a menu that showed nothing there would be wrong. Both spellings insert
+ * the long one.
+ */
+function spellings(value: string): string[] {
+	return /^\d{4}$/.test(value) ? [value, value.slice(2)] : [value];
+}
+
+/** Whether the value typed so far is the start of this one, under any of its spellings. */
+function begun(candidate: string, typed: string): boolean {
+	return spellings(candidate).some((spelling) => spelling.startsWith(typed));
+}
+
+function padded(number: number): string {
+	return String(number).padStart(2, "0");
+}
+
+/** Whether a month or a day could be written starting with these digits — `9` and `09` alike. */
+function begunNumber(typed: string, number: number): boolean {
+	return String(number).startsWith(typed) || padded(number).startsWith(typed);
+}
+
+/** The shape a value is an example of, which is where a row's hint comes from. */
+function shapeOf(spec: FilterSpec, value: string): ValueTemplate | undefined {
+	return spec.templates.find((template) => fills(spec, template, value)) ?? spec.templates[0];
+}
+
+/** The shape that spells out this many fields, for the hint beside a value of that depth. */
+function shapeAt(spec: FilterSpec, depth: number): ValueTemplate | undefined {
+	return spec.templates.find((template) => template.label.split("/").length === depth);
+}
+
+/** The year-first shapes, which are the only values written a field at a time. */
+const DATE_SHAPE = /^YYYY(?:\/MM(?:\/DD)?)?$/;
+
+function dateShaped(spec: FilterSpec): boolean {
+	return spec.templates.every((template) => DATE_SHAPE.test(template.label));
+}
+
+/** A value split into the fields it has given so far, and how it is spelling them. */
+interface Typed {
+	fields: string[];
+	/** `19880903`, which the parser takes and no template spells out: no separators to write. */
+	compact: boolean;
+	/** Whichever separator the reader chose, so completing their value does not restyle it. */
+	separator: string;
+}
+
+function typedFields(value: string): Typed {
+	const separator = SEPARATOR.exec(value)?.[0];
+	if (separator !== undefined) return { fields: value.split(SEPARATOR), compact: false, separator };
+	// Four digits or fewer is a year being typed; more than that, with nothing between them, can
+	// only be the compact spelling, whose fields are counted off by width instead.
+	if (value.length <= 4) return { fields: [value], compact: false, separator: "/" };
+	const fields = [value.slice(0, 4), value.slice(4, 6), value.slice(6, 8)];
+	return { fields: fields.filter((field) => field !== ""), compact: true, separator: "" };
+}
+
+/** One day the archive holds — or, read to a shallower depth, the year or month it fell in. */
+interface Day {
+	year: number;
+	month: number;
+	day: number;
+}
+
+/**
+ * Every value the archive can offer for one field, given the digits typed so far: the years the
+ * strip ran in, the months of one of them, or the days of one of those.
+ *
+ * A year or a month earns its place by holding at least one strip, which is what keeps 1985 out of
+ * the list until November and keeps the sabbaticals out of it altogether. Without that the menu
+ * would offer a date from before Calvin existed and then commit it, and the empty page of results
+ * would make the menu look like it had lied.
+ *
+ * Individual missing days are not accounted for: the full comic index is data this module cannot
+ * see, while the bounds and the two sabbaticals are static constants it can.
+ */
+function archiveValues(depth: number, fields: string[]): Day[] {
+	const [yearDigits = "", monthDigits = "", dayDigits = ""] = fields;
+	const found: Day[] = [];
+
+	for (const year of YEARS) {
+		if (!begun(String(year), yearDigits)) continue;
+		let answered = false;
+		for (let month = 1; month <= 12 && !answered; month++) {
+			if (!begunNumber(monthDigits, month)) continue;
+			for (let day = 1; day <= lastDayOf(year, month); day++) {
+				if (!begunNumber(dayDigits, day)) continue;
+				const date = dateToString(year, month, day);
+				if (date < RANGE_START || date > RANGE_END || isSabbatical(date)) continue;
+				found.push({ year, month, day });
+				// One strip is enough to put a year or a month on the list; only the day field
+				// wants every one of them.
+				if (depth === DATE_FIELDS.length) continue;
+				answered = depth === 1;
+				break;
+			}
+		}
+	}
+
+	return found;
+}
+
+/**
+ * Whether the value the reader has written names at least one strip.
+ *
+ * Read exactly, by the parser, rather than as a prefix — which is the difference between the two
+ * questions this module asks about `@date:19`. To the parser that is the year 1919 and names
+ * nothing; to the menu it is the start of eleven archive years. This is the first of those, and it
+ * is what keeps a row for the value as typed off the menu wherever the archive has real values to
+ * offer instead.
+ */
+function namesArchiveDay(value: string): boolean {
+	const expression = parseDateExpression(value, "filter");
+	if (expression === null || expression.candidates.length !== 1) return false;
+	const { year, month, day } = expression.candidates[0];
+	if (year === undefined) return false;
+	const exact = [String(year), month === undefined ? "" : padded(month), day === undefined ? "" : padded(day)];
+	return archiveValues(1, exact).length > 0;
+}
+
+/**
+ * The digits to write for one field: the reader's own wherever they already spell the number, so
+ * accepting a row never rewrites a character that was right — `@date:1988/09/03` is finished off
+ * rather than restyled into `1988/9/3`.
+ */
+function fieldText(typed: string, value: number, width: number, compact: boolean): string {
+	const plain = String(value);
+	const wide = plain.padStart(width, "0");
+	if (typed === plain || typed === wide) return typed;
+	// A two-digit year is a spelling of its own, and one the parser reads: `@date:88` stays 88.
+	if (width === 4 && typed === wide.slice(2)) return typed;
+	return compact ? wide : plain;
+}
+
+/** One of the archive's days written out to the depth of one shape, in the reader's own spelling. */
+function writeDate(typed: Typed, day: Day, depth: number): string {
+	const values = [day.year, day.month, day.day];
+	const written = DATE_FIELDS.slice(0, depth).map((field, index) =>
+		fieldText(typed.fields[index] ?? "", values[index], field.width, typed.compact),
+	);
+	return written.join(typed.compact ? "" : typed.separator);
+}
+
+/** One value the menu is offering, and what accepting it should do. */
+interface Offer {
+	value: string;
+	/** The shape it is an example of, whose hint the row carries. */
+	shape?: ValueTemplate;
+	/**
+	 * Whether accepting it finishes the filter off.
+	 *
+	 * Tab types the rest of the value in, and the committing space comes with it only where there
+	 * is nothing further Tab could add — either because the value is as deep as the filter goes, or
+	 * because it was already there. So `@date:198` fills in `1985` and reopens on the months of it,
+	 * while `@month:augus` finishes `august` and gets out of the way.
+	 */
+	commits: boolean;
+}
+
+/**
+ * The offers as rows, with the hint dropped wherever it would only repeat the row above it.
+ *
+ * Twenty rows all reading "1 to 31, a day of the month" is noise; the row worth stating it on is
+ * the one where the kind of value changes — the `monday` that arrives under `3`.
+ */
+function rowsFor(spec: FilterSpec, offers: Offer[]): Row[] {
+	const rows: Row[] = [];
+	let said = "";
+	for (const offer of offers.slice(0, VALUE_LIMIT)) {
+		const hint = offer.shape?.hint ?? spec.hint;
+		rows.push({
+			name: spec.name,
+			template: offer.shape?.label,
+			value: offer.value,
+			hint: hint === said ? "" : hint,
+			insert: `@${spec.name}:${offer.value}${offer.commits ? " " : ""}`,
+		});
+		said = hint;
+	}
+	return rows;
+}
+
+/**
+ * A list of values, narrowed to what has been typed.
+ *
+ * Every value here is a leaf: one field, with nothing deeper reachable past it, so accepting one
+ * always finishes the filter off.
+ */
+function listedOffers(spec: FilterSpec, candidates: readonly string[], value: string): Offer[] {
+	return candidates
+		.filter((candidate) => begun(candidate, value))
+		.map((candidate) => ({ value: candidate, shape: shapeOf(spec, candidate), commits: true }));
+}
+
+/**
+ * The date filters, which have no list to enumerate: their values are built out of the archive a
+ * field at a time.
+ *
+ * The rows are the archive's own values for the field the reader is in — every year, or every month
+ * of the year they have settled, or every day of that month — and a field their digits pin to one
+ * value is a field that is settled, so the rows drop to the next one down. That is what makes Tab
+ * walk a reader from `19` to a year, to a month, to a day, and what makes the arrows a choice of how
+ * narrow to be rather than a choice between three guesses.
+ *
+ * Above them sits the value as it stands, where that is already a whole one, because accepting what
+ * you have typed is the other thing the menu is for; and under the first of them sit the narrower
+ * shapes of that same value, so that the syntax for a month and a day is on screen before a reader
+ * has to guess that either is allowed.
+ */
+function builtOffers(spec: FilterSpec, value: string, parses: boolean): Offer[] {
+	const typed = typedFields(value);
+	const given = typed.fields.length;
+	if (given > DATE_FIELDS.length) return [];
+	// `1985//11` is November to the parser, which collapses the empty group, but positionally its
+	// fields say something else. There is nothing to build on until it is fixed.
+	if (typed.fields.some((field, index) => field === "" && index < given - 1)) return [];
+
+	const here = archiveValues(given, typed.fields);
+	const depth = here.length === 1 && given < DATE_FIELDS.length ? given + 1 : given;
+	const days = depth === given ? here : archiveValues(depth, typed.fields);
+
+	function offerFor(day: Day, at: number): Offer {
+		const written = writeDate(typed, day, at);
+		return { value: written, shape: shapeAt(spec, at), commits: written === value || at === DATE_FIELDS.length };
+	}
+
+	const offers = days.map((day) => offerFor(day, depth));
+	// The narrower shapes ride along under the first row, carried down from the very same day so
+	// that they agree with it. `@date:` is a list of years, and a reader who has only ever seen one
+	// would not know a month or a day could go in there — so the first screenful shows `1985`,
+	// `1985/11` and `1985/11/18`, and the rest of the years follow underneath. It is the same reason
+	// `@day:` starts its weekday names three rows down rather than after the thirty-first.
+	if (days.length > 0) {
+		const deeper = DATE_FIELDS.slice(depth).map((_, index) => offerFor(days[0], depth + index + 1));
+		offers.splice(1, 0, ...deeper);
+	}
+
+	const shape = shapeAt(spec, given);
+	const whole = parses && shape !== undefined && fills(spec, shape, value);
+	// The reader's own value goes on top where it is whole and real — or where the archive has
+	// nothing at all to offer, since `@date:2001` is a legitimate thing to ask and an honestly empty
+	// answer rather than a mistake. See `DateSource`.
+	if (whole && !offers.some((offer) => offer.value === value) && (offers.length === 0 || namesArchiveDay(value))) {
+		offers.unshift({ value, shape, commits: true });
+	}
+
+	return offers;
+}
+
+/**
+ * The rows past the colon.
+ *
+ * Two derivations, one row kind: a filter with a list of values offers them, and the date filters
+ * build theirs out of the archive. Nothing else is offered — a row the reader cannot accept is not
+ * a row, so where neither derivation has anything the menu closes rather than showing the shapes
+ * back to someone who can do nothing with them.
+ */
+function valueRows(spec: FilterSpec, value: string, parses: boolean): Row[] {
+	const candidates = CANDIDATES.get(spec.name);
+	if (candidates !== undefined) {
+		const offers = listedOffers(spec, candidates(), value);
+		// Nothing on the list fits, which is usually a value nothing would fit — but not always,
+		// and `@year:2001` is the exception `builtOffers` explains.
+		const shape = spec.templates.find((template) => parses && fills(spec, template, value));
+		if (offers.length === 0 && shape !== undefined) offers.push({ value, shape, commits: true });
+		return rowsFor(spec, offers);
+	}
+
+	if (!dateShaped(spec)) return [];
+	// In step with the pill: a value the parser will never take gets no menu, whatever the archive
+	// might have offered a reader who typed something else.
+	const reachable = spec.templates.some(
+		(template) => (parses && fills(spec, template, value)) || begins(spec, template, value),
+	);
+	return reachable ? rowsFor(spec, builtOffers(spec, value, parses)) : [];
+}
+
+/**
  * The `@…` run the caret sits in, or null.
  *
  * Found by walking left to the nearest `@` without crossing whitespace, which matches what the
@@ -197,13 +543,10 @@ function nameRow(spec: FilterSpec): Row {
 /**
  * The menu for a caret position, or null when there should be no menu.
  *
- * Past the colon a shape earns its row by being either filled or still reachable, and drops out
- * when it is neither: `@date:` offers all three, `@date:1988/` has ruled the bare year out and
- * offers two, and `@year:abc` offers nothing at all, which is the same news the red pill carries.
- *
- * The filled shape is highlighted, and it is the one row here that can be accepted — Tab on it
- * finishes the filter off rather than typing anything new. So `@year:94` shows `YY` filled with
- * `YYYY` still open underneath it, which is exactly the choice the reader has at that keystroke.
+ * Past the colon the rows are values to accept — see `valueRows` for where they come from, and
+ * `shapeRows` for what accepting one writes. A date filter offers one row per shape still in
+ * play, so `@date:` offers all three and `@date:1988/` has ruled the bare year out and offers
+ * two; `@year:abc` offers nothing at all, which is the same news the red pill carries.
  */
 export function completionsAt(text: string, caret: number): Completion | null {
 	const token = tokenAt(text, caret);
@@ -229,21 +572,7 @@ export function completionsAt(text: string, caret: number): Completion | null {
 	// shape may claim to be filled inside a filter that would not run.
 	const parses = scanFilters(token.body)[0]?.valid === true;
 
-	const rows: Row[] = [];
-	for (const template of spec.templates) {
-		const filled = parses && fills(spec, template, value);
-		if (!filled && !begins(spec, template, value)) continue;
-		rows.push({
-			name: spec.name,
-			template: template.label,
-			hint: template.hint,
-			// Accepting a filled shape means finishing the filter off — the caret past the end of
-			// it and a space ready for whatever comes next — not putting the shape's own letters
-			// into the query.
-			insert: filled ? `${token.body} ` : undefined,
-		});
-	}
-
+	const rows = valueRows(spec, value, parses);
 	return rows.length === 0 ? null : { start: token.start, end: token.end, rows };
 }
 

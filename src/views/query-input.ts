@@ -1,6 +1,7 @@
 import "./query-input.css";
 
 import { Completion, FilterSpan, Row, SpanKind, completionsAt, filterSpans } from "../completion";
+import { naturalHeight, onViewportShift, place, viewport } from "../placement";
 import { escHtml } from "../utils";
 
 /**
@@ -38,6 +39,16 @@ const METRICS = [
 	"borderLeftWidth",
 	"borderRadius",
 ] as const;
+
+/**
+ * How much menu is worth showing where there is room for it: five rows, and enough of a sixth that a
+ * longer list reads as one.
+ *
+ * Here rather than in `query-input.css`, because this is the number `place` caps against the room
+ * the viewport actually has — and a `max-height` in the stylesheet would be a second opinion that
+ * the inline one silently overrode.
+ */
+const MENU_HEIGHT = 160;
 
 /** Keys that move the caret without changing the text, so the menu has to be recomputed. */
 const CARET_KEYS = new Set(["ArrowLeft", "ArrowRight", "Home", "End"]);
@@ -91,7 +102,6 @@ function menuElement(): HTMLDivElement {
 		// Never let the input blur: the blur would tear the menu down before the click resolved,
 		// and the click would land on nothing.
 		event.preventDefault();
-		if (row.getAttribute("aria-disabled") === "true") return;
 		owner?.accept(Number(row.dataset.index));
 	});
 
@@ -117,9 +127,11 @@ function showTip(text: string, rect: DOMRect): void {
 	const element = tipElement();
 	element.textContent = text;
 	element.classList.add("query-tip--visible");
-	const above = rect.top - element.offsetHeight - 6;
-	element.style.top = `${above >= 8 ? above : rect.bottom + 6}px`;
-	element.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - element.offsetWidth - 8))}px`;
+	// The same rule the menu goes by, and deliberately without arbitrating between the two: the
+	// tooltip is a transient thing the pointer summoned, and it may land on top of the menu.
+	const spot = place(rect, { width: element.offsetWidth, height: element.offsetHeight }, viewport(), 6);
+	element.style.top = `${spot.top}px`;
+	element.style.left = `${spot.left}px`;
 }
 
 function hideTip(): void {
@@ -135,6 +147,9 @@ window.addEventListener("resize", () => {
 });
 
 window.addEventListener("scroll", () => owner?.reposition(), true);
+// The keyboard is the whole reason the placement measures the visual viewport, and it arrives
+// through neither of the two above.
+onViewportShift(() => owner?.reposition());
 
 /** The query, with the filters in it painted according to how far along each one is. */
 function paintHighlights(text: string, spans: FilterSpan[]): string {
@@ -155,15 +170,16 @@ function paintHighlights(text: string, spans: FilterSpan[]): string {
 }
 
 function rowHtml(row: Row, index: number, active: boolean): string {
-	const template =
-		// The colon stays in the name's own font; only the slot left to fill changes typeface.
-		row.template === undefined ? "" : `:<span class="query-menu-template">${escHtml(row.template)}</span>`;
-	const disabled = row.insert === undefined ? ` aria-disabled="true"` : "";
+	// The colon stays in the name's own font; only what follows it changes typeface — and a real
+	// value is text to accept rather than a slot to fill, so it does not wear the slot's italics.
+	const shape = row.value ?? row.template;
+	const style = row.value === undefined ? "query-menu-template" : "query-menu-value";
+	const template = shape === undefined ? "" : `:<span class="${style}">${escHtml(shape)}</span>`;
 	return `<div
 			class="query-menu-row${active ? " query-menu-row--active" : ""}"
 			role="option"
 			id="query-menu-row-${index}"
-			aria-selected="${active}"${disabled}
+			aria-selected="${active}"
 			data-index="${index}"
 		>
 			<span class="query-menu-syntax">@${escHtml(row.name)}${template}</span>
@@ -267,9 +283,8 @@ export function attachQueryInput(input: HTMLInputElement): void {
 		for (const property of METRICS) highlights.style[property] = computed[property];
 	}
 
-	function selectable(): number[] {
-		const rows = completion?.rows ?? [];
-		return rows.map((row, index) => (row.insert === undefined ? -1 : index)).filter((index) => index >= 0);
+	function rowCount(): number {
+		return completion?.rows.length ?? 0;
 	}
 
 	function visible(): boolean {
@@ -283,13 +298,13 @@ export function attachQueryInput(input: HTMLInputElement): void {
 		element.style.minWidth = `${rect.width}px`;
 		element.style.maxWidth = `${Math.max(rect.width, 320)}px`;
 
-		// Below by preference, above when there is no room, and never off the edge — the same
-		// clamp-then-flip the collection tooltip does in `detail.ts`.
-		const height = element.offsetHeight;
-		const below = rect.bottom + 4;
-		const top = below + height <= window.innerHeight - 8 ? below : Math.max(8, rect.top - height - 4);
-		element.style.top = `${top}px`;
-		element.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - element.offsetWidth - 8))}px`;
+		const height = Math.min(MENU_HEIGHT, naturalHeight(element));
+		const spot = place(rect, { width: element.offsetWidth, height }, viewport(), 4);
+		element.style.top = `${spot.top}px`;
+		element.style.left = `${spot.left}px`;
+		// A list of values scrolls inside whatever room there is, rather than off the bottom of a
+		// phone — see `.query-menu`, which owns how much menu is worth showing where there is room.
+		element.style.maxHeight = `${spot.maxHeight}px`;
 	}
 
 	function renderMenu(): void {
@@ -362,16 +377,22 @@ export function attachQueryInput(input: HTMLInputElement): void {
 		const broken = spans.find((span) => span.kind === "invalid");
 		note.textContent = broken?.reason ?? "";
 
-		const options = selectable();
-		highlighted = options.length > 0 ? options[0] : -1;
+		highlighted = rowCount() > 0 ? 0 : -1;
 		renderMenu();
+		// A fresh set of rows starts at the top, where the highlight now is. Rebuilding the menu's
+		// contents does not reliably reset this by itself — the scroll survives an `innerHTML` that
+		// replaces it with something at least as tall — so a reader who had scrolled down to
+		// `december` and then typed another character would be looking at rows nobody asked about.
+		// Only here, and not in `move`: that one wants the scroll it inherits, so its own
+		// `scrollIntoView` can step by a row rather than jumping.
+		menuElement().scrollTop = 0;
 		hovered = null;
 		updateTip();
 	}
 
 	function accept(index: number): void {
 		const row = completion?.rows[index];
-		if (completion === null || row?.insert === undefined) return;
+		if (completion === null || row === undefined) return;
 		const text = input.value;
 		// Never two spaces where one will do: a completion that brings its own steps over the one
 		// already there rather than adding a second.
@@ -384,10 +405,9 @@ export function attachQueryInput(input: HTMLInputElement): void {
 	}
 
 	function move(direction: number): void {
-		const options = selectable();
-		if (options.length === 0) return;
-		const current = options.indexOf(highlighted);
-		highlighted = options[(Math.max(current, 0) + direction + options.length) % options.length];
+		const count = rowCount();
+		if (count === 0) return;
+		highlighted = (Math.max(highlighted, 0) + direction + count) % count;
 		renderMenu();
 		menuElement().querySelector(".query-menu-row--active")?.scrollIntoView({ block: "nearest" });
 	}
@@ -429,7 +449,7 @@ export function attachQueryInput(input: HTMLInputElement): void {
 			if (!visible()) return;
 
 			if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-				if (selectable().length === 0) return;
+				if (rowCount() === 0) return;
 				event.preventDefault();
 				event.stopPropagation();
 				move(event.key === "ArrowDown" ? 1 : -1);

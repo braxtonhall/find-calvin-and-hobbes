@@ -66,6 +66,11 @@ export function formatCompactRange(entry: string): string {
 	return `${formatDate(start)} \u2013 ${formatDate(end)}`;
 }
 
+/** How many days the month has, February included, since the year is always known here. */
+export function lastDayOf(year: number, month: number): number {
+	return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
 export function dateToString(year: number, month: number, day: number): string {
 	return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }

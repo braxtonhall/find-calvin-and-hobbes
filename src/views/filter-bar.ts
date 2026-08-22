@@ -9,6 +9,7 @@ import {
 	removeToken,
 	selectedTokens,
 } from "../query-edit";
+import { naturalHeight, onViewportShift, place, viewport } from "../placement";
 import { escHtml } from "../utils";
 import { editQueryInput } from "./query-input";
 
@@ -43,6 +44,14 @@ const CHEVRON_ICON = `<svg class="filter-drop-chevron" viewBox="0 0 16 16" fill=
 const CHECK_ICON = `<svg class="filter-option-check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
 	<path d="M3 8.5l3.5 3.5L13 4.5" />
 </svg>`;
+
+/**
+ * Tall enough for the eleven years and the twelve months to arrive whole. Here rather than in the
+ * stylesheet, for the same reason the completion menu's own is: `place` caps it against the room the
+ * viewport actually has, and writes the result inline, where a `max-height` in CSS would only be a
+ * second opinion it overrode.
+ */
+const MENU_HEIGHT = 380;
 
 /** How many columns the day grid is laid out in, which is what makes it read as a calendar. */
 const GRID_COLUMNS = 7;
@@ -182,21 +191,22 @@ function paintMenu(): void {
 }
 
 /**
- * Below the button by preference, above it when there is no room, and never off the edge — the same
- * clamp-then-flip as the completion menu. Right-aligned, because the dropdowns sit at the right
- * end of their row and a left-aligned menu would hang off the page.
+ * By the same rule as the completion menu, and right-aligned: the dropdowns sit at the right end of
+ * their row, and a left-aligned menu under them would hang off the page.
  */
 function positionMenu(): void {
 	if (open === null) return;
 	const element = menuElement();
 	const rect = open.button.getBoundingClientRect();
+	// The values are what overflow here, not the menu: the heading and `Clear` stay put while the
+	// list between them scrolls.
+	const options = element.querySelector<HTMLElement>(".filter-menu-options");
+	const height = Math.min(MENU_HEIGHT, naturalHeight(element, options ?? element));
 
-	const height = element.offsetHeight;
-	const below = rect.bottom + 4;
-	element.style.top = `${below + height <= window.innerHeight - 8 ? below : Math.max(8, rect.top - height - 4)}px`;
-
-	const width = element.offsetWidth;
-	element.style.left = `${Math.max(8, Math.min(rect.right - width, window.innerWidth - width - 8))}px`;
+	const spot = place(rect, { width: element.offsetWidth, height }, viewport(), 4, "end");
+	element.style.top = `${spot.top}px`;
+	element.style.left = `${spot.left}px`;
+	element.style.maxHeight = `${spot.maxHeight}px`;
 }
 
 /**
@@ -383,6 +393,8 @@ document.addEventListener(
 window.addEventListener("resize", positionMenu);
 // Captured, because the row the menu hangs from is sticky inside a scroller of its own.
 window.addEventListener("scroll", positionMenu, true);
+// And the visible band moves under a software keyboard without either of those firing.
+onViewportShift(positionMenu);
 
 function dropdownHtml(field: FilterField): string {
 	return `<button

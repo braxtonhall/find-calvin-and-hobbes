@@ -15,9 +15,10 @@
 /** One shape a filter's value can take, and one row in the menu once the colon is typed. */
 export interface ValueTemplate {
 	/**
-	 * Shown in the template font, so it reads as a slot to fill rather than as text to copy.
-	 * A concrete word (`august`) rather than a placeholder (`NAME`) wherever the slot takes a
-	 * name, because the example is the more useful of the two.
+	 * The shape, as a slot to fill: `YYYY/MM`, `august`. A concrete word rather than a placeholder
+	 * (`NAME`) wherever the slot takes a name, because the example is the more useful of the two —
+	 * and `completion.ts` now takes that advice as far as it goes, offering real values past the
+	 * colon and leaving the label to the row that names the filter itself.
 	 */
 	label: string;
 	hint: string;

@@ -1,5 +1,5 @@
-import { RANGE_END, RANGE_START } from "./constants";
-import { FilterMatch, MONTHS, parseDateFilters, scanFilters } from "./date-query";
+import { FilterMatch, parseDateFilters, scanFilters } from "./date-query";
+import { MONTH_NAMES, YEARS } from "./vocabulary";
 
 /**
  * The filter bar, as string edits.
@@ -50,19 +50,6 @@ export interface FilterField {
 	shape: "list" | "grid";
 }
 
-const FIRST_YEAR = Number(RANGE_START.slice(0, 4));
-const LAST_YEAR = Number(RANGE_END.slice(0, 4));
-
-/**
- * The long spelling of every month, taken off the parser's own table rather than written out a
- * second time: every abbreviation in `MONTHS` is a prefix of the name it shortens, so the longest
- * key for a number is that month's name.
- */
-const MONTH_NAMES: string[] = [];
-for (const [name, month] of MONTHS) {
-	if (MONTH_NAMES[month] === undefined || name.length > MONTH_NAMES[month].length) MONTH_NAMES[month] = name;
-}
-
 function titled(word: string): string {
 	return word[0].toUpperCase() + word.slice(1);
 }
@@ -86,17 +73,14 @@ export const FILTER_FIELDS: readonly FilterField[] = [
 		label: "Year",
 		owns: ["year"],
 		shape: "list",
-		options: range(FIRST_YEAR, LAST_YEAR).map((year) => ({ token: `@year:${year}`, label: String(year) })),
+		options: YEARS.map((year) => ({ token: `@year:${year}`, label: String(year) })),
 	},
 	{
 		name: "month",
 		label: "Month",
 		owns: ["month"],
 		shape: "list",
-		options: range(1, 12).map((month) => ({
-			token: `@month:${MONTH_NAMES[month]}`,
-			label: titled(MONTH_NAMES[month]),
-		})),
+		options: MONTH_NAMES.map((month) => ({ token: `@month:${month}`, label: titled(month) })),
 	},
 	{
 		name: "day",
@@ -154,7 +138,7 @@ function tokenOf(text: string, match: FilterMatch): string | null {
 	const probe = parseDateFilters(text.slice(match.start, match.end)).filters;
 	if (probe === null) return null;
 	if (match.name === "year") return single(probe.years, (year) => `@year:${year}`);
-	if (match.name === "month") return single(probe.months, (month) => `@month:${MONTH_NAMES[month]}`);
+	if (match.name === "month") return single(probe.months, (month) => `@month:${MONTH_NAMES[month - 1]}`);
 	return single(probe.monthDays, (day) => `@day:${day}`);
 }
 
