@@ -126,8 +126,8 @@ test("naming a filter", async (suite) => {
 
 	await suite.test("a partial name narrows by prefix", () => {
 		assert.deepEqual(names("@y|"), ["year"]);
-		assert.deepEqual(names("@d|"), ["day", "date", "daily"]);
-		assert.deepEqual(names("@da|"), ["day", "date", "daily"]);
+		assert.deepEqual(names("@d|"), ["daily", "day", "date"]);
+		assert.deepEqual(names("@da|"), ["daily", "day", "date"]);
 		assert.deepEqual(names("@dat|"), ["date"]);
 	});
 

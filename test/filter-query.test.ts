@@ -155,6 +155,18 @@ test("filters", async (suite) => {
 		assert.deepEqual([...parseQueryFilters("@daily").filters!.weekdays].sort(), [1, 2, 3, 4, 5, 6]);
 	});
 
+	// `@empty` is the third flag, but unlike `@sunday` and `@daily` it is not about the day at
+	// all: it is a fact about the strip's text, so only a strip can answer it, exactly as `@in`
+	// does for the books.
+	await suite.test("@empty matches a strip with an empty transcript", () => {
+		const wordless: Comic = { date: "1988-06-01", transcript: "" };
+		const spoken: Comic = { date: "1988-06-02", transcript: "Calvinball!" };
+		assert.ok(passesFilters(wordless, parseQueryFilters("@empty").filters!));
+		assert.ok(!passesFilters(spoken, parseQueryFilters("@empty").filters!));
+		// A date cannot say whether a strip is wordless.
+		assert.ok(!passesFilters("1988-06-01", parseQueryFilters("@empty").filters!));
+	});
+
 	// A filter is deliberate syntax, so it may demand an unambiguous order instead of guessing.
 	await suite.test("@date values are year first, never ambiguous", () => {
 		const settled = parseQueryFilters("@date:1988/9/3").filters!;
@@ -257,6 +269,7 @@ test("filters", async (suite) => {
 			// A book that is not one of the archive's is a typo rather than a place to look — unlike
 			// `@year:2001`, which is a real coordinate that honestly holds nothing.
 			"@sunday:yes",
+			"@empty:yes",
 			"@year",
 			"@in",
 			"@in:snowman",
@@ -347,6 +360,7 @@ test("scanning filters", async (suite) => {
 			"@day:funday",
 			"@before:august-3",
 			"@sunday:yes",
+			"@empty:yes",
 			"@year",
 			"@in",
 			"@in:snowman",

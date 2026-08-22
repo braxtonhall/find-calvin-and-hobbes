@@ -39,6 +39,12 @@ export interface QueryFilters {
 	/** Strictly after this date, and strictly before the other — see `parseQueryFilters`. */
 	after: string | null;
 	before: string | null;
+	/**
+	 * The one filter that is a fact about the strip's text rather than its day or its shelf: whether
+	 * the transcript is empty. Like `collections`, it costs `passesFilters` a subject that is more
+	 * than a date — see `emptyTranscript`.
+	 */
+	empty: boolean;
 	/** A recognised filter whose value could not be read. Nothing satisfies it. */
 	impossible: boolean;
 }
@@ -61,6 +67,7 @@ function emptyFilters(): QueryFilters {
 		windows: [],
 		after: null,
 		before: null,
+		empty: false,
 		impossible: false,
 	};
 }
@@ -87,6 +94,7 @@ function applyFilter(filters: QueryFilters, name: string, value: string | undefi
 		// A flag carrying a value is a misunderstanding of the syntax, not a broader query.
 		if (value !== undefined) filters.impossible = true;
 		else if (name === "sunday") filters.weekdays.add(0);
+		else if (name === "empty") filters.empty = true;
 		else for (const weekday of [1, 2, 3, 4, 5, 6]) filters.weekdays.add(weekday);
 		return;
 	}
@@ -268,6 +276,19 @@ function printedIn(subject: string | Comic, wanted: Set<string>): boolean {
 }
 
 /**
+ * Whether the strip's transcript is empty, which only a strip can answer.
+ *
+ * The same reasoning as `printedIn`: a date cannot stand in for one, and returning false rather
+ * than true is the honest reading. A strip may carry an `alternate` beside an empty transcript,
+ * but `@empty` is about the transcript field itself, not about whether the strip has any text at
+ * all anywhere.
+ */
+function emptyTranscript(subject: string | Comic): boolean {
+	if (typeof subject === "string") return false;
+	return subject.transcript === "";
+}
+
+/**
  * Whether one strip survives the filters.
  *
  * The subject is a strip or, where every filter in play is about the calendar, just the day it ran
@@ -284,5 +305,6 @@ export function passesFilters(subject: string | Comic, filters: QueryFilters): b
 	if (filters.windows.length > 0 && !filters.windows.some((window) => matchesExpression(window, date))) return false;
 	if (filters.after !== null && date <= filters.after) return false;
 	if (filters.before !== null && date >= filters.before) return false;
+	if (filters.empty && !emptyTranscript(subject)) return false;
 	return !(filters.collections.size > 0 && !printedIn(subject, filters.collections));
 }

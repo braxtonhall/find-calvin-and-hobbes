@@ -47,11 +47,20 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
 
 /**
  * Ordered as a reader would reach for them — the three calendar fields, then the date forms, then
- * the bounds, then the two flags, and last the one filter that is not about time at all. Not
- * alphabetically: `@after` is not the thing to meet first, and `@in` is not the thing to meet
+ * the bounds, then the three flags, and last the one valued filter that is not about time at all.
+ * Not alphabetically: `@after` is not the thing to meet first, and `@in` is not the thing to meet
  * second.
  */
 export const FILTER_SPECS: readonly FilterSpec[] = [
+	{
+		name: "in",
+		kind: "valued",
+		hint: "Strips printed in one book",
+		vocabulary: true,
+		templates: [{ label: "book", hint: "a book of the archive" }],
+	},
+	{ name: "sunday", kind: "flag", hint: "Sunday strips only", templates: [] },
+	{ name: "daily", kind: "flag", hint: "Weekday strips only", templates: [] },
 	{
 		name: "year",
 		kind: "valued",
@@ -97,17 +106,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		hint: "Strips after a date, excluding it",
 		templates: YEAR_FIRST,
 	},
-	{ name: "sunday", kind: "flag", hint: "Sunday strips only", templates: [] },
-	{ name: "daily", kind: "flag", hint: "Weekday strips only", templates: [] },
-	{
-		// The value is the book's id rather than its title, because `scanFilters` takes no spaces —
-		// so the label is the word `book` and the title rides along as each row's hint instead.
-		name: "in",
-		kind: "valued",
-		hint: "Strips printed in one book",
-		vocabulary: true,
-		templates: [{ label: "book", hint: "a book of the archive" }],
-	},
+	{ name: "empty", kind: "flag", hint: "Strips with an empty transcript", templates: [] },
 ];
 
 const BY_NAME = new Map(FILTER_SPECS.map((spec) => [spec.name, spec]));
