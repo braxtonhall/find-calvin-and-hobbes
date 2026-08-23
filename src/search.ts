@@ -75,7 +75,7 @@ export const TUNING: Tuning = {
 	// better match than a guess at one. These are the values the engine has always used, and the
 	// rest of this block was fitted with them fixed.
 	exactWeight: 1,
-	prefixWeight: 0.85,
+	prefixWeight: 0,
 	transcriptCoverageFloor: 0.4,
 	// Measured, not swept: 0.3 was the bottom of the sweep's own candidate grid, so the only
 	// direction that helped was never tried and eleven `keep` lines read as convergence. Down
@@ -505,7 +505,7 @@ function expandTerm(
 		if (word === term) {
 			weight = tuning.exactWeight;
 			literal = true;
-		} else if (word.length > term.length && word.startsWith(term)) {
+		} else if (tuning.prefixWeight && word.length > term.length && word.startsWith(term)) {
 			weight = tuning.prefixWeight;
 			literal = true;
 		} else if (maxDistance > 0) {

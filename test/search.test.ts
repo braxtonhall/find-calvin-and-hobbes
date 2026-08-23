@@ -196,7 +196,7 @@ test("the exact and prefix weights decide how far a prefix match reaches", () =>
 
 	// Dragging the anchor below the prefix weight inverts the comparison, so the extension is now
 	// the stronger claim and leads.
-	const inverted: Tuning = { ...TUNING, exactWeight: 0.7 };
+	const inverted: Tuning = { ...TUNING, prefixWeight: 0.85, exactWeight: 0.7 };
 	assert.deepEqual(ranked("snow", inverted), ["2000-01-02", "2000-01-01"]);
 });
 
@@ -313,10 +313,12 @@ const SNOW: Entry[] = [
 
 test("repeatVariety decides whether a second matched word counts as saying it again", () => {
 	install(buildArchive(SNOW));
-	const emphasis: Tuning = { ...TUNING, repeatVariety: 0 };
+	// base on which this test was written had prefixWeight at 0.85
+	const legacy: Tuning = { ...TUNING, prefixWeight: 0.85 };
+	const emphasis: Tuning = { ...legacy, repeatVariety: 0 };
 
 	// At 1 the extra word is a repetition, so one `snow` and one `snowball` outrank one `snow`.
-	assert.deepEqual(ranked("snow outside").slice(0, 3), ["2000-01-02", "2000-01-03", "2000-01-01"]);
+	assert.deepEqual(ranked("snow outside", legacy).slice(0, 3), ["2000-01-02", "2000-01-03", "2000-01-01"]);
 	// At 0 only the same word again counts, and the pair falls back behind the single mention.
 	assert.deepEqual(ranked("snow outside", emphasis).slice(0, 3), ["2000-01-02", "2000-01-01", "2000-01-03"]);
 
