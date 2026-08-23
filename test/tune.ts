@@ -3,7 +3,6 @@ import path from "path";
 import { search, TUNING, Tuning } from "../src/search";
 import { stem } from "../src/stem";
 import { COMPOUNDS } from "../src/compounds";
-import { DERIVATIONS } from "../src/derivations";
 import {
 	describeMisses,
 	evaluate,
@@ -34,11 +33,11 @@ const CANDIDATES: Record<string, number[]> = {
 	repeatVariety: [0, 0.25, 0.5, 0.75, 1],
 	rarityExponent: [1, 1.25, 1.5, 2],
 	// The term-match weights. `exactWeight` is the anchor every other weight is measured against,
-	// so the grid stays near 1; `derivationWeight` is a listed compound reached from its base
-	// (`snowball` from `snow`), 0.5 for now, and 0 is a real value here — the engine with the
-	// curated list switched off.
+	// so the grid stays near 1; `prefixWeight` lives between the word itself and a one-edit
+	// correction (0.7) — above a typo, below the word, the only ordering in which a near word is
+	// both literal and a weaker claim than the word as typed.
 	exactWeight: [0.7, 0.85, 1, 1.25, 1.5],
-	derivationWeight: [0, 0.25, 0.5, 0.7, 0.85, 1],
+	prefixWeight: [0.7, 0.75, 0.8, 0.85, 0.9, 0.95],
 	// Both floors ran with 0.3 as the bottom of the grid while sitting at or near it, so the
 	// sweep could not try the only direction that helped and reported eleven `keep` lines that
 	// read as convergence. At 0.1 the description floor takes class C's zero-result rate from
@@ -105,7 +104,7 @@ const OBJECTIVE: Record<string, "recited" | "described" | "combined"> = {
 	descriptionLengthNormalization: "described",
 	descriptionIdfFloor: "described",
 	exactWeight: "combined",
-	derivationWeight: "combined",
+	prefixWeight: "combined",
 	rarityExponent: "combined",
 	repeatVariety: "combined",
 	descriptionPreference: "combined",
@@ -159,9 +158,9 @@ const WORD_PATTERN = /[\p{L}\p{N}']+/gu;
 const words = (text: string) =>
 	[...text.toLowerCase().matchAll(WORD_PATTERN)].flatMap((match) => COMPOUNDS.get(match[0]) || [match[0]]);
 
-// Whether the field holds any query word as written, as a listed derivation, or in another
-// inflection — the engine's three literal routes. `stem` is imported for the same reason the
-// decomposition is: what counts as the same word is the scorer's definition, not this file's.
+// Whether the field holds any query word as written, extended, or in another inflection — the
+// engine's three literal routes. `stem` is imported for the same reason the decomposition is: what
+// counts as the same word is the scorer's definition, not this file's.
 //
 // Read off the field text rather than the highlight ranges, which are filtered by
 // transcriptIdfFloor: a field matching only a common word literally reports no ranges at all, and
@@ -170,7 +169,7 @@ function literal(text: string, terms: string[], stems: Set<string>): boolean {
 	return words(text).some(
 		(word) =>
 			terms.includes(word) ||
-			terms.some((term) => DERIVATIONS.get(term)?.includes(word) === true) ||
+			terms.some((term) => word.length > term.length && word.startsWith(term)) ||
 			stems.has(stem(word)),
 	);
 }
