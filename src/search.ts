@@ -28,6 +28,8 @@ export interface Tuning {
 	descriptionRepeatWeight: number;
 	repeatVariety: number;
 	rarityExponent: number;
+	exactWeight: number;
+	prefixWeight: number;
 	transcriptCoverageFloor: number;
 	descriptionCoverageFloor: number;
 	transcriptLengthForgiveness: number;
@@ -66,6 +68,14 @@ export const TUNING: Tuning = {
 	// several forms of it once.
 	repeatVariety: 1,
 	rarityExponent: 1.25,
+	// The match weight a term reaches before rarity is applied, by how the word was reached: as
+	// written (exact), as an extension of it (prefix), or within an edit or two. `exactWeight` is
+	// the anchor the other weights are measured against, at 1, and `prefixWeight` sits at 0.85 —
+	// below the word itself and above the 0.7 a one-edit correction earns, so a near word stays a
+	// better match than a guess at one. These are the values the engine has always used, and the
+	// rest of this block was fitted with them fixed.
+	exactWeight: 1,
+	prefixWeight: 0.85,
 	transcriptCoverageFloor: 0.4,
 	// Measured, not swept: 0.3 was the bottom of the sweep's own candidate grid, so the only
 	// direction that helped was never tried and eleven `keep` lines read as convergence. Down
@@ -220,8 +230,6 @@ export const DATE_STRENGTH: Record<DatePrecision, number> = { exact: 3, narrow: 
 
 const WORD_PATTERN = /[\p{L}\p{N}']+/gu;
 
-const EXACT_WEIGHT = 1;
-const PREFIX_WEIGHT = 0.85;
 const DISTANCE_WEIGHTS = [1, 0.7, 0.55];
 
 const MAX_CACHED_EXPANSIONS = 400;
@@ -495,10 +503,10 @@ function expandTerm(
 		// and a single typo are both 0.7.
 		let literal = false;
 		if (word === term) {
-			weight = EXACT_WEIGHT;
+			weight = tuning.exactWeight;
 			literal = true;
 		} else if (word.length > term.length && word.startsWith(term)) {
-			weight = PREFIX_WEIGHT;
+			weight = tuning.prefixWeight;
 			literal = true;
 		} else if (maxDistance > 0) {
 			const distance = boundedDistance(word, term, maxDistance);

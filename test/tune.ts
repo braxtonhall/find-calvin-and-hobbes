@@ -32,6 +32,12 @@ const CANDIDATES: Record<string, number[]> = {
 	// variety have a knob to move. Judged on both intents because one value serves both corpora.
 	repeatVariety: [0, 0.25, 0.5, 0.75, 1],
 	rarityExponent: [1, 1.25, 1.5, 2],
+	// The term-match weights. `exactWeight` is the anchor every other weight is measured against,
+	// so the grid stays near 1; `prefixWeight` lives between the word itself and a one-edit
+	// correction (0.7) — above a typo, below the word, the only ordering in which a near word is
+	// both literal and a weaker claim than the word as typed.
+	exactWeight: [0.7, 0.85, 1, 1.25, 1.5],
+	prefixWeight: [0.7, 0.75, 0.8, 0.85, 0.9, 0.95],
 	// Both floors ran with 0.3 as the bottom of the grid while sitting at or near it, so the
 	// sweep could not try the only direction that helped and reported eleven `keep` lines that
 	// read as convergence. At 0.1 the description floor takes class C's zero-result rate from
@@ -97,6 +103,8 @@ const OBJECTIVE: Record<string, "recited" | "described" | "combined"> = {
 	transcriptLengthNormalization: "recited",
 	descriptionLengthNormalization: "described",
 	descriptionIdfFloor: "described",
+	exactWeight: "combined",
+	prefixWeight: "combined",
 	rarityExponent: "combined",
 	repeatVariety: "combined",
 	descriptionPreference: "combined",

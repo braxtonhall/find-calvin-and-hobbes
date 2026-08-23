@@ -175,6 +175,31 @@ test("a typo still finds the strip", () => {
 	assert.deepEqual(ranked("transmogrifer"), ["2000-01-01"]);
 });
 
+// A prefix match is a literal match but a weaker one than the word as written: `prefixWeight`
+// and `exactWeight` are the two ends of it, and their ratio decides how far an extension reaches.
+// With the two words equally rare, a one-word query demands full coverage — which a prefix at 0.85
+// cannot pay, though the exact word can.
+test("the exact and prefix weights decide how far a prefix match reaches", () => {
+	install(
+		buildArchive([
+			{ date: "2000-01-01", transcript: "There is snow on the ground." },
+			{ date: "2000-01-02", transcript: "A snowball rolls down the hill." },
+		]),
+	);
+
+	// `snow` alone reaches the strip that says `snow`, not the one that says `snowball`.
+	assert.deepEqual(ranked("snow"), ["2000-01-01"]);
+
+	// At 1 a prefix is worth the word itself, so both strips answer.
+	const fullPrefix: Tuning = { ...TUNING, prefixWeight: 1 };
+	assert.deepEqual(ranked("snow", fullPrefix), ["2000-01-01", "2000-01-02"]);
+
+	// Dragging the anchor below the prefix weight inverts the comparison, so the extension is now
+	// the stronger claim and leads.
+	const inverted: Tuning = { ...TUNING, exactWeight: 0.7 };
+	assert.deepEqual(ranked("snow", inverted), ["2000-01-02", "2000-01-01"]);
+});
+
 test("an alternate transcript is searched and does not inflate document frequency", () => {
 	install(
 		buildArchive([
