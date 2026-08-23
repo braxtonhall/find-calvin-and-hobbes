@@ -1,11 +1,13 @@
 /**
  * A light stemmer: inflection only, never derivation.
  *
- * The engine already bridges one direction of this by prefix — a query for `snack` reaches
- * `snacks` because the corpus word is the longer one. The other direction has nothing:
- * `complained` cannot reach `complains`, `growing` cannot reach `grow`, and the term is not
- * merely unhelpful but expensive, since it still counts toward the coverage the field has to
- * carry.
+ * The engine once bridged one direction of this by prefix — a query for `snack` reached
+ * `snacks` because the corpus word was the longer one — and still bridges the other, but the
+ * prefix rule is off by default (it reached `car` into `carrot`), so the curated
+ * `DERIVATIONS` list now carries compounds while this stemmer carries inflection in both
+ * directions. Without it `complained` cannot reach `complains`, `growing` cannot reach `grow`,
+ * and the term is not merely unhelpful but expensive, since it still counts toward the
+ * coverage the field has to carry.
  *
  * This is Porter's first step and nothing after it. Steps 2 onward are derivational —
  * `relational -> relate`, `hopefulness -> hope` — and change what a word means rather than

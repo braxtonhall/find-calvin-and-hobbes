@@ -1,6 +1,7 @@
 import { Comic, SortMode } from "./types";
 import { state } from "./state";
 import { COMPOUNDS } from "./compounds";
+import { DERIVATIONS } from "./derivations";
 import { stem } from "./stem";
 import { DateExpression, DatePrecision, matchesExpression, parseDateExpression } from "./date-query";
 import { QueryFilters, parseQueryFilters, passesFilters } from "./filter-query";
@@ -30,6 +31,7 @@ export interface Tuning {
 	rarityExponent: number;
 	exactWeight: number;
 	prefixWeight: number;
+	derivationWeight: number;
 	transcriptCoverageFloor: number;
 	descriptionCoverageFloor: number;
 	transcriptLengthForgiveness: number;
@@ -68,14 +70,15 @@ export const TUNING: Tuning = {
 	// several forms of it once.
 	repeatVariety: 1,
 	rarityExponent: 1.25,
-	// The match weight a term reaches before rarity is applied, by how the word was reached: as
-	// written (exact), as an extension of it (prefix), or within an edit or two. `exactWeight` is
-	// the anchor the other weights are measured against, at 1, and `prefixWeight` sits at 0.85 —
-	// below the word itself and above the 0.7 a one-edit correction earns, so a near word stays a
-	// better match than a guess at one. These are the values the engine has always used, and the
-	// rest of this block was fitted with them fixed.
+	// The match weight a term reaches before rarity is applied, by how the word was reached.
+	// `exactWeight` is the anchor the others are measured against, at 1 — the word as written.
+	// `derivationWeight` is what a closed compound in `DERIVATIONS` is worth when reached from
+	// its base (`snowball` from `snow`), 0.5 for now. `prefixWeight` is the old general
+	// string-prefix rule (`word.startsWith(term)`), off at 0 because it reached unrelated words
+	// (`car` -> `carrot`); the curated list replaced it and this is kept only as an escape hatch.
 	exactWeight: 1,
-	prefixWeight: 0.85,
+	prefixWeight: 0,
+	derivationWeight: 0.85,
 	transcriptCoverageFloor: 0.4,
 	// Measured, not swept: 0.3 was the bottom of the sweep's own candidate grid, so the only
 	// direction that helped was never tried and eleven `keep` lines read as convergence. Down
@@ -172,18 +175,20 @@ export const TUNING: Tuning = {
 	descriptionIdfFloor: 1,
 	// How much another inflection of a query word is worth beside the word itself.
 	//
-	// Off for transcripts, measured rather than assumed: across a 5x5 grid the transcript
-	// weight moves the recited intent by 0.0016 — a third of the sweep's own noise threshold —
-	// and takes a golden query with it, since `learning to ride a bicycle crash` then reaches
-	// the neighbouring strip that says "once you learn how to ride a bicycle". That fits what
-	// the two corpora are: a recitation quotes the strip, so its inflections are already the
-	// strip's, while a description query is the reader's own sentence about the picture.
+	// 0.7 for both corpora. Transcripts used to be 0 on the reasoning that a recitation quotes
+	// the strip, so its inflections are already the strip's — but that zero was fitted while the
+	// prefix rule was still bridging the clean inflection direction (`complain` -> `complains`)
+	// at 0.85, so "0" never meant "no inflection bridging", it meant "the prefix handles it".
+	// With prefix off by default, the stemmer is the only bridge for that direction and must be
+	// on here. The old measurement recorded one cost — `learning to ride a bicycle crash`
+	// reaching the neighbouring strip that says "once you learn how to ride a bicycle" — and
+	// that golden query is the one to re-check after this change.
 	//
 	// 0.7 for descriptions is where the described intent peaks (0.8497 -> 0.8542), class C
 	// stops returning nothing at all, and both queries that found no result now rank 2 and 3.
 	// Not higher: at 1 an inflection is worth as much as the word itself and held-out MRR
 	// falls from 0.931 to 0.911.
-	transcriptInflectionWeight: 0,
+	transcriptInflectionWeight: 0.7,
 	descriptionInflectionWeight: 0.7,
 	descriptionPreference: 0.7,
 	agreementBonus: 0.15,
@@ -489,6 +494,7 @@ function expandTerm(
 
 	const maxDistance = maxDistanceFor(term);
 	const inflections = inflectionWeight > 0 ? corpus.inflections.get(stem(term)) : undefined;
+	const derivations = DERIVATIONS.get(term);
 	const matchWeights = new Map<string, number>();
 	const contributions = new Map<string, number>();
 	const literalWords = new Set<string>();
@@ -505,7 +511,10 @@ function expandTerm(
 		if (word === term) {
 			weight = tuning.exactWeight;
 			literal = true;
-		} else if (word.length > term.length && word.startsWith(term)) {
+		} else if (derivations !== undefined && derivations.includes(word)) {
+			weight = tuning.derivationWeight;
+			literal = true;
+		} else if (tuning.prefixWeight && word.length > term.length && word.startsWith(term)) {
 			weight = tuning.prefixWeight;
 			literal = true;
 		} else if (maxDistance > 0) {

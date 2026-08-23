@@ -175,11 +175,11 @@ test("a typo still finds the strip", () => {
 	assert.deepEqual(ranked("transmogrifer"), ["2000-01-01"]);
 });
 
-// A prefix match is a literal match but a weaker one than the word as written: `prefixWeight`
-// and `exactWeight` are the two ends of it, and their ratio decides how far an extension reaches.
-// With the two words equally rare, a one-word query demands full coverage — which a prefix at 0.85
-// cannot pay, though the exact word can.
-test("the exact and prefix weights decide how far a prefix match reaches", () => {
+// A listed derivation is a literal match but a weaker one than the word as written: `snowball`
+// is reachable from `snow` because `DERIVATIONS` says so, at `derivationWeight`. With the two
+// words equally rare, a one-word query demands full coverage — which 0.5 cannot pay, though the
+// exact word can.
+test("the derivation dictionary reaches a listed compound, at its weight", () => {
 	install(
 		buildArchive([
 			{ date: "2000-01-01", transcript: "There is snow on the ground." },
@@ -190,14 +190,21 @@ test("the exact and prefix weights decide how far a prefix match reaches", () =>
 	// `snow` alone reaches the strip that says `snow`, not the one that says `snowball`.
 	assert.deepEqual(ranked("snow"), ["2000-01-01"]);
 
-	// At 1 a prefix is worth the word itself, so both strips answer.
-	const fullPrefix: Tuning = { ...TUNING, prefixWeight: 1 };
-	assert.deepEqual(ranked("snow", fullPrefix), ["2000-01-01", "2000-01-02"]);
+	// At 1 a derivation is worth the word itself, so both strips answer.
+	const full: Tuning = { ...TUNING, derivationWeight: 1 };
+	assert.deepEqual(ranked("snow", full), ["2000-01-01", "2000-01-02"]);
+});
 
-	// Dragging the anchor below the prefix weight inverts the comparison, so the extension is now
-	// the stronger claim and leads.
-	const inverted: Tuning = { ...TUNING, exactWeight: 0.7 };
-	assert.deepEqual(ranked("snow", inverted), ["2000-01-02", "2000-01-01"]);
+// The general string-prefix rule is off by default, so sharing a prefix is no longer enough by
+// itself: `wuggle` begins with `wug` but is not a listed derivation, so it must not answer.
+test("a shared prefix is not enough while the general rule is off", () => {
+	install(
+		buildArchive([
+			{ date: "2000-01-01", transcript: "I saw a wug." },
+			{ date: "2000-01-02", transcript: "I saw a wuggle." },
+		]),
+	);
+	assert.deepEqual(ranked("wug"), ["2000-01-01"]);
 });
 
 test("an alternate transcript is searched and does not inflate document frequency", () => {
@@ -313,10 +320,14 @@ const SNOW: Entry[] = [
 
 test("repeatVariety decides whether a second matched word counts as saying it again", () => {
 	install(buildArchive(SNOW));
-	const emphasis: Tuning = { ...TUNING, repeatVariety: 0 };
+	// `snow` reaches `snowball` through the derivation list. The default `derivationWeight` is a
+	// 0.5 placeholder that is too weak to earn the repetition bonus this test is about, so pin it
+	// to the 0.85 the old prefix rule used to; `repeatVariety` is what is under test here.
+	const atDefault: Tuning = { ...TUNING, derivationWeight: 0.85 };
+	const emphasis: Tuning = { ...atDefault, repeatVariety: 0 };
 
 	// At 1 the extra word is a repetition, so one `snow` and one `snowball` outrank one `snow`.
-	assert.deepEqual(ranked("snow outside").slice(0, 3), ["2000-01-02", "2000-01-03", "2000-01-01"]);
+	assert.deepEqual(ranked("snow outside", atDefault).slice(0, 3), ["2000-01-02", "2000-01-03", "2000-01-01"]);
 	// At 0 only the same word again counts, and the pair falls back behind the single mention.
 	assert.deepEqual(ranked("snow outside", emphasis).slice(0, 3), ["2000-01-02", "2000-01-01", "2000-01-03"]);
 
