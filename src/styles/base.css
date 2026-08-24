@@ -19,6 +19,7 @@
 	--border: #e6052f;
 	--highlight: #ffd700;
 	--mark: #fff176;
+	--mark-fuzzy: #fff8c4;
 	--font: system-ui, -apple-system, sans-serif;
 	--golden-dim: #f9db98;
 	--orange-dim: #fcc490;
@@ -90,6 +91,10 @@ mark {
 	background: var(--mark);
 	padding: 0 1px;
 	border-radius: 1px;
+}
+
+mark.mark--fuzzy {
+	background: var(--mark-fuzzy);
 }
 
 :focus-visible:not(input):not(textarea):not(select) {

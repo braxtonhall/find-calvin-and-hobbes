@@ -1,3 +1,5 @@
+import type { HighlightRange } from "./search";
+
 const HTML_ESCAPES: Record<string, string> = {
 	"&": "&amp;",
 	"<": "&lt;",
@@ -10,12 +12,13 @@ export function escHtml(text: string): string {
 	return text.replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
 }
 
-export function highlightRanges(text: string, ranges: readonly [number, number][]): string {
+export function highlightRanges(text: string, ranges: readonly HighlightRange[]): string {
 	let html = "";
 	let index = 0;
-	for (const [start, end] of ranges) {
+	for (const [start, end, literal] of ranges) {
 		if (start < index) continue;
-		html += escHtml(text.slice(index, start)) + `<mark>${escHtml(text.slice(start, end))}</mark>`;
+		const className = literal ? "" : ` class="mark--fuzzy"`;
+		html += escHtml(text.slice(index, start)) + `<mark${className}>${escHtml(text.slice(start, end))}</mark>`;
 		index = end;
 	}
 	return html + escHtml(text.slice(index));

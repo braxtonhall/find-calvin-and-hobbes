@@ -5,10 +5,12 @@ import { stem } from "./stem";
 import { DateExpression, DatePrecision, matchesExpression, parseDateExpression } from "./date-query";
 import { QueryFilters, parseQueryFilters, passesFilters } from "./filter-query";
 
+export type HighlightRange = [number, number, boolean];
+
 export interface SearchResult {
 	comic: Comic;
 	text: string;
-	ranges: [number, number][];
+	ranges: HighlightRange[];
 	score: number;
 	/**
 	 * Why this row is here. `date` is a strip the reader's own date expression named; `filter` is one
@@ -310,7 +312,7 @@ interface Summary {
 
 interface FieldMatch {
 	score: number;
-	ranges: [number, number][];
+	ranges: HighlightRange[];
 }
 
 // A transcript's sequence multiplier is only meaningful next to what the query could achieve,
@@ -318,7 +320,7 @@ interface FieldMatch {
 interface TranscriptMatch {
 	strength: number;
 	multiplier: number;
-	ranges: [number, number][];
+	ranges: HighlightRange[];
 }
 
 let indexedComics: IndexedComic[] = [];
@@ -818,10 +820,10 @@ function orderedSubsequence(order: number[], hits: FieldHits, breaks: Set<number
 	return { lcs: previous[columns], run };
 }
 
-function matchRanges(field: IndexedField, hits: FieldHits, expansions: Expansion[], floor: number): [number, number][] {
+function matchRanges(field: IndexedField, hits: FieldHits, expansions: Expansion[], floor: number): HighlightRange[] {
 	const anyAboveFloor = expansions.some((expansion) => expansion.rarity >= floor);
-	const ranges: [number, number][] = [];
-	let last = -1;
+	const ranges: HighlightRange[] = [];
+	const byStart = new Map<number, number>();
 
 	for (let index = 0; index < hits.positions.length; index++) {
 		if (anyAboveFloor && expansions[hits.terms[index]].rarity < floor) continue;
@@ -829,9 +831,14 @@ function matchRanges(field: IndexedField, hits: FieldHits, expansions: Expansion
 		// Deduped on the span rather than the position: both halves of a split compound sit
 		// at different positions but cover the same characters, and would emit it twice.
 		const start = field.starts[position];
-		if (start === last) continue;
-		last = start;
-		ranges.push([start, field.ends[position]]);
+		const existing = byStart.get(start);
+		if (existing !== undefined) {
+			// If two query terms cover the same source span, an exact match should win over a typo.
+			if (hits.literal[index]) ranges[existing][2] = true;
+			continue;
+		}
+		byStart.set(start, ranges.length);
+		ranges.push([start, field.ends[position], hits.literal[index]]);
 	}
 
 	return ranges;
@@ -898,11 +905,11 @@ function scoreDescription(
 	};
 }
 
-function literalRanges(field: IndexedField, loweredQuery: string): [number, number][] {
-	const ranges: [number, number][] = [];
+function literalRanges(field: IndexedField, loweredQuery: string): HighlightRange[] {
+	const ranges: HighlightRange[] = [];
 	let index = field.lowered.indexOf(loweredQuery);
 	while (index !== -1) {
-		ranges.push([index, index + loweredQuery.length]);
+		ranges.push([index, index + loweredQuery.length, true]);
 		index = field.lowered.indexOf(loweredQuery, index + loweredQuery.length);
 	}
 	return ranges;
@@ -913,7 +920,7 @@ function literalSearch(loweredQuery: string): SearchResult[] {
 	const results: SearchResult[] = [];
 
 	for (const { comic, transcripts, description } of indexedComics) {
-		let ranges: [number, number][] = [];
+		let ranges: HighlightRange[] = [];
 		let text = "";
 		for (const field of transcripts) {
 			const found = literalRanges(field, loweredQuery);

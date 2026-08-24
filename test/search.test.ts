@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { search, TUNING, Tuning } from "../src/search";
 import { registerVocabulary } from "../src/filter-vocabulary";
+import { highlightRanges } from "../src/utils";
 import { buildArchive, Entry, install } from "./helpers/archive";
 
 function ranked(query: string, tuning?: Tuning): string[] {
@@ -173,6 +174,14 @@ test("highlight ranges skip uninformative words unless nothing else matched", ()
 test("a typo still finds the strip", () => {
 	install(buildArchive([{ date: "2000-01-01", transcript: "Isn't that your transmogrifier?" }]));
 	assert.deepEqual(ranked("transmogrifer"), ["2000-01-01"]);
+});
+
+test("non-literal matches are marked as fuzzy", () => {
+	install(buildArchive([{ date: "2000-01-01", transcript: "You know the answer." }]));
+
+	const [result] = search("snow", "rank");
+	assert.equal(result.ranges[0][2], false);
+	assert.equal(highlightRanges(result.text, result.ranges), 'You <mark class="mark--fuzzy">know</mark> the answer.');
 });
 
 // A prefix match is a literal match but a weaker one than the word as written: `prefixWeight`
