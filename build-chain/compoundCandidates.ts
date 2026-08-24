@@ -23,6 +23,7 @@ const DENY = new Set([
 	"yowwow",
 	"zzzzzzzz",
 ]);
+const OBVIOUS_SUFFIXES = new Set(["able", "al", "ed", "ing", "ive", "ly", "ment", "ness", "ous", "ted", "tion"]);
 
 interface Counts {
 	words: Map<string, number>;
@@ -56,6 +57,10 @@ function tokenise(text: string): string[] {
 	return [...text.matchAll(WORD_PATTERN)].map((match) => match[0].toLowerCase());
 }
 
+function isObviousFalsePositive(whole: string, parts: string[]): boolean {
+	return whole.includes("'") || /(.)\1{2,}/.test(whole) || OBVIOUS_SUFFIXES.has(parts[1]);
+}
+
 export function buildCandidates(projectDir: string): CompoundCandidate[] {
 	const source = loadComicSource(path.join(projectDir, "comics.yaml"));
 	const documents: string[][] = [];
@@ -71,6 +76,7 @@ export function buildCandidates(projectDir: string): CompoundCandidate[] {
 		for (let cut = MINIMUM_PART; cut <= closed.length - MINIMUM_PART; cut++) {
 			const parts = [closed.slice(0, cut), closed.slice(cut)];
 			if (!words.has(parts[0]) || !words.has(parts[1])) continue;
+			if (isObviousFalsePositive(closed, parts)) continue;
 			const openDf = bigrams.get(parts.join(" ")) || 0;
 			if (openDf > closedDf) continue;
 
