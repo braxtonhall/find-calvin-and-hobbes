@@ -288,6 +288,11 @@ interface FieldHits {
 	literal: boolean[];
 }
 
+interface CompoundQuery {
+	parts: string[];
+	start: number;
+}
+
 interface Summary {
 	base: number;
 	achieved: number;
@@ -635,11 +640,66 @@ function collectHits(field: IndexedField, expansions: Expansion[]): FieldHits {
 	return hits;
 }
 
-function hasCompoundSequence(field: IndexedField, parts: string[]): boolean {
+function compoundSequencePositions(field: IndexedField, parts: string[]): Set<number> {
+	const positions = new Set<number>();
 	for (let start = 0; start <= field.words.length - parts.length; start++) {
-		if (parts.every((part, offset) => field.words[start + offset] === part)) return true;
+		if (!parts.every((part, offset) => field.words[start + offset] === part)) continue;
+		for (let offset = 0; offset < parts.length; offset++) positions.add(start + offset);
 	}
-	return false;
+	return positions;
+}
+
+function hasCompoundSequence(field: IndexedField, parts: string[]): boolean {
+	return compoundSequencePositions(field, parts).size > 0;
+}
+
+/**
+ * A compound query is indexed as its parts, which means collection cannot tell a complete
+ * compound occurrence from an unrelated occurrence of one of its parts. Keep only the component
+ * hits that belong to a valid sequence unless that component was also explicitly queried outside
+ * the compound.
+ */
+function resolveCompoundHits(
+	field: IndexedField,
+	hits: FieldHits,
+	compoundQueries: CompoundQuery[],
+	termIndices: Map<string, number>,
+	sequence: string[],
+): FieldHits {
+	if (compoundQueries.length === 0) return hits;
+
+	const allowed = new Set<number>();
+	const compoundTerms = new Set<number>();
+	for (const query of compoundQueries) {
+		const positions = compoundSequencePositions(field, query.parts);
+		for (const position of positions) allowed.add(position);
+		for (const part of query.parts) compoundTerms.add(termIndices.get(part)!);
+	}
+
+	const independentTerms = new Set<number>();
+	for (let sequencePosition = 0; sequencePosition < sequence.length; sequencePosition++) {
+		if (
+			compoundQueries.some(
+				(query) => sequencePosition >= query.start && sequencePosition < query.start + query.parts.length,
+			)
+		)
+			continue;
+		independentTerms.add(termIndices.get(sequence[sequencePosition])!);
+	}
+
+	const keep = (index: number): boolean => {
+		const position = hits.positions[index];
+		const term = hits.terms[index];
+		return !compoundTerms.has(term) || independentTerms.has(term) || allowed.has(position);
+	};
+
+	return {
+		positions: hits.positions.filter((_, index) => keep(index)),
+		terms: hits.terms.filter((_, index) => keep(index)),
+		weights: hits.weights.filter((_, index) => keep(index)),
+		contributions: hits.contributions.filter((_, index) => keep(index)),
+		literal: hits.literal.filter((_, index) => keep(index)),
+	};
 }
 
 function summarise(hits: FieldHits, ceilings: Float64Array, repeatWeight: number, variety: number): Summary {
@@ -785,12 +845,14 @@ function scoreTranscript(
 	required: number,
 	order: number[],
 	breaks: Set<number>,
-	compoundQueries: string[][],
+	compoundQueries: CompoundQuery[],
+	sequence: string[],
+	termIndices: Map<string, number>,
 	tuning: Tuning,
 ): TranscriptMatch | null {
-	const hits = collectHits(field, expansions);
+	const hits = resolveCompoundHits(field, collectHits(field, expansions), compoundQueries, termIndices, sequence);
 	if (hits.positions.length === 0) return null;
-	if (compoundQueries.some((parts) => !hasCompoundSequence(field, parts))) return null;
+	if (compoundQueries.some((query) => !hasCompoundSequence(field, query.parts))) return null;
 
 	const summary = summarise(hits, ceilings, tuning.transcriptRepeatWeight, tuning.repeatVariety);
 	if (summary.ceiling === 0 || summary.coverage < required) return null;
@@ -812,12 +874,14 @@ function scoreDescription(
 	expansions: Expansion[],
 	ceilings: Float64Array,
 	required: number,
-	compoundQueries: string[][],
+	compoundQueries: CompoundQuery[],
+	sequence: string[],
+	termIndices: Map<string, number>,
 	tuning: Tuning,
 ): FieldMatch | null {
-	const hits = collectHits(field, expansions);
+	const hits = resolveCompoundHits(field, collectHits(field, expansions), compoundQueries, termIndices, sequence);
 	if (hits.positions.length === 0) return null;
-	if (compoundQueries.some((parts) => !hasCompoundSequence(field, parts))) return null;
+	if (compoundQueries.some((query) => !hasCompoundSequence(field, query.parts))) return null;
 
 	const summary = summarise(hits, ceilings, tuning.descriptionRepeatWeight, tuning.repeatVariety);
 	if (summary.ceiling === 0 || summary.coverage < required) return null;
@@ -921,11 +985,13 @@ export function search(query: string, sort: SortMode, tuning: Tuning = TUNING): 
  * own words were not continuous.
  */
 function searchText(segments: string[], residual: string, tuning: Tuning): SearchResult[] {
-	const compoundQueries: string[][] = [];
+	const compoundQueries: CompoundQuery[] = [];
+	let sequenceOffset = 0;
 	const sequences = segments.map((segment) =>
 		[...segment.matchAll(WORD_PATTERN)].flatMap((match) => {
 			const parts = decompose(match[0].toLowerCase());
-			if (parts.length > 1) compoundQueries.push(parts);
+			if (parts.length > 1) compoundQueries.push({ parts, start: sequenceOffset });
+			sequenceOffset += parts.length;
 			return parts;
 		}),
 	);
@@ -1008,7 +1074,7 @@ function compareChronologically(a: SearchResult, b: SearchResult): number {
 	return a.comic.date.localeCompare(b.comic.date) || (a.comic.id || "").localeCompare(b.comic.id || "");
 }
 
-function rankedSearch(sequences: string[][], compoundQueries: string[][], tuning: Tuning): SearchResult[] {
+function rankedSearch(sequences: string[][], compoundQueries: CompoundQuery[], tuning: Tuning): SearchResult[] {
 	const sequence = sequences.flat();
 	const terms = [...new Set(sequence)];
 	const termIndices = new Map(terms.map((term, index) => [term, index]));
@@ -1066,6 +1132,8 @@ function rankedSearch(sequences: string[][], compoundQueries: string[][], tuning
 				order,
 				breaks,
 				compoundQueries,
+				sequence,
+				termIndices,
 				tuning,
 			);
 			if (match === null) continue;
@@ -1084,6 +1152,8 @@ function rankedSearch(sequences: string[][], compoundQueries: string[][], tuning
 					descriptionCeilings,
 					descriptionRequired,
 					compoundQueries,
+					sequence,
+					termIndices,
 					tuning,
 				)
 			: null;

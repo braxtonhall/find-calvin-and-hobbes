@@ -257,6 +257,32 @@ test("a split compound is highlighted once, across the whole word", () => {
 	assert.equal(result.text.slice(start, end), "goodnight");
 });
 
+test("a compound query does not highlight an unrelated component occurrence", () => {
+	install(buildArchive([{ date: "2000-01-01", transcript: "A snowball rolled past." }]));
+	const compoundOnlyScore = scoreOf("snowball", "2000-01-01");
+
+	install(buildArchive([{ date: "2000-01-01", transcript: "A snowball rolled past the snow." }]));
+
+	const [result] = search("snowball", "rank");
+	assert.equal(result.comic.date, "2000-01-01");
+	assert.equal(result.score, compoundOnlyScore, "an unrelated component must not add score");
+	assert.deepEqual(
+		result.ranges.map(([start, end]) => result.text.slice(start, end)),
+		["snowball"],
+	);
+});
+
+test("a separately queried compound component keeps its independent highlight", () => {
+	install(buildArchive([{ date: "2000-01-01", transcript: "A snowball rolled past the snow." }]));
+
+	const [result] = search("snowball snow", "rank");
+	assert.equal(result.comic.date, "2000-01-01");
+	assert.deepEqual(
+		result.ranges.map(([start, end]) => result.text.slice(start, end)),
+		["snowball", "snow"],
+	);
+});
+
 test("compound matching follows issue 43's golden table", () => {
 	const documents = [
 		{ date: "2000-03-01", transcript: "snowball" },
