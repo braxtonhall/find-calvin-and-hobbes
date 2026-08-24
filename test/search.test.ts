@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { search, TUNING, Tuning } from "../src/search";
+import { COMPOUND_CANONICAL_FORMS, COMPOUND_RELATIONS } from "../src/compounds";
 import { registerVocabulary } from "../src/filter-vocabulary";
 import { highlightRanges } from "../src/utils";
 import { buildArchive, Entry, install } from "./helpers/archive";
@@ -254,6 +255,15 @@ test("a closed compound and its open spelling find each other", () => {
 
 	assert.deepEqual(ranked("goodnight"), ["2000-01-01", "2000-01-02"]);
 	assert.deepEqual(ranked("good night"), ["2000-01-01", "2000-01-02"]);
+});
+
+test("compound relations retain preference separately from canonical forms", () => {
+	assert.deepEqual(COMPOUND_RELATIONS.get("snowball"), {
+		whole: "snowball",
+		parts: ["snow", "ball"],
+		preference: "balanced",
+	});
+	assert.deepEqual(COMPOUND_CANONICAL_FORMS.get("snowball"), ["snow", "ball"]);
 });
 
 test("a split compound is highlighted once, across the whole word", () => {

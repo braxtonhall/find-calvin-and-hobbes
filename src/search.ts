@@ -1,6 +1,6 @@
 import { Comic, SortMode } from "./types";
 import { state } from "./state";
-import { COMPOUNDS } from "./compounds";
+import { COMPOUND_RELATIONS } from "./compounds";
 import { stem } from "./stem";
 import { DateExpression, DatePrecision, matchesExpression, parseDateExpression } from "./date-query";
 import { QueryFilters, parseQueryFilters, passesFilters } from "./filter-query";
@@ -246,6 +246,9 @@ interface IndexedField {
 	text: string;
 	lowered: string;
 	words: string[];
+	// The source lexical units remain available alongside the component matching view. A compound
+	// contributes one unit here even when `words` contains several related parts.
+	sourceWords: string[];
 	starts: Int32Array;
 	ends: Int32Array;
 	compoundIds: Int32Array;
@@ -340,7 +343,7 @@ function averageFieldLength(fields: IndexedField[][]): number {
 	let count = 0;
 	for (const group of fields)
 		for (const field of group) {
-			words += field.words.length;
+			words += field.sourceWords.length;
 			count++;
 		}
 	return count === 0 ? 0 : words / count;
@@ -361,11 +364,12 @@ function indexInflections(corpus: Corpus): void {
  * than sitting beside it: keeping both would count the token's mass twice in `summarise`.
  */
 function decompose(word: string): string[] {
-	return COMPOUNDS.get(word) ?? [word];
+	return COMPOUND_RELATIONS.get(word)?.parts ?? [word];
 }
 
 function indexField(text: string, interned: Map<string, string>): IndexedField {
 	const words: string[] = [];
+	const sourceWords: string[] = [];
 	const starts: number[] = [];
 	const ends: number[] = [];
 	const compoundIds: number[] = [];
@@ -377,6 +381,7 @@ function indexField(text: string, interned: Map<string, string>): IndexedField {
 		// the reader can actually see rather than half of it.
 		const lowered = match[0].toLowerCase();
 		const parts = decompose(lowered);
+		sourceWords.push(lowered);
 		const compoundId = parts.length > 1 ? nextCompound++ : -1;
 		for (const part of parts) {
 			let word = interned.get(part);
@@ -396,6 +401,7 @@ function indexField(text: string, interned: Map<string, string>): IndexedField {
 		text,
 		lowered: text.toLowerCase(),
 		words,
+		sourceWords,
 		starts: Int32Array.from(starts),
 		ends: Int32Array.from(ends),
 		compoundIds: Int32Array.from(compoundIds),
@@ -408,6 +414,11 @@ function countDocument(corpus: Corpus, fields: IndexedField[]): void {
 	corpus.documentCount++;
 	const seen = new Set<string>();
 	for (const field of fields) {
+		for (const word of field.sourceWords) {
+			if (seen.has(word)) continue;
+			seen.add(word);
+			corpus.documentFrequency.set(word, (corpus.documentFrequency.get(word) || 0) + 1);
+		}
 		for (const word of field.words) {
 			if (seen.has(word)) continue;
 			seen.add(word);

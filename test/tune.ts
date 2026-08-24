@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { search, TUNING, Tuning } from "../src/search";
 import { stem } from "../src/stem";
-import { COMPOUNDS } from "../src/compounds";
+import { COMPOUND_CANONICAL_FORMS } from "../src/compounds";
 import {
 	describeMisses,
 	evaluate,
@@ -156,7 +156,9 @@ const WORD_PATTERN = /[\p{L}\p{N}']+/gu;
 // Both sides go through the index's own decomposition, since `goodnight` is `good night` to the
 // scorer and a guard that disagreed would be asking about a vocabulary the engine does not have.
 const words = (text: string) =>
-	[...text.toLowerCase().matchAll(WORD_PATTERN)].flatMap((match) => COMPOUNDS.get(match[0]) || [match[0]]);
+	[...text.toLowerCase().matchAll(WORD_PATTERN)].flatMap(
+		(match) => COMPOUND_CANONICAL_FORMS.get(match[0]) || [match[0]],
+	);
 
 // Whether the field holds any query word as written, extended, or in another inflection — the
 // engine's three literal routes. `stem` is imported for the same reason the decomposition is: what
