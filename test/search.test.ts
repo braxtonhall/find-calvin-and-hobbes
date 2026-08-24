@@ -261,7 +261,7 @@ test("compound relations retain preference separately from canonical forms", () 
 	assert.deepEqual(COMPOUND_RELATIONS.get("snowball"), {
 		whole: "snowball",
 		parts: ["snow", "ball"],
-		preference: "balanced",
+		preference: "closed",
 	});
 	assert.deepEqual(COMPOUND_CANONICAL_FORMS.get("snowball"), ["snow", "ball"]);
 });
