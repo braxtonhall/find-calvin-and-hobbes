@@ -9,6 +9,7 @@
 	display: block;
 	max-width: 480px;
 	width: 100%;
+	aspect-ratio: 722 / 103;
 	margin: 0 auto 32px auto;
 }
 
