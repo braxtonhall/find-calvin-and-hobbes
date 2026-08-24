@@ -9,11 +9,13 @@ import { loadDescriptions } from "./details";
 import { buildComicHash, isPlainClick, parseRoute } from "./router";
 
 export function updateGridStatesFromData(): void {
-	const cells = document.querySelectorAll(".cell--has-comic");
+	const cells = document.querySelectorAll(".cell");
 	for (const cell of cells) {
 		const element = cell as HTMLElement;
 		const date = element.dataset.date;
 		if (!date) continue;
+		if (state.reruns.has(date)) element.classList.add("cell--rerun");
+		if (!element.classList.contains("cell--has-comic")) continue;
 		const comicsForDate = state.comicsByDate.get(date);
 		if (!comicsForDate || comicsForDate.length === 0) {
 			element.classList.remove("cell--has-comic");

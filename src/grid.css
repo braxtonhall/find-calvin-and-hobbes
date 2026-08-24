@@ -132,6 +132,14 @@
 .cell--search-nonmatch.cell--none.cell--bookmarked {
 	background: var(--orange-dim);
 }
+
+.cell--rerun.cell--search-match {
+	background: var(--grey);
+}
+.cell--rerun.cell--search-match.cell--bookmarked {
+	background: var(--orange);
+}
+
 .cell--selected {
 	box-shadow: 0 0 0 var(--cell-ring) var(--border);
 	z-index: 1;

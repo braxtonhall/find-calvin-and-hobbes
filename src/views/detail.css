@@ -195,6 +195,11 @@
 
 .detail-rerun-link {
 	color: var(--golden);
+	text-decoration: none;
+}
+
+.detail-rerun-link:hover {
+	text-decoration: underline;
 }
 
 .detail-collections-heading {
