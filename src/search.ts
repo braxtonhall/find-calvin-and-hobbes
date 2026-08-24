@@ -148,44 +148,16 @@ export const TUNING: Tuning = {
 	// 1.1050 in a 25-word one. That is not evenly spread over the corpus — Sunday transcripts
 	// average 89.9 words against a weekday's 47.8 — so it is a systematic advantage for Sundays.
 	//
-	// Both measured, not swept, and both gain less than the sweep's 0.005 threshold on the intent
-	// they are judged against, so a sweep would keep 0 forever.
-	//
-	// 0 for transcripts, and the measurement is the reason rather than caution. 0.25 is worth
-	// +0.0017 on the recited intent — a third of the sweep's own threshold — and it costs a pinned
-	// property: `repeatVariety` exists to make a transcript saying `snow` and `snowball` outrank
-	// one saying `snow` once, and at 0.25 the seven-word strip falls behind the four-word one
-	// because length cancels the variety bonus. `test/search.test.ts` fails on exactly that case.
-	// A third of a threshold does not buy a property, which is the same trade
-	// `transcriptInflectionWeight` refused. Above 0.25 the described intent falls too, and at 1 a
-	// golden recitation goes with it.
-	//
-	// 0.1 for descriptions, which is the largest value that is no worse anywhere. It is worth
-	// +0.0067 on the described intent — above the sweep's threshold, unlike most of these — and
-	// +0.0022 recited, with held out improving on both. Not higher: at 0.15 the golden described
-	// set drops to 0.978, because `learning to ride a bicycle crash` then ranks 1986-09-02 first.
-	// Those two strips are consecutive days of one story and both descriptions are about learning
-	// to ride and crashing, so it is a knife-edge rather than a clear error — but the golden set is
-	// a guard rail and the rule is that it does not regress. The gain from 0.15 to 0.25 is real
-	// (described reaches 0.8680) and is available if that query is ever re-examined.
 	transcriptLengthNormalization: 0,
 	descriptionLengthNormalization: 0.1,
 	transcriptIdfFloor: 0.5,
 	descriptionIdfFloor: 1,
 	// How much another inflection of a query word is worth beside the word itself.
 	//
-	// Off for transcripts, measured rather than assumed: across a 5x5 grid the transcript
-	// weight moves the recited intent by 0.0016 — a third of the sweep's own noise threshold —
-	// and takes a golden query with it, since `learning to ride a bicycle crash` then reaches
-	// the neighbouring strip that says "once you learn how to ride a bicycle". That fits what
-	// the two corpora are: a recitation quotes the strip, so its inflections are already the
-	// strip's, while a description query is the reader's own sentence about the picture.
-	//
-	// 0.7 for descriptions is where the described intent peaks (0.8497 -> 0.8542), class C
-	// stops returning nothing at all, and both queries that found no result now rank 2 and 3.
-	// Not higher: at 1 an inflection is worth as much as the word itself and held-out MRR
-	// falls from 0.931 to 0.911.
-	transcriptInflectionWeight: 0,
+	// A small transcript weight admits a little lexical variety without making inflections as strong
+	// as the words the reader actually typed. Descriptions remain more permissive because they are
+	// paraphrases rather than quoted dialogue.
+	transcriptInflectionWeight: 0.1,
 	descriptionInflectionWeight: 0.7,
 	descriptionPreference: 0.7,
 	agreementBonus: 0.15,

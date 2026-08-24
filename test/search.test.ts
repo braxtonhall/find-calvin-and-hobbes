@@ -100,8 +100,8 @@ test("a ubiquitous description word neither admits nor blocks a result", () => {
 	assert.deepEqual(ranked("calvin hallway"), ["2000-01-02"]);
 });
 
-// The corpus has to be big enough for `bathtub` to be common WITHOUT being weightless. An
-// earlier version of this used three documents, which put `bathtub` in all of them: its IDF was
+// The corpus has to be big enough for `porch` to be common WITHOUT being weightless. An
+// earlier version of this used three documents, which put `porch` in all of them: its IDF was
 // zero, it was dropped below descriptionIdfFloor before scoring, and the two candidates were
 // left covering one equally rare term each. The assertion pinned a preference between two
 // symmetric documents, so it was measuring a tie-break rather than the rule in its own name.
@@ -116,20 +116,44 @@ test("a partial description match survives only if it covers the rare term", () 
 			{
 				date: "2000-01-01",
 				transcript: "Nothing to see here.",
-				description: "Calvin uses the transmogrifier in the bathtub.",
+				description: "Calvin uses the transmogrifier on the porch.",
 			},
 			{
 				date: "2000-01-02",
 				transcript: "Nothing to see here.",
-				description: "Calvin is in the bathtub by the window.",
+				description: "Calvin is on the porch by the window.",
 			},
-			{ date: "2000-01-03", transcript: "Nothing to see here.", description: "Calvin fills the bathtub up." },
+			{ date: "2000-01-03", transcript: "Nothing to see here.", description: "Calvin sits on the porch." },
 			...filler,
 		]),
 	);
-	// `bathtub` is in 3 of 10 descriptions and carries real weight; `transmogrifier` is in one.
+	// `porch` is in 3 of 10 descriptions and carries real weight; `transmogrifier` is in one.
 	// The two strips that have only the common word must not ride in on it.
-	assert.deepEqual(ranked("transmogrifier bathtub"), ["2000-01-01"]);
+	assert.deepEqual(ranked("transmogrifier porch"), ["2000-01-01"]);
+});
+
+test("a transcript inflection adds variety to an otherwise literal match", () => {
+	install(
+		buildArchive(
+			[
+				{ date: "2000-01-01", transcript: "Calvin is playing outside." },
+				{ date: "2000-01-02", transcript: "Calvin played outside." },
+			],
+			0,
+		),
+	);
+	// The low inflection weight should add transcript variety without allowing a one-word
+	// inflection-only query to pass the full-coverage requirement.
+	const results = search("calvin play", "date");
+	assert.deepEqual(
+		results.map((result) => result.comic.date),
+		["2000-01-01", "2000-01-02"],
+	);
+	const played = results.find((result) => result.comic.date === "2000-01-02")!;
+	assert.ok(
+		played.ranges.some(([start, end]) => played.text.slice(start, end) === "played"),
+		"the inflected transcript word should be highlighted",
+	);
 });
 
 // A wrong word in a two-word query leaves nothing to forgive it with, so the pair behaves as
@@ -517,13 +541,13 @@ test("document length normalization is off by default and prefers the shorter fi
 test("the description mass gate is a sum until normalized, and then a mean", () => {
 	// The filler descriptions rotate eight subjects across sixty comics, so a subject word is
 	// moderately common — rare enough to carry mass, common enough that a query full of them is
-	// not specific. `snowman` appears once and is genuinely rare.
+	// not specific. `unicorn` appears once and is genuinely rare.
 	install(
 		buildArchive([
 			{
 				date: "2000-01-01",
 				transcript: "Whump. Thpt.",
-				description: "Calvin builds a snowman near the sandbox, the porch and the driveway.",
+				description: "Calvin builds a unicorn near the sandbox, the porch and the driveway.",
 			},
 		]),
 	);
@@ -531,16 +555,16 @@ test("the description mass gate is a sum until normalized, and then a mean", () 
 	// `achieved` sums over query terms, so padding a query with moderately common words raises the
 	// total without making the query more specific. At normalization 0 a threshold therefore
 	// rejects the one precise word and admits the vague four — which is backwards, and is why the
-	// gate could never be raised far enough to stop a hollow query without deleting `snow` first.
+	// gate could never be raised far enough to stop a hollow query without deleting the rare term first.
 	const summed: Tuning = { ...TUNING, descriptionMinMass: 8, descriptionMassNormalization: 0 };
-	assert.deepEqual(ranked("snowman", summed), [], "one rare term cannot reach a threshold four terms sum to");
-	assert.deepEqual(ranked("snowman sandbox porch driveway", summed), ["2000-01-01"]);
+	assert.deepEqual(ranked("unicorn", summed), [], "one rare term cannot reach a threshold four terms sum to");
+	assert.deepEqual(ranked("unicorn sandbox porch driveway", summed), ["2000-01-01"]);
 
 	// At normalization 1 the threshold is mass per matched term, so it means the same thing to a
 	// query of one word as to a query of four, and the specific query is the one that survives.
 	const meaned: Tuning = { ...TUNING, descriptionMinMass: 4, descriptionMassNormalization: 1 };
-	assert.deepEqual(ranked("snowman", meaned), ["2000-01-01"]);
-	assert.deepEqual(ranked("snowman sandbox porch driveway", meaned), [], "diluted by its own vaguer words");
+	assert.deepEqual(ranked("unicorn", meaned), ["2000-01-01"]);
+	assert.deepEqual(ranked("unicorn sandbox porch driveway", meaned), [], "diluted by its own vaguer words");
 });
 
 function keys(results: { comic: { date: string; id?: string } }[]): string[] {

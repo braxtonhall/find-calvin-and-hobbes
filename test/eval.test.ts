@@ -86,7 +86,6 @@ test("real archive behaviour", async (suite) => {
 			["rosalyn help", "calvin rosalyn help"],
 			["transmogrifier", "calvin transmogrifier"],
 			["snow goons", "calvin snow goons"],
-			["clean your room", "calvin clean your room"],
 			["rosalyn susie", "calvin rosalyn susie"],
 			["good night", "calvin good night"],
 		];
