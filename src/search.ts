@@ -246,6 +246,8 @@ interface IndexedField {
 	words: string[];
 	starts: Int32Array;
 	ends: Int32Array;
+	compoundIds: Int32Array;
+	compoundParts: string[][];
 }
 
 interface IndexedComic {
@@ -359,11 +361,17 @@ function indexField(text: string, interned: Map<string, string>): IndexedField {
 	const words: string[] = [];
 	const starts: number[] = [];
 	const ends: number[] = [];
+	const compoundIds: number[] = [];
+	const compoundParts: string[][] = [];
+	let nextCompound = 0;
 
 	for (const match of text.matchAll(WORD_PATTERN)) {
 		// Every part keeps the whole token's offsets, so a highlight still covers the word
 		// the reader can actually see rather than half of it.
-		for (const part of decompose(match[0].toLowerCase())) {
+		const lowered = match[0].toLowerCase();
+		const parts = decompose(lowered);
+		const compoundId = parts.length > 1 ? nextCompound++ : -1;
+		for (const part of parts) {
 			let word = interned.get(part);
 			if (word === undefined) {
 				word = part;
@@ -372,10 +380,20 @@ function indexField(text: string, interned: Map<string, string>): IndexedField {
 			words.push(word);
 			starts.push(match.index);
 			ends.push(match.index + match[0].length);
+			compoundIds.push(compoundId);
+			compoundParts.push(parts);
 		}
 	}
 
-	return { text, lowered: text.toLowerCase(), words, starts: Int32Array.from(starts), ends: Int32Array.from(ends) };
+	return {
+		text,
+		lowered: text.toLowerCase(),
+		words,
+		starts: Int32Array.from(starts),
+		ends: Int32Array.from(ends),
+		compoundIds: Int32Array.from(compoundIds),
+		compoundParts,
+	};
 }
 
 // One document is one comic, so a word shared by a transcript and its alternate counts once.
@@ -617,6 +635,13 @@ function collectHits(field: IndexedField, expansions: Expansion[]): FieldHits {
 	return hits;
 }
 
+function hasCompoundSequence(field: IndexedField, parts: string[]): boolean {
+	for (let start = 0; start <= field.words.length - parts.length; start++) {
+		if (parts.every((part, offset) => field.words[start + offset] === part)) return true;
+	}
+	return false;
+}
+
 function summarise(hits: FieldHits, ceilings: Float64Array, repeatWeight: number, variety: number): Summary {
 	const termCount = ceilings.length;
 	const best = new Float64Array(termCount);
@@ -760,10 +785,12 @@ function scoreTranscript(
 	required: number,
 	order: number[],
 	breaks: Set<number>,
+	compoundQueries: string[][],
 	tuning: Tuning,
 ): TranscriptMatch | null {
 	const hits = collectHits(field, expansions);
 	if (hits.positions.length === 0) return null;
+	if (compoundQueries.some((parts) => !hasCompoundSequence(field, parts))) return null;
 
 	const summary = summarise(hits, ceilings, tuning.transcriptRepeatWeight, tuning.repeatVariety);
 	if (summary.ceiling === 0 || summary.coverage < required) return null;
@@ -785,10 +812,12 @@ function scoreDescription(
 	expansions: Expansion[],
 	ceilings: Float64Array,
 	required: number,
+	compoundQueries: string[][],
 	tuning: Tuning,
 ): FieldMatch | null {
 	const hits = collectHits(field, expansions);
 	if (hits.positions.length === 0) return null;
+	if (compoundQueries.some((parts) => !hasCompoundSequence(field, parts))) return null;
 
 	const summary = summarise(hits, ceilings, tuning.descriptionRepeatWeight, tuning.repeatVariety);
 	if (summary.ceiling === 0 || summary.coverage < required) return null;
@@ -892,11 +921,16 @@ export function search(query: string, sort: SortMode, tuning: Tuning = TUNING): 
  * own words were not continuous.
  */
 function searchText(segments: string[], residual: string, tuning: Tuning): SearchResult[] {
+	const compoundQueries: string[][] = [];
 	const sequences = segments.map((segment) =>
-		[...segment.matchAll(WORD_PATTERN)].flatMap((match) => decompose(match[0])),
+		[...segment.matchAll(WORD_PATTERN)].flatMap((match) => {
+			const parts = decompose(match[0].toLowerCase());
+			if (parts.length > 1) compoundQueries.push(parts);
+			return parts;
+		}),
 	);
 	if (sequences.every((sequence) => sequence.length === 0)) return literalSearch(residual);
-	return rankedSearch(sequences, tuning);
+	return rankedSearch(sequences, compoundQueries, tuning);
 }
 
 /** The transcript a date match shows. A wordless strip has none, so it shows its description. */
@@ -974,7 +1008,7 @@ function compareChronologically(a: SearchResult, b: SearchResult): number {
 	return a.comic.date.localeCompare(b.comic.date) || (a.comic.id || "").localeCompare(b.comic.id || "");
 }
 
-function rankedSearch(sequences: string[][], tuning: Tuning): SearchResult[] {
+function rankedSearch(sequences: string[][], compoundQueries: string[][], tuning: Tuning): SearchResult[] {
 	const sequence = sequences.flat();
 	const terms = [...new Set(sequence)];
 	const termIndices = new Map(terms.map((term, index) => [term, index]));
@@ -1008,7 +1042,6 @@ function rankedSearch(sequences: string[][], tuning: Tuning): SearchResult[] {
 		effectiveTerms(descriptionCeilings),
 		tuning.descriptionLengthForgiveness,
 	);
-
 	interface Candidate {
 		comic: Comic;
 		transcript: TranscriptMatch | null;
@@ -1032,6 +1065,7 @@ function rankedSearch(sequences: string[][], tuning: Tuning): SearchResult[] {
 				transcriptRequired,
 				order,
 				breaks,
+				compoundQueries,
 				tuning,
 			);
 			if (match === null) continue;
@@ -1049,6 +1083,7 @@ function rankedSearch(sequences: string[][], tuning: Tuning): SearchResult[] {
 					descriptionExpansions,
 					descriptionCeilings,
 					descriptionRequired,
+					compoundQueries,
 					tuning,
 				)
 			: null;

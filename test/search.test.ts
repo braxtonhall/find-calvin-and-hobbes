@@ -8,8 +8,8 @@ function ranked(query: string, tuning?: Tuning): string[] {
 	return search(query, "rank", tuning).map((result) => result.comic.date);
 }
 
-function scoreOf(query: string, date: string): number {
-	const result = search(query, "rank").find((candidate) => candidate.comic.date === date);
+function scoreOf(query: string, date: string, tuning?: Tuning): number {
+	const result = search(query, "rank", tuning).find((candidate) => candidate.comic.date === date);
 	assert.ok(result, `expected ${date} to match "${query}"`);
 	return result.score;
 }
@@ -183,7 +183,7 @@ test("the exact and prefix weights decide how far a prefix match reaches", () =>
 	install(
 		buildArchive([
 			{ date: "2000-01-01", transcript: "There is snow on the ground." },
-			{ date: "2000-01-02", transcript: "A snowball rolls down the hill." },
+			{ date: "2000-01-02", transcript: "A snowflake rolls down the hill." },
 		]),
 	);
 
@@ -257,6 +257,47 @@ test("a split compound is highlighted once, across the whole word", () => {
 	assert.equal(result.text.slice(start, end), "goodnight");
 });
 
+test("compound matching follows issue 43's golden table", () => {
+	const documents = [
+		{ date: "2000-03-01", transcript: "snowball" },
+		{ date: "2000-03-02", transcript: "snow ball" },
+		{ date: "2000-03-03", transcript: "ball snow" },
+		{ date: "2000-03-04", transcript: "snow" },
+		{ date: "2000-03-05", transcript: "ball" },
+	];
+	const queries = ["snowball", "snow ball", "snow", "ball"];
+	const expected = [
+		[true, true, true, true],
+		[true, true, true, true],
+		[false, true, true, true],
+		[false, true, true, false],
+		[false, true, false, true],
+	];
+	const permissive: Tuning = { ...TUNING, transcriptCoverageFloor: 0 };
+	install(buildArchive(documents));
+	for (let document = 0; document < documents.length; document++) {
+		for (let query = 0; query < queries.length; query++) {
+			const result = search(queries[query], "rank", permissive).find(
+				(candidate) => candidate.comic.date === documents[document].date,
+			);
+			assert.equal(
+				result !== undefined,
+				expected[document][query],
+				`${queries[query]} against ${documents[document].transcript}`,
+			);
+		}
+	}
+
+	assert.ok(
+		scoreOf("snow ball", "2000-03-04", permissive) < scoreOf("snow", "2000-03-04", permissive),
+		"a partial compound match is weaker than its matching component",
+	);
+	assert.ok(
+		scoreOf("snow ball", "2000-03-05", permissive) < scoreOf("ball", "2000-03-05", permissive),
+		"a partial compound match is weaker than its matching component",
+	);
+});
+
 // The prefix rule already reaches `complains` from `complain`, because the corpus word is the
 // longer of the two. This is the same relation in the direction a prefix cannot go, and it
 // runs on descriptions only: a recitation quotes the strip, so its inflections are the
@@ -318,7 +359,7 @@ test("repeatVariety decides whether a second matched word counts as saying it ag
 	const emphasis: Tuning = { ...legacy, repeatVariety: 0 };
 
 	// At 1 the extra word is a repetition, so one `snow` and one `snowball` outrank one `snow`.
-	assert.deepEqual(ranked("snow outside", legacy).slice(0, 3), ["2000-01-02", "2000-01-03", "2000-01-01"]);
+	assert.deepEqual(ranked("snow outside", legacy).slice(0, 3), ["2000-01-02", "2000-01-01", "2000-01-03"]);
 	// At 0 only the same word again counts, and the pair falls back behind the single mention.
 	assert.deepEqual(ranked("snow outside", emphasis).slice(0, 3), ["2000-01-02", "2000-01-01", "2000-01-03"]);
 
