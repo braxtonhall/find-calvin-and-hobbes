@@ -1,4 +1,5 @@
 import { canGoBack } from "../router";
+import { routeUrl } from "../base-path";
 
 export function buildBackButton(className: string): string {
 	return canGoBack()
@@ -14,7 +15,7 @@ export function attachBackButtonHandler(element: HTMLElement, className: string)
 // A link, because home has an address. Back stays a button: `history.back()` is a step through a
 // list only the browser holds, and there is no URL to put in an href for it.
 export function buildHomeButton(className: string): string {
-	return `<a class="${className}" href="#/"><span class="home-icon">&#8962;</span> Home</a>`;
+	return `<a class="${className}" href="${routeUrl("/")}"><span class="home-icon">&#8962;</span> Home</a>`;
 }
 
 export function buildBackAndHomeButtons(): string {

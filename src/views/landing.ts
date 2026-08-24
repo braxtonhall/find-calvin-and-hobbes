@@ -3,6 +3,7 @@ import "./landing.css";
 import { buildSearchHash, navigate } from "../router";
 import { randomQuery } from "../suggestions";
 import { attachQueryInput, editQueryInput } from "./query-input";
+import { routeUrl } from "../base-path";
 
 // Drawn in the same idiom as the results-bar icons: 16px, stroked in `currentColor`, no fill.
 const SEARCH_ICON = `<svg class="landing-submit-search" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
@@ -100,7 +101,7 @@ export function renderLanding(): void {
 			/>
 			<button type="submit" class="landing-submit" id="landing-submit" title="Search" aria-label="Search">${SEARCH_ICON}</button>
 		</form>
-		<a class="landing-credits" href="#/credits">Credits</a>
+		<a class="landing-credits" href="${routeUrl("/credits")}">Credits</a>
 	`;
 
 	const input = document.getElementById("landing-input") as HTMLInputElement;

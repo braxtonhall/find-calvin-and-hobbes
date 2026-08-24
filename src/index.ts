@@ -12,10 +12,56 @@ import {
 	markInitialHistoryEntry,
 	navigate,
 	parseRoute,
+	rewriteLegacyHash,
+	updateGridState,
 } from "./router";
 import { getAdjacentComicDate, getSameDayComicDate } from "./views/detail";
+import { assetUrl, routeUrl } from "./base-path";
+import type { CollectionIndex } from "./types";
 
-async function initialize(): Promise<void> {
+function hydrateInitialData(): void {
+	const payload = document.getElementById("initial-data");
+	if (!payload) return;
+	try {
+		const data = JSON.parse(payload.textContent || "{}");
+		state.initialPrerendered = true;
+		if (data.comics) {
+			state.comics = data.comics.map((comic: (typeof state.comics)[number]) => ({
+				...comic,
+				image: comic.image ? assetUrl(comic.image) : comic.image,
+			}));
+			state.comicsByDate = new Map();
+			for (const comic of state.comics) {
+				const entries = state.comicsByDate.get(comic.date) || [];
+				entries.push(comic);
+				state.comicsByDate.set(comic.date, entries);
+			}
+			state.initialPrerenderNeedsRefresh = true;
+		}
+		if (data.collectionIndex) {
+			state.initialPrerendered = true;
+			state.collectionIndex = {
+				...data.collectionIndex,
+				collections: data.collectionIndex.collections.map((collection: CollectionIndex["collections"][number]) => ({
+					...collection,
+					image: collection.image ? assetUrl(collection.image) : collection.image,
+				})),
+			};
+			state.collectionsById = new Map(
+				state.collectionIndex!.collections.map((collection: CollectionIndex["collections"][number]) => [
+					collection.id,
+					collection,
+				]),
+			);
+			state.initialPrerenderNeedsRefresh = true;
+		}
+		state.dataLoaded = false;
+	} catch {
+		// Invalid build-time data falls back to the normal fetch path.
+	}
+}
+
+function initialize(): void {
 	// The one filter whose values are loaded data. A thunk, so this can be registered before the
 	// collection index has been fetched and answer with the books the moment it has — nothing has to
 	// notice when that happens, and an index that never arrives leaves an empty list, which every
@@ -24,25 +70,31 @@ async function initialize(): Promise<void> {
 		(state.collectionIndex?.collections ?? []).map((collection) => ({ value: collection.id, hint: collection.name })),
 	);
 
-	try {
-		state.bookmarkedDates = await getBookmarkedDates();
-	} catch {
-		// IndexedDB unavailable — bookmarks won't work
-	}
+	hydrateInitialData();
 
 	buildGridData();
 	renderGrid();
 	handleRoute();
 	loadComicData();
+
+	// IndexedDB is optional and can be slow; it must not delay the first prerendered view.
+	getBookmarkedDates()
+		.then((dates) => {
+			state.bookmarkedDates = dates;
+			updateGridState(parseRoute());
+		})
+		.catch(() => {
+			// IndexedDB unavailable — bookmarks won't work
+		});
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+	rewriteLegacyHash();
 	markInitialHistoryEntry();
 	attachRouteLinkHandler();
 
 	initialize();
 
-	window.addEventListener("hashchange", handleRoute);
 	window.addEventListener("popstate", handleRoute);
 
 	document.addEventListener("keydown", (event) => {
@@ -52,7 +104,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (event.key === "Escape") {
 			if (parseRoute().view !== "landing") {
 				event.preventDefault();
-				navigate("#/");
+				navigate(routeUrl("/"));
 			}
 		}
 

@@ -7,6 +7,8 @@ import { scrollCellIntoViewIfNeeded } from "./utils";
 import { state } from "./state";
 import { loadDescriptions } from "./details";
 import { buildComicHash, isPlainClick, parseRoute } from "./router";
+import { assetUrl } from "./base-path";
+import { updateCollectionDateSet } from "./views/collection";
 
 export function updateGridStatesFromData(): void {
 	const cells = document.querySelectorAll(".cell--has-comic");
@@ -337,7 +339,7 @@ export async function loadComicData(): Promise<void> {
 	void loadDescriptions();
 
 	try {
-		const response = await fetch("comics.json");
+		const response = await fetch(assetUrl("comics.json"));
 		if (!response.ok) throw new Error(`HTTP ${response.status}`);
 		state.comics = await response.json();
 		state.comicsByDate = new Map();
@@ -361,8 +363,12 @@ export async function loadComicData(): Promise<void> {
 	}
 
 	try {
-		const collectionsResponse = await fetch("collection-index.json");
+		const collectionsResponse = await fetch(assetUrl("collection-index.json"));
 		const collectionIndex = await collectionsResponse.json();
+		collectionIndex.collections = collectionIndex.collections.map((collection: { image: string }) => ({
+			...collection,
+			image: collection.image ? assetUrl(collection.image) : collection.image,
+		}));
 		state.collectionIndex = collectionIndex;
 		state.collectionsById = new Map();
 		for (const collection of collectionIndex.collections) {
@@ -382,6 +388,17 @@ export async function loadComicData(): Promise<void> {
 	if (state.pendingRoute) {
 		state.pendingRoute = null;
 		handleRoute();
+	} else if (
+		state.initialPrerenderNeedsRefresh &&
+		(parseRoute().view === "detail" || parseRoute().view === "collection")
+	) {
+		state.initialPrerenderNeedsRefresh = false;
+		const route = parseRoute();
+		if (route.view === "collection" && route.id && state.collectionsById) {
+			const collection = state.collectionsById.get(route.id);
+			if (collection) updateCollectionDateSet(collection);
+		}
+		updateGridState(route);
 	} else {
 		updateGridState(parseRoute());
 	}

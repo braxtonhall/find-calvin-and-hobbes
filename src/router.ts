@@ -7,16 +7,17 @@ import { renderDetail } from "./views/detail";
 import { renderCollection } from "./views/collection";
 import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
+import { basePath, routeUrl } from "./base-path";
 
 export function parseRoute(): Route {
-	const hash = location.hash;
-	if (!hash || hash === "#/" || hash === "#") return { view: "landing" };
+	const prefix = basePath().replace(/\/$/, "");
+	let pathname = location.pathname;
+	if (prefix && pathname.startsWith(prefix)) pathname = pathname.slice(prefix.length) || "/";
+	pathname = pathname.replace(/\/+$/, "") || "/";
 
-	const noHash = hash.startsWith("#") ? hash.slice(1) : hash;
-
-	const searchMatch = noHash.match(/^\/search\?(.*)$/);
-	if (searchMatch) {
-		const params = new URLSearchParams(searchMatch[1]);
+	const searchMatch = pathname === "/search" ? location.search.slice(1) : null;
+	if (searchMatch !== null) {
+		const params = new URLSearchParams(searchMatch);
 		return {
 			view: "results",
 			q: params.get("q") ?? "",
@@ -28,36 +29,36 @@ export function parseRoute(): Route {
 		};
 	}
 
-	const comicMatch = noHash.match(/^\/comic\/(\d{4}-\d{2}-\d{2})$/);
+	const comicMatch = pathname.match(/^\/comics\/(\d{4})\/(\d{2})\/(\d{2})$/);
 	if (comicMatch) {
-		return { view: "detail", date: comicMatch[1] };
+		return { view: "detail", date: `${comicMatch[1]}-${comicMatch[2]}-${comicMatch[3]}` };
 	}
 
-	const collectionMatch = noHash.match(/^\/collection\/([a-z0-9]+)$/);
+	const collectionMatch = pathname.match(/^\/collection\/([a-z0-9]+)$/);
 	if (collectionMatch) {
 		return { view: "collection", id: collectionMatch[1] };
 	}
 
-	if (noHash === "/credits") {
+	if (pathname === "/credits") {
 		return { view: "credits" };
 	}
 
-	replaceRoute("#/");
+	replaceRoute(routeUrl("/"));
 	return { view: "landing" };
 }
 
 // A link that names no sort is a link to the ranked results, so the parameter only appears on
 // the way to date order. An older `&sort=rank` link still parses to the same place it always did.
 export function buildSearchHash(query: string, sort: SortMode = "rank"): string {
-	return "#/search?q=" + encodeURIComponent(query) + (sort === "date" ? "&sort=date" : "");
+	return routeUrl("/search") + "?q=" + encodeURIComponent(query) + (sort === "date" ? "&sort=date" : "");
 }
 
 export function buildComicHash(date: string): string {
-	return "#/comic/" + date;
+	return routeUrl(`/comics/${date.slice(0, 4)}/${date.slice(5, 7)}/${date.slice(8, 10)}`);
 }
 
 export function buildCollectionHash(collectionId: string): string {
-	return "#/collection/" + collectionId;
+	return routeUrl(`/collection/${collectionId}`);
 }
 
 /**
@@ -80,19 +81,24 @@ export function isPlainClick(event: MouseEvent): boolean {
  * button on the destination renders disabled, and the render would run from `hashchange` rather
  * than from us.
  *
- * `#/` is the prefix every route shares and no other anchor on the page has: the skip link is
- * `#main`, and everything leaving the site is absolute.
+ * Internal anchors are the only links this handler owns; the skip link and external links pass
+ * through to the browser.
  */
 export function attachRouteLinkHandler(): void {
 	document.addEventListener("click", (event) => {
 		if (event.defaultPrevented) return;
-		const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#/"]');
+		const link = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
 		if (!link || !isPlainClick(event)) return;
 		if (link.target !== "" && link.target !== "_self") return;
+		if (link.hasAttribute("download")) return;
+		const url = new URL(link.href, location.href);
+		const base = basePath();
+		if (url.origin !== location.origin || !(url.pathname === base.slice(0, -1) || url.pathname.startsWith(base)))
+			return;
 		// `getAttribute` rather than `.href`, which resolves to an absolute URL — `navigate` puts the
 		// pathname back on itself.
 		event.preventDefault();
-		navigate(link.getAttribute("href")!);
+		navigate(url.pathname + url.search);
 	});
 }
 
@@ -111,21 +117,33 @@ export function canGoBack(): boolean {
 
 export function markInitialHistoryEntry(): void {
 	if (history.state === null) {
-		history.replaceState({ depth: 0 } satisfies HistoryState, "", window.location.pathname + window.location.hash);
+		history.replaceState({ depth: 0 } satisfies HistoryState, "", window.location.pathname + window.location.search);
 	}
 }
 
-export function replaceRoute(hash: string): void {
-	history.replaceState({ depth: currentDepth() } satisfies HistoryState, "", window.location.pathname + hash);
+/** Migration code: move links from the former hash router to static pathnames on first load. */
+export function rewriteLegacyHash(): void {
+	if (!location.hash.startsWith("#/")) return;
+
+	const legacy = location.hash.slice(1);
+	const comic = legacy.match(/^\/comic\/(\d{4})-(\d{2})-(\d{2})$/);
+	const clean = comic ? `/comics/${comic[1]}/${comic[2]}/${comic[3]}/` : legacy === "/" ? "/" : legacy;
+	const query = clean.startsWith("/search?") ? clean.slice(clean.indexOf("?")) : "";
+	const pathname = query ? clean.slice(0, clean.indexOf("?")) : clean;
+	history.replaceState(null, "", routeUrl(pathname) + query);
 }
 
-export function navigate(hash: string): void {
-	history.pushState({ depth: currentDepth() + 1 } satisfies HistoryState, "", window.location.pathname + hash);
+export function replaceRoute(url: string): void {
+	history.replaceState({ depth: currentDepth() } satisfies HistoryState, "", url);
+}
+
+export function navigate(url: string): void {
+	history.pushState({ depth: currentDepth() + 1 } satisfies HistoryState, "", url);
 	handleRoute();
 }
 
-export function replaceSearch(hash: string): void {
-	replaceRoute(hash);
+export function replaceSearch(url: string): void {
+	replaceRoute(url);
 	handleRoute();
 }
 
@@ -142,7 +160,7 @@ export function handleRoute(): void {
 	// re-rendered on a keystroke comes through here too.
 	if (route.view !== "results") closeFilterMenu();
 
-	if (!state.dataLoaded && route.view !== "landing") {
+	if (!state.dataLoaded && route.view !== "landing" && !state.initialPrerendered) {
 		showLoadingView(route);
 		updateGridState(route);
 		return;

@@ -1,9 +1,11 @@
 import path from "path";
 import { Configuration, WebpackOptionsNormalized } from "webpack";
 import HtmlWebpackPlugin from "html-webpack-plugin";
-import HtmlInlineScriptPlugin from "html-inline-script-webpack-plugin";
+import webpack from "webpack";
+import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import CopyWebpackPlugin from "copy-webpack-plugin";
 import SiteFilesPlugin from "./build-chain/SiteFilesPlugin";
+import RoutePagesPlugin from "./build-chain/RoutePagesPlugin";
 import { loadSiteConfig } from "./build-chain/siteConfig";
 import YamlToJsonPlugin from "./build-chain/YamlToJsonPlugin";
 
@@ -20,7 +22,7 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 		index: path.join(srcDir, "index"),
 	},
 	output: {
-		publicPath: "",
+		publicPath: loadSiteConfig()?.basePath ?? "/",
 		path: path.join(outputDir),
 		filename: "[name].js",
 	},
@@ -35,7 +37,7 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 			},
 			{
 				test: /\.css$/,
-				use: ["style-loader", "css-loader"],
+				use: [MiniCssExtractPlugin.loader, "css-loader"],
 			},
 		],
 	},
@@ -43,6 +45,7 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 		extensions: [".tsx", ".ts", ".json", ".js"],
 	},
 	plugins: [
+		new webpack.DefinePlugin({ __SITE_BASE_PATH__: JSON.stringify(loadSiteConfig()?.basePath ?? "/") }),
 		new YamlToJsonPlugin(),
 		new CopyWebpackPlugin({
 			patterns: [{ from: "assets", to: "assets", context: path.join(__dirname) }],
@@ -51,12 +54,12 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 			filename: "index.html",
 			template: path.join(srcDir, "index.html"),
 			chunks: ["index"],
+			inject: "body",
 			cache: false,
 			templateParameters: () => ({ siteUrl: loadSiteConfig()?.siteUrl ?? "" }),
 		}),
-		new HtmlInlineScriptPlugin({
-			scriptMatchPattern: [/index/],
-		}),
+		new MiniCssExtractPlugin({ filename: "[name].css" }),
+		new RoutePagesPlugin(),
 		new SiteFilesPlugin(staticDir),
 	],
 });

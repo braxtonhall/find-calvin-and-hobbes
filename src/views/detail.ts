@@ -7,7 +7,9 @@ import { dateToCompact } from "../date-utils";
 import { getDescription, loadDescriptions } from "../details";
 import { isBookmarked, toggleBookmark } from "../bookmarks";
 import { buildCollectionHash, buildComicHash, parseRoute } from "../router";
-import { attachBackAndHomeHandlers, buildBackAndHomeButtons } from "./nav-buttons";
+import { attachBackAndHomeHandlers, buildBackButton } from "./nav-buttons";
+import { renderDetailHtml } from "../renderers/detail-html";
+import { routeUrl } from "../base-path";
 
 export function getAdjacentComicDate(date: string, direction: -1 | 1, jump: number = 1): string | null {
 	const allDays = state.allDays;
@@ -372,31 +374,24 @@ export function renderDetail(date: string): void {
 
 	const prevDate = getAdjacentComicDate(date, -1);
 	const nextDate = getAdjacentComicDate(date, 1);
-
-	const prevButtonHtml = prevDate
-		? `<a class="nav-btn" id="nav-prev" href="${buildComicHash(prevDate)}" data-date="${prevDate}" title="Previous comic">&larr;</a>`
-		: `<span class="nav-btn nav-btn--disabled" title="First comic">&larr;</span>`;
-	const nextButtonHtml = nextDate
-		? `<a class="nav-btn" id="nav-next" href="${buildComicHash(nextDate)}" data-date="${nextDate}" title="Next comic">&rarr;</a>`
-		: `<span class="nav-btn nav-btn--disabled" title="Last comic">&rarr;</span>`;
-
-	const headerHtml = `<div class="detail-container">
-		${buildBackAndHomeButtons()}
-		<h2 class="detail-date">${dateFormatted}</h2>
-		<div class="detail-actions">
-			<button class="copy-link-btn" id="copy-link-btn" data-href="${window.location.pathname}${buildComicHash(date)}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark"><svg class="bookmark-icon" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button> ${prevButtonHtml} ${nextButtonHtml}
-		</div>`;
-
-	if (!comicsForDate || comicsForDate.length === 0) {
-		element.innerHTML = `${headerHtml}
-			<p class="detail-missing">No comics found</p>
-		</div>`;
-	} else {
-		const bodies = buildComicBodiesHtml(date, dateFormatted, isSunday);
-		element.innerHTML = `${headerHtml}
-			${bodies}
-		</div>`;
-	}
+	const preservePrerenderedMarkup = state.initialPrerendered;
+	state.initialPrerendered = false;
+	if (!preservePrerenderedMarkup)
+		element.innerHTML = renderDetailHtml({
+			date,
+			dateFormatted,
+			isSunday,
+			comics: comicsForDate || [],
+			descriptions: state.descriptions,
+			collectionIndex: state.collectionIndex,
+			collectionsById: state.collectionsById,
+			homeHref: routeUrl("/"),
+			backHtml: buildBackButton("detail-back"),
+			copyHref: window.location.pathname,
+			previousHref: prevDate ? buildComicHash(prevDate) : null,
+			nextHref: nextDate ? buildComicHash(nextDate) : null,
+			collectionHref: buildCollectionHash,
+		});
 
 	attachBackAndHomeHandlers(element);
 

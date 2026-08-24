@@ -16,6 +16,8 @@ export interface AppState {
 	dataLoaded: boolean;
 	pendingRoute: Route | null;
 	resultsDebounceTimer: number | null;
+	initialPrerendered: boolean;
+	initialPrerenderNeedsRefresh: boolean;
 }
 
 export const state: AppState = {
@@ -34,4 +36,6 @@ export const state: AppState = {
 	dataLoaded: false,
 	pendingRoute: null,
 	resultsDebounceTimer: null,
+	initialPrerendered: false,
+	initialPrerenderNeedsRefresh: false,
 };

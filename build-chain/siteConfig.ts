@@ -4,6 +4,7 @@ import path from "path";
 export interface SiteConfig {
 	siteUrl: string;
 	host: string;
+	basePath: string;
 }
 
 /**
@@ -62,9 +63,10 @@ export function loadSiteConfig(): SiteConfig | null {
 	if (url.protocol !== "https:") {
 		throw new Error(`SITE_URL must use the https protocol (got "${raw}").`);
 	}
-	if (url.pathname !== "/" || url.search || url.hash || url.port) {
-		throw new Error(`SITE_URL must be a bare https origin with no path, port, query, or fragment (got "${raw}").`);
+	if (url.search || url.hash || url.port) {
+		throw new Error(`SITE_URL must not include a port, query, or fragment (got "${raw}").`);
 	}
 
-	return { siteUrl: url.origin, host: url.hostname };
+	const basePath = url.pathname.replace(/\/?$/, "/");
+	return { siteUrl: url.origin + (basePath === "/" ? "" : basePath.slice(0, -1)), host: url.hostname, basePath };
 }
