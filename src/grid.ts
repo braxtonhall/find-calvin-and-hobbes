@@ -345,6 +345,9 @@ export async function loadComicData(): Promise<void> {
 			if (!state.comicsByDate.has(comic.date)) state.comicsByDate.set(comic.date, []);
 			state.comicsByDate.get(comic.date)!.push(comic);
 		}
+
+		const rerunsResponse = await fetch("reruns.json");
+		state.reruns = new Map(Object.entries((await rerunsResponse.json()) as Record<string, string>));
 	} catch {
 		const loading = document.getElementById("loading")!;
 		loading.classList.remove("hidden");

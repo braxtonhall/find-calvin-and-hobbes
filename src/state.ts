@@ -3,6 +3,7 @@ import { Comic, CollectionIndex, Collection, Day, Route } from "./types";
 export interface AppState {
 	comics: Comic[];
 	comicsByDate: Map<string, Comic[]>;
+	reruns: Map<string, string>;
 	descriptions: Map<string, string> | null;
 	allDays: Day[];
 	searchResultTiers: Map<string, number> | null;
@@ -21,6 +22,7 @@ export interface AppState {
 export const state: AppState = {
 	comics: [],
 	comicsByDate: new Map(),
+	reruns: new Map(),
 	descriptions: null,
 	allDays: [],
 	searchResultTiers: null,

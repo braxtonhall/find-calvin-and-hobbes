@@ -2,7 +2,7 @@ import "./detail.css";
 
 import { Appearance, Collection, Comic } from "../types";
 import { state } from "../state";
-import { escHtml } from "../utils";
+import { escHtml, scrollCellIntoViewIfNeeded } from "../utils";
 import { dateToCompact } from "../date-utils";
 import { getDescription, loadDescriptions } from "../details";
 import { isBookmarked, toggleBookmark } from "../bookmarks";
@@ -354,6 +354,26 @@ function attachCollectionBookHandlers(element: HTMLElement): void {
 	followCollectionTooltip();
 }
 
+function attachRerunLinkHandler(element: HTMLElement): void {
+	const link = element.querySelector<HTMLElement>(".detail-rerun-link");
+	if (!link) return;
+
+	link.addEventListener("mouseenter", () => {
+		if (state.hoveredCell) state.hoveredCell.classList.remove("cell--hover-highlight");
+		const cell = document.querySelector<HTMLElement>(`.cell[data-date="${link.dataset.originalDate}"]`);
+		if (!cell) return;
+		cell.classList.add("cell--hover-highlight");
+		state.hoveredCell = cell;
+		scrollCellIntoViewIfNeeded(cell);
+	});
+
+	link.addEventListener("mouseleave", () => {
+		if (!state.hoveredCell) return;
+		state.hoveredCell.classList.remove("cell--hover-highlight");
+		state.hoveredCell = null;
+	});
+}
+
 export function renderDetail(date: string): void {
 	document.getElementById("main")!.scrollTop = 0;
 	const element = document.getElementById("view-detail")!;
@@ -369,6 +389,7 @@ export function renderDetail(date: string): void {
 		timeZone: "UTC",
 	});
 	const isSunday = dateObject.getUTCDay() === 0;
+	const originalDate = state.reruns.get(date);
 
 	const prevDate = getAdjacentComicDate(date, -1);
 	const nextDate = getAdjacentComicDate(date, 1);
@@ -387,7 +408,22 @@ export function renderDetail(date: string): void {
 			<button class="copy-link-btn" id="copy-link-btn" data-href="${window.location.pathname}${buildComicHash(date)}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark"><svg class="bookmark-icon" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button> ${prevButtonHtml} ${nextButtonHtml}
 		</div>`;
 
-	if (!comicsForDate || comicsForDate.length === 0) {
+	if (originalDate) {
+		const [originalYear, originalMonth, originalDay] = originalDate.split("-").map(Number);
+		const originalDateFormatted = new Date(Date.UTC(originalYear, originalMonth - 1, originalDay)).toLocaleDateString(
+			"en-US",
+			{
+				weekday: "long",
+				year: "numeric",
+				month: "long",
+				day: "numeric",
+				timeZone: "UTC",
+			},
+		);
+		element.innerHTML = `${headerHtml}
+			<p class="detail-rerun">On this day, the strip from <a class="detail-rerun-link" href="${buildComicHash(originalDate)}" data-original-date="${originalDate}">${originalDateFormatted}</a> was rerun</p>
+		</div>`;
+	} else if (!comicsForDate || comicsForDate.length === 0) {
 		element.innerHTML = `${headerHtml}
 			<p class="detail-missing">No comics found</p>
 		</div>`;
@@ -399,6 +435,7 @@ export function renderDetail(date: string): void {
 	}
 
 	attachBackAndHomeHandlers(element);
+	attachRerunLinkHandler(element);
 
 	const copyButton = element.querySelector<HTMLButtonElement>("#copy-link-btn");
 	if (copyButton) buildCopyLinkButtonHandler(copyButton);

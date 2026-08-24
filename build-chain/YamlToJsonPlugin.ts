@@ -3,9 +3,11 @@ import path from "path";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
 import { loadCollectionData } from "./collectionPages";
+import { loadComicSource } from "./comicSource";
 import { exportComicsJson } from "./exportComicsJson";
 import { exportDescriptions } from "./exportDescriptions";
 import { generateCollectionIndex } from "./generateCollectionIndex";
+import { exportRerunsJson } from "./reruns";
 
 const PLUGIN_NAME = "YamlToJsonPlugin";
 
@@ -16,6 +18,7 @@ const PLUGIN_NAME = "YamlToJsonPlugin";
 function watchDataFiles(compilation: Compilation, projectDir: string): void {
 	const collectionsDir = path.join(projectDir, "collections");
 	compilation.fileDependencies.add(path.join(projectDir, "comics.yaml"));
+	compilation.fileDependencies.add(path.join(projectDir, "reruns.yaml"));
 	compilation.contextDependencies.add(collectionsDir);
 	for (const file of fs.readdirSync(collectionsDir)) {
 		if (file.endsWith(".yaml")) {
@@ -39,6 +42,9 @@ class YamlToJsonPlugin {
 
 					const comicsJson = exportComicsJson(projectDir, collectionData);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
+
+					const source = loadComicSource(path.join(projectDir, "comics.yaml"));
+					compilation.emitAsset("reruns.json", new sources.RawSource(exportRerunsJson(projectDir, source)));
 
 					const collectionIndexJson = generateCollectionIndex(collectionData);
 					compilation.emitAsset("collection-index.json", new sources.RawSource(collectionIndexJson));

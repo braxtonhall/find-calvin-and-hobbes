@@ -5,6 +5,7 @@ import { COMPOUND_CANONICAL_FORMS, COMPOUND_RELATIONS } from "../src/compounds";
 import { registerVocabulary } from "../src/filter-vocabulary";
 import { highlightRanges } from "../src/utils";
 import { buildArchive, Entry, install } from "./helpers/archive";
+import { state } from "../src/state";
 
 function ranked(query: string, tuning?: Tuning): string[] {
 	return search(query, "rank", tuning).map((result) => result.comic.date);
@@ -728,6 +729,25 @@ test("a strip matched by both the date and the text keeps its text row", () => {
 	// It matched two independent ways, so it must outscore both the year alone and its own text.
 	assert.ok(result.score > scoreOf("1988", "1988-08-03"), "above the strips that matched by date only");
 	assert.equal(sourceOf("august 3 1988", "1988-08-03"), "date", "and a date-only row still says so");
+});
+
+test("reruns appear only for exact date queries and use the original transcript", () => {
+	install(buildArchive(DATED));
+	state.reruns = new Map([["1991-05-05", "1988-08-03"]]);
+	try {
+		const exact = search("may 5 1991", "rank");
+		assert.equal(exact.length, 1);
+		assert.equal(exact[0].comic.date, "1991-05-05");
+		assert.equal(exact[0].source, "rerun");
+		assert.equal(exact[0].text, DATED[0].transcript);
+		assert.deepEqual(search("may 1991", "rank"), []);
+		assert.deepEqual(
+			search("tiger", "rank").map((result) => result.comic.date),
+			["1988-08-03"],
+		);
+	} finally {
+		state.reruns = new Map();
+	}
 });
 
 test("only a whole query is read as a date", () => {

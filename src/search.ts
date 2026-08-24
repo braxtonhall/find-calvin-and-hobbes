@@ -17,7 +17,7 @@ export interface SearchResult {
 	 * a filter admitted when there was nothing else in the query to match — a different claim, and
 	 * `@in:book3` is what makes the difference worth drawing.
 	 */
-	source: "transcript" | "description" | "date" | "filter";
+	source: "transcript" | "description" | "date" | "rerun" | "filter";
 }
 
 // Transcripts and descriptions are searched with the same query but different scoring.
@@ -1027,6 +1027,21 @@ function withDateMatches(textResults: SearchResult[], expression: DateExpression
 	for (const indexed of indexedComics) {
 		if (!matched.has(indexed.comic) || covered.has(indexed.comic)) continue;
 		results.push({ comic: indexed.comic, text: dateText(indexed), ranges: [], score: strength, source: "date" });
+	}
+
+	if (expression.precision === "exact") {
+		for (const [rerunDate, originalDate] of state.reruns) {
+			if (!matchesExpression(expression, rerunDate)) continue;
+			const original = indexedComics.find(({ comic }) => comic.date === originalDate);
+			if (!original) continue;
+			results.push({
+				comic: { ...original.comic, date: rerunDate, id: undefined },
+				text: original.comic.transcript,
+				ranges: [],
+				score: strength,
+				source: "rerun",
+			});
+		}
 	}
 
 	return results;
