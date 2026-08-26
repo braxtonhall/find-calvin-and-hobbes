@@ -194,10 +194,26 @@ function buildDescriptionSlotContents(comic: Comic, description: string | undefi
 		return `<div class="detail-description-skeleton"><span></span><span></span><span></span></div>`;
 	}
 	if (!description) return "";
-	return `<p class="detail-description">${escHtml(description)}</p><p class="detail-transcript-label">Transcript</p>`;
+	return `<p class="detail-description">${escHtml(description)}</p>`;
 }
 
-function buildComicBodiesHtml(date: string, dateFormatted: string, isSunday: boolean): string {
+function buildTranscriptHtml(comic: Comic, date: string, alternates: string[]): string {
+	const hasAlternate = Boolean(comic.alternate);
+	const toggleId = `alternate-toggle-${date}-${comic.id || "daily"}`;
+	const isAlternate = alternates.includes(dateToCompact(date));
+	const label = hasAlternate
+		? `<p class="detail-transcript-label"><span class="detail-transcript-label__title">Transcript</span> <span class="detail-transcript-toggle"><span aria-hidden="true">&middot;</span><span class="detail-transcript-toggle__original">Original</span><input id="${escHtml(toggleId)}" type="checkbox" aria-label="Show alternate transcript"${isAlternate ? " checked" : ""} /><span class="detail-transcript-toggle__alternate">Alternate</span></span></p>`
+		: `<p class="detail-transcript-label"><span class="detail-transcript-label__title">Transcript</span></p>`;
+	const original = comic.transcript
+		? `<div class="detail-transcript detail-transcript--original">${escHtml(comic.transcript)}</div>`
+		: `<div class="detail-transcript detail-transcript--original"><em>No text</em></div>`;
+	const alternate = hasAlternate
+		? `<div class="detail-transcript detail-transcript--alternate">${escHtml(comic.alternate!)}</div>`
+		: "";
+	return `<div class="detail-transcript-wrap">${label}<div class="detail-transcript-content">${original}${alternate}</div></div>`;
+}
+
+function buildComicBodiesHtml(date: string, dateFormatted: string, isSunday: boolean, alternates: string[]): string {
 	const comicsForDate = state.comicsByDate.get(date);
 	if (!comicsForDate || comicsForDate.length === 0) return "";
 	const descriptionsResolved = state.descriptions !== null;
@@ -206,12 +222,7 @@ function buildComicBodiesHtml(date: string, dateFormatted: string, isSunday: boo
 	for (const comic of comicsForDate) {
 		const description = getDescription(date, comic.id);
 
-		let transcriptHtml: string;
-		if (comic.transcript) {
-			transcriptHtml = `<div class="detail-transcript">${escHtml(comic.transcript)}</div>`;
-		} else {
-			transcriptHtml = `<div class="detail-transcript"><em>No text</em></div>`;
-		}
+		const transcriptHtml = buildTranscriptHtml(comic, date, alternates);
 
 		let readLinkHtml = "";
 		if (!comic.id) {
@@ -354,7 +365,7 @@ function attachCollectionBookHandlers(element: HTMLElement): void {
 	followCollectionTooltip();
 }
 
-export function renderDetail(date: string): void {
+export function renderDetail(date: string, alternates: string[] = []): void {
 	document.getElementById("main")!.scrollTop = 0;
 	const element = document.getElementById("view-detail")!;
 	const comicsForDate = state.comicsByDate.get(date);
@@ -392,7 +403,7 @@ export function renderDetail(date: string): void {
 			<p class="detail-missing">No comics found</p>
 		</div>`;
 	} else {
-		const bodies = buildComicBodiesHtml(date, dateFormatted, isSunday);
+		const bodies = buildComicBodiesHtml(date, dateFormatted, isSunday, alternates);
 		element.innerHTML = `${headerHtml}
 			${bodies}
 		</div>`;

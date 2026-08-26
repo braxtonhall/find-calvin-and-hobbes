@@ -18,6 +18,7 @@ export interface SearchResult {
 	 * `@in:book3` is what makes the difference worth drawing.
 	 */
 	source: "transcript" | "description" | "date" | "filter";
+	matchedAlternate?: boolean;
 }
 
 // Transcripts and descriptions are searched with the same query but different scoring.
@@ -905,15 +906,17 @@ function literalSearch(loweredQuery: string): SearchResult[] {
 	for (const { comic, transcripts, description } of indexedComics) {
 		let ranges: HighlightRange[] = [];
 		let text = "";
-		for (const field of transcripts) {
+		let matchedAlternate = false;
+		for (const [index, field] of transcripts.entries()) {
 			const found = literalRanges(field, loweredQuery);
 			if (found.length > ranges.length) {
 				ranges = found;
 				text = field.text;
+				matchedAlternate = index > 0;
 			}
 		}
 		if (ranges.length > 0) {
-			results.push({ comic, text, ranges, score: ranges.length, source: "transcript" });
+			results.push({ comic, text, ranges, score: ranges.length, source: "transcript", matchedAlternate });
 			continue;
 		}
 		if (!description) continue;
@@ -1102,6 +1105,7 @@ function rankedSearch(sequences: string[][], compoundQueries: CompoundQuery[], t
 		comic: Comic;
 		transcript: TranscriptMatch | null;
 		transcriptText: string;
+		matchedAlternate: boolean;
 		description: FieldMatch | null;
 		descriptionText: string;
 	}
@@ -1112,7 +1116,8 @@ function rankedSearch(sequences: string[][], compoundQueries: CompoundQuery[], t
 	for (const { comic, transcripts, description } of indexedComics) {
 		let transcript: TranscriptMatch | null = null;
 		let transcriptText = "";
-		for (const field of transcripts) {
+		let matchedAlternate = false;
+		for (const [index, field] of transcripts.entries()) {
 			const match = scoreTranscript(
 				field,
 				transcriptCorpus,
@@ -1130,6 +1135,7 @@ function rankedSearch(sequences: string[][], compoundQueries: CompoundQuery[], t
 			if (transcript === null || match.strength * match.multiplier > transcript.strength * transcript.multiplier) {
 				transcript = match;
 				transcriptText = field.text;
+				matchedAlternate = index > 0;
 			}
 		}
 		if (transcript !== null && transcript.multiplier > bestMultiplier) bestMultiplier = transcript.multiplier;
@@ -1153,6 +1159,7 @@ function rankedSearch(sequences: string[][], compoundQueries: CompoundQuery[], t
 			comic,
 			transcript,
 			transcriptText,
+			matchedAlternate,
 			description: summary,
 			descriptionText: description?.text || "",
 		});
@@ -1181,6 +1188,7 @@ function rankedSearch(sequences: string[][], compoundQueries: CompoundQuery[], t
 			ranges: preferTranscript ? candidate.transcript!.ranges : candidate.description!.ranges,
 			score,
 			source: preferTranscript ? "transcript" : "description",
+			matchedAlternate: preferTranscript ? candidate.matchedAlternate : false,
 		});
 	}
 

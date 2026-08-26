@@ -28,9 +28,10 @@ export function parseRoute(): Route {
 		};
 	}
 
-	const comicMatch = noHash.match(/^\/comic\/(\d{4}-\d{2}-\d{2})$/);
+	const comicMatch = noHash.match(/^\/comic\/(\d{4}-\d{2}-\d{2})(?:\?(.*))?$/);
 	if (comicMatch) {
-		return { view: "detail", date: comicMatch[1] };
+		const params = new URLSearchParams(comicMatch[2] || "");
+		return { view: "detail", date: comicMatch[1], alternates: params.getAll("alternate") };
 	}
 
 	const collectionMatch = noHash.match(/^\/collection\/([a-z0-9]+)$/);
@@ -52,8 +53,9 @@ export function buildSearchHash(query: string, sort: SortMode = "rank"): string 
 	return "#/search?q=" + encodeURIComponent(query) + (sort === "date" ? "&sort=date" : "");
 }
 
-export function buildComicHash(date: string): string {
-	return "#/comic/" + date;
+export function buildComicHash(date: string, alternates: string[] = []): string {
+	const params = alternates.map((alternate) => "alternate=" + encodeURIComponent(alternate)).join("&");
+	return "#/comic/" + date + (params ? "?" + params : "");
 }
 
 export function buildCollectionHash(collectionId: string): string {
@@ -166,7 +168,7 @@ export function handleRoute(): void {
 		}
 		case "detail": {
 			document.getElementById("view-detail")!.classList.add("active");
-			renderDetail(route.date || "");
+			renderDetail(route.date || "", route.alternates || []);
 			document.title = `${route.date} — Find Calvin and Hobbes`;
 			break;
 		}
