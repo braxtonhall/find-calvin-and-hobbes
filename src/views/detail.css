@@ -261,10 +261,10 @@
 	padding: 40px 0;
 }
 
-.detail-rerun {
-	font-size: 15px;
-	line-height: 1.7;
-	color: var(--text);
+.detail-rerun-banner {
+	font-size: 13px;
+	color: var(--text-muted);
+	margin-bottom: 24px;
 }
 
 .detail-rerun-link {
