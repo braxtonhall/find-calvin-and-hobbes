@@ -6,7 +6,7 @@ export function loadDescriptions(): Promise<void> {
 	if (state.descriptions) return Promise.resolve();
 	if (inFlight) return inFlight;
 
-	inFlight = fetch("descriptions.json")
+	inFlight = fetch("/descriptions.json")
 		.then((response) => {
 			if (!response.ok) throw new Error(`HTTP ${response.status}`);
 			return response.json() as Promise<Record<string, string>>;

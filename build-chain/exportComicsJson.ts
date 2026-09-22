@@ -9,7 +9,8 @@ function findImage(key: string, assetsDir: string): string {
 	for (const ext of EXTENSIONS) {
 		const candidate = path.join(assetsDir, `${key}${ext}`);
 		if (fs.existsSync(candidate)) {
-			return `assets/comics/${key}${ext}`;
+			// Root-relative, since the page showing it may live at any depth.
+			return `/assets/comics/${key}${ext}`;
 		}
 	}
 	return "";

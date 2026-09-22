@@ -1,11 +1,10 @@
 import path from "path";
 import { Configuration, WebpackOptionsNormalized } from "webpack";
-import HtmlWebpackPlugin from "html-webpack-plugin";
-import HtmlInlineScriptPlugin from "html-inline-script-webpack-plugin";
+import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import CopyWebpackPlugin from "copy-webpack-plugin";
 import SiteFilesPlugin from "./build-chain/SiteFilesPlugin";
-import { loadSiteConfig } from "./build-chain/siteConfig";
 import YamlToJsonPlugin from "./build-chain/YamlToJsonPlugin";
+import PagesPlugin from "./build-chain/PagesPlugin";
 
 const srcDir = path.join(__dirname, "src");
 const staticDir = path.join(__dirname, "static");
@@ -20,8 +19,11 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 		index: path.join(srcDir, "index"),
 	},
 	output: {
-		publicPath: "",
+		// Every page lives in its own directory, so everything it references is named from the root.
+		publicPath: "/",
 		path: path.join(outputDir),
+		// Unhashed on purpose: a hashed name would put a new script tag in all three thousand pages
+		// on every change to the script, and the hosts this deploys to set no cache headers anyway.
 		filename: "[name].js",
 	},
 	module: {
@@ -35,7 +37,7 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 			},
 			{
 				test: /\.css$/,
-				use: ["style-loader", "css-loader"],
+				use: [MiniCssExtractPlugin.loader, "css-loader"],
 			},
 		],
 	},
@@ -47,16 +49,10 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 		new CopyWebpackPlugin({
 			patterns: [{ from: "assets", to: "assets", context: path.join(__dirname) }],
 		}),
-		new HtmlWebpackPlugin({
-			filename: "index.html",
-			template: path.join(srcDir, "index.html"),
-			chunks: ["index"],
-			cache: false,
-			templateParameters: () => ({ siteUrl: loadSiteConfig()?.siteUrl ?? "" }),
-		}),
-		new HtmlInlineScriptPlugin({
-			scriptMatchPattern: [/index/],
-		}),
+		// A stylesheet of its own rather than one injected by the script: a prerendered page has
+		// content to paint before the script runs, and it should be painted styled.
+		new MiniCssExtractPlugin({ filename: "[name].css" }),
+		new PagesPlugin(path.join(srcDir, "index.html")),
 		new SiteFilesPlugin(staticDir),
 	],
 });

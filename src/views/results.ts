@@ -5,7 +5,8 @@ import { SortMode } from "../types";
 import { search, SearchResult } from "../search";
 import { assignTiers } from "../tiers";
 import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
-import { buildComicHash, buildSearchHash, navigate, replaceSearch } from "../router";
+import { navigate, replaceSearch } from "../router";
+import { HOME_PATH, buildComicPath, buildSearchPath } from "../routes";
 import { dateToCompact } from "../date-utils";
 import { buildFilterBar, filterMenuHasFocus, syncFilterBar } from "./filter-bar";
 import { attachQueryInput, syncQueryInput } from "./query-input";
@@ -81,9 +82,9 @@ function buildSearchBar(element: HTMLElement): void {
 		const inputQuery = input.value.trim();
 		state.resultsDebounceTimer = window.setTimeout(() => {
 			if (inputQuery) {
-				replaceSearch(buildSearchHash(inputQuery, currentSort));
+				replaceSearch(buildSearchPath(inputQuery, currentSort));
 			} else {
-				navigate("#/");
+				navigate(HOME_PATH);
 			}
 		}, 200);
 	});
@@ -94,21 +95,21 @@ function buildSearchBar(element: HTMLElement): void {
 			if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
 			const inputQuery = input.value.trim();
 			if (!inputQuery) {
-				navigate("#/");
+				navigate(HOME_PATH);
 			} else if (inputQuery !== currentQuery) {
-				replaceSearch(buildSearchHash(inputQuery, currentSort));
+				replaceSearch(buildSearchPath(inputQuery, currentSort));
 			}
 		}
 	});
 
 	document.getElementById("results-clear")!.addEventListener("click", () => {
-		navigate("#/");
+		navigate(HOME_PATH);
 	});
 
 	document.getElementById("results-sort")!.addEventListener("click", () => {
 		if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
 		const inputQuery = input.value.trim() || currentQuery;
-		if (inputQuery) replaceSearch(buildSearchHash(inputQuery, currentSort === "rank" ? "date" : "rank"));
+		if (inputQuery) replaceSearch(buildSearchPath(inputQuery, currentSort === "rank" ? "date" : "rank"));
 	});
 
 	element.addEventListener("focusin", (event) => {
@@ -166,7 +167,7 @@ function resultsHtml(results: SearchResult[]): string {
 		// focus and Enter behaviour that had to be spelled out now comes for free — and announces as a
 		// link, which is the truth. `draggable="false"` because dragging from inside an anchor drags the
 		// link instead of selecting text, and the transcript below is text a reader may want to copy.
-		const comicLink = buildComicHash(comic.date, result.matchedAlternate ? [dateToCompact(comic.date)] : []);
+		const comicLink = buildComicPath(comic.date, result.matchedAlternate ? [dateToCompact(comic.date)] : []);
 		html += `<a class="result-row${comic.image ? "" : " result-row--no-image"}" href="${comicLink}" draggable="false" data-date="${comic.date}" aria-label="View comic from ${dateFormatted}">
 			<div class="result-header">${dateFormatted}${sourceTag}</div>
 			<div class="result-body">

@@ -39,15 +39,49 @@ function readDotenvFile(): Record<string, string> {
 	return values;
 }
 
+/** A build setting: the process environment when it has one, else the `.env` file, else "". */
+function readSetting(name: string): string {
+	const fromEnvironment = (process.env[name] ?? "").trim();
+	const fromFile = (readDotenvFile()[name] ?? "").trim();
+	return fromEnvironment || fromFile;
+}
+
+/**
+ * Where a page's file goes, which is up to the host it is for.
+ *
+ * - `html`: `credits.html`, served for `/credits` by a host with clean URLs — GitHub Pages,
+ *   Neocities, Netlify, Cloudflare. No redirect on a cold load, so a reload keeps `history.state`.
+ * - `directory`: `credits/index.html`, which any host serves for `/credits/`. Hosts without clean
+ *   URLs need this; most of them answer `/credits` with a redirect to `/credits/`, and the app
+ *   puts the address back the way the links spell it.
+ *
+ * The home page is `index.html` either way.
+ */
+export type PageLayout = "html" | "directory";
+
+const PAGE_LAYOUTS: readonly PageLayout[] = ["html", "directory"];
+
+export function loadPageLayout(): PageLayout {
+	const raw = readSetting("PAGE_LAYOUT");
+	if (!raw) return "html";
+	if (!(PAGE_LAYOUTS as readonly string[]).includes(raw)) {
+		throw new Error(`PAGE_LAYOUT must be one of ${PAGE_LAYOUTS.join(", ")} (got "${raw}").`);
+	}
+	return raw as PageLayout;
+}
+
+export function pageAssetPath(routePath: string, layout: PageLayout): string {
+	if (routePath === "/") return "index.html";
+	return layout === "html" ? `${routePath.slice(1)}.html` : `${routePath.slice(1)}/index.html`;
+}
+
 /**
  * Returns the configured site, or `null` when no `SITE_URL` is set (so a local build can succeed
  * without one). Throws when a value is set but malformed, so a bad URL fails loudly rather than
  * silently producing wrong output.
  */
 export function loadSiteConfig(): SiteConfig | null {
-	const fromEnvironment = (process.env.SITE_URL ?? "").trim();
-	const fromFile = (readDotenvFile().SITE_URL ?? "").trim();
-	const raw = fromEnvironment || fromFile;
+	const raw = readSetting("SITE_URL");
 	if (!raw) {
 		return null;
 	}

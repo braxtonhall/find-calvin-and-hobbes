@@ -1,6 +1,11 @@
-import { Route, SortMode } from "./types";
+import { Route } from "./types";
 import { state } from "./state";
 import { scrollCellIntoViewIfNeeded } from "./utils";
+import { HOME_PATH, legacyHashPath, normalizePathname, parseRoutePath } from "./routes";
+import { Page, pageTitle } from "./pages/page";
+import { PAGE_DATA_ID } from "./pages/shell";
+import { detailPageFrom } from "./pages/detail";
+import { collectionPageFrom } from "./pages/collection";
 import { renderLanding } from "./views/landing";
 import { renderResults } from "./views/results";
 import { renderDetail } from "./views/detail";
@@ -9,57 +14,10 @@ import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
 
 export function parseRoute(): Route {
-	const hash = location.hash;
-	if (!hash || hash === "#/" || hash === "#") return { view: "landing" };
-
-	const noHash = hash.startsWith("#") ? hash.slice(1) : hash;
-
-	const searchMatch = noHash.match(/^\/search\?(.*)$/);
-	if (searchMatch) {
-		const params = new URLSearchParams(searchMatch[1]);
-		return {
-			view: "results",
-			q: params.get("q") ?? "",
-			// Relevance is the default and `?sort=date` is the alternative. Date order has no
-			// ranking in it, so the coverage bar is the only thing keeping a weak match out of
-			// the top of the page: `ding dong rosalyn` led with a strip about a ping-pong ball,
-			// which is one edit from `ding dong` and nothing to do with the query.
-			sort: params.get("sort") === "date" ? "date" : "rank",
-		};
-	}
-
-	const comicMatch = noHash.match(/^\/comic\/(\d{4}-\d{2}-\d{2})(?:\?(.*))?$/);
-	if (comicMatch) {
-		const params = new URLSearchParams(comicMatch[2] || "");
-		return { view: "detail", date: comicMatch[1], alternates: params.getAll("alternate") };
-	}
-
-	const collectionMatch = noHash.match(/^\/collection\/([a-z0-9]+)$/);
-	if (collectionMatch) {
-		return { view: "collection", id: collectionMatch[1] };
-	}
-
-	if (noHash === "/credits") {
-		return { view: "credits" };
-	}
-
-	replaceRoute("#/");
+	const route = parseRoutePath(location.pathname, location.search);
+	if (route) return route;
+	replaceRoute(HOME_PATH);
 	return { view: "landing" };
-}
-
-// A link that names no sort is a link to the ranked results, so the parameter only appears on
-// the way to date order. An older `&sort=rank` link still parses to the same place it always did.
-export function buildSearchHash(query: string, sort: SortMode = "rank"): string {
-	return "#/search?q=" + encodeURIComponent(query) + (sort === "date" ? "&sort=date" : "");
-}
-
-export function buildComicHash(date: string, alternates: string[] = []): string {
-	const params = alternates.map((alternate) => "alternate=" + encodeURIComponent(alternate)).join("&");
-	return "#/comic/" + date + (params ? "?" + params : "");
-}
-
-export function buildCollectionHash(collectionId: string): string {
-	return "#/collection/" + collectionId;
 }
 
 /**
@@ -76,23 +34,22 @@ export function isPlainClick(event: MouseEvent): boolean {
  * Sends every in-app anchor through `navigate`, once, for the whole app.
  *
  * The anchors carry real hrefs so that cmd-click opens a comic in a new tab and right-click offers
- * to copy its address — the browser cannot do either for a `<div>` with a click handler. This is
- * what stops a plain click from being handled natively, and it has to, twice over: a native hash
- * navigation lands with `history.state === null`, so `canGoBack` reads a depth of 0 and the Back
- * button on the destination renders disabled, and the render would run from `hashchange` rather
- * than from us.
+ * to copy its address — the browser cannot do either for a `<div>` with a click handler. A plain
+ * click has to be caught, though: left to the browser it would be a full page load, and the
+ * destination would render from its own file with `history.state === null`, so `canGoBack` would
+ * read a depth of 0 and the Back button there would render disabled.
  *
- * `#/` is the prefix every route shares and no other anchor on the page has: the skip link is
- * `#main`, and everything leaving the site is absolute.
+ * A root-relative href is the mark of one of ours: the skip link is `#main`, and everything
+ * leaving the site is absolute.
  */
 export function attachRouteLinkHandler(): void {
 	document.addEventListener("click", (event) => {
 		if (event.defaultPrevented) return;
-		const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="#/"]');
+		const link = (event.target as HTMLElement).closest<HTMLAnchorElement>('a[href^="/"]:not([href^="//"])');
 		if (!link || !isPlainClick(event)) return;
 		if (link.target !== "" && link.target !== "_self") return;
-		// `getAttribute` rather than `.href`, which resolves to an absolute URL — `navigate` puts the
-		// pathname back on itself.
+		if (link.hasAttribute("download")) return;
+		// `getAttribute` rather than `.href`, which resolves to an absolute URL.
 		event.preventDefault();
 		navigate(link.getAttribute("href")!);
 	});
@@ -111,86 +68,162 @@ export function canGoBack(): boolean {
 	return currentDepth() > 0;
 }
 
+/**
+ * Settles the address the page was opened at.
+ *
+ * Three spellings can arrive here for one page: the one the links use, the one a static host
+ * redirects to on the way to `index.html` (`/credits/`), and the old `#/credits`. All of them are
+ * rewritten to the first so that what is in the bar is what a copy of it should say. The history
+ * depth is kept: a reload arrives with the state of the entry it reloads.
+ */
 export function markInitialHistoryEntry(): void {
-	if (history.state === null) {
-		history.replaceState({ depth: 0 } satisfies HistoryState, "", window.location.pathname + window.location.hash);
+	const legacy = legacyHashPath(location.hash);
+	const url = legacy ?? normalizePathname(location.pathname) + location.search;
+	history.replaceState({ depth: currentDepth() } satisfies HistoryState, "", url);
+}
+
+export function replaceRoute(path: string): void {
+	history.replaceState({ depth: currentDepth() } satisfies HistoryState, "", path);
+}
+
+export function navigate(path: string): void {
+	history.pushState({ depth: currentDepth() + 1 } satisfies HistoryState, "", path);
+	handleRoute();
+}
+
+export function replaceSearch(path: string): void {
+	replaceRoute(path);
+	handleRoute();
+}
+
+/**
+ * The page the app has the data to draw for a route, or `null` while that data is still loading.
+ * The landing and credits pages are made of nothing that has to be fetched.
+ */
+function pageFor(route: Route): Page | null {
+	switch (route.view) {
+		case "landing":
+			return { view: "landing" };
+		case "credits":
+			return { view: "credits" };
+		case "results":
+			return state.dataLoaded ? { view: "results", q: route.q ?? "", sort: route.sort ?? "rank" } : null;
+		case "detail":
+			return state.dataLoaded ? detailPageFrom(state, route.date ?? "", route.alternates ?? []) : null;
+		case "collection":
+			return state.dataLoaded ? collectionPageFrom(state, route.id ?? "") : null;
 	}
 }
 
-export function replaceRoute(hash: string): void {
-	history.replaceState({ depth: currentDepth() } satisfies HistoryState, "", window.location.pathname + hash);
+/**
+ * The page the build wrote into this document, if it wrote one. Read once, on boot; every later
+ * route is drawn from the fetched archive.
+ */
+export function readPrerenderedPage(): Page | null {
+	const script = document.getElementById(PAGE_DATA_ID);
+	if (!script?.textContent) return null;
+	try {
+		return JSON.parse(script.textContent) as Page;
+	} catch {
+		return null;
+	}
 }
 
-export function navigate(hash: string): void {
-	history.pushState({ depth: currentDepth() + 1 } satisfies HistoryState, "", window.location.pathname + hash);
-	handleRoute();
+/**
+ * Whether the page the build wrote is the page the address asks for — and if so whether its
+ * markup can be kept as it stands, or has to be redrawn from the same data. The only thing that
+ * forces a redraw is a `?alternate=` the build could not have known about.
+ */
+function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt: boolean } | null {
+	if (prerendered.view !== route.view) return null;
+	switch (prerendered.view) {
+		case "landing":
+		case "credits":
+			return { page: prerendered, adopt: true };
+		case "results":
+			return null;
+		case "detail": {
+			if (prerendered.date !== route.date) return null;
+			const alternates = route.alternates ?? [];
+			const same =
+				alternates.length === prerendered.alternates.length &&
+				alternates.every((alternate, index) => alternate === prerendered.alternates[index]);
+			return same ? { page: prerendered, adopt: true } : { page: { ...prerendered, alternates }, adopt: false };
+		}
+		case "collection":
+			return prerendered.id === route.id ? { page: prerendered, adopt: true } : null;
+	}
 }
 
-export function replaceSearch(hash: string): void {
-	replaceRoute(hash);
-	handleRoute();
-}
-
-export function handleRoute(): void {
+/**
+ * Draws the page the address names.
+ *
+ * On boot the document may already hold that page, built by the build from the same data and the
+ * same code that would draw it here; then `prerendered` is what the build embedded, and the view
+ * is adopted — handlers attached, nothing redrawn — rather than replaced with a spinner until the
+ * archive arrives.
+ */
+export function handleRoute(prerendered: Page | null = null): void {
 	const route = parseRoute();
-
-	document.querySelectorAll(".view").forEach((viewElement) => {
-		viewElement.classList.remove("active");
-		viewElement.removeAttribute("style");
-	});
 
 	// The filter dropdowns float on the body, so hiding the results view does not hide them. Every
 	// other route leaves them behind; the results view keeps whichever one is open, because a search
 	// re-rendered on a keystroke comes through here too.
 	if (route.view !== "results") closeFilterMenu();
 
-	if (!state.dataLoaded && route.view !== "landing") {
-		showLoadingView(route);
+	const served = prerendered ? servePrerendered(prerendered, route) : null;
+	const page = served?.page ?? pageFor(route);
+	const adopt = served?.adopt ?? false;
+
+	const viewElement = document.getElementById(`view-${route.view}`)!;
+	document.querySelectorAll(".view").forEach((element) => {
+		if (element === viewElement) return;
+		element.classList.remove("active");
+		element.removeAttribute("style");
+	});
+
+	if (!page) {
+		showLoadingView(viewElement, route);
 		updateGridState(route);
 		return;
 	}
 
 	state.pendingRoute = null;
+	// The spinner's inline layout, if it was showing here. Left alone on an adopted view, whose
+	// entrance animation is already running and should not be restarted.
+	if (!adopt) viewElement.removeAttribute("style");
+	viewElement.classList.add("active");
 
-	switch (route.view) {
+	switch (page.view) {
 		case "landing": {
-			document.getElementById("view-landing")!.classList.add("active");
-			renderLanding();
-			document.title = "Find Calvin and Hobbes";
+			renderLanding(adopt);
 			break;
 		}
 		case "results": {
-			document.getElementById("view-results")!.classList.add("active");
-			renderResults(route.q || "", route.sort || "rank");
+			renderResults(page.q, page.sort);
 			document.getElementById("main")!.scrollTop = 0;
-			document.title = `${route.q} — Find Calvin and Hobbes`;
 			break;
 		}
 		case "detail": {
-			document.getElementById("view-detail")!.classList.add("active");
-			renderDetail(route.date || "", route.alternates || []);
-			document.title = `${route.date} — Find Calvin and Hobbes`;
+			renderDetail(page, adopt);
 			break;
 		}
 		case "collection": {
-			document.getElementById("view-collection")!.classList.add("active");
-			renderCollection(route.id || "");
+			renderCollection(page, adopt);
 			break;
 		}
 		case "credits": {
-			document.getElementById("view-credits")!.classList.add("active");
-			renderCredits();
+			renderCredits(adopt);
 			document.getElementById("main")!.scrollTop = 0;
-			document.title = "Credits — Find Calvin and Hobbes";
 			break;
 		}
 	}
 
+	document.title = pageTitle(page);
 	updateGridState(route);
 }
 
-function showLoadingView(route: Route): void {
-	const viewElement = document.getElementById(`view-${route.view}`)!;
+function showLoadingView(viewElement: HTMLElement, route: Route): void {
 	viewElement.classList.add("active");
 	viewElement.style.height = "100%";
 	viewElement.style.display = "flex";
