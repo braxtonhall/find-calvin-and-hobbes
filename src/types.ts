@@ -59,5 +59,6 @@ export interface Route {
 	q?: string;
 	sort?: SortMode;
 	date?: string;
+	alternates?: string[];
 	id?: string;
 }

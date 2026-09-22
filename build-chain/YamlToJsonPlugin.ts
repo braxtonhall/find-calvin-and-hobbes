@@ -8,6 +8,8 @@ import { exportComicsJson } from "./exportComicsJson";
 import { exportDescriptions } from "./exportDescriptions";
 import { generateCollectionIndex } from "./generateCollectionIndex";
 import { exportRerunsJson } from "./reruns";
+import { setSiteData } from "./siteData";
+import { loadSiteConfig } from "./siteConfig";
 
 const PLUGIN_NAME = "YamlToJsonPlugin";
 
@@ -39,18 +41,28 @@ class YamlToJsonPlugin {
 					const projectDir = compiler.context;
 					watchDataFiles(compilation, projectDir);
 					const collectionData = loadCollectionData(projectDir);
+					// The images are named from the mount, so the app can show them from any page as they are.
+					const basePath = loadSiteConfig()?.basePath ?? "/";
 
-					const comicsJson = exportComicsJson(projectDir, collectionData);
+					const comicsJson = exportComicsJson(projectDir, collectionData, basePath);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 
 					const source = loadComicSource(path.join(projectDir, "comics.yaml"));
-					compilation.emitAsset("reruns.json", new sources.RawSource(exportRerunsJson(projectDir, source)));
+					const rerunsJson = exportRerunsJson(projectDir, source);
+					compilation.emitAsset("reruns.json", new sources.RawSource(rerunsJson));
 
-					const collectionIndexJson = generateCollectionIndex(collectionData);
+					const collectionIndexJson = generateCollectionIndex(collectionData, basePath);
 					compilation.emitAsset("collection-index.json", new sources.RawSource(collectionIndexJson));
 
 					const descriptionsJson = exportDescriptions(projectDir);
 					compilation.emitAsset("descriptions.json", new sources.RawSource(descriptionsJson));
+
+					setSiteData(compilation, {
+						comics: JSON.parse(comicsJson),
+						reruns: JSON.parse(rerunsJson),
+						collectionIndex: JSON.parse(collectionIndexJson),
+						descriptions: JSON.parse(descriptionsJson),
+					});
 				},
 			);
 		});

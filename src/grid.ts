@@ -1,12 +1,13 @@
 import "./grid.css";
 
 import { Day } from "./types";
-import { RANGE_START, RANGE_END } from "./constants";
-import { dateToString, isSabbatical } from "./date-utils";
+import { computeDays } from "./days";
 import { scrollCellIntoViewIfNeeded } from "./utils";
 import { state } from "./state";
 import { loadDescriptions } from "./details";
-import { buildComicHash, isPlainClick, parseRoute } from "./router";
+import { isPlainClick, parseRoute } from "./router";
+import { buildComicPath } from "./routes";
+import { addressOf } from "./base-path";
 
 export function updateGridStatesFromData(): void {
 	const cells = document.querySelectorAll(".cell");
@@ -25,34 +26,7 @@ export function updateGridStatesFromData(): void {
 }
 
 export function buildGridData(): void {
-	const [startYear, startMonth, startDay] = RANGE_START.split("-").map(Number);
-	const [endYear, endMonth, endDay] = RANGE_END.split("-").map(Number);
-
-	const startDate = new Date(Date.UTC(startYear, startMonth - 1, startDay));
-	const endDate = new Date(Date.UTC(endYear, endMonth - 1, endDay));
-
-	const firstMonday = new Date(startDate);
-	firstMonday.setUTCDate(startDate.getUTCDate() - ((startDate.getUTCDay() + 6) % 7));
-
-	const days: Day[] = [];
-	const current = new Date(startDate);
-
-	while (current <= endDate) {
-		const year = current.getUTCFullYear();
-		const month = current.getUTCMonth() + 1;
-		const day = current.getUTCDate();
-		const dateStr = dateToString(year, month, day);
-		const dayOfWeek = current.getUTCDay();
-		const msDiff = current.getTime() - firstMonday.getTime();
-		const weekIndex = Math.floor(msDiff / (7 * 24 * 60 * 60 * 1000));
-
-		const stateLabel = isSabbatical(dateStr) ? "none" : "has-comic";
-
-		days.push({ date: dateStr, weekIndex, dayOfWeek, state: stateLabel });
-		current.setUTCDate(current.getUTCDate() + 1);
-	}
-
-	state.allDays = days;
+	state.allDays = computeDays();
 }
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -179,7 +153,7 @@ export function renderGrid(): void {
 		// `attachRouteLinkHandler` catches the plain click and re-renders in place as it always has.
 		const cell = document.createElement("a");
 		cell.className = `cell cell--${day.state}`;
-		cell.href = buildComicHash(day.date);
+		cell.href = addressOf(buildComicPath(day.date));
 		// Out of the tab order deliberately. There are one of these per day of the run, and the grid
 		// sits ahead of `main`, so a reader tabbing towards the content would walk the whole archive to
 		// reach it. The href is here to be copied and opened, not stepped through; stepping through the
@@ -339,7 +313,7 @@ export async function loadComicData(): Promise<void> {
 	void loadDescriptions();
 
 	try {
-		const response = await fetch("comics.json");
+		const response = await fetch(addressOf("/comics.json"));
 		if (!response.ok) throw new Error(`HTTP ${response.status}`);
 		state.comics = await response.json();
 		state.comicsByDate = new Map();
@@ -348,7 +322,7 @@ export async function loadComicData(): Promise<void> {
 			state.comicsByDate.get(comic.date)!.push(comic);
 		}
 
-		const rerunsResponse = await fetch("reruns.json");
+		const rerunsResponse = await fetch(addressOf("/reruns.json"));
 		state.reruns = new Map(Object.entries((await rerunsResponse.json()) as Record<string, string>));
 	} catch {
 		const loading = document.getElementById("loading")!;
@@ -366,16 +340,13 @@ export async function loadComicData(): Promise<void> {
 	}
 
 	try {
-		const collectionsResponse = await fetch("collection-index.json");
+		const collectionsResponse = await fetch(addressOf("/collection-index.json"));
 		const collectionIndex = await collectionsResponse.json();
 		state.collectionIndex = collectionIndex;
 		state.collectionsById = new Map();
 		for (const collection of collectionIndex.collections) {
 			state.collectionsById.set(collection.id, collection);
 		}
-		state.collectionTooltip = document.createElement("div");
-		state.collectionTooltip.className = "collection-tooltip";
-		document.body.appendChild(state.collectionTooltip);
 	} catch {
 		// collection data unavailable — "Appears in" section won't render
 	}

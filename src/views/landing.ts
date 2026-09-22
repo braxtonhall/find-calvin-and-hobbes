@@ -1,13 +1,10 @@
 import "./landing.css";
 
-import { buildSearchHash, navigate } from "../router";
+import { navigate } from "../router";
+import { buildSearchPath } from "../routes";
+import { buildLandingHtml } from "../pages/landing";
 import { randomQuery } from "../suggestions";
 import { attachQueryInput, editQueryInput } from "./query-input";
-
-// Drawn in the same idiom as the results-bar icons: 16px, stroked in `currentColor`, no fill.
-const SEARCH_ICON = `<svg class="landing-submit-search" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
-	<circle cx="6.8" cy="6.8" r="4.3" /><path d="M10 10l3.5 3.5" />
-</svg>`;
 
 /** Fast enough not to be a wait, slow enough that the `@` and the pill it earns can be read. */
 const TYPE_INTERVAL = 32;
@@ -79,29 +76,16 @@ function startTypeOut(input: HTMLInputElement): void {
 	typeStep(input, query, 1);
 }
 
-export function renderLanding(): void {
+/**
+ * Draws the home page, or — with `adopt` — takes over the one the build drew, which is the same
+ * markup. The box is focused and wired either way.
+ */
+export function renderLanding(adopt: boolean = false): void {
 	// Whatever was being written is being written into a node this render is about to replace.
 	cancelTypeOut();
 
 	const element = document.getElementById("view-landing")!;
-	element.innerHTML = `
-		<img
-			class="landing-logo"
-			src="https://upload.wikimedia.org/wikipedia/commons/9/96/Calvin_and_Hobbes_title.png"
-			alt="Calvin and Hobbes"
-		/>
-		<form class="landing-form" id="landing-form">
-			<input
-				type="text"
-				class="landing-input"
-				id="landing-input"
-				placeholder="Search comics..."
-				autocomplete="off"
-			/>
-			<button type="submit" class="landing-submit" id="landing-submit" title="Search" aria-label="Search">${SEARCH_ICON}</button>
-		</form>
-		<a class="landing-credits" href="#/credits">Credits</a>
-	`;
+	if (!adopt) element.innerHTML = buildLandingHtml();
 
 	const input = document.getElementById("landing-input") as HTMLInputElement;
 	const submit = document.getElementById("landing-submit") as HTMLButtonElement;
@@ -131,6 +115,6 @@ export function renderLanding(): void {
 		}
 		const query = input.value.trim();
 		if (query === "") startTypeOut(input);
-		else navigate(buildSearchHash(query));
+		else navigate(buildSearchPath(query));
 	});
 }

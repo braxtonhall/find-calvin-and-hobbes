@@ -7,15 +7,18 @@ import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
 import {
 	attachRouteLinkHandler,
-	buildComicHash,
 	handleRoute,
 	markInitialHistoryEntry,
 	navigate,
+	navigateTo,
 	parseRoute,
+	readPrerenderedPage,
+	updateGridState,
 } from "./router";
-import { getAdjacentComicDate, getSameDayComicDate } from "./views/detail";
+import { HOME_PATH, buildComicPath } from "./routes";
+import { getSameDayComicDate } from "./pages/detail";
 
-async function initialize(): Promise<void> {
+function initialize(): void {
 	// The one filter whose values are loaded data. A thunk, so this can be registered before the
 	// collection index has been fetched and answer with the books the moment it has — nothing has to
 	// notice when that happens, and an index that never arrives leaves an empty list, which every
@@ -24,16 +27,24 @@ async function initialize(): Promise<void> {
 		(state.collectionIndex?.collections ?? []).map((collection) => ({ value: collection.id, hint: collection.name })),
 	);
 
-	try {
-		state.bookmarkedDates = await getBookmarkedDates();
-	} catch {
-		// IndexedDB unavailable — bookmarks won't work
-	}
-
 	buildGridData();
 	renderGrid();
-	handleRoute();
+	// The build may have written this very page into the document; if so, it is taken over as it
+	// stands rather than replaced with a spinner until the archive arrives. See `handleRoute`.
+	handleRoute(readPrerenderedPage());
 	loadComicData();
+
+	// After the first paint, not before it: opening IndexedDB can take longer than drawing a
+	// prerendered page, and the only thing waiting on the answer is the grid's bookmark highlights.
+	// The bookmark button on a strip's page asks for its own date separately.
+	getBookmarkedDates()
+		.then((dates) => {
+			state.bookmarkedDates = dates;
+			updateGridState(parseRoute());
+		})
+		.catch(() => {
+			// IndexedDB unavailable — bookmarks won't work
+		});
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -42,8 +53,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	initialize();
 
-	window.addEventListener("hashchange", handleRoute);
-	window.addEventListener("popstate", handleRoute);
+	window.addEventListener("popstate", () => handleRoute());
 
 	document.addEventListener("keydown", (event) => {
 		const activeTag = (document.activeElement as HTMLElement | null)?.tagName;
@@ -52,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (event.key === "Escape") {
 			if (parseRoute().view !== "landing") {
 				event.preventDefault();
-				navigate("#/");
+				navigate(HOME_PATH);
 			}
 		}
 
@@ -60,9 +70,10 @@ document.addEventListener("DOMContentLoaded", () => {
 			const route = parseRoute();
 			if (route.view === "detail" && route.date) {
 				event.preventDefault();
-				const direction = event.key === "ArrowLeft" ? -1 : 1;
-				const adjacentDate = getAdjacentComicDate(route.date, direction);
-				if (adjacentDate) navigate(buildComicHash(adjacentDate));
+				// The arrows on the page already know where they go, and they know it on a prerendered
+				// page before the archive has loaded, which is more than the state does.
+				const arrow = document.querySelector<HTMLAnchorElement>(event.key === "ArrowLeft" ? "#nav-prev" : "#nav-next");
+				if (arrow) navigateTo(arrow.href);
 			}
 		}
 
@@ -71,8 +82,8 @@ document.addEventListener("DOMContentLoaded", () => {
 			if (route.view === "detail" && route.date) {
 				event.preventDefault();
 				const direction = event.key === "ArrowUp" ? -1 : 1;
-				const adjacentDate = getSameDayComicDate(route.date, direction);
-				if (adjacentDate) navigate(buildComicHash(adjacentDate));
+				const adjacentDate = getSameDayComicDate(state, route.date, direction);
+				if (adjacentDate) navigate(buildComicPath(adjacentDate));
 			}
 		}
 
