@@ -2,6 +2,7 @@ import { Appearance, Comic } from "../types";
 import { escHtml } from "../utils";
 import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
 import { buildCollectionPath, buildComicPath } from "../routes";
+import { addressOf } from "../base-path";
 import { DetailCollection, DetailPage, PageSource } from "./page";
 import { buildBackAndHomeButtons } from "./nav-buttons";
 
@@ -170,7 +171,7 @@ function buildCoverBoxHtml(
 	const alteration = collection.alterations && collection.alterations[alterationKey];
 	const badge = alteration ? '<div class="collection-book__badge">*</div>' : "";
 
-	return `<a class="collection-book${bwClass}" href="${escHtml(buildCollectionPath(collection.id))}" data-collection-id="${escHtml(collection.id)}" data-bw="${isBlackAndWhite ? "1" : "0"}" data-alteration="${escHtml(alteration || "")}" data-pages="${escHtml(tooltipLines.join("\n"))}" style="aspect-ratio: ${collection.aspectRatio}"><img src="${escHtml(collection.image)}" alt="${escHtml(collection.name)}" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${badge}</a>`;
+	return `<a class="collection-book${bwClass}" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}" data-bw="${isBlackAndWhite ? "1" : "0"}" data-alteration="${escHtml(alteration || "")}" data-pages="${escHtml(tooltipLines.join("\n"))}" style="aspect-ratio: ${collection.aspectRatio}"><img src="${escHtml(collection.image)}" alt="${escHtml(collection.name)}" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${badge}</a>`;
 }
 
 function wrapCollectionSection(inner: string): string {
@@ -291,17 +292,17 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 	const isSunday = weekdayOf(date) === 0;
 
 	const prevButtonHtml = prevDate
-		? `<a class="nav-btn" id="nav-prev" href="${buildComicPath(prevDate)}" data-date="${prevDate}" title="Previous comic">&larr;</a>`
+		? `<a class="nav-btn" id="nav-prev" href="${addressOf(buildComicPath(prevDate))}" data-date="${prevDate}" title="Previous comic">&larr;</a>`
 		: `<span class="nav-btn nav-btn--disabled" title="First comic">&larr;</span>`;
 	const nextButtonHtml = nextDate
-		? `<a class="nav-btn" id="nav-next" href="${buildComicPath(nextDate)}" data-date="${nextDate}" title="Next comic">&rarr;</a>`
+		? `<a class="nav-btn" id="nav-next" href="${addressOf(buildComicPath(nextDate))}" data-date="${nextDate}" title="Next comic">&rarr;</a>`
 		: `<span class="nav-btn nav-btn--disabled" title="Last comic">&rarr;</span>`;
 
 	const headerHtml = `<div class="detail-container">
 		${buildBackAndHomeButtons(canGoBack)}
 		<h2 class="detail-date">${dateFormatted}</h2>
 		<div class="detail-actions">
-			<button class="copy-link-btn" id="copy-link-btn" data-href="${buildComicPath(date)}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark"><svg class="bookmark-icon" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button> ${prevButtonHtml} ${nextButtonHtml}
+			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark"><svg class="bookmark-icon" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button> ${prevButtonHtml} ${nextButtonHtml}
 		</div>`;
 
 	const bodyHtml =

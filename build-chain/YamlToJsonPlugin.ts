@@ -7,6 +7,7 @@ import { exportComicsJson } from "./exportComicsJson";
 import { exportDescriptions } from "./exportDescriptions";
 import { generateCollectionIndex } from "./generateCollectionIndex";
 import { setSiteData } from "./siteData";
+import { loadSiteConfig } from "./siteConfig";
 
 const PLUGIN_NAME = "YamlToJsonPlugin";
 
@@ -37,11 +38,13 @@ class YamlToJsonPlugin {
 					const projectDir = compiler.context;
 					watchDataFiles(compilation, projectDir);
 					const collectionData = loadCollectionData(projectDir);
+					// The images are named from the mount, so the app can show them from any page as they are.
+					const basePath = loadSiteConfig()?.basePath ?? "/";
 
-					const comicsJson = exportComicsJson(projectDir, collectionData);
+					const comicsJson = exportComicsJson(projectDir, collectionData, basePath);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 
-					const collectionIndexJson = generateCollectionIndex(collectionData);
+					const collectionIndexJson = generateCollectionIndex(collectionData, basePath);
 					compilation.emitAsset("collection-index.json", new sources.RawSource(collectionIndexJson));
 
 					const descriptionsJson = exportDescriptions(projectDir);

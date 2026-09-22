@@ -63,6 +63,11 @@ The site's own URL is optional at build time. Set `SITE_URL` to have the build
 emit the `og:url` and canonical tags on every page, a `robots.txt` sitemap pointer,
 `sitemap.xml`, and a `CNAME` file for a GitHub Pages custom domain.
 
+A `SITE_URL` with a path — `https://user.github.io/repo`, as a GitHub project page is served —
+mounts the site there: every link, fetch and image is written from `/repo/`, the app reads the
+address bar through it, and no `CNAME` is emitted. The mount is compiled into the bundle, so a
+change to it needs a fresh build rather than a `--watch` rebuild.
+
 ```sh
 cp .env.sample .env
 # then edit .env and uncomment/set SITE_URL

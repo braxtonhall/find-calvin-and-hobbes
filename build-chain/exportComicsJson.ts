@@ -5,12 +5,12 @@ import { loadComicSource } from "./comicSource";
 
 const EXTENSIONS = [".gif", ".jpg", ".jpeg", ".png", ".webp", ".bmp"];
 
-function findImage(key: string, assetsDir: string): string {
+function findImage(key: string, assetsDir: string, basePath: string): string {
 	for (const ext of EXTENSIONS) {
 		const candidate = path.join(assetsDir, `${key}${ext}`);
 		if (fs.existsSync(candidate)) {
-			// Root-relative, since the page showing it may live at any depth.
-			return `/assets/comics/${key}${ext}`;
+			// From the mount, since the page showing it may live at any depth.
+			return `${basePath}assets/comics/${key}${ext}`;
 		}
 	}
 	return "";
@@ -31,7 +31,8 @@ interface Entry {
 	appearances?: Appearance[];
 }
 
-export function exportComicsJson(projectDir: string, collectionData: CollectionData): string {
+/** `basePath` is where the site is mounted, `/` or `/prefix/`; the image paths are written from it. */
+export function exportComicsJson(projectDir: string, collectionData: CollectionData, basePath: string = "/"): string {
 	const assetsDir = path.join(projectDir, "assets", "comics");
 	const source = loadComicSource(path.join(projectDir, "comics.yaml"));
 
@@ -48,7 +49,7 @@ export function exportComicsJson(projectDir: string, collectionData: CollectionD
 			transcript: daily.transcript,
 		};
 		if (daily.alternate) entry.alternate = daily.alternate;
-		const img = findImage(dateStr, assetsDir);
+		const img = findImage(dateStr, assetsDir, basePath);
 		if (img) entry.image = img;
 		attachAppearances(entry, dateStr);
 		entries.push(entry);
@@ -63,7 +64,7 @@ export function exportComicsJson(projectDir: string, collectionData: CollectionD
 		if (special.alternate) entry.alternate = special.alternate;
 		if (special.sort) entry.sort = special.sort;
 		if (special["aspect-ratio"]) entry.aspectRatio = special["aspect-ratio"];
-		const img = findImage(sid, assetsDir);
+		const img = findImage(sid, assetsDir, basePath);
 		if (img) entry.image = img;
 		attachAppearances(entry, sid);
 		entries.push(entry);

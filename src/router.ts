@@ -2,6 +2,7 @@ import { Route } from "./types";
 import { state } from "./state";
 import { scrollCellIntoViewIfNeeded } from "./utils";
 import { HOME_PATH, legacyHashPath, normalizePathname, parseRoutePath } from "./routes";
+import { addressOf, pathOf } from "./base-path";
 import { Page, pageTitle } from "./pages/page";
 import { PAGE_DATA_ID } from "./pages/shell";
 import { detailPageFrom } from "./pages/detail";
@@ -14,7 +15,8 @@ import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
 
 export function parseRoute(): Route {
-	const route = parseRoutePath(location.pathname, location.search);
+	const path = pathOf(location.pathname);
+	const route = path === null ? null : parseRoutePath(path, location.search);
 	if (route) return route;
 	replaceRoute(HOME_PATH);
 	return { view: "landing" };
@@ -49,10 +51,20 @@ export function attachRouteLinkHandler(): void {
 		if (!link || !isPlainClick(event)) return;
 		if (link.target !== "" && link.target !== "_self") return;
 		if (link.hasAttribute("download")) return;
-		// `getAttribute` rather than `.href`, which resolves to an absolute URL.
-		event.preventDefault();
-		navigate(link.getAttribute("href")!);
+		if (navigateTo(link.href)) event.preventDefault();
 	});
+}
+
+/**
+ * Follows an address as an anchor spells it — `/prefix/1986-07-07?alternate=…` — and says whether
+ * it was one of ours to follow. One outside the mount is left to the browser.
+ */
+export function navigateTo(href: string): boolean {
+	const url = new URL(href, location.href);
+	const path = pathOf(url.pathname);
+	if (path === null) return false;
+	navigate(path + url.search);
+	return true;
 }
 
 interface HistoryState {
@@ -74,20 +86,29 @@ export function canGoBack(): boolean {
  * Three spellings can arrive here for one page: the one the links use, the one a static host
  * redirects to on the way to `index.html` (`/credits/`), and the old `#/credits`. All of them are
  * rewritten to the first so that what is in the bar is what a copy of it should say. The history
- * depth is kept: a reload arrives with the state of the entry it reloads.
+ * depth is kept: a reload arrives with the state of the entry it reloads. An address outside the
+ * mount is not ours to tidy; `parseRoute` sends it home.
  */
 export function markInitialHistoryEntry(): void {
 	const legacy = legacyHashPath(location.hash);
-	const url = legacy ?? normalizePathname(location.pathname) + location.search;
+	const path = legacy === null ? pathOf(location.pathname) : null;
+	const url =
+		legacy !== null
+			? addressOf(legacy)
+			: path !== null
+				? addressOf(normalizePathname(path)) + location.search
+				: location.pathname + location.search;
 	history.replaceState({ depth: currentDepth() } satisfies HistoryState, "", url);
 }
 
+// The paths these take are the ones `routes.ts` builds, from the mount; the address bar gets the
+// mount put back on.
 export function replaceRoute(path: string): void {
-	history.replaceState({ depth: currentDepth() } satisfies HistoryState, "", path);
+	history.replaceState({ depth: currentDepth() } satisfies HistoryState, "", addressOf(path));
 }
 
 export function navigate(path: string): void {
-	history.pushState({ depth: currentDepth() + 1 } satisfies HistoryState, "", path);
+	history.pushState({ depth: currentDepth() + 1 } satisfies HistoryState, "", addressOf(path));
 	handleRoute();
 }
 

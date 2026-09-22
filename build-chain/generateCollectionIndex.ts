@@ -14,7 +14,8 @@ import { CollectionData } from "./collectionPages";
  * collection has no page index, and a book with a range but no appearances is precisely the one
  * `@in:` must not offer.
  */
-export function generateCollectionIndex(collectionData: CollectionData): string {
+/** `basePath` is where the site is mounted, `/` or `/prefix/`; the cover paths are written from it. */
+export function generateCollectionIndex(collectionData: CollectionData, basePath: string = "/"): string {
 	const collectionExtras: Record<string, unknown[]> = {};
 	const collections = [];
 
@@ -37,7 +38,7 @@ export function generateCollectionIndex(collectionData: CollectionData): string 
 		const collection: Record<string, unknown> = {
 			...rest,
 			// The YAML names the cover relative to the project; the page showing it may live at any depth.
-			image: `/${String(rest.image).replace(/^\/+/, "")}`,
+			image: `${basePath}${String(rest.image).replace(/^\/+/, "")}`,
 			dailies: collectionData.rangesById.get(source.id) || [],
 			specials: collectionData.specialsById.get(source.id) || {},
 			alterations: Object.fromEntries(

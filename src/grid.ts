@@ -7,6 +7,7 @@ import { state } from "./state";
 import { loadDescriptions } from "./details";
 import { isPlainClick, parseRoute } from "./router";
 import { buildComicPath } from "./routes";
+import { addressOf } from "./base-path";
 
 export function updateGridStatesFromData(): void {
 	const cells = document.querySelectorAll(".cell--has-comic");
@@ -150,7 +151,7 @@ export function renderGrid(): void {
 		// `attachRouteLinkHandler` catches the plain click and re-renders in place as it always has.
 		const cell = document.createElement("a");
 		cell.className = `cell cell--${day.state}`;
-		cell.href = buildComicPath(day.date);
+		cell.href = addressOf(buildComicPath(day.date));
 		// Out of the tab order deliberately. There are one of these per day of the run, and the grid
 		// sits ahead of `main`, so a reader tabbing towards the content would walk the whole archive to
 		// reach it. The href is here to be copied and opened, not stepped through; stepping through the
@@ -310,7 +311,7 @@ export async function loadComicData(): Promise<void> {
 	void loadDescriptions();
 
 	try {
-		const response = await fetch("/comics.json");
+		const response = await fetch(addressOf("/comics.json"));
 		if (!response.ok) throw new Error(`HTTP ${response.status}`);
 		state.comics = await response.json();
 		state.comicsByDate = new Map();
@@ -334,7 +335,7 @@ export async function loadComicData(): Promise<void> {
 	}
 
 	try {
-		const collectionsResponse = await fetch("/collection-index.json");
+		const collectionsResponse = await fetch(addressOf("/collection-index.json"));
 		const collectionIndex = await collectionsResponse.json();
 		state.collectionIndex = collectionIndex;
 		state.collectionsById = new Map();

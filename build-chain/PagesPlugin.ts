@@ -74,8 +74,12 @@ class PagesPlugin {
 					const data = getSiteData(compilation);
 					const source = buildPageSource(data);
 					const template = fs.readFileSync(templatePath, "utf8");
-					const siteUrl = loadSiteConfig()?.siteUrl ?? "";
+					const config = loadSiteConfig();
+					const siteUrl = config?.siteUrl ?? "";
 					const layout = loadPageLayout();
+					// The page builders write links from the mount they find in `__BASE_PATH__` — the same
+					// name `DefinePlugin` fills in for the app. See `src/base-path.ts`.
+					(globalThis as { __BASE_PATH__?: string }).__BASE_PATH__ = config?.basePath ?? "/";
 
 					const emit = (assetPath: string, routePath: string, page: Page) => {
 						const html = buildDocumentHtml(template, page, { siteUrl, path: routePath });

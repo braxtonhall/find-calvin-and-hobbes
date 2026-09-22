@@ -1,4 +1,4 @@
 User-agent: *
-Allow: /
-Disallow: /search
+Allow: {{basePath}}
+Disallow: {{basePath}}search
 Sitemap: {{siteUrl}}/sitemap.xml
