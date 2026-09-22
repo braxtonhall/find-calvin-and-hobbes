@@ -12,11 +12,12 @@ import {
 	navigate,
 	parseRoute,
 	readPrerenderedPage,
+	updateGridState,
 } from "./router";
 import { HOME_PATH, buildComicPath } from "./routes";
 import { getSameDayComicDate } from "./pages/detail";
 
-async function initialize(): Promise<void> {
+function initialize(): void {
 	// The one filter whose values are loaded data. A thunk, so this can be registered before the
 	// collection index has been fetched and answer with the books the moment it has — nothing has to
 	// notice when that happens, and an index that never arrives leaves an empty list, which every
@@ -25,18 +26,24 @@ async function initialize(): Promise<void> {
 		(state.collectionIndex?.collections ?? []).map((collection) => ({ value: collection.id, hint: collection.name })),
 	);
 
-	try {
-		state.bookmarkedDates = await getBookmarkedDates();
-	} catch {
-		// IndexedDB unavailable — bookmarks won't work
-	}
-
 	buildGridData();
 	renderGrid();
 	// The build may have written this very page into the document; if so, it is taken over as it
 	// stands rather than replaced with a spinner until the archive arrives. See `handleRoute`.
 	handleRoute(readPrerenderedPage());
 	loadComicData();
+
+	// After the first paint, not before it: opening IndexedDB can take longer than drawing a
+	// prerendered page, and the only thing waiting on the answer is the grid's bookmark highlights.
+	// The bookmark button on a strip's page asks for its own date separately.
+	getBookmarkedDates()
+		.then((dates) => {
+			state.bookmarkedDates = dates;
+			updateGridState(parseRoute());
+		})
+		.catch(() => {
+			// IndexedDB unavailable — bookmarks won't work
+		});
 }
 
 document.addEventListener("DOMContentLoaded", () => {
