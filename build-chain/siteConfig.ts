@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { execSync } from "child_process";
 
 export interface SiteConfig {
 	/** The site's address with no trailing slash — `https://example.com`, or `https://example.com/prefix` — which every page's path is appended to. */
@@ -76,6 +77,27 @@ export function loadPageLayout(): PageLayout {
 export function pageAssetPath(routePath: string, layout: PageLayout): string {
 	if (routePath === "/") return "index.html";
 	return layout === "html" ? `${routePath.slice(1)}.html` : `${routePath.slice(1)}/index.html`;
+}
+
+/**
+ * The commit the pages were built from, which a correction reports so that it can be read against
+ * the archive it was made from. "unknown" where there is no git to ask — a build from a tarball.
+ */
+export function loadCommitSha(): string {
+	try {
+		return execSync("git rev-parse --short HEAD", { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+	} catch {
+		return "unknown";
+	}
+}
+
+/**
+ * Whether to write the corrections link. It is on unless a build turns it off, and the link is then
+ * left out of every page rather than hidden, so a fork that wants no part of the form carries no
+ * trace of it. See `src/pages/correction.ts` for why the form itself is not configurable.
+ */
+export function loadCorrectionsEnabled(): boolean {
+	return readSetting("CORRECTIONS").toLowerCase() !== "false";
 }
 
 /**

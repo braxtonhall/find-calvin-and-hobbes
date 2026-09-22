@@ -1,6 +1,7 @@
 #view-collection.active {
 	display: block;
-	padding: 20px;
+	/* The corrections link floats over the bottom of the page; the last line clears it. */
+	padding: 20px 20px 56px;
 }
 
 .collection-container {

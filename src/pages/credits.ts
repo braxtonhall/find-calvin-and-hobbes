@@ -58,6 +58,6 @@ export function buildCreditsHtml(canGoBack: boolean): string {
 			</ul>
 		</div>
 
-		<p class="credits-footer">Please send corrections, fixes, and ideas to Braxton Hall through <a href="https://github.com/braxtonhall/find-calvin-and-hobbes" target="_blank" rel="noopener">GitHub</a>.</p>
+		<p class="credits-footer">Please send ideas to Braxton Hall through <a href="https://github.com/braxtonhall/find-calvin-and-hobbes" target="_blank" rel="noopener">GitHub</a>.</p>
 	</div>`;
 }
