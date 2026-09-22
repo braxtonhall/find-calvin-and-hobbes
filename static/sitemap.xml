@@ -6,11 +6,11 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>{{siteUrl}}/#/comic/1985-11-18</loc>
+    <loc>{{siteUrl}}/1985-11-18</loc>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>{{siteUrl}}/#/comic/1995-12-31</loc>
+    <loc>{{siteUrl}}/1995-12-31</loc>
     <priority>0.8</priority>
   </url>
 </urlset>

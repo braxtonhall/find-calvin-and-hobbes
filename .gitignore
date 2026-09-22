@@ -3,3 +3,4 @@ dist/
 assets/comics/
 .env
 .DS_Store
+.npmrc

@@ -83,3 +83,14 @@ export function dateToString(year: number, month: number, day: number): string {
 export function isSabbatical(dateStr: string): boolean {
 	return SABBATICALS.some(([sabbaticalStart, sabbaticalEnd]) => dateStr >= sabbaticalStart && dateStr <= sabbaticalEnd);
 }
+
+/** `Monday, July 7, 1986` — the long form the detail page and the grid tooltips share. */
+export function formatLongDate(date: string): string {
+	return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
+		weekday: "long",
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+		timeZone: "UTC",
+	});
+}

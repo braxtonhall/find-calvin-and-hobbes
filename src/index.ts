@@ -7,13 +7,14 @@ import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
 import {
 	attachRouteLinkHandler,
-	buildComicHash,
 	handleRoute,
 	markInitialHistoryEntry,
 	navigate,
 	parseRoute,
+	readPrerenderedPage,
 } from "./router";
-import { getAdjacentComicDate, getSameDayComicDate } from "./views/detail";
+import { HOME_PATH, buildComicPath } from "./routes";
+import { getSameDayComicDate } from "./pages/detail";
 
 async function initialize(): Promise<void> {
 	// The one filter whose values are loaded data. A thunk, so this can be registered before the
@@ -32,7 +33,9 @@ async function initialize(): Promise<void> {
 
 	buildGridData();
 	renderGrid();
-	handleRoute();
+	// The build may have written this very page into the document; if so, it is taken over as it
+	// stands rather than replaced with a spinner until the archive arrives. See `handleRoute`.
+	handleRoute(readPrerenderedPage());
 	loadComicData();
 }
 
@@ -42,8 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	initialize();
 
-	window.addEventListener("hashchange", handleRoute);
-	window.addEventListener("popstate", handleRoute);
+	window.addEventListener("popstate", () => handleRoute());
 
 	document.addEventListener("keydown", (event) => {
 		const activeTag = (document.activeElement as HTMLElement | null)?.tagName;
@@ -52,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (event.key === "Escape") {
 			if (parseRoute().view !== "landing") {
 				event.preventDefault();
-				navigate("#/");
+				navigate(HOME_PATH);
 			}
 		}
 
@@ -60,9 +62,10 @@ document.addEventListener("DOMContentLoaded", () => {
 			const route = parseRoute();
 			if (route.view === "detail" && route.date) {
 				event.preventDefault();
-				const direction = event.key === "ArrowLeft" ? -1 : 1;
-				const adjacentDate = getAdjacentComicDate(route.date, direction);
-				if (adjacentDate) navigate(buildComicHash(adjacentDate));
+				// The arrows on the page already know where they go, and they know it on a prerendered
+				// page before the archive has loaded, which is more than the state does.
+				const arrow = document.querySelector<HTMLAnchorElement>(event.key === "ArrowLeft" ? "#nav-prev" : "#nav-next");
+				if (arrow) navigate(arrow.getAttribute("href")!);
 			}
 		}
 
@@ -71,8 +74,8 @@ document.addEventListener("DOMContentLoaded", () => {
 			if (route.view === "detail" && route.date) {
 				event.preventDefault();
 				const direction = event.key === "ArrowUp" ? -1 : 1;
-				const adjacentDate = getSameDayComicDate(route.date, direction);
-				if (adjacentDate) navigate(buildComicHash(adjacentDate));
+				const adjacentDate = getSameDayComicDate(state, route.date, direction);
+				if (adjacentDate) navigate(buildComicPath(adjacentDate));
 			}
 		}
 

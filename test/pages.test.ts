@@ -1,0 +1,137 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "fs";
+import path from "path";
+import { loadCollectionData } from "../build-chain/collectionPages";
+import { exportComicsJson } from "../build-chain/exportComicsJson";
+import { exportDescriptions } from "../build-chain/exportDescriptions";
+import { generateCollectionIndex } from "../build-chain/generateCollectionIndex";
+import { computeDays } from "../src/days";
+import { Collection, Comic } from "../src/types";
+import { Page, PageSource } from "../src/pages/page";
+import { detailPageFrom } from "../src/pages/detail";
+import { collectionPageFrom } from "../src/pages/collection";
+import { buildDocumentHtml, buildViewHtml, PAGE_DATA_ID } from "../src/pages/shell";
+import { loadPageLayout, pageAssetPath } from "../build-chain/siteConfig";
+
+/**
+ * What a prerendered document promises: that the view it holds is the one the app would draw
+ * from the data it holds. The app relies on this when it adopts a document on a cold load rather
+ * than redrawing it, so it is checked here the way the app would check it — by reading the data
+ * back out of the document and drawing.
+ */
+
+const PROJECT_DIR = process.cwd();
+const template = fs.readFileSync(path.join(PROJECT_DIR, "src", "index.html"), "utf8");
+
+function loadSource(): PageSource {
+	const collectionData = loadCollectionData(PROJECT_DIR);
+	const comics: Comic[] = JSON.parse(exportComicsJson(PROJECT_DIR, collectionData));
+	const collectionIndex = JSON.parse(generateCollectionIndex(collectionData));
+	const descriptions: Record<string, string> = JSON.parse(exportDescriptions(PROJECT_DIR));
+
+	const comicsByDate = new Map<string, Comic[]>();
+	for (const comic of comics) {
+		if (!comicsByDate.has(comic.date)) comicsByDate.set(comic.date, []);
+		comicsByDate.get(comic.date)!.push(comic);
+	}
+	const collectionsById = new Map<string, Collection>(
+		collectionIndex.collections.map((collection: Collection) => [collection.id, collection]),
+	);
+	return {
+		comicsByDate,
+		allDays: computeDays(),
+		collectionIndex,
+		collectionsById,
+		descriptions: new Map(Object.entries(descriptions)),
+	};
+}
+
+function embeddedPage(document: string): Page {
+	const match = document.match(new RegExp(`<script type="application/json" id="${PAGE_DATA_ID}">(.*?)</script>`, "s"));
+	assert.ok(match, "the document embeds its page");
+	return JSON.parse(match[1]);
+}
+
+function activeView(document: string, view: string): string {
+	const match = document.match(
+		new RegExp(
+			`<div id="view-${view}" class="view active">(.*?)</div>\\s*<div id="view-|<div id="view-${view}" class="view active">(.*)</div>\\s*</main>`,
+			"s",
+		),
+	);
+	assert.ok(match, `the ${view} view is active`);
+	return match[1] ?? match[2];
+}
+
+const source = loadSource();
+const options = { siteUrl: "https://example.test", path: "" };
+
+test("a prerendered document", async (suite) => {
+	await suite.test("holds the view its embedded data draws, for a strip", () => {
+		// A Sunday with two printings and a strip with an alternate transcript are the busy cases.
+		for (const date of ["1985-11-18", "1986-07-06", "1987-01-07", "1995-12-31"]) {
+			const page = detailPageFrom(source, date);
+			const document = buildDocumentHtml(template, page, { ...options, path: `/${date}` });
+			const embedded = embeddedPage(document);
+			assert.deepEqual(embedded, page);
+			assert.equal(activeView(document, "detail"), buildViewHtml(embedded, false));
+		}
+	});
+
+	await suite.test("holds the view its embedded data draws, for a book", () => {
+		for (const collection of source.collectionIndex!.collections) {
+			const page = collectionPageFrom(source, collection.id);
+			const document = buildDocumentHtml(template, page, { ...options, path: `/collection/${collection.id}` });
+			const embedded = embeddedPage(document);
+			assert.deepEqual(embedded, page);
+			assert.equal(activeView(document, "collection"), buildViewHtml(embedded, false));
+			assert.ok(page.dates.length > 0, `${collection.id} highlights something in the grid`);
+		}
+	});
+
+	await suite.test("names itself and where it lives", () => {
+		const document = buildDocumentHtml(template, detailPageFrom(source, "1986-07-07"), {
+			...options,
+			path: "/1986-07-07",
+		});
+		assert.match(document, /<title>1986-07-07 — Find Calvin and Hobbes<\/title>/);
+		assert.match(document, /<link rel="canonical" href="https:\/\/example.test\/1986-07-07" \/>/);
+		assert.match(document, /<meta property="og:url" content="https:\/\/example.test\/1986-07-07" \/>/);
+		assert.doesNotMatch(document, /\{\{\w+\}\}/, "every template token is filled");
+	});
+
+	await suite.test("keeps its data inside its script tag whatever the transcript says", () => {
+		const page = detailPageFrom(source, "1986-07-07");
+		page.comics = [{ ...page.comics[0], transcript: 'Look: </script><script>alert("hi")</script>' }];
+		const document = buildDocumentHtml(template, page, options);
+		assert.deepEqual(embeddedPage(document), page);
+		assert.doesNotMatch(document, /alert\("hi"\)<\/script>/);
+	});
+});
+
+test("the page layout", async (suite) => {
+	await suite.test("puts a page where its host will find it", () => {
+		assert.equal(pageAssetPath("/", "html"), "index.html");
+		assert.equal(pageAssetPath("/", "directory"), "index.html");
+		assert.equal(pageAssetPath("/credits", "html"), "credits.html");
+		assert.equal(pageAssetPath("/credits", "directory"), "credits/index.html");
+		assert.equal(pageAssetPath("/collection/yukonho", "html"), "collection/yukonho.html");
+		assert.equal(pageAssetPath("/collection/yukonho", "directory"), "collection/yukonho/index.html");
+	});
+
+	await suite.test("is html unless told otherwise, and refuses a layout it does not know", () => {
+		const saved = process.env.PAGE_LAYOUT;
+		try {
+			process.env.PAGE_LAYOUT = "";
+			assert.equal(loadPageLayout(), "html");
+			process.env.PAGE_LAYOUT = "directory";
+			assert.equal(loadPageLayout(), "directory");
+			process.env.PAGE_LAYOUT = "folders";
+			assert.throws(() => loadPageLayout(), /PAGE_LAYOUT/);
+		} finally {
+			if (saved === undefined) delete process.env.PAGE_LAYOUT;
+			else process.env.PAGE_LAYOUT = saved;
+		}
+	});
+});

@@ -6,6 +6,7 @@ import { loadCollectionData } from "./collectionPages";
 import { exportComicsJson } from "./exportComicsJson";
 import { exportDescriptions } from "./exportDescriptions";
 import { generateCollectionIndex } from "./generateCollectionIndex";
+import { setSiteData } from "./siteData";
 
 const PLUGIN_NAME = "YamlToJsonPlugin";
 
@@ -45,6 +46,12 @@ class YamlToJsonPlugin {
 
 					const descriptionsJson = exportDescriptions(projectDir);
 					compilation.emitAsset("descriptions.json", new sources.RawSource(descriptionsJson));
+
+					setSiteData(compilation, {
+						comics: JSON.parse(comicsJson),
+						collectionIndex: JSON.parse(collectionIndexJson),
+						descriptions: JSON.parse(descriptionsJson),
+					});
 				},
 			);
 		});

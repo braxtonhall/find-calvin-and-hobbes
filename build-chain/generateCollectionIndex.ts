@@ -36,6 +36,8 @@ export function generateCollectionIndex(collectionData: CollectionData): string 
 
 		const collection: Record<string, unknown> = {
 			...rest,
+			// The YAML names the cover relative to the project; the page showing it may live at any depth.
+			image: `/${String(rest.image).replace(/^\/+/, "")}`,
 			dailies: collectionData.rangesById.get(source.id) || [],
 			specials: collectionData.specialsById.get(source.id) || {},
 			alterations: Object.fromEntries(
