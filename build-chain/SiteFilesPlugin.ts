@@ -7,10 +7,11 @@ import { loadSiteConfig } from "./siteConfig";
 const PLUGIN_NAME = "SiteFilesPlugin";
 
 /**
- * Emits the site's static files that depend on `SITE_URL`: `robots.txt`, `sitemap.xml`, and the
- * `CNAME` file for a GitHub Pages custom domain. Reads `.env` fresh on every compilation and watches
- * it, so `--watch` rebuilds when the configured URL changes. When no `SITE_URL` is set, the sitemap
- * reference and `sitemap.xml`/`CNAME` are omitted and the site deploys to the default `*.github.io`.
+ * Emits the site's static files that depend on `SITE_URL`: `robots.txt` and the `CNAME` file for a
+ * GitHub Pages custom domain. Reads `.env` fresh on every compilation and watches it, so `--watch`
+ * rebuilds when the configured URL changes. When no `SITE_URL` is set, the sitemap reference and
+ * `CNAME` are omitted and the site deploys to the default `*.github.io`. The sitemap itself is
+ * `PagesPlugin`'s, since it is a list of the pages that plugin writes.
  */
 class SiteFilesPlugin {
 	constructor(private readonly staticDir: string) {}
@@ -38,10 +39,6 @@ class SiteFilesPlugin {
 					compilation.emitAsset("robots.txt", new sources.RawSource(robots));
 
 					if (config) {
-						const sitemapSource = fs.readFileSync(path.join(staticDir, "sitemap.xml"), "utf8");
-						const sitemap = sitemapSource.replace(/{{siteUrl}}/g, config.siteUrl);
-						compilation.emitAsset("sitemap.xml", new sources.RawSource(sitemap));
-
 						compilation.emitAsset("CNAME", new sources.RawSource(config.host));
 					}
 				},

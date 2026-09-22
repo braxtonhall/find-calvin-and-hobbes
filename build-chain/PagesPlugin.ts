@@ -11,6 +11,7 @@ import { collectionPageFrom } from "../src/pages/collection";
 import { buildDocumentHtml } from "../src/pages/shell";
 import { getSiteData, SiteData } from "./siteData";
 import { loadPageLayout, loadSiteConfig, pageAssetPath } from "./siteConfig";
+import { buildSitemapXml } from "./sitemap";
 
 const PLUGIN_NAME = "PagesPlugin";
 
@@ -49,6 +50,9 @@ function buildPageSource(data: SiteData): PageSource {
  * The home page is also written as `404.html` and `not_found.html`, which is where GitHub Pages
  * and Neocities respectively send an address that has no file; the app reads the address and
  * takes it from there. Where the other files go is `PAGE_LAYOUT`'s call — see `siteConfig.ts`.
+ *
+ * When the site's URL is known, `sitemap.xml` is written too, listing the pages a crawler should
+ * start from — see `sitemap.ts` for which those are.
  */
 class PagesPlugin {
 	constructor(private readonly templatePath: string) {}
@@ -87,12 +91,20 @@ class PagesPlugin {
 					emitPage(CREDITS_PATH, { view: "credits" });
 					emitPage(SEARCH_PATH, { view: "results", q: "", sort: "rank" });
 
+					const collectionPaths: string[] = [];
 					for (const collection of data.collectionIndex.collections) {
-						emitPage(buildCollectionPath(collection.id), collectionPageFrom(source, collection.id));
+						const routePath = buildCollectionPath(collection.id);
+						collectionPaths.push(routePath);
+						emitPage(routePath, collectionPageFrom(source, collection.id));
 					}
 
 					for (const date of source.comicsByDate.keys()) {
 						emitPage(buildComicPath(date), detailPageFrom(source, date));
+					}
+
+					if (siteUrl) {
+						const sitemap = buildSitemapXml(siteUrl, [HOME_PATH, CREDITS_PATH, ...collectionPaths]);
+						compilation.emitAsset("sitemap.xml", new sources.RawSource(sitemap));
 					}
 				},
 			);
