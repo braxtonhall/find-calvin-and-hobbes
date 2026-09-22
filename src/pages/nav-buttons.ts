@@ -1,4 +1,5 @@
 import { HOME_PATH } from "../routes";
+import { addressOf } from "../base-path";
 
 /**
  * Back is a `<button>` whether or not it can go anywhere: `history.back()` is a step through a
@@ -14,7 +15,7 @@ export function buildBackButton(className: string, canGoBack: boolean): string {
 
 // A link, because home has an address.
 export function buildHomeButton(className: string): string {
-	return `<a class="${className}" href="${HOME_PATH}"><span class="home-icon">&#8962;</span> Home</a>`;
+	return `<a class="${className}" href="${addressOf(HOME_PATH)}"><span class="home-icon">&#8962;</span> Home</a>`;
 }
 
 export function buildBackAndHomeButtons(canGoBack: boolean): string {

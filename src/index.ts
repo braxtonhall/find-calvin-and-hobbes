@@ -10,6 +10,7 @@ import {
 	handleRoute,
 	markInitialHistoryEntry,
 	navigate,
+	navigateTo,
 	parseRoute,
 	readPrerenderedPage,
 } from "./router";
@@ -65,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
 				// The arrows on the page already know where they go, and they know it on a prerendered
 				// page before the archive has loaded, which is more than the state does.
 				const arrow = document.querySelector<HTMLAnchorElement>(event.key === "ArrowLeft" ? "#nav-prev" : "#nav-next");
-				if (arrow) navigate(arrow.getAttribute("href")!);
+				if (arrow) navigateTo(arrow.href);
 			}
 		}
 

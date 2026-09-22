@@ -1,6 +1,7 @@
 import { escHtml } from "../utils";
 import { formatLongDate } from "../date-utils";
 import { SITE_NAME } from "../routes";
+import { basePath } from "../base-path";
 import { Page, pageTitle } from "./page";
 import { buildLandingHtml } from "./landing";
 import { buildCreditsHtml } from "./credits";
@@ -12,9 +13,9 @@ import { buildCollectionHtml } from "./collection";
  *
  * The build writes one of these per address. The template holds everything every page shares —
  * the sidebar, the script and stylesheet, the view containers — and this fills the three things
- * that vary: the title, the head's metadata, and the content of the view that is showing. The
- * page's data goes into the head as JSON so the app can pick the page up where the build left it
- * without fetching the archive first.
+ * that vary: the title, the head's metadata, and the content of the view that is showing, plus
+ * the mount the script and stylesheet are served from. The page's data goes into the head as JSON
+ * so the app can pick the page up where the build left it without fetching the archive first.
  */
 
 export const VIEWS = ["landing", "results", "detail", "collection", "credits"] as const;
@@ -61,11 +62,15 @@ function pageDescription(page: Page): string {
 	}
 }
 
-/** The strip itself where there is one on disk, so that a shared link previews the comic rather than the logo. */
+/**
+ * The strip itself where there is one on disk, so that a shared link previews the comic rather
+ * than the logo. An image path is already written from the mount, so it goes on the origin alone.
+ */
 function pageImage(page: Page, siteUrl: string): string {
+	const origin = siteUrl ? new URL(siteUrl).origin : "";
 	const own = page.view === "detail" ? page.comics.find((comic) => comic.image)?.image : undefined;
-	if (own) return siteUrl + own;
-	if (page.view === "collection" && page.collection) return siteUrl + page.collection.image;
+	if (own) return origin + own;
+	if (page.view === "collection" && page.collection) return origin + page.collection.image;
 	return DEFAULT_IMAGE;
 }
 
@@ -123,6 +128,7 @@ export function buildDocumentHtml(template: string, page: Page, options: Documen
 		title: escHtml(pageTitle(page)),
 		head: buildHeadHtml(page, options),
 		views: buildViewsHtml(page),
+		base: escHtml(basePath()),
 	};
 	return template.replace(/\{\{(\w+)\}\}/g, (token, name: string) => {
 		if (!(name in fields)) throw new Error(`Unknown template token ${token} in ${SITE_NAME} page template`);

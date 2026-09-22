@@ -2,8 +2,11 @@ import fs from "fs";
 import path from "path";
 
 export interface SiteConfig {
+	/** The site's address with no trailing slash — `https://example.com`, or `https://example.com/prefix` — which every page's path is appended to. */
 	siteUrl: string;
 	host: string;
+	/** The path the site is mounted at, `/` or `/prefix/`. See `src/base-path.ts`. */
+	basePath: string;
 }
 
 /**
@@ -79,6 +82,9 @@ export function pageAssetPath(routePath: string, layout: PageLayout): string {
  * Returns the configured site, or `null` when no `SITE_URL` is set (so a local build can succeed
  * without one). Throws when a value is set but malformed, so a bad URL fails loudly rather than
  * silently producing wrong output.
+ *
+ * A path on the URL mounts the site below the origin's root — `https://user.github.io/repo` is
+ * what a GitHub project page is served at — and the build writes every address from there.
  */
 export function loadSiteConfig(): SiteConfig | null {
 	const raw = readSetting("SITE_URL");
@@ -96,9 +102,10 @@ export function loadSiteConfig(): SiteConfig | null {
 	if (url.protocol !== "https:") {
 		throw new Error(`SITE_URL must use the https protocol (got "${raw}").`);
 	}
-	if (url.pathname !== "/" || url.search || url.hash || url.port) {
-		throw new Error(`SITE_URL must be a bare https origin with no path, port, query, or fragment (got "${raw}").`);
+	if (url.search || url.hash || url.port) {
+		throw new Error(`SITE_URL must be an https URL with no port, query, or fragment (got "${raw}").`);
 	}
 
-	return { siteUrl: url.origin, host: url.hostname };
+	const basePath = url.pathname.replace(/\/*$/, "/");
+	return { siteUrl: url.origin + basePath.slice(0, -1), host: url.hostname, basePath };
 }
