@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Box, place } from "../src/placement";
+import { Box, place, shed } from "../src/placement";
 
 /** A phone-shaped viewport, and the same one with a keyboard taking the bottom half of it. */
 const PHONE: Box = { top: 0, left: 0, width: 390, height: 800 };
@@ -108,5 +108,33 @@ test("staying on the screen", async (suite) => {
 	await suite.test("a band too short for either side clamps to the band, not to the document", () => {
 		const scrolled: Box = { top: 400, left: 0, width: 390, height: 200 };
 		assert.equal(place(box(500), MENU, scrolled, 4).top, 408);
+	});
+});
+
+test("shedding a row", async (suite) => {
+	// Five buttons, Book last, and the first four may go in that order.
+	const widths = [60, 70, 50, 70, 60];
+	const order = [2, 1, 3, 0];
+
+	await suite.test("nothing goes while everything fits", () => {
+		assert.deepEqual(shed(widths, 6, 334, order), new Set());
+	});
+
+	await suite.test("the first in the order goes on the first pixel short", () => {
+		assert.deepEqual(shed(widths, 6, 333, order), new Set([2]));
+	});
+
+	// Shedding a box gives back its gap along with its width: 334 - 50 - 6 is 278.
+	await suite.test("a shed box takes its gap with it", () => {
+		assert.deepEqual(shed(widths, 6, 278, order), new Set([2]));
+		assert.deepEqual(shed(widths, 6, 277, order), new Set([2, 1]));
+	});
+
+	await suite.test("the order is the order, not the widths", () => {
+		assert.deepEqual(shed(widths, 6, 150, order), new Set([2, 1, 3]));
+	});
+
+	await suite.test("what is not in the order stays whatever the room", () => {
+		assert.deepEqual(shed(widths, 6, 0, order), new Set([2, 1, 3, 0]));
 	});
 });

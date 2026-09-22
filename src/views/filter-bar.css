@@ -1,44 +1,37 @@
 /*
  * The second row of the sticky block: the count on the left, the dropdowns on the right.
  *
- * It wraps rather than scrolls or hides, count first, and only when it must: four short labels and a
- * count fit on one line down to most phone widths, so there is nothing here worth putting behind a
- * "more" control — and nothing worth breaking the row for while it still fits.
+ * One line, always. It neither wraps nor scrolls: five short labels and a count fit down to most
+ * phone widths, and where they do not, `fit` in `filter-bar.ts` takes dropdowns away rather than
+ * let the row break — a second line of buttons under the count is a toolbar, and this is not one.
+ * The `gap` is what `fit` measures against, so the two are the same number.
  */
 .filter-bar {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	flex-wrap: wrap;
 	gap: 6px;
 	margin-top: 6px;
 }
 
-/* The same box as a `filter-drop`, so the count and the labels line up by their glyphs whether they
-   share a line or the row has broken and the first label is sitting under the count. */
+/* The same box as a `filter-drop`, so the count and the labels line up by their glyphs. Neither
+   shrinks nor wraps: `fit` reads its width and makes the fields answer for it. */
 .filter-count {
+	flex-shrink: 0;
 	padding: 3px 7px;
 	font-size: 13px;
+	white-space: nowrap;
 	color: var(--text-muted);
 }
 
-/*
- * `flex-shrink: 0` is what makes the row break as a block: the group asks for the full width of its
- * four buttons, so when that no longer fits beside the count the bar's own `flex-wrap` drops the
- * whole group to a second line instead of squeezing the buttons in beside it. `max-width` is the
- * floor under that — where the four alone are wider than the bar, they wrap among themselves rather
- * than run off the page.
- *
- * No `margin-left: auto`: the bar is `space-between` already, which is the same right edge on a
- * shared line, and the left edge — not the right — on a line of their own.
- */
+/* `flex-shrink: 0` so a button is measured at the width it asks for rather than the width the row
+   has left — with every button shown, which is how `fit` reads them, the group can be wider than
+   the bar for the length of one task. */
 .filter-fields {
 	display: flex;
 	align-items: center;
-	flex-wrap: wrap;
 	flex-shrink: 0;
 	gap: 6px;
-	max-width: 100%;
 }
 
 /*
@@ -62,6 +55,11 @@
 	border: none;
 	border-radius: 5px;
 	cursor: pointer;
+}
+
+/* The `display` above beats the attribute's own `display: none`, so it is said again here. */
+.filter-drop[hidden] {
+	display: none;
 }
 
 .filter-drop:hover,

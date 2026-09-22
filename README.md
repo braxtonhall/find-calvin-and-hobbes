@@ -75,6 +75,17 @@ cp .env.sample .env
 
 Leave `SITE_URL` unset to build without those files.
 
+### Corrections
+
+Every page that holds something correctable — a strip, a book, the credits — carries a link to a
+form for reporting what is wrong with it. The form opens knowing which page it was sent from, which
+site it was sent from, and which commit that site was built at.
+
+It is one form for every deployment, so that a correction sent from a fork arrives with the rest
+rather than nowhere, and its address is written in `src/pages/correction.ts` rather than configured.
+A build that wants no part of it sets `CORRECTIONS=false`, which leaves the link out of every page
+rather than hiding it.
+
 ### Images
 
 Comic strip images go in `assets/comics/` named by date as `YYYYMMDD.ext` (e.g. `assets/comics/19851118.gif`). Collection cover images go directly in `assets/` (e.g. `assets/book1.png`). The webpack build discovers these automatically and copies them into `dist/assets/`.

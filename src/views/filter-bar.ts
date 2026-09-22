@@ -9,12 +9,12 @@ import {
 	removeToken,
 	selectedTokens,
 } from "../query-edit";
-import { naturalHeight, onViewportShift, place, viewport } from "../placement";
+import { naturalHeight, onViewportShift, place, shed, viewport } from "../placement";
 import { escHtml } from "../utils";
 import { editQueryInput } from "./query-input";
 
 /**
- * The row under the search box: a result count, and four dropdowns that write `@filters` into the
+ * The row under the search box: a result count, and five dropdowns that write `@filters` into the
  * query text.
  *
  * The filter language is good and nobody finds it, because the only two ways in — typing an `@`,
@@ -64,6 +64,20 @@ const GRID_COLUMNS = 7;
  */
 const CLEAR_HTML = `<button type="button" class="filter-menu-clear" tabindex="-1">Clear</button>`;
 
+/**
+ * The order the dropdowns give way in on a screen too narrow for all of them, first to go first.
+ * The row does not wrap: a second line of buttons under the count is a toolbar, and the bar is not
+ * one — so what does not fit goes, and the query box keeps every filter it wrote.
+ *
+ * `Book` is not in it. Every other field is a shortcut to a token the reader could type, and on a
+ * phone a reader who has seen `@year:1988` once can type it again. A book's token is an id, and
+ * the dropdown is the only place its title is spelled out — take it away and there is no way in.
+ */
+const SHED_ORDER = ["day", "month", "format", "year"];
+
+/** The space the stylesheet leaves between the count and the fields, and between the fields. */
+const GAP = 6;
+
 interface Dropdown {
 	field: FilterField;
 	button: HTMLButtonElement;
@@ -71,6 +85,7 @@ interface Dropdown {
 
 /** The box every click writes into, and the box every checkmark is read back out of. */
 let target: HTMLInputElement | null = null;
+let bar: HTMLElement | null = null;
 let dropdowns: Dropdown[] = [];
 let count: HTMLElement | null = null;
 let menu: HTMLDivElement | null = null;
@@ -445,6 +460,44 @@ function paint(): void {
 }
 
 /**
+ * Hides as many dropdowns as the row is too narrow for, in `SHED_ORDER`.
+ *
+ * Measured rather than written as breakpoints, because the room is not a function of the screen:
+ * the count beside the fields is as wide as its number, and the sidebar takes a share of the
+ * window on a desktop and none on a phone. Everything is shown and then read, so a button hidden
+ * on the last pass is measured at its real width and not at the nought a hidden box reports —
+ * all inside one task, so nothing is painted between.
+ */
+function fit(): void {
+	if (bar === null || count === null) return;
+	const room = bar.getBoundingClientRect().width;
+	// The results view is `display: none` behind another, or the bar is not attached yet. Nothing
+	// here measures, and the observer will call again once something does.
+	if (room === 0) return;
+
+	// Read before anything is hidden: a button that goes with the focus on it, or on a row of its
+	// menu, leaves the focus on `document.body`.
+	const held = dropdowns.find(
+		({ button }) => button === document.activeElement || (open?.button === button && filterMenuHasFocus()),
+	);
+
+	for (const { button } of dropdowns) button.hidden = false;
+	const widths = dropdowns.map(({ button }) => button.getBoundingClientRect().width);
+	const order = SHED_ORDER.map((name) => dropdowns.findIndex(({ field }) => field.name === name));
+	const gone = shed(widths, GAP, room - count.getBoundingClientRect().width - GAP, order);
+
+	for (const [index, dropdown] of dropdowns.entries()) {
+		const hidden = gone.has(index);
+		dropdown.button.hidden = hidden;
+		if (hidden && open === dropdown) closeMenu();
+	}
+
+	// The focus goes to the nearest button still standing, which is what a reader who was tabbing
+	// along the row expects to find under the same key.
+	if (held !== undefined && held.button.hidden) dropdowns.findLast(({ button }) => !button.hidden)?.button.focus();
+}
+
+/**
  * Built once, with the search bar, rather than in `resultsHtml` — which is rebuilt on every
  * keystroke and would tear an open dropdown down as the reader typed. The bar survives its
  * renders, exactly as the input does and for exactly the same reason.
@@ -452,15 +505,16 @@ function paint(): void {
 export function buildFilterBar(input: HTMLInputElement): HTMLElement {
 	target = input;
 
-	const bar = document.createElement("div");
-	bar.className = "filter-bar";
-	bar.innerHTML = `<div class="filter-count" id="filter-count" role="status"></div>
+	const element = document.createElement("div");
+	element.className = "filter-bar";
+	element.innerHTML = `<div class="filter-count" id="filter-count" role="status"></div>
 		<div class="filter-fields">${FILTER_FIELDS.map(dropdownHtml).join("")}</div>`;
+	bar = element;
 
-	count = bar.querySelector<HTMLElement>(".filter-count");
+	count = element.querySelector<HTMLElement>(".filter-count");
 	dropdowns = FILTER_FIELDS.map((field) => ({
 		field,
-		button: bar.querySelector<HTMLButtonElement>(`#filter-drop-${field.name}`)!,
+		button: element.querySelector<HTMLButtonElement>(`#filter-drop-${field.name}`)!,
 	}));
 	for (const dropdown of dropdowns) attachDropdown(dropdown);
 
@@ -468,8 +522,13 @@ export function buildFilterBar(input: HTMLInputElement): HTMLElement {
 	// the keystroke that finishes it instead of 200ms later when the search comes back.
 	input.addEventListener("input", paint);
 
+	// The bar's own width is the one thing that changes under it that no render tells it about: a
+	// window resized, a phone turned, the sidebar shown or hidden. The first call comes with the
+	// first layout, which is after this returns and the bar is attached.
+	new ResizeObserver(fit).observe(element);
+
 	paint();
-	return bar;
+	return element;
 }
 
 /**
@@ -503,5 +562,7 @@ export function syncFilterBar(results: number): void {
 	// Nothing where there are none: the empty state says "No comics found" a line below, and
 	// "0 results" beside it would only be saying it twice.
 	if (count !== null) count.textContent = results === 0 ? "" : `${results} result${results === 1 ? "" : "s"}`;
+	// The count is the other thing that takes room from the fields, and it has just changed width.
+	fit();
 	paint();
 }
