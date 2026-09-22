@@ -7,6 +7,7 @@ import { buildLandingHtml } from "./landing";
 import { buildCreditsHtml } from "./credits";
 import { buildDetailHtml } from "./detail";
 import { buildCollectionHtml } from "./collection";
+import { buildCorrectionLinkHtml } from "./correction";
 
 /**
  * A whole document: the template in `src/index.html` with a page's head and body filled in.
@@ -33,6 +34,10 @@ export interface DocumentOptions {
 	siteUrl: string;
 	/** The address this document is served at, for the canonical link and `og:url`. */
 	path: string;
+	/** The build this document was written by, which the corrections link reports. */
+	commit?: string;
+	/** Whether to write the corrections link at all. A fork that wants none sets `CORRECTIONS=false`. */
+	corrections?: boolean;
 }
 
 /** A transcript is a wall of dialogue; the first sentence or two of it is what a link preview has room for. */
@@ -129,6 +134,15 @@ export function buildDocumentHtml(template: string, page: Page, options: Documen
 		head: buildHeadHtml(page, options),
 		views: buildViewsHtml(page),
 		base: escHtml(basePath()),
+		correction:
+			options.corrections === false
+				? ""
+				: buildCorrectionLinkHtml({
+						view: page.view,
+						// Without a `SITE_URL` the build has no origin to write; the app fills the real one in.
+						url: options.siteUrl + options.path,
+						commit: options.commit ?? "unknown",
+					}),
 	};
 	return template.replace(/\{\{(\w+)\}\}/g, (token, name: string) => {
 		if (!(name in fields)) throw new Error(`Unknown template token ${token} in ${SITE_NAME} page template`);

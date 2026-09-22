@@ -125,7 +125,50 @@
 	pointer-events: auto;
 }
 
+/*
+ * The corrections link, which the build writes outside the views so that it outlives every
+ * navigation. It fades in with `viewFadeIn`, the animation the views themselves come in on, and
+ * goes as instantly as an outgoing view does — which is what `hidden` gives for nothing, and why
+ * nothing here transitions `visibility`.
+ */
+.correction-link {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	position: fixed;
+	bottom: 16px;
+	right: 16px;
+	/* Under `.mobile-overlay`, so an open grid dims this too. */
+	z-index: 97;
+	padding: 3px 7px;
+	font-family: var(--font);
+	font-size: 10px;
+	color: var(--text-muted);
+	/* Opaque, so that it stays legible where the page has scrolled something underneath it. */
+	background: var(--bg);
+	border: 1px solid var(--grey);
+	border-radius: 4px;
+	text-decoration: none;
+	animation: viewFadeIn 0.5s ease;
+}
+
+.correction-link:hover {
+	background: var(--grey);
+	color: var(--text);
+}
+
+/* The class sets a `display`, which would otherwise win over the one `[hidden]` carries. */
+.correction-link[hidden] {
+	display: none;
+}
+
 @media (max-width: 768px) {
+	/* The other corner, since `.mobile-grid-toggle` has this one. */
+	.correction-link {
+		right: auto;
+		left: 16px;
+	}
+
 	#sidebar {
 		display: flex;
 		position: fixed;

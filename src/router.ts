@@ -13,6 +13,7 @@ import { renderDetail } from "./views/detail";
 import { renderCollection } from "./views/collection";
 import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
+import { updateCorrectionLink } from "./views/correction";
 
 export function parseRoute(): Route {
 	const path = pathOf(location.pathname);
@@ -186,6 +187,10 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
  */
 export function handleRoute(prerendered: Page | null = null): void {
 	const route = parseRoute();
+
+	// Before the loading view can return early below: the link is chrome, and stale chrome would
+	// send a correction about the page the reader came from.
+	updateCorrectionLink(route.view);
 
 	// The filter dropdowns float on the body, so hiding the results view does not hide them. Every
 	// other route leaves them behind; the results view keeps whichever one is open, because a search

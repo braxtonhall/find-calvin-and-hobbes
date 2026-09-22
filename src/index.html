@@ -50,6 +50,10 @@
 
 		<main id="main">{{views}}</main>
 
+		<!-- Chrome, so that it outlives every navigation. `src/pages/correction.ts` writes it and
+		`src/views/correction.ts` keeps it pointed at the page showing. -->
+		{{correction}}
+
 		<noscript>
 			<div style="padding: 40px; text-align: center; font-family: sans-serif">
 				<h1>JavaScript Required</h1>
