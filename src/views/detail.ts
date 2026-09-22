@@ -1,7 +1,7 @@
 import "./detail.css";
 
 import { state } from "../state";
-import { escHtml } from "../utils";
+import { escHtml, scrollCellIntoViewIfNeeded } from "../utils";
 import { loadDescriptions } from "../details";
 import { isBookmarked, toggleBookmark } from "../bookmarks";
 import { canGoBack, parseRoute } from "../router";
@@ -185,6 +185,26 @@ function attachCollectionBookHandlers(element: HTMLElement, page: DetailPage): v
 	followCollectionTooltip();
 }
 
+function attachRerunLinkHandler(element: HTMLElement): void {
+	const link = element.querySelector<HTMLElement>(".detail-rerun-link");
+	if (!link) return;
+
+	link.addEventListener("mouseenter", () => {
+		if (state.hoveredCell) state.hoveredCell.classList.remove("cell--hover-highlight");
+		const cell = document.querySelector<HTMLElement>(`.cell[data-date="${link.dataset.originalDate}"]`);
+		if (!cell) return;
+		cell.classList.add("cell--hover-highlight");
+		state.hoveredCell = cell;
+		scrollCellIntoViewIfNeeded(cell);
+	});
+
+	link.addEventListener("mouseleave", () => {
+		if (!state.hoveredCell) return;
+		state.hoveredCell.classList.remove("cell--hover-highlight");
+		state.hoveredCell = null;
+	});
+}
+
 /**
  * Draws a strip's page, or — with `adopt` — takes over the one the build drew from the same
  * `page`, attaching what the markup cannot carry: the handlers.
@@ -197,6 +217,7 @@ export function renderDetail(page: DetailPage, adopt: boolean = false): void {
 	}
 
 	attachBackAndHomeHandlers(element);
+	attachRerunLinkHandler(element);
 
 	const copyButton = element.querySelector<HTMLButtonElement>("#copy-link-btn");
 	if (copyButton) buildCopyLinkButtonHandler(copyButton);

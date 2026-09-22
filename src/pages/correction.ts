@@ -23,17 +23,18 @@ export function showsCorrection(view: Page["view"]): boolean {
 }
 
 /**
- * The box the form opens with checked, which is what the page is about. Credits is about the site
- * rather than the archive, so it checks nothing and the reader says what they mean.
+ * The boxes the form opens with checked, which is what the page is about. A rerun day's page is
+ * about the strip and the rerun both, since either could be what is wrong. Credits is about the
+ * site rather than the archive, so it checks nothing and the reader says what they mean.
  */
-export function correctionKind(view: Page["view"]): string | null {
+export function correctionKinds(view: Page["view"], rerun: boolean): string[] {
 	switch (view) {
 		case "detail":
-			return "Comic";
+			return rerun ? ["Comic", "Rerun"] : ["Comic"];
 		case "collection":
-			return "Collection";
+			return ["Collection"];
 		default:
-			return null;
+			return [];
 	}
 }
 
@@ -52,12 +53,14 @@ export interface CorrectionContext {
 	url: string;
 	/** The build this was reported from, so a correction can be read against the archive it was made from. */
 	commit: string;
+	/** Whether the page is a rerun day's, which the form has its own box for. */
+	rerun?: boolean;
 }
 
-export function buildCorrectionUrl({ view, url, commit }: CorrectionContext): string {
+export function buildCorrectionUrl({ view, url, commit, rerun = false }: CorrectionContext): string {
 	const parameters = new URLSearchParams({ usp: "pp_url" });
-	const kind = correctionKind(view);
-	if (kind) parameters.set(KIND_FIELD, kind);
+	// The field is checkboxes, which the form prefills from the same field given once per box.
+	for (const kind of correctionKinds(view, rerun)) parameters.append(KIND_FIELD, kind);
 	parameters.set(URL_FIELD, url);
 	parameters.set(SITE_FIELD, originOf(url));
 	parameters.set(COMMIT_FIELD, commit);

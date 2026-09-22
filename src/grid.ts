@@ -10,11 +10,13 @@ import { buildComicPath } from "./routes";
 import { addressOf } from "./base-path";
 
 export function updateGridStatesFromData(): void {
-	const cells = document.querySelectorAll(".cell--has-comic");
+	const cells = document.querySelectorAll(".cell");
 	for (const cell of cells) {
 		const element = cell as HTMLElement;
 		const date = element.dataset.date;
 		if (!date) continue;
+		if (state.reruns.has(date)) element.classList.add("cell--rerun");
+		if (!element.classList.contains("cell--has-comic")) continue;
 		const comicsForDate = state.comicsByDate.get(date);
 		if (!comicsForDate || comicsForDate.length === 0) {
 			element.classList.remove("cell--has-comic");
@@ -319,6 +321,9 @@ export async function loadComicData(): Promise<void> {
 			if (!state.comicsByDate.has(comic.date)) state.comicsByDate.set(comic.date, []);
 			state.comicsByDate.get(comic.date)!.push(comic);
 		}
+
+		const rerunsResponse = await fetch(addressOf("/reruns.json"));
+		state.reruns = new Map(Object.entries((await rerunsResponse.json()) as Record<string, string>));
 	} catch {
 		const loading = document.getElementById("loading")!;
 		loading.classList.remove("hidden");

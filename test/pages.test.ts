@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import path from "path";
 import { loadCollectionData } from "../build-chain/collectionPages";
+import { loadComicSource } from "../build-chain/comicSource";
 import { exportComicsJson } from "../build-chain/exportComicsJson";
+import { exportRerunsJson } from "../build-chain/reruns";
 import { exportDescriptions } from "../build-chain/exportDescriptions";
 import { generateCollectionIndex } from "../build-chain/generateCollectionIndex";
 import { computeDays } from "../src/days";
@@ -27,6 +29,9 @@ const template = fs.readFileSync(path.join(PROJECT_DIR, "src", "index.html"), "u
 function loadSource(): PageSource {
 	const collectionData = loadCollectionData(PROJECT_DIR);
 	const comics: Comic[] = JSON.parse(exportComicsJson(PROJECT_DIR, collectionData));
+	const reruns: Record<string, string> = JSON.parse(
+		exportRerunsJson(PROJECT_DIR, loadComicSource(path.join(PROJECT_DIR, "comics.yaml"))),
+	);
 	const collectionIndex = JSON.parse(generateCollectionIndex(collectionData));
 	const descriptions: Record<string, string> = JSON.parse(exportDescriptions(PROJECT_DIR));
 
@@ -40,6 +45,7 @@ function loadSource(): PageSource {
 	);
 	return {
 		comicsByDate,
+		reruns: new Map(Object.entries(reruns)),
 		allDays: computeDays(),
 		collectionIndex,
 		collectionsById,
@@ -69,8 +75,9 @@ const options = { siteUrl: "https://example.test", path: "" };
 
 test("a prerendered document", async (suite) => {
 	await suite.test("holds the view its embedded data draws, for a strip", () => {
-		// A Sunday with two printings and a strip with an alternate transcript are the busy cases.
-		for (const date of ["1985-11-18", "1986-07-06", "1987-01-07", "1995-12-31"]) {
+		// A Sunday with two printings, a strip with an alternate transcript, and a rerun day are the
+		// busy cases.
+		for (const date of ["1985-11-18", "1986-07-06", "1987-01-07", "1991-05-05", "1995-12-31"]) {
 			const page = detailPageFrom(source, date);
 			const document = buildDocumentHtml(template, page, { ...options, path: `/${date}` });
 			const embedded = embeddedPage(document);

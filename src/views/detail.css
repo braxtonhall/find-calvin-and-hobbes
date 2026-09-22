@@ -262,6 +262,21 @@
 	padding: 40px 0;
 }
 
+.detail-rerun-banner {
+	font-size: 13px;
+	color: var(--text-muted);
+	margin-bottom: 24px;
+}
+
+.detail-rerun-link {
+	color: var(--golden);
+	text-decoration: none;
+}
+
+.detail-rerun-link:hover {
+	text-decoration: underline;
+}
+
 .detail-collections-heading {
 	font-size: 12px;
 	color: var(--text-muted);

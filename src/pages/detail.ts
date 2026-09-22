@@ -94,12 +94,15 @@ function summarizeCollections(source: PageSource, comics: Comic[]): DetailCollec
 
 /** The page for a date, from whatever holds the archive — the app's state or the build's data. */
 export function detailPageFrom(source: PageSource, date: string, alternates: string[] = []): DetailPage {
-	const comics = source.comicsByDate.get(date) ?? [];
+	const rerunOf = source.reruns.get(date) ?? null;
+	// A rerun day holds no strip of its own; it shows the one that ran again, from the original day.
+	const comics = source.comicsByDate.get(date) ?? (rerunOf ? (source.comicsByDate.get(rerunOf) ?? []) : []);
 	return {
 		view: "detail",
 		date,
 		alternates,
 		comics,
+		rerunOf,
 		prevDate: getAdjacentComicDate(source, date, -1),
 		nextDate: getAdjacentComicDate(source, date, 1),
 		collections: summarizeCollections(source, comics),
@@ -245,8 +248,8 @@ export function describeImageFor(page: DetailPage, comic: Comic): string {
 	return describeImage(getPageDescription(page, comic), formatLongDate(page.date));
 }
 
-function buildComicBodiesHtml(page: DetailPage, dateFormatted: string, isSunday: boolean): string {
-	const { date, comics, alternates } = page;
+function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: string, isSunday: boolean): string {
+	const { comics, alternates } = page;
 	const collectionsById = new Map(page.collections.map((collection) => [collection.id, collection]));
 	const descriptionsResolved = page.descriptions !== null;
 
@@ -286,10 +289,23 @@ function buildComicBodiesHtml(page: DetailPage, dateFormatted: string, isSunday:
 	return bodies;
 }
 
+/**
+ * A rerun day shows the strip it reran, so this sits above it as a note of where it's from.
+ * `data-original-date` is what the view reads to light up that strip's cell in the grid while the
+ * link is hovered.
+ */
+function buildRerunBannerHtml(originalDate: string): string {
+	return `<p class="detail-rerun-banner">Originally ran <a class="detail-rerun-link" href="${addressOf(buildComicPath(originalDate))}" data-original-date="${originalDate}">${formatLongDate(originalDate)}</a></p>`;
+}
+
 export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
-	const { date, comics, prevDate, nextDate } = page;
+	const { date, comics, prevDate, nextDate, rerunOf } = page;
 	const dateFormatted = formatLongDate(date);
 	const isSunday = weekdayOf(date) === 0;
+	// A rerun's strip is drawn as of the day it originally ran — its own weekday, its own read links.
+	const contentDate = rerunOf ?? date;
+	const contentDateFormatted = rerunOf ? formatLongDate(contentDate) : dateFormatted;
+	const contentIsSunday = rerunOf ? weekdayOf(contentDate) === 0 : isSunday;
 
 	const prevButtonHtml = prevDate
 		? `<a class="nav-btn" id="nav-prev" href="${addressOf(buildComicPath(prevDate))}" data-date="${prevDate}" title="Previous comic">&larr;</a>`
@@ -305,12 +321,14 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark"><svg class="bookmark-icon" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button> ${prevButtonHtml} ${nextButtonHtml}
 		</div>`;
 
+	const rerunBannerHtml = rerunOf ? buildRerunBannerHtml(rerunOf) : "";
 	const bodyHtml =
 		comics.length === 0
 			? `<p class="detail-missing">No comics found</p>`
-			: buildComicBodiesHtml(page, dateFormatted, isSunday);
+			: buildComicBodiesHtml(page, contentDate, contentDateFormatted, contentIsSunday);
 
 	return `${headerHtml}
+		${rerunBannerHtml}
 		${bodyHtml}
 	</div>`;
 }

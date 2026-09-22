@@ -42,6 +42,8 @@ export interface DetailPage {
 	/** Compact dates whose alternate transcript is shown first — the `?alternate=` parameter. */
 	alternates: string[];
 	comics: Comic[];
+	/** The date of the strip that ran again on this one, when this is a rerun day and holds no strip of its own. */
+	rerunOf: string | null;
 	prevDate: string | null;
 	nextDate: string | null;
 	collections: DetailCollection[];
@@ -68,6 +70,8 @@ export type Page = LandingPage | CreditsPage | ResultsPage | DetailPage | Collec
  */
 export interface PageSource {
 	comicsByDate: Map<string, Comic[]>;
+	/** Rerun date to the date of the strip it reran. */
+	reruns: Map<string, string>;
 	allDays: Day[];
 	collectionIndex: CollectionIndex | null;
 	collectionsById: Map<string, Collection> | null;

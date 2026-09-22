@@ -34,6 +34,7 @@ function buildPageSource(data: SiteData): PageSource {
 	}
 	return {
 		comicsByDate,
+		reruns: new Map(Object.entries(data.reruns)),
 		allDays: computeDays(),
 		collectionIndex: data.collectionIndex,
 		collectionsById,
@@ -104,7 +105,8 @@ class PagesPlugin {
 						emitPage(routePath, collectionPageFrom(source, collection.id));
 					}
 
-					for (const date of source.comicsByDate.keys()) {
+					// A rerun day has a page too, pointing at the strip that ran again on it.
+					for (const date of [...source.comicsByDate.keys(), ...source.reruns.keys()]) {
 						emitPage(buildComicPath(date), detailPageFrom(source, date));
 					}
 

@@ -23,11 +23,14 @@ const detail: Page = {
 	date: "1986-07-07",
 	alternates: [],
 	comics: [{ date: "1986-07-07", transcript: "Hi." }],
+	rerunOf: null,
 	prevDate: null,
 	nextDate: null,
 	collections: [],
 	descriptions: {},
 };
+
+const rerun: Page = { ...detail, date: "1995-12-31", rerunOf: "1986-07-07" };
 
 const collection: Page = {
 	view: "collection",
@@ -52,6 +55,15 @@ test("the corrections form's address", async (suite) => {
 	await suite.test("checks the box for the kind of page it was sent from", () => {
 		assert.match(buildCorrectionUrl({ view: "detail", url: "", commit: "" }), /entry.762468410=Comic/);
 		assert.match(buildCorrectionUrl({ view: "collection", url: "", commit: "" }), /entry.762468410=Collection/);
+	});
+
+	await suite.test("checks the rerun box alongside the strip's on a rerun day", () => {
+		const kinds = (rerun: boolean) =>
+			new URL(buildCorrectionUrl({ view: "detail", url: "", commit: "", rerun })).searchParams.getAll(
+				"entry.762468410",
+			);
+		assert.deepEqual(kinds(true), ["Comic", "Rerun"]);
+		assert.deepEqual(kinds(false), ["Comic"]);
 	});
 
 	await suite.test("checks nothing where the page is about no one strip or book", () => {
@@ -91,6 +103,8 @@ test("a document's corrections link", async (suite) => {
 	await suite.test("opens the form about the page it is on", () => {
 		assert.match(link(document(detail, "/1986-07-07")), /entry.762468410=Comic/);
 		assert.match(link(document(detail, "/1986-07-07")), /entry.1138251038=https%3A%2F%2Fexample.test%2F1986-07-07/);
+		assert.doesNotMatch(link(document(detail, "/1986-07-07")), /entry.762468410=Rerun/);
+		assert.match(link(document(rerun, "/1995-12-31")), /entry.762468410=Comic&amp;entry.762468410=Rerun/);
 		assert.match(link(document(collection, "/collection/yukonho")), /entry.762468410=Collection/);
 		assert.doesNotMatch(link(document({ view: "credits" }, "/credits")), /entry.762468410/);
 	});

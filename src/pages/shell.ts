@@ -54,6 +54,7 @@ function pageDescription(page: Page): string {
 		case "detail": {
 			const comic = page.comics[0];
 			const lead = `Calvin and Hobbes for ${formatLongDate(page.date)}.`;
+			if (page.rerunOf) return `${lead} A rerun of the strip from ${formatLongDate(page.rerunOf)}.`;
 			return comic?.transcript ? `${lead} ${summarize(comic.transcript)}` : lead;
 		}
 		case "collection": {
@@ -142,6 +143,7 @@ export function buildDocumentHtml(template: string, page: Page, options: Documen
 						// Without a `SITE_URL` the build has no origin to write; the app fills the real one in.
 						url: options.siteUrl + options.path,
 						commit: options.commit ?? "unknown",
+						rerun: page.view === "detail" && page.rerunOf !== null,
 					}),
 	};
 	return template.replace(/\{\{(\w+)\}\}/g, (token, name: string) => {
