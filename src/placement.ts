@@ -86,6 +86,27 @@ export function place(anchor: Box, size: Size, viewport: Box, gap: number, align
 }
 
 /**
+ * Which boxes in a row to give up so that the rest fit side by side.
+ *
+ * The filter bar on a phone: a row that neither wraps nor scrolls, so whatever does not fit goes,
+ * and goes in an order the caller sets. `order` is the boxes that may be shed, first to go first;
+ * anything not in it stays whatever the room. Sheds as few as it takes, and returns them rather than
+ * the survivors because that is the smaller answer at every width where anything is shed at all.
+ */
+export function shed(widths: readonly number[], gap: number, room: number, order: readonly number[]): Set<number> {
+	const gone = new Set<number>();
+	const taken = (): number => {
+		const kept = widths.filter((_, index) => !gone.has(index));
+		return kept.reduce((sum, width) => sum + width, 0) + Math.max(0, kept.length - 1) * gap;
+	};
+	for (const index of order) {
+		if (taken() <= room) break;
+		gone.add(index);
+	}
+	return gone;
+}
+
+/**
  * How tall the box would be with nothing capping it.
  *
  * Measured from what is overflowing rather than by clearing the cap and reading `offsetHeight`
