@@ -188,10 +188,6 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 export function handleRoute(prerendered: Page | null = null): void {
 	const route = parseRoute();
 
-	// Before the loading view can return early below: the link is chrome, and stale chrome would
-	// send a correction about the page the reader came from.
-	updateCorrectionLink(route.view);
-
 	// The filter dropdowns float on the body, so hiding the results view does not hide them. Every
 	// other route leaves them behind; the results view keeps whichever one is open, because a search
 	// re-rendered on a keystroke comes through here too.
@@ -200,6 +196,11 @@ export function handleRoute(prerendered: Page | null = null): void {
 	const served = prerendered ? servePrerendered(prerendered, route) : null;
 	const page = served?.page ?? pageFor(route);
 	const adopt = served?.adopt ?? false;
+
+	// Before the loading view can return early below: the link is chrome, and stale chrome would
+	// send a correction about the page the reader came from. Whether a date is a rerun is only known
+	// once there is a page; until then the link says less, and this runs again when the data lands.
+	updateCorrectionLink(route.view, page?.view === "detail" && page.rerunOf !== null);
 
 	const viewElement = document.getElementById(`view-${route.view}`)!;
 	document.querySelectorAll(".view").forEach((element) => {

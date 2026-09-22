@@ -143,6 +143,7 @@ export function buildDocumentHtml(template: string, page: Page, options: Documen
 						// Without a `SITE_URL` the build has no origin to write; the app fills the real one in.
 						url: options.siteUrl + options.path,
 						commit: options.commit ?? "unknown",
+						rerun: page.view === "detail" && page.rerunOf !== null,
 					}),
 	};
 	return template.replace(/\{\{(\w+)\}\}/g, (token, name: string) => {
