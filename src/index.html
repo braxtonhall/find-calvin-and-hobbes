@@ -48,11 +48,14 @@
 			<nav id="year-rail" aria-label="Jump to year"></nav>
 		</aside>
 
-		<main id="main">{{views}}</main>
+		<main id="main">
+			{{views}}
 
-		<!-- Chrome, so that it outlives every navigation. `src/pages/correction.ts` writes it and
-		`src/views/correction.ts` keeps it pointed at the page showing. -->
-		{{correction}}
+			<!-- Chrome, so that it outlives every navigation: it sits beside the views rather than in
+			one. It is in `#main` so that on mobile it can scroll with the page. `src/pages/correction.ts`
+			writes it and `src/views/correction.ts` keeps it pointed at the page showing. -->
+			{{correction}}
+		</main>
 
 		<noscript>
 			<div style="padding: 40px; text-align: center; font-family: sans-serif">

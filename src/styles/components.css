@@ -126,8 +126,8 @@
 }
 
 /*
- * The corrections link, which the build writes outside the views so that it outlives every
- * navigation. It fades in with `viewFadeIn`, the animation the views themselves come in on, and
+ * The corrections link, which the build writes beside the views so that it outlives every
+ * navigation. On desktop it is fixed in the corner; on mobile it is the page's footer. It fades in with `viewFadeIn`, the animation the views themselves come in on, and
  * goes as instantly as an outgoing view does — which is what `hidden` gives for nothing, and why
  * nothing here transitions `visibility`.
  */
@@ -163,10 +163,24 @@
 }
 
 @media (max-width: 768px) {
-	/* The other corner, since `.mobile-grid-toggle` has this one. */
+	/*
+	 * A sticky footer: the active view grows to fill a short page, so the link sits at the foot of
+	 * the screen, and follows the content on a long one. Scrolled to the end, it lands in the same
+	 * place either way. The left corner, since `.mobile-grid-toggle` has the right.
+	 */
+	#main {
+		display: flex;
+		flex-direction: column;
+	}
+
+	#main > .view.active {
+		flex: 1 0 auto;
+	}
+
 	.correction-link {
-		right: auto;
-		left: 16px;
+		position: static;
+		align-self: flex-start;
+		margin: auto 16px 16px;
 	}
 
 	#sidebar {
