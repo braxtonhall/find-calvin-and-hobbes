@@ -32,6 +32,7 @@ export function correctionKinds(view: Page["view"], rerun: boolean): string[] {
 		case "detail":
 			return rerun ? ["Comic", "Rerun"] : ["Comic"];
 		case "collection":
+		case "collections":
 			return ["Collection"];
 		default:
 			return [];

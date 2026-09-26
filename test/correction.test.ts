@@ -39,6 +39,8 @@ const collection: Page = {
 	indexLoaded: true,
 	extras: [],
 	dates: [],
+	prev: null,
+	next: null,
 };
 
 function document(page: Page, routePath: string, overrides: Partial<typeof options> = {}): string {
@@ -55,6 +57,7 @@ test("the corrections form's address", async (suite) => {
 	await suite.test("checks the box for the kind of page it was sent from", () => {
 		assert.match(buildCorrectionUrl({ view: "detail", url: "", commit: "" }), /entry.762468410=Comic/);
 		assert.match(buildCorrectionUrl({ view: "collection", url: "", commit: "" }), /entry.762468410=Collection/);
+		assert.match(buildCorrectionUrl({ view: "collections", url: "", commit: "" }), /entry.762468410=Collection/);
 	});
 
 	await suite.test("checks the rerun box alongside the strip's on a rerun day", () => {
@@ -93,6 +96,7 @@ test("the corrections form's address", async (suite) => {
 	await suite.test("shows only where there is something of the archive to be wrong", () => {
 		assert.equal(showsCorrection("detail"), true);
 		assert.equal(showsCorrection("collection"), true);
+		assert.equal(showsCorrection("collections"), true);
 		assert.equal(showsCorrection("credits"), true);
 		assert.equal(showsCorrection("landing"), false);
 		assert.equal(showsCorrection("results"), false);

@@ -7,6 +7,7 @@ import { buildLandingHtml } from "./landing";
 import { buildCreditsHtml } from "./credits";
 import { buildDetailHtml } from "./detail";
 import { buildCollectionHtml } from "./collection";
+import { buildCollectionsHtml } from "./collections";
 import { buildCorrectionLinkHtml } from "./correction";
 
 /**
@@ -19,7 +20,7 @@ import { buildCorrectionLinkHtml } from "./correction";
  * so the app can pick the page up where the build left it without fetching the archive first.
  */
 
-export const VIEWS = ["landing", "results", "detail", "collection", "credits"] as const;
+export const VIEWS = ["landing", "results", "detail", "collection", "collections", "credits"] as const;
 
 export const PAGE_DATA_ID = "page-data";
 
@@ -63,6 +64,8 @@ function pageDescription(page: Page): string {
 			const note = collection.notes && collection.notes.length > 0 ? ` ${collection.notes[0]}` : "";
 			return `${collection.name}, published ${collection.pub_year}. Every Calvin and Hobbes strip it holds, and where to find each one.${note}`;
 		}
+		case "collections":
+			return "Every Calvin and Hobbes book, in the order they were published, and which strips each one holds.";
 		default:
 			return DEFAULT_DESCRIPTION;
 	}
@@ -116,6 +119,8 @@ export function buildViewHtml(page: Page, canGoBack: boolean): string {
 			return buildDetailHtml(page, canGoBack);
 		case "collection":
 			return buildCollectionHtml(page, canGoBack);
+		case "collections":
+			return buildCollectionsHtml(page, canGoBack);
 		case "results":
 			// The rows are the app's to draw: they depend on the query, and there is no file per query.
 			return "";

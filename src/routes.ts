@@ -50,6 +50,10 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "collection", id: collectionMatch[1] };
 	}
 
+	if (path === COLLECTIONS_PATH) {
+		return { view: "collections" };
+	}
+
 	if (path === "/credits") {
 		return { view: "credits" };
 	}
@@ -72,6 +76,7 @@ export function buildCollectionPath(collectionId: string): string {
 	return "/collection/" + collectionId;
 }
 
+export const COLLECTIONS_PATH = "/collections";
 export const CREDITS_PATH = "/credits";
 export const HOME_PATH = "/";
 

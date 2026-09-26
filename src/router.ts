@@ -7,10 +7,12 @@ import { Page, pageTitle } from "./pages/page";
 import { PAGE_DATA_ID } from "./pages/shell";
 import { detailPageFrom } from "./pages/detail";
 import { collectionPageFrom } from "./pages/collection";
+import { collectionsPageFrom } from "./pages/collections";
 import { renderLanding } from "./views/landing";
 import { renderResults } from "./views/results";
 import { renderDetail } from "./views/detail";
 import { renderCollection } from "./views/collection";
+import { renderCollections } from "./views/collections";
 import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
 import { updateCorrectionLink } from "./views/correction";
@@ -134,6 +136,8 @@ function pageFor(route: Route): Page | null {
 			return state.dataLoaded ? detailPageFrom(state, route.date ?? "", route.alternates ?? []) : null;
 		case "collection":
 			return state.dataLoaded ? collectionPageFrom(state, route.id ?? "") : null;
+		case "collections":
+			return state.dataLoaded ? collectionsPageFrom(state) : null;
 	}
 }
 
@@ -161,6 +165,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 	switch (prerendered.view) {
 		case "landing":
 		case "credits":
+		case "collections":
 			return { page: prerendered, adopt: true };
 		case "results":
 			return null;
@@ -237,6 +242,12 @@ export function handleRoute(prerendered: Page | null = null): void {
 		}
 		case "collection": {
 			renderCollection(page, adopt);
+			document.getElementById("main")!.scrollTop = 0;
+			break;
+		}
+		case "collections": {
+			renderCollections(page, adopt);
+			document.getElementById("main")!.scrollTop = 0;
 			break;
 		}
 		case "credits": {

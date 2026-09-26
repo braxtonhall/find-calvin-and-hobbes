@@ -4,6 +4,7 @@ import {
 	buildCollectionPath,
 	buildComicPath,
 	buildSearchPath,
+	COLLECTIONS_PATH,
 	legacyHashPath,
 	normalizePathname,
 	parseRoutePath,
@@ -13,6 +14,7 @@ test("routes", async (suite) => {
 	await suite.test("every path a builder writes parses back to the route it was built from", () => {
 		assert.deepEqual(parseRoutePath("/", ""), { view: "landing" });
 		assert.deepEqual(parseRoutePath("/credits", ""), { view: "credits" });
+		assert.deepEqual(parseRoutePath(COLLECTIONS_PATH, ""), { view: "collections" });
 
 		const [comicPath, comicSearch] = buildComicPath("1986-07-07").split("?");
 		assert.deepEqual(parseRoutePath(comicPath, comicSearch ?? ""), {
@@ -50,6 +52,8 @@ test("routes", async (suite) => {
 		assert.equal(normalizePathname("/index.html"), "/");
 		assert.equal(normalizePathname("/"), "/");
 		assert.deepEqual(parseRoutePath("/credits/", ""), { view: "credits" });
+		assert.deepEqual(parseRoutePath("/collections/", ""), { view: "collections" });
+		assert.deepEqual(parseRoutePath("/collections.html", ""), { view: "collections" });
 	});
 
 	await suite.test("an address that is not ours is nobody's", () => {

@@ -60,9 +60,31 @@ export interface CollectionPage {
 	extras: string[];
 	/** The strips the book holds, which is what the grid highlights. */
 	dates: string[];
+	/** The books either side of this one in publication order, which the arrows step to. */
+	prev: CollectionNeighbour | null;
+	next: CollectionNeighbour | null;
 }
 
-export type Page = LandingPage | CreditsPage | ResultsPage | DetailPage | CollectionPage;
+export type CollectionNeighbour = Pick<Collection, "id" | "name">;
+
+/**
+ * The slice of a book the list of books needs: enough to draw its row, and — in the ranges and
+ * `sundays` — enough to light up its strips in the grid without the archive, so a row hovered on a
+ * cold load answers before the fetch does. A list of dates per book would say the same thing at
+ * many times the size.
+ */
+export type CollectionSummary = Pick<
+	Collection,
+	"id" | "name" | "type" | "pub_year" | "pub_month" | "pub_day" | "image" | "dailies" | "sundays"
+>;
+
+export interface CollectionsPage {
+	view: "collections";
+	/** In publication order. */
+	collections: CollectionSummary[];
+}
+
+export type Page = LandingPage | CreditsPage | ResultsPage | DetailPage | CollectionPage | CollectionsPage;
 
 /**
  * Where a page's data comes from. The app's `state` is one of these; the build assembles another
@@ -88,6 +110,8 @@ export function pageTitle(page: Page): string {
 			return `${page.date} — ${SITE_NAME}`;
 		case "collection":
 			return `${page.collection?.name ?? "Collection not found"} — ${SITE_NAME}`;
+		case "collections":
+			return `Collections — ${SITE_NAME}`;
 		case "credits":
 			return `Credits — ${SITE_NAME}`;
 	}

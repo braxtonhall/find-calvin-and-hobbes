@@ -20,7 +20,7 @@ export function parseDailiesRange(entry: string): [string, string] {
 	return [entry, entry];
 }
 
-export function isDateInCollection(dateStr: string, collection: Collection): boolean {
+export function isDateInCollection(dateStr: string, collection: Pick<Collection, "dailies" | "sundays">): boolean {
 	if (!collection.dailies || collection.dailies.length === 0) return false;
 	const compact = dateToCompact(dateStr);
 	const sundays = collection.sundays || false;
@@ -53,17 +53,14 @@ export function getCollectionCoverage(collection: Collection): string[] {
 	return coverage;
 }
 
-export function formatCompactRange(entry: string): string {
-	const [start, end] = parseDailiesRange(entry);
-	const formatDate = (compact: string) =>
-		compactToDate(compact).toLocaleDateString("en-US", {
-			month: "long",
-			day: "numeric",
-			year: "numeric",
-			timeZone: "UTC",
-		});
-	if (start === end) return formatDate(start);
-	return `${formatDate(start)} \u2013 ${formatDate(end)}`;
+/** `June 5, 1988`, from `19880605`. */
+export function formatCompactDate(compact: string): string {
+	return compactToDate(compact).toLocaleDateString("en-US", {
+		month: "long",
+		day: "numeric",
+		year: "numeric",
+		timeZone: "UTC",
+	});
 }
 
 /** How many days the month has, February included, since the year is always known here. */

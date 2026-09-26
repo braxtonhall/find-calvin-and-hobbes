@@ -1,7 +1,7 @@
 import "./detail.css";
 
 import { state } from "../state";
-import { escHtml, scrollCellIntoViewIfNeeded } from "../utils";
+import { escHtml } from "../utils";
 import { loadDescriptions } from "../details";
 import { isBookmarked, toggleBookmark } from "../bookmarks";
 import { canGoBack, parseRoute } from "../router";
@@ -14,20 +14,8 @@ import {
 	getPageDescription,
 } from "../pages/detail";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
-
-function buildCopyLinkButtonHandler(copyButton: HTMLButtonElement): void {
-	copyButton.addEventListener("click", () => {
-		const url = window.location.origin + copyButton.dataset.href;
-		navigator.clipboard.writeText(url).then(() => {
-			copyButton.textContent = "Copied!";
-			copyButton.classList.add("copy-link-btn--copied");
-			setTimeout(() => {
-				copyButton.textContent = "Copy link";
-				copyButton.classList.remove("copy-link-btn--copied");
-			}, 1500);
-		});
-	});
-}
+import { attachCopyLinkHandler } from "./copy-link";
+import { attachCellHighlightLink } from "./cell-highlight";
 
 function buildBookmarkButtonHandler(bookmarkButton: HTMLButtonElement, date: string): void {
 	isBookmarked(date).then((bookmarked) => {
@@ -189,20 +177,7 @@ function attachRerunLinkHandler(element: HTMLElement): void {
 	const link = element.querySelector<HTMLElement>(".detail-rerun-link");
 	if (!link) return;
 
-	link.addEventListener("mouseenter", () => {
-		if (state.hoveredCell) state.hoveredCell.classList.remove("cell--hover-highlight");
-		const cell = document.querySelector<HTMLElement>(`.cell[data-date="${link.dataset.originalDate}"]`);
-		if (!cell) return;
-		cell.classList.add("cell--hover-highlight");
-		state.hoveredCell = cell;
-		scrollCellIntoViewIfNeeded(cell);
-	});
-
-	link.addEventListener("mouseleave", () => {
-		if (!state.hoveredCell) return;
-		state.hoveredCell.classList.remove("cell--hover-highlight");
-		state.hoveredCell = null;
-	});
+	attachCellHighlightLink(link, link.dataset.originalDate!);
 }
 
 /**
@@ -219,8 +194,7 @@ export function renderDetail(page: DetailPage, adopt: boolean = false): void {
 	attachBackAndHomeHandlers(element);
 	attachRerunLinkHandler(element);
 
-	const copyButton = element.querySelector<HTMLButtonElement>("#copy-link-btn");
-	if (copyButton) buildCopyLinkButtonHandler(copyButton);
+	attachCopyLinkHandler(element);
 
 	const bookmarkButton = element.querySelector<HTMLButtonElement>("#bookmark-btn");
 	if (bookmarkButton) buildBookmarkButtonHandler(bookmarkButton, page.date);

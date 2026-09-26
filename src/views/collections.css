@@ -1,0 +1,72 @@
+#view-collections.active {
+	display: block;
+	/* The corrections link floats over the bottom of the page; the last line clears it. */
+	padding: 20px 20px 56px;
+}
+
+@media (max-width: 768px) {
+	/* On mobile the link follows the page instead of floating over it, so there is nothing to clear. */
+	#view-collections.active {
+		padding-bottom: 20px;
+	}
+}
+
+.collections-container {
+	max-width: 800px;
+}
+
+.collections-heading {
+	font-size: 22px;
+	font-weight: 700;
+	margin-bottom: 12px;
+}
+
+/* Modelled on the search results' rows: the whole row is the link, and hovering tints it. */
+.collections-row {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	color: inherit;
+	text-decoration: none;
+	padding: 10px 8px;
+	border-bottom: 1px solid var(--grey);
+	transition: background 0.1s;
+}
+
+.collections-row:hover,
+.collections-row:focus-visible {
+	background: var(--bg-sidebar);
+}
+
+/* A fixed box, so that the titles line up however wide each cover is. */
+.collections-cover {
+	flex-shrink: 0;
+	width: 56px;
+	height: 56px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.collections-cover img {
+	max-width: 100%;
+	max-height: 100%;
+	border-radius: 3px;
+	display: block;
+}
+
+.collections-info {
+	min-width: 0;
+}
+
+.collections-name {
+	font-size: 15px;
+	font-weight: 600;
+	color: var(--text);
+	margin-bottom: 2px;
+}
+
+.collections-meta {
+	font-size: 13px;
+	color: var(--text-muted);
+}
