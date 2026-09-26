@@ -28,6 +28,16 @@ export function buildCreditsHtml(canGoBack: boolean): string {
 
 		<p class="credits-section">
 			<strong>Comic dates</strong> from
+			<i>The Complete Calvin and Hobbes</i>.
+		</p>
+
+		<p class="credits-section">
+			<strong>Rerun dates</strong> from
+			<a href="https://www.reddit.com/user/robservations247/" target="_blank" rel="noopener">u/robservations247</a>.
+		</p>
+
+		<p class="credits-section">
+			<strong>Collection dates</strong> from
 			<a href="https://en.wikipedia.org/wiki/List_of_Calvin_and_Hobbes_books" target="_blank" rel="noopener">Wikipedia</a> and the
 			<a href="https://calvinandhobbes.fandom.com/" target="_blank" rel="noopener">Calvin and Hobbes Fandom Wiki</a>.
 		</p>
