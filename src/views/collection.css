@@ -62,6 +62,11 @@
 	color: var(--text-muted);
 }
 
+/* Under the book's details rather than under a heading, so it needs none of the page-level gap below it. */
+.collection-info .detail-actions {
+	margin: 12px 0 0;
+}
+
 .collection-note {
 	font-size: 13px;
 	color: var(--text-muted);
@@ -119,6 +124,26 @@
 
 .collection-range {
 	margin-bottom: 2px;
+}
+
+/* Each end of a range is its strip, styled like the rerun banner's link to the strip it reran. */
+.collection-range-date {
+	color: var(--golden);
+	text-decoration: none;
+}
+
+.collection-range-date:hover {
+	text-decoration: underline;
+}
+
+/* The dash between the ends searches the whole range. Left looking like punctuation on purpose. */
+.collection-range-dash {
+	color: inherit;
+	text-decoration: none;
+}
+
+.collection-range-dash:hover {
+	color: var(--golden);
 }
 
 .collection-no-ranges {

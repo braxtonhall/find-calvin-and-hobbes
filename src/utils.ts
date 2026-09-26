@@ -24,15 +24,21 @@ export function highlightRanges(text: string, ranges: readonly HighlightRange[])
 	return html + escHtml(text.slice(index));
 }
 
-export function scrollCellIntoViewIfNeeded(cell: HTMLElement): void {
+/** Whether any of `cells` is wholly inside the part of the grid on screen, below its sticky header. */
+export function anyCellInView(cells: Iterable<HTMLElement>): boolean {
 	const sidebar = document.getElementById("sidebar")!;
 	const container = document.getElementById("grid-container")!;
 	const header = document.querySelector<HTMLElement>(".grid-header-row")!;
 	const top = header.getBoundingClientRect().bottom;
 	const bottom = Math.min(sidebar.getBoundingClientRect().bottom, container.getBoundingClientRect().bottom);
 
-	const cellRect = cell.getBoundingClientRect();
-	if (cellRect.top < top || cellRect.bottom > bottom) {
-		cell.scrollIntoView({ block: "center", behavior: "smooth" });
+	for (const cell of cells) {
+		const cellRect = cell.getBoundingClientRect();
+		if (cellRect.top >= top && cellRect.bottom <= bottom) return true;
 	}
+	return false;
+}
+
+export function scrollCellIntoViewIfNeeded(cell: HTMLElement): void {
+	if (!anyCellInView([cell])) cell.scrollIntoView({ block: "center", behavior: "smooth" });
 }

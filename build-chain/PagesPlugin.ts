@@ -4,10 +4,11 @@ import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
 import { Collection, Comic } from "../src/types";
 import { computeDays } from "../src/days";
-import { buildCollectionPath, buildComicPath, CREDITS_PATH, HOME_PATH } from "../src/routes";
+import { buildCollectionPath, buildComicPath, COLLECTIONS_PATH, CREDITS_PATH, HOME_PATH } from "../src/routes";
 import { Page, PageSource } from "../src/pages/page";
 import { detailPageFrom } from "../src/pages/detail";
 import { collectionPageFrom } from "../src/pages/collection";
+import { collectionsPageFrom } from "../src/pages/collections";
 import { buildDocumentHtml } from "../src/pages/shell";
 import { getSiteData, SiteData } from "./siteData";
 import { loadCommitSha, loadCorrectionsEnabled, loadPageLayout, loadSiteConfig, pageAssetPath } from "./siteConfig";
@@ -98,6 +99,8 @@ class PagesPlugin {
 					emitPage(CREDITS_PATH, { view: "credits" });
 					emitPage(SEARCH_PATH, { view: "results", q: "", sort: "rank" });
 
+					emitPage(COLLECTIONS_PATH, collectionsPageFrom(source));
+
 					const collectionPaths: string[] = [];
 					for (const collection of data.collectionIndex.collections) {
 						const routePath = buildCollectionPath(collection.id);
@@ -111,7 +114,7 @@ class PagesPlugin {
 					}
 
 					if (siteUrl) {
-						const sitemap = buildSitemapXml(siteUrl, [HOME_PATH, CREDITS_PATH, ...collectionPaths]);
+						const sitemap = buildSitemapXml(siteUrl, [HOME_PATH, CREDITS_PATH, COLLECTIONS_PATH, ...collectionPaths]);
 						compilation.emitAsset("sitemap.xml", new sources.RawSource(sitemap));
 					}
 				},

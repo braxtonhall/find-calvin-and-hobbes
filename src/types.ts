@@ -55,7 +55,7 @@ export interface Day {
 export type SortMode = "date" | "rank";
 
 export interface Route {
-	view: "landing" | "results" | "detail" | "collection" | "credits";
+	view: "landing" | "results" | "detail" | "collection" | "collections" | "credits";
 	q?: string;
 	sort?: SortMode;
 	date?: string;

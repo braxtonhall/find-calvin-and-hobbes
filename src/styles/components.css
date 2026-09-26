@@ -265,3 +265,46 @@
 		font-size: 16px;
 	}
 }
+
+.nav-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	font-family: var(--font);
+	font-size: 14px;
+	color: var(--text-muted);
+	text-decoration: none;
+	background: none;
+	border: 1px solid var(--grey);
+	border-radius: 4px;
+	cursor: pointer;
+	margin-left: 4px;
+	vertical-align: middle;
+	padding: 0;
+}
+
+.nav-btn:hover {
+	background: var(--grey);
+}
+
+.nav-btn--disabled {
+	opacity: 0.25;
+	cursor: default;
+}
+
+/* The row of small buttons under a page's title: Copy link, and whatever steps to its neighbours. */
+.detail-actions {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-bottom: 20px;
+}
+
+.detail-actions > .copy-link-btn,
+.detail-actions > .bookmark-btn,
+.detail-actions > .nav-btn {
+	margin-left: 0;
+}

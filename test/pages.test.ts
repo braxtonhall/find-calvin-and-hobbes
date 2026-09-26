@@ -12,7 +12,11 @@ import { computeDays } from "../src/days";
 import { Collection, Comic } from "../src/types";
 import { Page, PageSource } from "../src/pages/page";
 import { detailPageFrom } from "../src/pages/detail";
-import { collectionPageFrom } from "../src/pages/collection";
+import { buildRangeSearchPath, collectionPageFrom } from "../src/pages/collection";
+import { parseQueryFilters, passesFilters } from "../src/filter-query";
+import { parseRoutePath } from "../src/routes";
+import { collectionsPageFrom } from "../src/pages/collections";
+import { isDateInCollection } from "../src/date-utils";
 import { buildDocumentHtml, buildViewHtml, PAGE_DATA_ID } from "../src/pages/shell";
 import { loadPageLayout, pageAssetPath } from "../build-chain/siteConfig";
 
@@ -97,6 +101,78 @@ test("a prerendered document", async (suite) => {
 		}
 	});
 
+	await suite.test("steps from each book to the next in publication order, and stops at either end", () => {
+		const collections = source.collectionIndex!.collections;
+		collections.forEach((collection, index) => {
+			const page = collectionPageFrom(source, collection.id);
+			assert.equal(page.prev?.id ?? null, index > 0 ? collections[index - 1].id : null);
+			assert.equal(page.next?.id ?? null, index < collections.length - 1 ? collections[index + 1].id : null);
+		});
+	});
+
+	await suite.test("links each end of a book's ranges to a strip the archive has", () => {
+		for (const collection of source.collectionIndex!.collections) {
+			const html = buildViewHtml(collectionPageFrom(source, collection.id), false);
+			const dates = [...html.matchAll(/class="collection-range-date" href="[^"]*" data-date="([^"]+)"/g)].map(
+				(match) => match[1],
+			);
+			assert.ok(dates.length > 0, `${collection.id} links its ranges`);
+			for (const date of dates) assert.ok(source.comicsByDate.has(date), `${collection.id} links ${date}`);
+		}
+	});
+
+	await suite.test("searches a book's range from its dash, finding just the book's strips in it", () => {
+		const iso = (compact: string, days = 0) => {
+			const date = new Date(
+				Date.UTC(Number(compact.slice(0, 4)), Number(compact.slice(4, 6)) - 1, Number(compact.slice(6, 8)) + days),
+			);
+			return date.toISOString().slice(0, 10);
+		};
+		const allDates = [...source.comicsByDate.keys()];
+		for (const collection of source.collectionIndex!.collections) {
+			const held = collectionPageFrom(source, collection.id).dates;
+			for (const entry of collection.dailies.filter((range) => range.includes("-"))) {
+				const [start, end] = entry.split("-");
+				const [pathname, search] = buildRangeSearchPath(entry, collection.sundays ?? false).split("?");
+				const route = parseRoutePath(pathname, "?" + search);
+				assert.equal(route?.view, "results");
+				assert.equal(route?.sort, "date");
+				const { filters, residual } = parseQueryFilters(route!.q!);
+				assert.equal(residual, "", `${entry} is all filter`);
+				assert.ok(passesFilters(iso(start), filters!), `${entry} keeps its first day`);
+				assert.ok(passesFilters(iso(end), filters!), `${entry} keeps its last day`);
+				assert.ok(!passesFilters(iso(start, -1), filters!), `${entry} stops at its first day`);
+				assert.ok(!passesFilters(iso(end, 1), filters!), `${entry} stops at its last day`);
+				// A Sundays-only book's range spans the weekdays between its Sundays; the search must not.
+				assert.deepEqual(
+					allDates.filter((date) => passesFilters(date, filters!)),
+					held.filter((date) => date >= iso(start) && date <= iso(end)),
+					`${collection.id} ${entry} finds the book's strips and no others`,
+				);
+			}
+		}
+	});
+
+	await suite.test("holds the view its embedded data draws, for the list of books", () => {
+		const page = collectionsPageFrom(source);
+		const document = buildDocumentHtml(template, page, { ...options, path: "/collections" });
+		const embedded = embeddedPage(document);
+		assert.deepEqual(embedded, page);
+		assert.equal(activeView(document, "collections"), buildViewHtml(embedded, false));
+		assert.match(document, /<title>Collections — Find Calvin and Hobbes<\/title>/);
+
+		assert.deepEqual(
+			page.collections.map((collection) => collection.id),
+			source.collectionIndex!.collections.map((collection) => collection.id),
+			"in publication order",
+		);
+		// What a hovered row lights up in the grid is what the book's own page lights up.
+		for (const summary of page.collections) {
+			const hovered = [...source.comicsByDate.keys()].filter((date) => isDateInCollection(date, summary));
+			assert.deepEqual(hovered, collectionPageFrom(source, summary.id).dates, `${summary.id} lights its strips`);
+		}
+	});
+
 	await suite.test("names itself and where it lives", () => {
 		const document = buildDocumentHtml(template, detailPageFrom(source, "1986-07-07"), {
 			...options,
@@ -123,6 +199,8 @@ test("the page layout", async (suite) => {
 		assert.equal(pageAssetPath("/", "directory"), "index.html");
 		assert.equal(pageAssetPath("/credits", "html"), "credits.html");
 		assert.equal(pageAssetPath("/credits", "directory"), "credits/index.html");
+		assert.equal(pageAssetPath("/collections", "html"), "collections.html");
+		assert.equal(pageAssetPath("/collections", "directory"), "collections/index.html");
 		assert.equal(pageAssetPath("/collection/yukonho", "html"), "collection/yukonho.html");
 		assert.equal(pageAssetPath("/collection/yukonho", "directory"), "collection/yukonho/index.html");
 	});

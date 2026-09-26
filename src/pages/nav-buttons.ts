@@ -1,4 +1,4 @@
-import { HOME_PATH } from "../routes";
+import { COLLECTIONS_PATH, HOME_PATH } from "../routes";
 import { addressOf } from "../base-path";
 
 /**
@@ -16,6 +16,11 @@ export function buildBackButton(className: string, canGoBack: boolean): string {
 // A link, because home has an address.
 export function buildHomeButton(className: string): string {
 	return `<a class="${className}" href="${addressOf(HOME_PATH)}"><span class="home-icon">&#8962;</span> Home</a>`;
+}
+
+// The way up from a book to the shelf it sits on.
+export function buildCollectionsButton(className: string): string {
+	return `<a class="${className}" href="${addressOf(COLLECTIONS_PATH)}">Collections</a>`;
 }
 
 export function buildBackAndHomeButtons(canGoBack: boolean): string {
