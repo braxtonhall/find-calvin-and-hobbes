@@ -153,6 +153,14 @@ test("a prerendered document", async (suite) => {
 		}
 	});
 
+	await suite.test("holds nothing for the bookmarks, which only the browser knows", () => {
+		const page: Page = { view: "bookmarks" };
+		const document = buildDocumentHtml(template, page, { ...options, path: "/bookmarks" });
+		assert.deepEqual(embeddedPage(document), page);
+		assert.equal(activeView(document, "bookmarks"), "");
+		assert.match(document, /<title>Bookmarks — Find Calvin and Hobbes<\/title>/);
+	});
+
 	await suite.test("holds the view its embedded data draws, for the list of books", () => {
 		const page = collectionsPageFrom(source);
 		const document = buildDocumentHtml(template, page, { ...options, path: "/collections" });

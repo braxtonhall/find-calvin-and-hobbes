@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+	BOOKMARKS_PATH,
 	buildCollectionPath,
 	buildComicPath,
 	buildSearchPath,
@@ -15,6 +16,7 @@ test("routes", async (suite) => {
 		assert.deepEqual(parseRoutePath("/", ""), { view: "landing" });
 		assert.deepEqual(parseRoutePath("/credits", ""), { view: "credits" });
 		assert.deepEqual(parseRoutePath(COLLECTIONS_PATH, ""), { view: "collections" });
+		assert.deepEqual(parseRoutePath(BOOKMARKS_PATH, ""), { view: "bookmarks" });
 
 		const [comicPath, comicSearch] = buildComicPath("1986-07-07").split("?");
 		assert.deepEqual(parseRoutePath(comicPath, comicSearch ?? ""), {
@@ -54,6 +56,8 @@ test("routes", async (suite) => {
 		assert.deepEqual(parseRoutePath("/credits/", ""), { view: "credits" });
 		assert.deepEqual(parseRoutePath("/collections/", ""), { view: "collections" });
 		assert.deepEqual(parseRoutePath("/collections.html", ""), { view: "collections" });
+		assert.deepEqual(parseRoutePath("/bookmarks/", ""), { view: "bookmarks" });
+		assert.deepEqual(parseRoutePath("/bookmarks.html", ""), { view: "bookmarks" });
 	});
 
 	await suite.test("an address that is not ours is nobody's", () => {

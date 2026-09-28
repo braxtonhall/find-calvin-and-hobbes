@@ -13,6 +13,7 @@ import { renderResults } from "./views/results";
 import { renderDetail } from "./views/detail";
 import { renderCollection } from "./views/collection";
 import { renderCollections } from "./views/collections";
+import { renderBookmarks } from "./views/bookmarks";
 import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
 import { updateCorrectionLink } from "./views/correction";
@@ -138,6 +139,21 @@ function pageFor(route: Route): Page | null {
 			return state.dataLoaded ? collectionPageFrom(state, route.id ?? "") : null;
 		case "collections":
 			return state.dataLoaded ? collectionsPageFrom(state) : null;
+		case "bookmarks":
+			// Both, because a page drawn before IndexedDB answers would say there are no bookmarks.
+			return state.dataLoaded && state.bookmarksLoaded ? { view: "bookmarks" } : null;
+	}
+}
+
+/**
+ * Picks up after something the page was waiting on has arrived — the archive, or the bookmarks. A
+ * route that was showing a spinner is drawn now; any other only needs the grid brought up to date.
+ */
+export function resumeRoute(): void {
+	if (state.pendingRoute) {
+		handleRoute();
+	} else {
+		updateGridState(parseRoute());
 	}
 }
 
@@ -168,6 +184,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		case "collections":
 			return { page: prerendered, adopt: true };
 		case "results":
+		case "bookmarks":
 			return null;
 		case "detail": {
 			if (prerendered.date !== route.date) return null;
@@ -250,6 +267,11 @@ export function handleRoute(prerendered: Page | null = null): void {
 			document.getElementById("main")!.scrollTop = 0;
 			break;
 		}
+		case "bookmarks": {
+			renderBookmarks();
+			document.getElementById("main")!.scrollTop = 0;
+			break;
+		}
 		case "credits": {
 			renderCredits(adopt);
 			document.getElementById("main")!.scrollTop = 0;
@@ -327,6 +349,17 @@ export function updateGridState(route: Route): void {
 			setTimeout(() => {
 				scrollCellIntoViewIfNeeded(cell as HTMLElement);
 			}, 50);
+		}
+		return;
+	}
+
+	// Lit and dimmed the way a book's page is, with the bookmarks as the book — once they are known;
+	// until then an empty set would dim the whole grid, only to light it back up a moment later.
+	if (route.view === "bookmarks") {
+		if (!state.bookmarksLoaded) return;
+		for (const cell of allCells) {
+			const date = (cell as HTMLElement).dataset.date;
+			cell.classList.add(date && state.bookmarkedDates.has(date) ? "cell--search-match" : "cell--search-nonmatch");
 		}
 		return;
 	}

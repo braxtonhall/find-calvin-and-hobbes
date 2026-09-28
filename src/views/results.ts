@@ -2,15 +2,13 @@ import "./results.css";
 
 import { state } from "../state";
 import { SortMode } from "../types";
-import { search, SearchResult } from "../search";
+import { search } from "../search";
 import { assignTiers } from "../tiers";
-import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
 import { navigate, replaceSearch } from "../router";
-import { HOME_PATH, buildComicPath, buildSearchPath } from "../routes";
-import { addressOf } from "../base-path";
-import { dateToCompact } from "../date-utils";
+import { HOME_PATH, buildSearchPath } from "../routes";
 import { buildFilterBar, filterMenuHasFocus, syncFilterBar } from "./filter-bar";
 import { attachQueryInput, syncQueryInput } from "./query-input";
+import { attachRowFocusHandler, attachRowHandlers, resultsHtml } from "./result-rows";
 
 const DATE_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
 	<rect x="2" y="3.5" width="12" height="10" rx="1.5" /><path d="M2 6.5h12M5.5 2v3M10.5 2v3" />
@@ -19,19 +17,6 @@ const DATE_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" st
 const RANK_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
 	<path d="M3 3v10M3 13l-2-2M3 13l2-2M7.5 4h7M7.5 8h5M7.5 12h3" />
 </svg>`;
-
-// A transcript match carries no label, as it always has: it is the default, and naming it would
-// put a badge on nearly every row. A date match is the one that needs saying, because nothing in
-// the text it shows is why it matched.
-const SOURCE_LABELS: Record<SearchResult["source"], string> = {
-	transcript: "",
-	description: "Description",
-	date: "Date",
-	rerun: "Date · Rerun",
-	// Nothing: a filter-only query is every row it let through, so a badge on all of them says only
-	// what the query in the box above already says, and `@in:book3` rows are not date matches.
-	filter: "",
-};
 
 /**
  * What the search bar's own handlers act on.
@@ -114,149 +99,16 @@ function buildSearchBar(element: HTMLElement): void {
 		if (inputQuery) replaceSearch(buildSearchPath(inputQuery, currentSort === "rank" ? "date" : "rank"));
 	});
 
-	element.addEventListener("focusin", (event) => {
-		const row = (event.target as HTMLElement).closest(".result-row") as HTMLElement | null;
-		if (!row) return;
-		if (state.hoveredCell) {
-			state.hoveredCell.classList.remove("cell--hover-highlight");
-		}
-		document
-			.querySelectorAll(".result-row--highlight")
-			.forEach((highlightedRow) => highlightedRow.classList.remove("result-row--highlight"));
-
-		row.classList.add("result-row--highlight");
-		const cell = document.querySelector(`.cell[data-date="${row.dataset.date}"]`);
-		if (cell) {
-			cell.classList.add("cell--hover-highlight");
-			scrollCellIntoViewIfNeeded(cell as HTMLElement);
-			state.hoveredCell = cell as HTMLElement;
-		}
-		state.keyboardNavActive = true;
-	});
+	attachRowFocusHandler(element);
 }
 
 /**
- * The rows, and nothing about the query.
- *
  * The count moved to the filter bar and dropped the query on the way — `12 results`, not
  * `12 results for "snow goons"`, and `No comics found` rather than `No comics found for …`. Both
  * were restating the query that is sitting in the input one line up, and the widest line on the
  * page is worth more than a second copy of it.
  */
-function resultsHtml(results: SearchResult[]): string {
-	if (results.length === 0) {
-		return `<div class="results-empty">No comics found</div>`;
-	}
-
-	let html = "";
-	for (const result of results) {
-		const { comic, text, ranges, source } = result;
-		const [year, month, day] = comic.date.split("-").map(Number);
-		const dateObject = new Date(Date.UTC(year, month - 1, day));
-		const dateFormatted = dateObject.toLocaleDateString("en-US", {
-			weekday: "long",
-			year: "numeric",
-			month: "long",
-			day: "numeric",
-			timeZone: "UTC",
-		});
-		const highlighted = highlightRanges(text, ranges);
-		const label = SOURCE_LABELS[source];
-		const sourceTag = label ? `<span class="result-source">${label}</span>` : ``;
-
-		// An anchor rather than the `tabindex`/`role="button"` div it used to be: the row goes somewhere
-		// with an address, so the browser can offer to copy it or open it in a second tab, and the
-		// focus and Enter behaviour that had to be spelled out now comes for free — and announces as a
-		// link, which is the truth. `draggable="false"` because dragging from inside an anchor drags the
-		// link instead of selecting text, and the transcript below is text a reader may want to copy.
-		const comicLink = addressOf(buildComicPath(comic.date, result.matchedAlternate ? [dateToCompact(comic.date)] : []));
-		html += `<a class="result-row${comic.image ? "" : " result-row--no-image"}" href="${comicLink}" draggable="false" data-date="${comic.date}" aria-label="View comic from ${dateFormatted}">
-			<div class="result-header">${dateFormatted}${sourceTag}</div>
-			<div class="result-body">
-				<div class="result-text">${highlighted}</div>
-				${comic.image ? `<div class="result-image-wrap"><img class="result-image" src="${escHtml(comic.image)}" alt="Comic from ${dateFormatted}" onload="this.classList.add('loaded')" onerror="this.style.display='none'" /></div>` : ``}
-			</div>
-		</a>`;
-	}
-	return html;
-}
-
-function attachRowHandlers(list: HTMLElement): void {
-	list.querySelectorAll<HTMLElement>(".result-row").forEach((row) => {
-		const textElement = row.querySelector<HTMLElement>(".result-text")!;
-		if (textElement.scrollHeight > textElement.clientHeight) {
-			textElement.classList.add("result-text--overflow");
-		}
-		const mark = textElement.querySelector("mark");
-		if (mark) {
-			const maxScroll = textElement.scrollHeight - textElement.clientHeight;
-			const scrollTo = mark.offsetTop - textElement.clientHeight / 2;
-			textElement.scrollTop = Math.max(0, Math.min(scrollTo, maxScroll));
-		}
-
-		row.addEventListener("mouseenter", () => {
-			if (state.keyboardNavActive) return;
-			if (state.hoveredCell) {
-				state.hoveredCell.classList.remove("cell--hover-highlight");
-				document
-					.querySelectorAll(`.result-row[data-date="${state.hoveredCell.dataset.date}"]`)
-					.forEach((highlightedRow) => highlightedRow.classList.remove("result-row--highlight"));
-			}
-			const cell = document.querySelector(`.cell[data-date="${row.dataset.date}"]`);
-			if (cell) {
-				cell.classList.add("cell--hover-highlight");
-				scrollCellIntoViewIfNeeded(cell as HTMLElement);
-				state.hoveredCell = cell as HTMLElement;
-			}
-			document
-				.querySelectorAll(`.result-row[data-date="${row.dataset.date}"]`)
-				.forEach((highlightedRow) => highlightedRow.classList.add("result-row--highlight"));
-		});
-
-		row.addEventListener("mouseleave", () => {
-			if (state.keyboardNavActive) return;
-			if (state.hoveredCell) {
-				state.hoveredCell.classList.remove("cell--hover-highlight");
-				state.hoveredCell = null;
-			}
-			document
-				.querySelectorAll(`.result-row[data-date="${row.dataset.date}"]`)
-				.forEach((highlightedRow) => highlightedRow.classList.remove("result-row--highlight"));
-		});
-	});
-
-	list.querySelectorAll<HTMLElement>(".result-row").forEach((row, index) => {
-		row.addEventListener("keydown", (event) => {
-			if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-				event.preventDefault();
-				const rows = list.querySelectorAll<HTMLElement>(".result-row");
-				const next = event.key === "ArrowDown" ? index + 1 : index - 1;
-				if (next >= 0 && next < rows.length) {
-					if (state.hoveredCell) {
-						state.hoveredCell.classList.remove("cell--hover-highlight");
-					}
-					document
-						.querySelectorAll(".result-row--highlight")
-						.forEach((highlightedRow) => highlightedRow.classList.remove("result-row--highlight"));
-
-					const newRow = rows[next];
-					newRow.focus();
-					newRow.classList.add("result-row--highlight");
-
-					const cell = document.querySelector(`.cell[data-date="${newRow.dataset.date}"]`);
-					if (cell) {
-						cell.classList.add("cell--hover-highlight");
-						scrollCellIntoViewIfNeeded(cell as HTMLElement);
-						state.hoveredCell = cell as HTMLElement;
-					}
-
-					state.keyboardNavActive = true;
-				}
-			}
-			// Enter is the anchor's own: it fires a click, which `attachRouteLinkHandler` picks up.
-		});
-	});
-}
+const EMPTY = "No comics found";
 
 export function renderResults(query: string, sort: SortMode): void {
 	const element = document.getElementById("view-results")!;
@@ -288,7 +140,7 @@ export function renderResults(query: string, sort: SortMode): void {
 	const results = search(query, sort);
 	syncFilterBar(results.length);
 	const list = document.getElementById("results-list")!;
-	list.innerHTML = resultsHtml(results);
+	list.innerHTML = resultsHtml(results, EMPTY);
 	state.searchResultTiers = assignTiers(results);
 	attachRowHandlers(list);
 

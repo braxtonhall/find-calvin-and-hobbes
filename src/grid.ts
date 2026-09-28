@@ -355,14 +355,9 @@ export async function loadComicData(): Promise<void> {
 	updateGridStatesFromData();
 	document.getElementById("loading")!.classList.add("hidden");
 
-	if (state.pendingRoute) {
-		state.pendingRoute = null;
-		handleRoute();
-	} else {
-		updateGridState(parseRoute());
-	}
+	resumeRoute();
 }
 
 // ─── Re-import from router (circular dependency resolved at runtime) ────────
 
-import { handleRoute, updateGridState } from "./router";
+import { resumeRoute } from "./router";

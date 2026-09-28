@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { search, TUNING, Tuning } from "../src/search";
+import { bookmarkResults, search, TUNING, Tuning } from "../src/search";
 import { COMPOUND_CANONICAL_FORMS, COMPOUND_RELATIONS } from "../src/compounds";
 import { registerVocabulary } from "../src/filter-vocabulary";
 import { highlightRanges } from "../src/utils";
@@ -745,6 +745,27 @@ test("reruns appear only for exact date queries and use the original transcript"
 			search("tiger", "rank").map((result) => result.comic.date),
 			["1988-08-03"],
 		);
+	} finally {
+		state.reruns = new Map();
+	}
+});
+
+test("bookmarks are rows in date order, a rerun day shows the strip that ran again, and a date with no strip is left out", () => {
+	install(buildArchive(DATED));
+	state.reruns = new Map([["1991-05-05", "1988-08-03"]]);
+	try {
+		const results = bookmarkResults(new Set(["1991-05-05", "1989-08-03", "1988-08-03", "1990-01-01"]));
+		assert.deepEqual(
+			results.map((result) => [result.comic.date, result.source]),
+			[
+				["1988-08-03", "filter"],
+				["1989-08-03", "filter"],
+				["1991-05-05", "rerun"],
+			],
+		);
+		assert.equal(results[2].text, DATED[0].transcript);
+		assert.ok(results.every((result) => result.ranges.length === 0));
+		assert.deepEqual(bookmarkResults(new Set()), []);
 	} finally {
 		state.reruns = new Map();
 	}

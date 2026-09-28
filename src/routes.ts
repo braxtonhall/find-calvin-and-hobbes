@@ -54,6 +54,10 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "collections" };
 	}
 
+	if (path === BOOKMARKS_PATH) {
+		return { view: "bookmarks" };
+	}
+
 	if (path === "/credits") {
 		return { view: "credits" };
 	}
@@ -77,6 +81,7 @@ export function buildCollectionPath(collectionId: string): string {
 }
 
 export const COLLECTIONS_PATH = "/collections";
+export const BOOKMARKS_PATH = "/bookmarks";
 export const CREDITS_PATH = "/credits";
 export const HOME_PATH = "/";
 

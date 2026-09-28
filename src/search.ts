@@ -1035,19 +1035,25 @@ function withDateMatches(textResults: SearchResult[], expression: DateExpression
 	if (expression.precision === "exact") {
 		for (const [rerunDate, originalDate] of state.reruns) {
 			if (!matchesExpression(expression, rerunDate)) continue;
-			const original = indexedComics.find(({ comic }) => comic.date === originalDate);
-			if (!original) continue;
-			results.push({
-				comic: { ...original.comic, date: rerunDate, id: undefined },
-				text: original.comic.transcript,
-				ranges: [],
-				score: strength,
-				source: "rerun",
-			});
+			const rerun = rerunResult(rerunDate, originalDate, strength);
+			if (rerun) results.push(rerun);
 		}
 	}
 
 	return results;
+}
+
+/** A rerun day's row: the strip that ran again, under the date it ran again on. */
+function rerunResult(rerunDate: string, originalDate: string, score: number): SearchResult | null {
+	const original = indexedComics.find(({ comic }) => comic.date === originalDate);
+	if (!original) return null;
+	return {
+		comic: { ...original.comic, date: rerunDate, id: undefined },
+		text: original.comic.transcript,
+		ranges: [],
+		score,
+		source: "rerun",
+	};
 }
 
 function filterOnlyResults(filters: QueryFilters): SearchResult[] {
@@ -1070,6 +1076,30 @@ function filterOnlyResults(filters: QueryFilters): SearchResult[] {
 		});
 	}
 	return results;
+}
+
+/**
+ * The bookmarked strips as rows, oldest first — the only order there is, since a bookmark keeps no
+ * record of when it was made. Every strip on a bookmarked date is a row, as it would be in a search
+ * for that date, and a bookmarked rerun day shows the strip that ran again. A date with neither is
+ * left out rather than drawn as an empty row.
+ *
+ * `filter` is the source because it carries no badge: every row here is here for the same reason,
+ * and the heading already says what it is.
+ */
+export function bookmarkResults(dates: Set<string>): SearchResult[] {
+	ensureIndex();
+	const results: SearchResult[] = [];
+	for (const indexed of indexedComics) {
+		if (!dates.has(indexed.comic.date)) continue;
+		results.push({ comic: indexed.comic, text: dateText(indexed), ranges: [], score: 0, source: "filter" });
+	}
+	for (const [rerunDate, originalDate] of state.reruns) {
+		if (!dates.has(rerunDate)) continue;
+		const rerun = rerunResult(rerunDate, originalDate, 0);
+		if (rerun) results.push(rerun);
+	}
+	return results.sort(compareChronologically);
 }
 
 /**
