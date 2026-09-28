@@ -1,106 +1,12 @@
-import "./results.css";
-
 import { state } from "../state";
 import { SortMode } from "../types";
 import { search } from "../search";
 import { assignTiers } from "../tiers";
-import { navigate, replaceSearch } from "../router";
+import { navigate } from "../router";
 import { HOME_PATH, buildSearchPath } from "../routes";
-import { buildFilterBar, filterMenuHasFocus, syncFilterBar } from "./filter-bar";
-import { attachQueryInput, syncQueryInput } from "./query-input";
-import { attachRowFocusHandler, attachRowHandlers, resultsHtml } from "./result-rows";
-
-const DATE_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
-	<rect x="2" y="3.5" width="12" height="10" rx="1.5" /><path d="M2 6.5h12M5.5 2v3M10.5 2v3" />
-</svg>`;
-
-const RANK_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
-	<path d="M3 3v10M3 13l-2-2M3 13l2-2M7.5 4h7M7.5 8h5M7.5 12h3" />
-</svg>`;
-
-/**
- * What the search bar's own handlers act on.
- *
- * The bar outlives any one render — see `renderResults` — so its listeners cannot close over the
- * arguments of the render that happened to build them, or the sort button would still be flipping
- * the sort the view opened with.
- */
-let currentQuery = "";
-let currentSort: SortMode = "rank";
-
-function sortLabelFor(sort: SortMode): string {
-	return sort === "rank"
-		? "Sorted by relevance — click to sort by date"
-		: "Sorted by date — click to sort by relevance";
-}
-
-/**
- * Builds the search bar and wires it, once.
- *
- * Kept out of the per-query render because typing in a box that is being replaced underneath you
- * is the whole problem: it used to cost a snapshot-and-restore of the value and the selection on
- * every keystroke, and it left nowhere for the autocomplete menu to keep its state. The bar now
- * survives, so the caret survives with it and `attachQueryInput` can own what it knows.
- */
-function buildSearchBar(element: HTMLElement): void {
-	element.innerHTML = `<div class="results-sticky">
-		<div class="results-search-bar">
-			<input
-				type="text"
-				class="results-input"
-				id="results-input"
-				placeholder="Search comics..."
-				autocomplete="off"
-			/>
-			<button class="results-clear" id="results-clear" aria-label="Clear search">&times;</button>
-			<button class="results-sort" id="results-sort"></button>
-		</div>
-	</div>
-	<div id="results-list"></div>`;
-
-	const input = document.getElementById("results-input") as HTMLInputElement;
-	attachQueryInput(input);
-	// Attached to the search bar rather than built beside it: the two rows are one block, and the
-	// filter bar has to outlive `resultsHtml` for the same reason the input does.
-	element.querySelector(".results-sticky")!.appendChild(buildFilterBar(input));
-
-	input.addEventListener("input", () => {
-		if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
-		const inputQuery = input.value.trim();
-		state.resultsDebounceTimer = window.setTimeout(() => {
-			if (inputQuery) {
-				replaceSearch(buildSearchPath(inputQuery, currentSort));
-			} else {
-				navigate(HOME_PATH);
-			}
-		}, 200);
-	});
-
-	input.addEventListener("keydown", (event) => {
-		if (event.key === "Enter") {
-			event.preventDefault();
-			if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
-			const inputQuery = input.value.trim();
-			if (!inputQuery) {
-				navigate(HOME_PATH);
-			} else if (inputQuery !== currentQuery) {
-				replaceSearch(buildSearchPath(inputQuery, currentSort));
-			}
-		}
-	});
-
-	document.getElementById("results-clear")!.addEventListener("click", () => {
-		navigate(HOME_PATH);
-	});
-
-	document.getElementById("results-sort")!.addEventListener("click", () => {
-		if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
-		const inputQuery = input.value.trim() || currentQuery;
-		if (inputQuery) replaceSearch(buildSearchPath(inputQuery, currentSort === "rank" ? "date" : "rank"));
-	});
-
-	attachRowFocusHandler(element);
-}
+import { filterMenuHasFocus } from "./filter-bar";
+import { attachRowHandlers, resultsHtml } from "./result-rows";
+import { SearchBar, buildSearchBar } from "./search-bar";
 
 /**
  * The count moved to the filter bar and dropped the query on the way — `12 results`, not
@@ -110,46 +16,37 @@ function buildSearchBar(element: HTMLElement): void {
  */
 const EMPTY = "No comics found";
 
+/**
+ * Built on the first render and kept: see `buildSearchBar`. Built again only if something has
+ * written over the view since — the loading spinner does.
+ */
+let bar: SearchBar | null = null;
+
 export function renderResults(query: string, sort: SortMode): void {
 	const element = document.getElementById("view-results")!;
-	currentQuery = query;
-	currentSort = sort;
 
-	const firstBuild = element.querySelector(".results-search-bar") === null;
-	if (firstBuild) buildSearchBar(element);
-
-	const input = document.getElementById("results-input") as HTMLInputElement;
-	const sortButton = document.getElementById("results-sort")!;
-	const label = sortLabelFor(sort);
-	sortButton.innerHTML = sort === "rank" ? RANK_ICON : DATE_ICON;
-	sortButton.title = label;
-	sortButton.setAttribute("aria-label", label);
-	sortButton.setAttribute("aria-pressed", String(sort === "rank"));
-
-	// Only when the query arriving is not the one the box already holds — a followed link, the back
-	// button — because assigning to the box moves the caret to the end of it. Compared trimmed,
-	// since the box is what trimmed the query on its way into the URL: a reader who typed a
-	// trailing space is still holding the query that came back, and that space has a job to do
-	// after a flag.
-	if (input.value.trim() !== query) {
-		input.value = query;
-		input.setSelectionRange(query.length, query.length);
-		syncQueryInput(input);
+	if (!bar || !element.contains(bar.input)) {
+		bar = buildSearchBar(element, {
+			id: "results",
+			placeholder: "Search comics...",
+			pathFor: buildSearchPath,
+			listsWithoutQuery: false,
+			onEmpty: () => navigate(HOME_PATH),
+		});
 	}
 
 	const results = search(query, sort);
-	syncFilterBar(results.length);
-	const list = document.getElementById("results-list")!;
-	list.innerHTML = resultsHtml(results, EMPTY);
+	bar.update(query, sort, results.length);
+	bar.list.innerHTML = resultsHtml(results, EMPTY);
 	state.searchResultTiers = assignTiers(results);
-	attachRowHandlers(list);
+	attachRowHandlers(bar.list);
 
 	// Arriving from another view, rather than typing here or stepping through the rows. The filter
 	// menu counts as being here: it is floated on `document.body` rather than nested in this element,
 	// so `contains` cannot see a reader who is standing on one of its rows — and the search that
 	// follows a checkmark comes back through here 200ms later.
 	if (!element.contains(document.activeElement) && !filterMenuHasFocus()) {
-		input.focus();
-		input.setSelectionRange(input.value.length, input.value.length);
+		bar.input.focus();
+		bar.input.setSelectionRange(bar.input.value.length, bar.input.value.length);
 	}
 }

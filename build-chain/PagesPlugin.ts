@@ -105,7 +105,7 @@ class PagesPlugin {
 
 					emitPage(CREDITS_PATH, { view: "credits" });
 					emitPage(SEARCH_PATH, { view: "results", q: "", sort: "rank" });
-					emitPage(BOOKMARKS_PATH, { view: "bookmarks" });
+					emitPage(BOOKMARKS_PATH, { view: "bookmarks", q: "", sort: "rank" });
 
 					emitPage(COLLECTIONS_PATH, collectionsPageFrom(source));
 

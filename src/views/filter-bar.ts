@@ -78,19 +78,34 @@ const SHED_ORDER = ["day", "month", "format", "year"];
 /** The space the stylesheet leaves between the count and the fields, and between the fields. */
 const GAP = 6;
 
+/**
+ * One row under one search box. The search page and the bookmarks page each have their own, and
+ * the menu below is shared between them, since only one of them is ever on screen.
+ */
+interface Bar {
+	/** The box every click writes into, and the box every checkmark is read back out of. */
+	target: HTMLInputElement;
+	element: HTMLElement;
+	dropdowns: Dropdown[];
+	count: HTMLElement;
+	selected: Set<string>;
+}
+
 interface Dropdown {
+	bar: Bar;
 	field: FilterField;
 	button: HTMLButtonElement;
 }
 
-/** The box every click writes into, and the box every checkmark is read back out of. */
-let target: HTMLInputElement | null = null;
-let bar: HTMLElement | null = null;
-let dropdowns: Dropdown[] = [];
-let count: HTMLElement | null = null;
+/** What a view does with its bar after each render. */
+export interface FilterBar {
+	element: HTMLElement;
+	/** The two things a render has left to say: how many strips matched, and which boxes are ticked. */
+	sync(results: number): void;
+}
+
 let menu: HTMLDivElement | null = null;
 let open: Dropdown | null = null;
-let selected = new Set<string>();
 
 function menuElement(): HTMLDivElement {
 	if (menu !== null) return menu;
@@ -111,7 +126,7 @@ function menuElement(): HTMLDivElement {
 		}
 		const row = element.closest<HTMLElement>(".filter-option");
 		if (row === null || open === null) return;
-		toggle(open.field.options()[Number(row.dataset.index)]);
+		toggle(open.bar, open.field.options()[Number(row.dataset.index)]);
 	});
 
 	// Bound here as well as on the button, because while the reader is arrowing around the menu the
@@ -123,8 +138,8 @@ function menuElement(): HTMLDivElement {
 	return menu;
 }
 
-function optionHtml(field: FilterField, option: FilterOption, index: number): string {
-	const checked = selected.has(option.token);
+function optionHtml(bar: Bar, field: FilterField, option: FilterOption, index: number): string {
+	const checked = bar.selected.has(option.token);
 	const classes = ["filter-option", `filter-option--${field.shape}`, checked ? "filter-option--checked" : ""]
 		.filter(Boolean)
 		.join(" ");
@@ -143,8 +158,8 @@ function optionHtml(field: FilterField, option: FilterOption, index: number): st
 }
 
 /** Whether the field has anything in it to clear, which is the only thing `Clear` is offered for. */
-function hasClearable(field: FilterField): boolean {
-	return field.options().some((option) => selected.has(option.token));
+function hasClearable(bar: Bar, field: FilterField): boolean {
+	return field.options().some((option) => bar.selected.has(option.token));
 }
 
 /**
@@ -162,18 +177,18 @@ function buildMenu(): void {
 		return;
 	}
 
-	const { field } = open;
+	const { bar, field } = open;
 	const heading = field.heading === undefined ? "" : `<div class="filter-menu-heading">${escHtml(field.heading)}</div>`;
 	const rows = field
 		.options()
-		.map((option, index) => optionHtml(field, option, index))
+		.map((option, index) => optionHtml(bar, field, option, index))
 		.join("");
 	element.innerHTML = `${heading}<div
 			class="filter-menu-options filter-menu-options--${field.shape}"
 			role="listbox"
 			aria-multiselectable="true"
 			aria-label="${escHtml(field.heading ?? field.label)}"
-		>${rows}</div>${hasClearable(field) ? CLEAR_HTML : ""}`;
+		>${rows}</div>${hasClearable(bar, field) ? CLEAR_HTML : ""}`;
 	element.classList.add("filter-menu--visible");
 	positionMenu();
 }
@@ -185,16 +200,16 @@ function buildMenu(): void {
 function paintMenu(): void {
 	if (open === null) return;
 	const element = menuElement();
-	const { field } = open;
+	const { bar, field } = open;
 
 	for (const row of element.querySelectorAll<HTMLElement>(".filter-option")) {
-		const checked = selected.has(field.options()[Number(row.dataset.index)].token);
+		const checked = bar.selected.has(field.options()[Number(row.dataset.index)].token);
 		row.classList.toggle("filter-option--checked", checked);
 		row.setAttribute("aria-selected", String(checked));
 	}
 
 	const clear = element.querySelector<HTMLButtonElement>(".filter-menu-clear");
-	const wanted = hasClearable(field);
+	const wanted = hasClearable(bar, field);
 	if (wanted && clear === null) element.insertAdjacentHTML("beforeend", CLEAR_HTML);
 	else if (!wanted && clear !== null) {
 		// `Clear` goes with the last checkmark it clears. A reader standing on it gets the button
@@ -268,25 +283,28 @@ function closeMenu(restore = false): void {
  * The checkmarks do not wait for it. They are read straight back off the box, because a checkbox
  * that took a search to tick would feel broken.
  */
-function write(text: string): void {
-	if (target === null || text === target.value) return;
-	editQueryInput(target, text);
-	paint();
+function write(bar: Bar, text: string): void {
+	if (text === bar.target.value) return;
+	editQueryInput(bar.target, text);
+	paint(bar);
 }
 
-function toggle(option: FilterOption): void {
-	if (target === null) return;
-	write(selected.has(option.token) ? removeToken(target.value, option.token) : insertToken(target.value, option.token));
+function toggle(bar: Bar, option: FilterOption): void {
+	const { target, selected } = bar;
+	write(
+		bar,
+		selected.has(option.token) ? removeToken(target.value, option.token) : insertToken(target.value, option.token),
+	);
 }
 
 function clearOpenField(): void {
-	if (target === null || open === null) return;
-	write(clearField(target.value, open.field));
+	if (open === null) return;
+	write(open.bar, clearField(open.bar.target.value, open.field));
 }
 
 /** Where the focus lands when the menu is opened from the keyboard: the first checked row. */
-function firstChecked(field: FilterField): number {
-	const index = field.options().findIndex((option) => selected.has(option.token));
+function firstChecked(dropdown: Dropdown): number {
+	const index = dropdown.field.options().findIndex((option) => dropdown.bar.selected.has(option.token));
 	return index < 0 ? 0 : index;
 }
 
@@ -317,7 +335,7 @@ function activateFocused(): void {
 	const row = active === null ? null : active.closest<HTMLElement>(".filter-option");
 	// Toggling never closes the menu: these are multi-selects, and a reader picking two years
 	// should not have to open the same dropdown twice.
-	if (row !== null) toggle(open.field.options()[Number(row.dataset.index)]);
+	if (row !== null) toggle(open.bar, open.field.options()[Number(row.dataset.index)]);
 	// Nothing at all when the focus is still on the button, which is a menu the pointer opened and
 	// a reader who has not said which row they mean yet.
 	else if (active?.classList.contains("filter-menu-clear") === true) clearOpenField();
@@ -344,7 +362,7 @@ function handleKey(dropdown: Dropdown, event: KeyboardEvent): void {
 	if (event.key === "ArrowDown" || event.key === "ArrowUp") {
 		event.preventDefault();
 		event.stopPropagation();
-		if (!isOpen) openMenu(dropdown, firstChecked(field));
+		if (!isOpen) openMenu(dropdown, firstChecked(dropdown));
 		// A grid steps by a row rather than by a cell, which is what its shape promises.
 		else moveFocus((event.key === "ArrowDown" ? 1 : -1) * (field.shape === "grid" ? GRID_COLUMNS : 1));
 		return;
@@ -360,7 +378,7 @@ function handleKey(dropdown: Dropdown, event: KeyboardEvent): void {
 
 	if (event.key === "Enter" || event.key === " ") {
 		event.preventDefault();
-		if (!isOpen) openMenu(dropdown, firstChecked(field));
+		if (!isOpen) openMenu(dropdown, firstChecked(dropdown));
 		else activateFocused();
 		return;
 	}
@@ -418,7 +436,7 @@ function dropdownHtml(field: FilterField): string {
 	return `<button
 			type="button"
 			class="filter-drop"
-			id="filter-drop-${field.name}"
+			data-field="${field.name}"
 			aria-haspopup="listbox"
 			aria-expanded="false"
 			aria-controls="filter-menu"
@@ -438,11 +456,10 @@ function dropdownHtml(field: FilterField): string {
  * the query box directly above, wearing pills, which is the whole point of the bar. What the eye
  * gets from the query text, the label says for a reader who is not looking at it.
  */
-function paint(): void {
-	if (target === null) return;
-	selected = selectedTokens(target.value);
+function paint(bar: Bar): void {
+	bar.selected = selectedTokens(bar.target.value);
 
-	for (const dropdown of dropdowns) {
+	for (const dropdown of bar.dropdowns) {
 		const options = dropdown.field.options();
 		// A field whose values have not arrived has nothing to open. `Book` is the only one this can
 		// happen to, and it happens on every first paint — the bar is built with the results view and
@@ -451,12 +468,12 @@ function paint(): void {
 		const empty = options.length === 0;
 		dropdown.button.disabled = empty;
 		if (empty && open === dropdown) closeMenu();
-		const chosen = options.filter((option) => selected.has(option.token)).length;
+		const chosen = options.filter((option) => bar.selected.has(option.token)).length;
 		const label = chosen === 0 ? dropdown.field.label : `${dropdown.field.label}, ${chosen} selected`;
 		dropdown.button.setAttribute("aria-label", label);
 	}
 
-	paintMenu();
+	if (open?.bar === bar) paintMenu();
 }
 
 /**
@@ -468,11 +485,11 @@ function paint(): void {
  * on the last pass is measured at its real width and not at the nought a hidden box reports —
  * all inside one task, so nothing is painted between.
  */
-function fit(): void {
-	if (bar === null || count === null) return;
-	const room = bar.getBoundingClientRect().width;
-	// The results view is `display: none` behind another, or the bar is not attached yet. Nothing
-	// here measures, and the observer will call again once something does.
+function fit(bar: Bar): void {
+	const { dropdowns, count } = bar;
+	const room = bar.element.getBoundingClientRect().width;
+	// Its view is `display: none` behind another, or the bar is not attached yet. Nothing here
+	// measures, and the observer will call again once something does.
 	if (room === 0) return;
 
 	// Read before anything is hidden: a button that goes with the focus on it, or on a row of its
@@ -502,33 +519,47 @@ function fit(): void {
  * keystroke and would tear an open dropdown down as the reader typed. The bar survives its
  * renders, exactly as the input does and for exactly the same reason.
  */
-export function buildFilterBar(input: HTMLInputElement): HTMLElement {
-	target = input;
-
+export function buildFilterBar(input: HTMLInputElement): FilterBar {
 	const element = document.createElement("div");
 	element.className = "filter-bar";
-	element.innerHTML = `<div class="filter-count" id="filter-count" role="status"></div>
+	element.innerHTML = `<div class="filter-count" role="status"></div>
 		<div class="filter-fields">${FILTER_FIELDS.map(dropdownHtml).join("")}</div>`;
-	bar = element;
 
-	count = element.querySelector<HTMLElement>(".filter-count");
-	dropdowns = FILTER_FIELDS.map((field) => ({
+	const bar: Bar = {
+		target: input,
+		element,
+		dropdowns: [],
+		count: element.querySelector<HTMLElement>(".filter-count")!,
+		selected: new Set(),
+	};
+	bar.dropdowns = FILTER_FIELDS.map((field) => ({
+		bar,
 		field,
-		button: element.querySelector<HTMLButtonElement>(`#filter-drop-${field.name}`)!,
+		button: element.querySelector<HTMLButtonElement>(`[data-field="${field.name}"]`)!,
 	}));
-	for (const dropdown of dropdowns) attachDropdown(dropdown);
+	for (const dropdown of bar.dropdowns) attachDropdown(dropdown);
 
 	// Straight off the box rather than out of the render, so a hand-typed `@year:88` ticks 1988 on
 	// the keystroke that finishes it instead of 200ms later when the search comes back.
-	input.addEventListener("input", paint);
+	input.addEventListener("input", () => paint(bar));
 
 	// The bar's own width is the one thing that changes under it that no render tells it about: a
 	// window resized, a phone turned, the sidebar shown or hidden. The first call comes with the
 	// first layout, which is after this returns and the bar is attached.
-	new ResizeObserver(fit).observe(element);
+	new ResizeObserver(() => fit(bar)).observe(element);
 
-	paint();
-	return element;
+	paint(bar);
+	return {
+		element,
+		sync(results) {
+			// Nothing where there are none: the empty state says so a line below, and "0 results"
+			// beside it would only be saying it twice.
+			bar.count.textContent = results === 0 ? "" : `${results} result${results === 1 ? "" : "s"}`;
+			// The count is the other thing that takes room from the fields, and it has just changed width.
+			fit(bar);
+			paint(bar);
+		},
+	};
 }
 
 /**
@@ -555,14 +586,4 @@ export function closeFilterMenu(): void {
  */
 export function filterMenuHasFocus(): boolean {
 	return open !== null && menuElement().contains(document.activeElement);
-}
-
-/** The two things a render has left to say: how many strips matched, and which boxes are ticked. */
-export function syncFilterBar(results: number): void {
-	// Nothing where there are none: the empty state says "No comics found" a line below, and
-	// "0 results" beside it would only be saying it twice.
-	if (count !== null) count.textContent = results === 0 ? "" : `${results} result${results === 1 ? "" : "s"}`;
-	// The count is the other thing that takes room from the fields, and it has just changed width.
-	fit();
-	paint();
 }

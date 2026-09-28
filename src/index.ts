@@ -103,7 +103,8 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (event.key === "/" && !isInput) {
 			event.preventDefault();
 			const landingInput = document.getElementById("landing-input") as HTMLInputElement | null;
-			const resultsInput = document.getElementById("results-input") as HTMLInputElement | null;
+			// The search page's box, or the bookmarks page's, whichever is showing.
+			const resultsInput = document.querySelector<HTMLInputElement>(".view.active .results-input");
 			if (resultsInput) {
 				resultsInput.focus();
 			} else if (landingInput) {
