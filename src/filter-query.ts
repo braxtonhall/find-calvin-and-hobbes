@@ -45,6 +45,11 @@ export interface QueryFilters {
 	 * than a date — see `emptyTranscript`.
 	 */
 	empty: boolean;
+	/**
+	 * Whether any book printed the strip altered — a fact about the shelf, like `collections`, and,
+	 * like it, costs `passesFilters` a subject that is more than a date. See `printedAltered`.
+	 */
+	altered: boolean;
 	/** A recognised filter whose value could not be read. Nothing satisfies it. */
 	impossible: boolean;
 }
@@ -68,6 +73,7 @@ function emptyFilters(): QueryFilters {
 		after: null,
 		before: null,
 		empty: false,
+		altered: false,
 		impossible: false,
 	};
 }
@@ -95,6 +101,7 @@ function applyFilter(filters: QueryFilters, name: string, value: string | undefi
 		if (value !== undefined) filters.impossible = true;
 		else if (name === "sunday") filters.weekdays.add(0);
 		else if (name === "empty") filters.empty = true;
+		else if (name === "altered") filters.altered = true;
 		else for (const weekday of [1, 2, 3, 4, 5, 6]) filters.weekdays.add(weekday);
 		return;
 	}
@@ -276,6 +283,17 @@ function printedIn(subject: string | Comic, wanted: Set<string>): boolean {
 }
 
 /**
+ * Whether any book printed the strip altered, which only a strip can answer.
+ *
+ * The same reasoning as `printedIn`. It is a field of its own, so `@in:book1 @altered` is a strip
+ * printed in Book 1 that some book — not necessarily Book 1 — altered.
+ */
+function printedAltered(subject: string | Comic): boolean {
+	if (typeof subject === "string") return false;
+	return (subject.appearances ?? []).some((appearance) => appearance.altered === true);
+}
+
+/**
  * Whether the strip's transcript is empty, which only a strip can answer.
  *
  * The same reasoning as `printedIn`: a date cannot stand in for one, and returning false rather
@@ -293,7 +311,7 @@ function emptyTranscript(subject: string | Comic): boolean {
  *
  * The subject is a strip or, where every filter in play is about the calendar, just the day it ran
  * on — which every caller here in the search pipeline could give, and which the tests and the
- * completion menu still do. `@in:` is the one field that wants more than the date; see `printedIn`.
+ * completion menu still do. `@in:`, `@altered` and `@empty` want more than the date; see `printedIn`.
  */
 export function passesFilters(subject: string | Comic, filters: QueryFilters): boolean {
 	if (filters.impossible) return false;
@@ -306,5 +324,6 @@ export function passesFilters(subject: string | Comic, filters: QueryFilters): b
 	if (filters.after !== null && date <= filters.after) return false;
 	if (filters.before !== null && date >= filters.before) return false;
 	if (filters.empty && !emptyTranscript(subject)) return false;
+	if (filters.altered && !printedAltered(subject)) return false;
 	return !(filters.collections.size > 0 && !printedIn(subject, filters.collections));
 }

@@ -14,6 +14,7 @@ export interface Appearance {
 	edition?: string;
 	volume?: number;
 	pages: number[];
+	altered?: true;
 }
 
 export interface Edition {

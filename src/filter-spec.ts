@@ -47,7 +47,7 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
 
 /**
  * Ordered as a reader would reach for them — the three calendar fields, then the date forms, then
- * the bounds, then the three flags, and last the one valued filter that is not about time at all.
+ * the bounds, then the flags, and last the one valued filter that is not about time at all.
  * Not alphabetically: `@after` is not the thing to meet first, and `@in` is not the thing to meet
  * second.
  */
@@ -107,6 +107,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		templates: YEAR_FIRST,
 	},
 	{ name: "empty", kind: "flag", hint: "Strips with an empty transcript", templates: [] },
+	{ name: "altered", kind: "flag", hint: "Strips a book printed with changes", templates: [] },
 ];
 
 const BY_NAME = new Map(FILTER_SPECS.map((spec) => [spec.name, spec]));
