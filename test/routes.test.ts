@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+	LIBRARY_PATH,
+	buildLibraryPath,
 	buildCollectionPath,
 	buildComicPath,
 	buildSearchPath,
@@ -15,6 +17,18 @@ test("routes", async (suite) => {
 		assert.deepEqual(parseRoutePath("/", ""), { view: "landing" });
 		assert.deepEqual(parseRoutePath("/credits", ""), { view: "credits" });
 		assert.deepEqual(parseRoutePath(COLLECTIONS_PATH, ""), { view: "collections" });
+		assert.deepEqual(parseRoutePath(LIBRARY_PATH, ""), { view: "library", q: "", sort: "rank" });
+
+		const [libraryPath, libraryQuery] = buildLibraryPath("snow goons & co", "date").split("?");
+		assert.equal(libraryPath, LIBRARY_PATH);
+		assert.deepEqual(parseRoutePath(libraryPath, "?" + libraryQuery), {
+			view: "library",
+			q: "snow goons & co",
+			sort: "date",
+		});
+		assert.equal(buildLibraryPath(), LIBRARY_PATH);
+		assert.equal(buildLibraryPath("", "date"), LIBRARY_PATH + "?sort=date");
+		assert.deepEqual(parseRoutePath(LIBRARY_PATH, "?sort=date"), { view: "library", q: "", sort: "date" });
 
 		const [comicPath, comicSearch] = buildComicPath("1986-07-07").split("?");
 		assert.deepEqual(parseRoutePath(comicPath, comicSearch ?? ""), {
@@ -54,6 +68,8 @@ test("routes", async (suite) => {
 		assert.deepEqual(parseRoutePath("/credits/", ""), { view: "credits" });
 		assert.deepEqual(parseRoutePath("/collections/", ""), { view: "collections" });
 		assert.deepEqual(parseRoutePath("/collections.html", ""), { view: "collections" });
+		assert.deepEqual(parseRoutePath("/library/", ""), { view: "library", q: "", sort: "rank" });
+		assert.deepEqual(parseRoutePath("/library.html", ""), { view: "library", q: "", sort: "rank" });
 	});
 
 	await suite.test("an address that is not ours is nobody's", () => {

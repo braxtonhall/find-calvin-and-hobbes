@@ -72,15 +72,21 @@
 	height: 19px;
 }
 
-.landing-credits {
-	display: block;
-	margin-top: 32px;
+.landing-links {
+	margin-top: 24px;
 	font-size: 12px;
 	font-family: var(--font);
 	color: var(--text-muted);
+}
+
+/* Padded rather than spaced, so each link's tap target reaches the dot beside it. */
+.landing-links > a {
+	display: inline-block;
+	padding: 8px 6px;
+	color: inherit;
 	text-decoration: none;
 }
 
-.landing-credits:hover {
+.landing-links > a:hover {
 	color: var(--golden);
 }

@@ -929,7 +929,16 @@ function literalSearch(loweredQuery: string): SearchResult[] {
 	return results;
 }
 
-export function search(query: string, sort: SortMode, tuning: Tuning = TUNING): SearchResult[] {
+/**
+ * `within`, when given, is the only dates a result may carry — the bookmarks page's search, which
+ * is the same search over fewer strips. See `searchBookmarks`.
+ */
+export function search(
+	query: string,
+	sort: SortMode,
+	tuning: Tuning = TUNING,
+	within: Set<string> | null = null,
+): SearchResult[] {
 	const trimmed = query.trim();
 	if (!trimmed) return [];
 
@@ -948,6 +957,7 @@ export function search(query: string, sort: SortMode, tuning: Tuning = TUNING): 
 		// passes it is a result. This is the only place a filter produces a row instead of removing
 		// one.
 		results = filterOnlyResults(filters!);
+		if (within !== null) results.push(...filteredReruns(filters!, within));
 	} else {
 		results = searchText(segments, residual, tuning);
 		// Implicit date search is all or nothing: `parseDateExpression` returns null unless the whole
@@ -955,10 +965,14 @@ export function search(query: string, sort: SortMode, tuning: Tuning = TUNING): 
 		// `rankedSearch` never sees a stray year or day number.
 		const expression = parseDateExpression(residual);
 		if (expression !== null) results = withDateMatches(results, expression, tuning);
+		// Before the filters, so that they judge a rerun by the date it ran again on, as its row shows.
+		if (within !== null) results = withReruns(results, within);
 		// Filters restrict the finished set. Applied before the union, they would let a date match
 		// through that the reader had explicitly excluded.
 		if (filters !== null) results = results.filter((result) => passesFilters(result.comic, filters));
 	}
+
+	if (within !== null) results = results.filter((result) => within.has(result.comic.date));
 
 	// Date order is purely chronological: the score decided which strips are here, not where they
 	// sit. Rank order puts the score first and falls back to the same chronology for ties.
@@ -1035,19 +1049,25 @@ function withDateMatches(textResults: SearchResult[], expression: DateExpression
 	if (expression.precision === "exact") {
 		for (const [rerunDate, originalDate] of state.reruns) {
 			if (!matchesExpression(expression, rerunDate)) continue;
-			const original = indexedComics.find(({ comic }) => comic.date === originalDate);
-			if (!original) continue;
-			results.push({
-				comic: { ...original.comic, date: rerunDate, id: undefined },
-				text: original.comic.transcript,
-				ranges: [],
-				score: strength,
-				source: "rerun",
-			});
+			const rerun = rerunResult(rerunDate, originalDate, strength);
+			if (rerun) results.push(rerun);
 		}
 	}
 
 	return results;
+}
+
+/** A rerun day's row: the strip that ran again, under the date it ran again on. */
+function rerunResult(rerunDate: string, originalDate: string, score: number): SearchResult | null {
+	const original = indexedComics.find(({ comic }) => comic.date === originalDate);
+	if (!original) return null;
+	return {
+		comic: { ...original.comic, date: rerunDate, id: undefined },
+		text: original.comic.transcript,
+		ranges: [],
+		score,
+		source: "rerun",
+	};
 }
 
 function filterOnlyResults(filters: QueryFilters): SearchResult[] {
@@ -1068,6 +1088,76 @@ function filterOnlyResults(filters: QueryFilters): SearchResult[] {
 			score: DATE_STRENGTH.broad,
 			source: "filter",
 		});
+	}
+	return results;
+}
+
+/**
+ * The bookmarked strips as rows, oldest first — the only order there is, since a bookmark keeps no
+ * record of when it was made. Every strip on a bookmarked date is a row, as it would be in a search
+ * for that date, and a bookmarked rerun day shows the strip that ran again. A date with neither is
+ * left out rather than drawn as an empty row.
+ *
+ * `filter` is the source because it carries no badge: every row here is here for the same reason,
+ * and the heading already says what it is.
+ */
+export function bookmarkResults(dates: Set<string>): SearchResult[] {
+	ensureIndex();
+	const results: SearchResult[] = [];
+	for (const indexed of indexedComics) {
+		if (!dates.has(indexed.comic.date)) continue;
+		results.push({ comic: indexed.comic, text: dateText(indexed), ranges: [], score: 0, source: "filter" });
+	}
+	for (const [rerunDate, originalDate] of state.reruns) {
+		if (!dates.has(rerunDate)) continue;
+		const rerun = rerunResult(rerunDate, originalDate, 0);
+		if (rerun) results.push(rerun);
+	}
+	return results.sort(compareChronologically);
+}
+
+/**
+ * The bookmarks that match a query, or all of them when there is no query. Searched as the archive
+ * is, and then narrowed to the bookmarked dates — except that a bookmarked rerun day is found by its
+ * strip's words too, which a search of the archive alone would only find under the original date.
+ */
+export function searchBookmarks(query: string, sort: SortMode, dates: Set<string>): SearchResult[] {
+	return query.trim() ? search(query, sort, TUNING, dates) : bookmarkResults(dates);
+}
+
+/**
+ * Every text match again under each date in `within` that reran it. `withDateMatches` has already
+ * added the rerun rows an exact date names, so a date that has one is not given a second.
+ */
+function withReruns(results: SearchResult[], within: Set<string>): SearchResult[] {
+	const rerunsOf = new Map<string, string[]>();
+	for (const [rerunDate, originalDate] of state.reruns) {
+		if (!within.has(rerunDate)) continue;
+		rerunsOf.set(originalDate, [...(rerunsOf.get(originalDate) ?? []), rerunDate]);
+	}
+	if (rerunsOf.size === 0) return results;
+
+	const covered = new Set(results.filter((result) => result.source === "rerun").map((result) => result.comic.date));
+	const reruns: SearchResult[] = [];
+	for (const result of results) {
+		// A special is never the strip that ran again: `rerunResult` shows the day's daily.
+		if (result.source === "rerun" || result.comic.id) continue;
+		for (const rerunDate of rerunsOf.get(result.comic.date) ?? []) {
+			if (covered.has(rerunDate)) continue;
+			covered.add(rerunDate);
+			reruns.push({ ...result, comic: { ...result.comic, date: rerunDate, id: undefined }, source: "rerun" });
+		}
+	}
+	return [...results, ...reruns];
+}
+
+/** The rerun days in `within` that a filter-only query lets through, which `filterOnlyResults` never visits. */
+function filteredReruns(filters: QueryFilters, within: Set<string>): SearchResult[] {
+	const results: SearchResult[] = [];
+	for (const [rerunDate, originalDate] of state.reruns) {
+		if (!within.has(rerunDate)) continue;
+		const rerun = rerunResult(rerunDate, originalDate, DATE_STRENGTH.broad);
+		if (rerun && passesFilters(rerun.comic, filters)) results.push(rerun);
 	}
 	return results;
 }

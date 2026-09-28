@@ -28,16 +28,14 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 
 	if (path === "/") return { view: "landing" };
 
+	// Relevance is the default and `?sort=date` is the alternative. Date order has no ranking in it,
+	// so the coverage bar is the only thing keeping a weak match out of the top of the page:
+	// `ding dong rosalyn` led with a strip about a ping-pong ball, which is one edit from `ding dong`
+	// and nothing to do with the query.
+	const sort: SortMode = params.get("sort") === "date" ? "date" : "rank";
+
 	if (path === "/search") {
-		return {
-			view: "results",
-			q: params.get("q") ?? "",
-			// Relevance is the default and `?sort=date` is the alternative. Date order has no
-			// ranking in it, so the coverage bar is the only thing keeping a weak match out of
-			// the top of the page: `ding dong rosalyn` led with a strip about a ping-pong ball,
-			// which is one edit from `ding dong` and nothing to do with the query.
-			sort: params.get("sort") === "date" ? "date" : "rank",
-		};
+		return { view: "results", q: params.get("q") ?? "", sort };
 	}
 
 	const comicMatch = path.match(/^\/(\d{4}-\d{2}-\d{2})$/);
@@ -54,6 +52,12 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "collections" };
 	}
 
+	// The same query a search takes, over the bookmarks only. Unlike `/search`, no query is a page
+	// of its own — every bookmark — so an empty `?q=` is not written; see `buildLibraryPath`.
+	if (path === LIBRARY_PATH) {
+		return { view: "library", q: params.get("q") ?? "", sort };
+	}
+
 	if (path === "/credits") {
 		return { view: "credits" };
 	}
@@ -67,6 +71,15 @@ export function buildSearchPath(query: string, sort: SortMode = "rank"): string 
 	return "/search?q=" + encodeURIComponent(query) + (sort === "date" ? "&sort=date" : "");
 }
 
+/**
+ * The sort is kept without a query, so that a reader who picks date order before typing gets it
+ * when they do. The query is not: `?q=` alone says nothing `/library` does not.
+ */
+export function buildLibraryPath(query: string = "", sort: SortMode = "rank"): string {
+	const params = [query ? "q=" + encodeURIComponent(query) : "", sort === "date" ? "sort=date" : ""].filter(Boolean);
+	return LIBRARY_PATH + (params.length > 0 ? "?" + params.join("&") : "");
+}
+
 export function buildComicPath(date: string, alternates: string[] = []): string {
 	const params = alternates.map((alternate) => "alternate=" + encodeURIComponent(alternate)).join("&");
 	return "/" + date + (params ? "?" + params : "");
@@ -77,6 +90,7 @@ export function buildCollectionPath(collectionId: string): string {
 }
 
 export const COLLECTIONS_PATH = "/collections";
+export const LIBRARY_PATH = "/library";
 export const CREDITS_PATH = "/credits";
 export const HOME_PATH = "/";
 

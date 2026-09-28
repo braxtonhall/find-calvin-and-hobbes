@@ -13,7 +13,7 @@ import {
 	navigateTo,
 	parseRoute,
 	readPrerenderedPage,
-	updateGridState,
+	resumeRoute,
 } from "./router";
 import { HOME_PATH, buildComicPath } from "./routes";
 import { getSameDayComicDate } from "./pages/detail";
@@ -35,15 +35,19 @@ function initialize(): void {
 	loadComicData();
 
 	// After the first paint, not before it: opening IndexedDB can take longer than drawing a
-	// prerendered page, and the only thing waiting on the answer is the grid's bookmark highlights.
+	// prerendered page, and what waits on the answer is the grid's bookmark highlights and the
+	// bookmarks page, which shows a spinner until it lands.
 	// The bookmark button on a strip's page asks for its own date separately.
 	getBookmarkedDates()
 		.then((dates) => {
 			state.bookmarkedDates = dates;
-			updateGridState(parseRoute());
 		})
 		.catch(() => {
-			// IndexedDB unavailable — bookmarks won't work
+			// IndexedDB unavailable — bookmarks won't work, and the bookmarks page says there are none
+		})
+		.finally(() => {
+			state.bookmarksLoaded = true;
+			resumeRoute();
 		});
 }
 
@@ -99,7 +103,8 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (event.key === "/" && !isInput) {
 			event.preventDefault();
 			const landingInput = document.getElementById("landing-input") as HTMLInputElement | null;
-			const resultsInput = document.getElementById("results-input") as HTMLInputElement | null;
+			// The search page's box, or the bookmarks page's, whichever is showing.
+			const resultsInput = document.querySelector<HTMLInputElement>(".view.active .results-input");
 			if (resultsInput) {
 				resultsInput.focus();
 			} else if (landingInput) {

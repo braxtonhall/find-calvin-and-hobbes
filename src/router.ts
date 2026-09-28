@@ -13,6 +13,7 @@ import { renderResults } from "./views/results";
 import { renderDetail } from "./views/detail";
 import { renderCollection } from "./views/collection";
 import { renderCollections } from "./views/collections";
+import { renderLibrary } from "./views/library";
 import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
 import { updateCorrectionLink } from "./views/correction";
@@ -138,6 +139,23 @@ function pageFor(route: Route): Page | null {
 			return state.dataLoaded ? collectionPageFrom(state, route.id ?? "") : null;
 		case "collections":
 			return state.dataLoaded ? collectionsPageFrom(state) : null;
+		case "library":
+			// Both, because a page drawn before IndexedDB answers would say there are no bookmarks.
+			return state.dataLoaded && state.bookmarksLoaded
+				? { view: "library", q: route.q ?? "", sort: route.sort ?? "rank" }
+				: null;
+	}
+}
+
+/**
+ * Picks up after something the page was waiting on has arrived — the archive, or the bookmarks. A
+ * route that was showing a spinner is drawn now; any other only needs the grid brought up to date.
+ */
+export function resumeRoute(): void {
+	if (state.pendingRoute) {
+		handleRoute();
+	} else {
+		updateGridState(parseRoute());
 	}
 }
 
@@ -168,6 +186,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		case "collections":
 			return { page: prerendered, adopt: true };
 		case "results":
+		case "library":
 			return null;
 		case "detail": {
 			if (prerendered.date !== route.date) return null;
@@ -193,11 +212,6 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 export function handleRoute(prerendered: Page | null = null): void {
 	const route = parseRoute();
 
-	// The filter dropdowns float on the body, so hiding the results view does not hide them. Every
-	// other route leaves them behind; the results view keeps whichever one is open, because a search
-	// re-rendered on a keystroke comes through here too.
-	if (route.view !== "results") closeFilterMenu();
-
 	const served = prerendered ? servePrerendered(prerendered, route) : null;
 	const page = served?.page ?? pageFor(route);
 	const adopt = served?.adopt ?? false;
@@ -208,6 +222,14 @@ export function handleRoute(prerendered: Page | null = null): void {
 	updateCorrectionLink(route.view, page?.view === "detail" && page.rerunOf !== null);
 
 	const viewElement = document.getElementById(`view-${route.view}`)!;
+	// Rather than typing on, or re-sorting, the page that was already showing.
+	const arriving = !viewElement.classList.contains("active");
+
+	// The filter dropdowns float on the body, so hiding the view they hang from does not hide them.
+	// Arriving at any view leaves them behind; staying on one with a search bar keeps whichever one
+	// is open, because a search re-rendered on a keystroke comes through here too.
+	if (arriving || (route.view !== "results" && route.view !== "library")) closeFilterMenu();
+
 	document.querySelectorAll(".view").forEach((element) => {
 		if (element === viewElement) return;
 		element.classList.remove("active");
@@ -247,6 +269,11 @@ export function handleRoute(prerendered: Page | null = null): void {
 		}
 		case "collections": {
 			renderCollections(page, adopt);
+			document.getElementById("main")!.scrollTop = 0;
+			break;
+		}
+		case "library": {
+			renderLibrary(page.q, page.sort, arriving);
 			document.getElementById("main")!.scrollTop = 0;
 			break;
 		}
@@ -307,16 +334,7 @@ export function updateGridState(route: Route): void {
 	}
 
 	if (route.view === "results") {
-		if (!state.searchResultTiers) return;
-		for (const cell of allCells) {
-			const date = (cell as HTMLElement).dataset.date;
-			const tier = date ? state.searchResultTiers.get(date) : undefined;
-			if (tier !== undefined) {
-				cell.classList.add("cell--search-match", `cell--search-t${tier}`);
-			} else {
-				cell.classList.add("cell--search-nonmatch");
-			}
-		}
+		lightTiers(allCells);
 		return;
 	}
 
@@ -331,6 +349,22 @@ export function updateGridState(route: Route): void {
 		return;
 	}
 
+	// Lit and dimmed the way a book's page is, with the bookmarks as the book — once they are known;
+	// until then an empty set would dim the whole grid, only to light it back up a moment later. A
+	// search of them is lit as any search is.
+	if (route.view === "library") {
+		if (!state.bookmarksLoaded) return;
+		if (state.searchResultTiers) {
+			lightTiers(allCells);
+			return;
+		}
+		for (const cell of allCells) {
+			const date = (cell as HTMLElement).dataset.date;
+			cell.classList.add(date && state.bookmarkedDates.has(date) ? "cell--search-match" : "cell--search-nonmatch");
+		}
+		return;
+	}
+
 	if (route.view === "collection" && state.collectionDateSet) {
 		for (const cell of allCells) {
 			const date = (cell as HTMLElement).dataset.date;
@@ -341,5 +375,19 @@ export function updateGridState(route: Route): void {
 			}
 		}
 		return;
+	}
+}
+
+/** Each search result's cell by how well it matched, and every other cell dimmed. */
+function lightTiers(allCells: NodeListOf<Element>): void {
+	if (!state.searchResultTiers) return;
+	for (const cell of allCells) {
+		const date = (cell as HTMLElement).dataset.date;
+		const tier = date ? state.searchResultTiers.get(date) : undefined;
+		if (tier !== undefined) {
+			cell.classList.add("cell--search-match", `cell--search-t${tier}`);
+		} else {
+			cell.classList.add("cell--search-nonmatch");
+		}
 	}
 }

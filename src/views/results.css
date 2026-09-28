@@ -59,9 +59,15 @@
 	flex-shrink: 0;
 }
 
-.results-clear:hover {
+.results-clear:hover:not(:disabled) {
 	color: var(--text);
 	background: var(--grey);
+}
+
+/* Nothing to clear: an empty box on the bookmarks page is every bookmark, not a way home. */
+.results-clear:disabled {
+	opacity: 0.4;
+	cursor: default;
 }
 
 .results-sort {

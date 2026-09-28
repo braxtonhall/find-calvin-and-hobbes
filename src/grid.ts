@@ -213,7 +213,9 @@ export function renderGrid(): void {
 		const cell = (event.target as HTMLElement).closest<HTMLElement>(".cell");
 		if (!cell || cell === state.hoveredCell) return;
 		const route = parseRoute();
-		if (route.view !== "results") return;
+		// The two pages whose rows are the grid's cells, lit and dimmed; anywhere else a hover is
+		// only the tooltip.
+		if (route.view !== "results" && route.view !== "library") return;
 		if (cell.classList.contains("cell--none")) return;
 		if (cell.classList.contains("cell--search-nonmatch")) return;
 
@@ -227,7 +229,9 @@ export function renderGrid(): void {
 		cell.classList.add("cell--hover-highlight");
 		state.hoveredCell = cell;
 
-		const resultRows = document.querySelectorAll(`.result-row[data-date="${cell.dataset.date}"]`);
+		// The showing page's rows only: the other page keeps its rows while hidden, and a hidden row
+		// cannot be scrolled to.
+		const resultRows = document.querySelectorAll(`.view.active .result-row[data-date="${cell.dataset.date}"]`);
 		if (resultRows.length > 0) {
 			resultRows.forEach((row) => row.classList.add("result-row--highlight"));
 			const mainView = document.getElementById("main")!;
@@ -355,14 +359,9 @@ export async function loadComicData(): Promise<void> {
 	updateGridStatesFromData();
 	document.getElementById("loading")!.classList.add("hidden");
 
-	if (state.pendingRoute) {
-		state.pendingRoute = null;
-		handleRoute();
-	} else {
-		updateGridState(parseRoute());
-	}
+	resumeRoute();
 }
 
 // ─── Re-import from router (circular dependency resolved at runtime) ────────
 
-import { handleRoute, updateGridState } from "./router";
+import { resumeRoute } from "./router";

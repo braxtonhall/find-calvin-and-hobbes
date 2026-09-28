@@ -27,6 +27,16 @@ export interface ResultsPage {
 }
 
 /**
+ * Never prerendered either: the bookmarks live in this browser's IndexedDB, so the build has no
+ * rows to write, and the page is empty until the app has read them.
+ */
+export interface LibraryPage {
+	view: "library";
+	q: string;
+	sort: SortMode;
+}
+
+/**
  * The slice of a collection a strip's page needs: enough to draw its cover and its tooltip. The
  * alterations are only the ones for the strips on the page, since the full map on a compendium
  * would be repeated on every strip it holds.
@@ -84,7 +94,8 @@ export interface CollectionsPage {
 	collections: CollectionSummary[];
 }
 
-export type Page = LandingPage | CreditsPage | ResultsPage | DetailPage | CollectionPage | CollectionsPage;
+export type Page =
+	LandingPage | CreditsPage | ResultsPage | LibraryPage | DetailPage | CollectionPage | CollectionsPage;
 
 /**
  * Where a page's data comes from. The app's `state` is one of these; the build assembles another
@@ -112,6 +123,8 @@ export function pageTitle(page: Page): string {
 			return `${page.collection?.name ?? "Collection not found"} — ${SITE_NAME}`;
 		case "collections":
 			return `Collections — ${SITE_NAME}`;
+		case "library":
+			return page.q ? `${page.q} — Library — ${SITE_NAME}` : `Library — ${SITE_NAME}`;
 		case "credits":
 			return `Credits — ${SITE_NAME}`;
 	}

@@ -4,7 +4,14 @@ import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
 import { Collection, Comic } from "../src/types";
 import { computeDays } from "../src/days";
-import { buildCollectionPath, buildComicPath, COLLECTIONS_PATH, CREDITS_PATH, HOME_PATH } from "../src/routes";
+import {
+	LIBRARY_PATH,
+	buildCollectionPath,
+	buildComicPath,
+	COLLECTIONS_PATH,
+	CREDITS_PATH,
+	HOME_PATH,
+} from "../src/routes";
 import { Page, PageSource } from "../src/pages/page";
 import { detailPageFrom } from "../src/pages/detail";
 import { collectionPageFrom } from "../src/pages/collection";
@@ -98,6 +105,7 @@ class PagesPlugin {
 
 					emitPage(CREDITS_PATH, { view: "credits" });
 					emitPage(SEARCH_PATH, { view: "results", q: "", sort: "rank" });
+					emitPage(LIBRARY_PATH, { view: "library", q: "", sort: "rank" });
 
 					emitPage(COLLECTIONS_PATH, collectionsPageFrom(source));
 
@@ -114,7 +122,13 @@ class PagesPlugin {
 					}
 
 					if (siteUrl) {
-						const sitemap = buildSitemapXml(siteUrl, [HOME_PATH, CREDITS_PATH, COLLECTIONS_PATH, ...collectionPaths]);
+						const sitemap = buildSitemapXml(siteUrl, [
+							HOME_PATH,
+							CREDITS_PATH,
+							COLLECTIONS_PATH,
+							LIBRARY_PATH,
+							...collectionPaths,
+						]);
 						compilation.emitAsset("sitemap.xml", new sources.RawSource(sitemap));
 					}
 				},

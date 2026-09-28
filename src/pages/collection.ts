@@ -155,11 +155,10 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 		extrasHtml = `<p class="collection-section-heading">Extras</p><ul class="collection-extras">${page.extras.map((extra) => `<li>${escHtml(extra)}</li>`).join("")}</ul>`;
 	}
 
-	const hasDailies = collection.dailies && collection.dailies.length > 0;
 	const numComicsInCollection = page.dates.length;
 	let comicsSummary = "";
 	if (numComicsInCollection > 0) {
-		comicsSummary = `<p class="collection-meta"><span class="collection-meta--label">Comics:</span> ${numComicsInCollection} strip${numComicsInCollection !== 1 ? "s" : ""}${hasDailies ? " in order" : " (unordered)"}</p>`;
+		comicsSummary = `<p class="collection-meta"><span class="collection-meta--label">Comics:</span> ${numComicsInCollection} strip${numComicsInCollection !== 1 ? "s" : ""}</p>`;
 	}
 
 	return `<div class="collection-container">

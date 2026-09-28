@@ -14,6 +14,8 @@ export interface AppState {
 	collectionTooltip: HTMLElement | null;
 	keyboardNavActive: boolean;
 	bookmarkedDates: Set<string>;
+	/** Whether IndexedDB has answered — or failed to — so an empty `bookmarkedDates` means none. */
+	bookmarksLoaded: boolean;
 	dataLoaded: boolean;
 	pendingRoute: Route | null;
 	resultsDebounceTimer: number | null;
@@ -33,6 +35,7 @@ export const state: AppState = {
 	collectionTooltip: null,
 	keyboardNavActive: false,
 	bookmarkedDates: new Set(),
+	bookmarksLoaded: false,
 	dataLoaded: false,
 	pendingRoute: null,
 	resultsDebounceTimer: null,
