@@ -53,8 +53,8 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 	}
 
 	// The same query a search takes, over the bookmarks only. Unlike `/search`, no query is a page
-	// of its own — every bookmark — so an empty `?q=` is not written; see `buildBookmarksPath`.
-	if (path === BOOKMARKS_PATH) {
+	// of its own — every bookmark — so an empty `?q=` is not written; see `buildLibraryPath`.
+	if (path === LIBRARY_PATH) {
 		return { view: "bookmarks", q: params.get("q") ?? "", sort };
 	}
 
@@ -73,11 +73,11 @@ export function buildSearchPath(query: string, sort: SortMode = "rank"): string 
 
 /**
  * The sort is kept without a query, so that a reader who picks date order before typing gets it
- * when they do. The query is not: `?q=` alone says nothing `/bookmarks` does not.
+ * when they do. The query is not: `?q=` alone says nothing `/library` does not.
  */
-export function buildBookmarksPath(query: string = "", sort: SortMode = "rank"): string {
+export function buildLibraryPath(query: string = "", sort: SortMode = "rank"): string {
 	const params = [query ? "q=" + encodeURIComponent(query) : "", sort === "date" ? "sort=date" : ""].filter(Boolean);
-	return BOOKMARKS_PATH + (params.length > 0 ? "?" + params.join("&") : "");
+	return LIBRARY_PATH + (params.length > 0 ? "?" + params.join("&") : "");
 }
 
 export function buildComicPath(date: string, alternates: string[] = []): string {
@@ -90,7 +90,7 @@ export function buildCollectionPath(collectionId: string): string {
 }
 
 export const COLLECTIONS_PATH = "/collections";
-export const BOOKMARKS_PATH = "/bookmarks";
+export const LIBRARY_PATH = "/library";
 export const CREDITS_PATH = "/credits";
 export const HOME_PATH = "/";
 

@@ -1,4 +1,4 @@
-import { CREDITS_PATH } from "../routes";
+import { COLLECTIONS_PATH, CREDITS_PATH, LIBRARY_PATH } from "../routes";
 import { addressOf } from "../base-path";
 
 // Drawn in the same idiom as the results-bar icons: 16px, stroked in `currentColor`, no fill.
@@ -23,6 +23,12 @@ export function buildLandingHtml(): string {
 			/>
 			<button type="submit" class="landing-submit" id="landing-submit" title="Search" aria-label="Search">${SEARCH_ICON}</button>
 		</form>
-		<a class="landing-credits" href="${addressOf(CREDITS_PATH)}">Credits</a>
+		<nav class="landing-links">
+			<a href="${addressOf(COLLECTIONS_PATH)}">Collections</a>
+			<span aria-hidden="true">·</span>
+			<a href="${addressOf(LIBRARY_PATH)}">Library</a>
+			<span aria-hidden="true">·</span>
+			<a href="${addressOf(CREDITS_PATH)}">Credits</a>
+		</nav>
 	`;
 }

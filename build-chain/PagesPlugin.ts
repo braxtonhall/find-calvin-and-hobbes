@@ -5,7 +5,7 @@ import { sources } from "webpack";
 import { Collection, Comic } from "../src/types";
 import { computeDays } from "../src/days";
 import {
-	BOOKMARKS_PATH,
+	LIBRARY_PATH,
 	buildCollectionPath,
 	buildComicPath,
 	COLLECTIONS_PATH,
@@ -105,7 +105,7 @@ class PagesPlugin {
 
 					emitPage(CREDITS_PATH, { view: "credits" });
 					emitPage(SEARCH_PATH, { view: "results", q: "", sort: "rank" });
-					emitPage(BOOKMARKS_PATH, { view: "bookmarks", q: "", sort: "rank" });
+					emitPage(LIBRARY_PATH, { view: "bookmarks", q: "", sort: "rank" });
 
 					emitPage(COLLECTIONS_PATH, collectionsPageFrom(source));
 
@@ -126,7 +126,7 @@ class PagesPlugin {
 							HOME_PATH,
 							CREDITS_PATH,
 							COLLECTIONS_PATH,
-							BOOKMARKS_PATH,
+							LIBRARY_PATH,
 							...collectionPaths,
 						]);
 						compilation.emitAsset("sitemap.xml", new sources.RawSource(sitemap));

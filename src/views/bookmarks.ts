@@ -5,7 +5,7 @@ import { SortMode } from "../types";
 import { searchBookmarks } from "../search";
 import { assignTiers } from "../tiers";
 import { canGoBack } from "../router";
-import { buildBookmarksPath } from "../routes";
+import { buildLibraryPath } from "../routes";
 import { buildBackAndHomeButtons } from "../pages/nav-buttons";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachRowHandlers, resultsHtml, SEARCH_LABELS, SourceLabels } from "./result-rows";
@@ -33,13 +33,13 @@ export function renderBookmarks(query: string, sort: SortMode, arriving: boolean
 
 	if (arriving || !bar || !element.contains(bar.input)) {
 		element.innerHTML = `${buildBackAndHomeButtons(canGoBack())}
-			<h2 class="bookmarks-heading">Bookmarks</h2>
+			<h2 class="bookmarks-heading">Library</h2>
 			<div class="bookmarks-search"></div>`;
 		attachBackAndHomeHandlers(element);
 		bar = buildSearchBar(element.querySelector(".bookmarks-search")!, {
 			id: "bookmarks",
 			placeholder: "Search bookmarks",
-			pathFor: buildBookmarksPath,
+			pathFor: buildLibraryPath,
 			// An empty box on this page is every bookmark, not a way home.
 			listsWithoutQuery: true,
 		});

@@ -124,7 +124,7 @@ export function pageTitle(page: Page): string {
 		case "collections":
 			return `Collections — ${SITE_NAME}`;
 		case "bookmarks":
-			return page.q ? `${page.q} — Bookmarks — ${SITE_NAME}` : `Bookmarks — ${SITE_NAME}`;
+			return page.q ? `${page.q} — Library — ${SITE_NAME}` : `Library — ${SITE_NAME}`;
 		case "credits":
 			return `Credits — ${SITE_NAME}`;
 	}
