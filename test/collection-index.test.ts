@@ -28,6 +28,21 @@ test("the collection index", async (suite) => {
 		for (const id of printed) assert.ok(emitted.has(id), `${id} is printed in but not indexed`);
 	});
 
+	// Every alteration a book records is of a strip it prints, so `@altered` can find all of them.
+	await suite.test("marks every alteration on an appearance in its book", () => {
+		for (const source of data.sources) {
+			for (const key of Object.keys(source.alterations ?? {})) {
+				const appearances = data.appearancesByComic.get(key) ?? [];
+				const inBook = appearances.filter((appearance) => appearance.collection === source.id);
+				assert.ok(inBook.length > 0, `${source.id} alters ${key} but does not print it`);
+				assert.ok(
+					inBook.every((appearance) => appearance.altered),
+					`${source.id} ${key} is not marked altered`,
+				);
+			}
+		}
+	});
+
 	/*
 	 * The invariant the emptiness check exists to create, and the reason `@in:` can offer every id in
 	 * here: a collection nobody appears in could only ever be a value the menu offered and then

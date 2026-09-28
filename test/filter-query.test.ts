@@ -167,6 +167,27 @@ test("filters", async (suite) => {
 		assert.ok(!passesFilters("1988-06-01", parseQueryFilters("@empty").filters!));
 	});
 
+	// `@altered` is read off the same appearances as `@in`, but it is a field of its own: altered in
+	// any book, whichever books `@in` names.
+	await suite.test("@altered matches a strip some book printed altered", () => {
+		const changed: Comic = {
+			date: "1985-12-15",
+			transcript: "",
+			appearances: [
+				{ collection: "book1", pages: [1], altered: true },
+				{ collection: "book3", pages: [2] },
+			],
+		};
+		const faithful = strip("1985-12-16", "book1", "book3");
+		assert.ok(passesFilters(changed, parseQueryFilters("@altered").filters!));
+		assert.ok(!passesFilters(faithful, parseQueryFilters("@altered").filters!));
+		assert.ok(passesFilters(changed, parseQueryFilters("@in:book1 @altered").filters!));
+		assert.ok(passesFilters(changed, parseQueryFilters("@in:book3 @altered").filters!));
+		assert.ok(!passesFilters(changed, parseQueryFilters("@in:book5 @altered").filters!));
+		// A date cannot say whether a book changed the strip.
+		assert.ok(!passesFilters("1985-12-15", parseQueryFilters("@altered").filters!));
+	});
+
 	// A filter is deliberate syntax, so it may demand an unambiguous order instead of guessing.
 	await suite.test("@date values are year first, never ambiguous", () => {
 		const settled = parseQueryFilters("@date:1988/9/3").filters!;
@@ -270,6 +291,7 @@ test("filters", async (suite) => {
 			// `@year:2001`, which is a real coordinate that honestly holds nothing.
 			"@sunday:yes",
 			"@empty:yes",
+			"@altered:yes",
 			"@year",
 			"@in",
 			"@in:snowman",
@@ -361,6 +383,7 @@ test("scanning filters", async (suite) => {
 			"@before:august-3",
 			"@sunday:yes",
 			"@empty:yes",
+			"@altered:yes",
 			"@year",
 			"@in",
 			"@in:snowman",
