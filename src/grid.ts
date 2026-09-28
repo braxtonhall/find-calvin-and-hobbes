@@ -215,7 +215,7 @@ export function renderGrid(): void {
 		const route = parseRoute();
 		// The two pages whose rows are the grid's cells, lit and dimmed; anywhere else a hover is
 		// only the tooltip.
-		if (route.view !== "results" && route.view !== "bookmarks") return;
+		if (route.view !== "results" && route.view !== "library") return;
 		if (cell.classList.contains("cell--none")) return;
 		if (cell.classList.contains("cell--search-nonmatch")) return;
 

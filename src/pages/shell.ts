@@ -20,7 +20,7 @@ import { buildCorrectionLinkHtml } from "./correction";
  * so the app can pick the page up where the build left it without fetching the archive first.
  */
 
-export const VIEWS = ["landing", "results", "detail", "collection", "collections", "bookmarks", "credits"] as const;
+export const VIEWS = ["landing", "results", "detail", "collection", "collections", "library", "credits"] as const;
 
 export const PAGE_DATA_ID = "page-data";
 
@@ -124,7 +124,7 @@ export function buildViewHtml(page: Page, canGoBack: boolean): string {
 		case "results":
 			// The rows are the app's to draw: they depend on the query, and there is no file per query.
 			return "";
-		case "bookmarks":
+		case "library":
 			// The same, for rows that depend on what this browser has bookmarked.
 			return "";
 	}

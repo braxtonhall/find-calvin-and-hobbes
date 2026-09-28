@@ -13,7 +13,7 @@ import { renderResults } from "./views/results";
 import { renderDetail } from "./views/detail";
 import { renderCollection } from "./views/collection";
 import { renderCollections } from "./views/collections";
-import { renderBookmarks } from "./views/bookmarks";
+import { renderLibrary } from "./views/library";
 import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
 import { updateCorrectionLink } from "./views/correction";
@@ -139,10 +139,10 @@ function pageFor(route: Route): Page | null {
 			return state.dataLoaded ? collectionPageFrom(state, route.id ?? "") : null;
 		case "collections":
 			return state.dataLoaded ? collectionsPageFrom(state) : null;
-		case "bookmarks":
+		case "library":
 			// Both, because a page drawn before IndexedDB answers would say there are no bookmarks.
 			return state.dataLoaded && state.bookmarksLoaded
-				? { view: "bookmarks", q: route.q ?? "", sort: route.sort ?? "rank" }
+				? { view: "library", q: route.q ?? "", sort: route.sort ?? "rank" }
 				: null;
 	}
 }
@@ -186,7 +186,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		case "collections":
 			return { page: prerendered, adopt: true };
 		case "results":
-		case "bookmarks":
+		case "library":
 			return null;
 		case "detail": {
 			if (prerendered.date !== route.date) return null;
@@ -228,7 +228,7 @@ export function handleRoute(prerendered: Page | null = null): void {
 	// The filter dropdowns float on the body, so hiding the view they hang from does not hide them.
 	// Arriving at any view leaves them behind; staying on one with a search bar keeps whichever one
 	// is open, because a search re-rendered on a keystroke comes through here too.
-	if (arriving || (route.view !== "results" && route.view !== "bookmarks")) closeFilterMenu();
+	if (arriving || (route.view !== "results" && route.view !== "library")) closeFilterMenu();
 
 	document.querySelectorAll(".view").forEach((element) => {
 		if (element === viewElement) return;
@@ -272,8 +272,8 @@ export function handleRoute(prerendered: Page | null = null): void {
 			document.getElementById("main")!.scrollTop = 0;
 			break;
 		}
-		case "bookmarks": {
-			renderBookmarks(page.q, page.sort, arriving);
+		case "library": {
+			renderLibrary(page.q, page.sort, arriving);
 			document.getElementById("main")!.scrollTop = 0;
 			break;
 		}
@@ -352,7 +352,7 @@ export function updateGridState(route: Route): void {
 	// Lit and dimmed the way a book's page is, with the bookmarks as the book — once they are known;
 	// until then an empty set would dim the whole grid, only to light it back up a moment later. A
 	// search of them is lit as any search is.
-	if (route.view === "bookmarks") {
+	if (route.view === "library") {
 		if (!state.bookmarksLoaded) return;
 		if (state.searchResultTiers) {
 			lightTiers(allCells);

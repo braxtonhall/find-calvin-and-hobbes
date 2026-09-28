@@ -30,8 +30,8 @@ export interface ResultsPage {
  * Never prerendered either: the bookmarks live in this browser's IndexedDB, so the build has no
  * rows to write, and the page is empty until the app has read them.
  */
-export interface BookmarksPage {
-	view: "bookmarks";
+export interface LibraryPage {
+	view: "library";
 	q: string;
 	sort: SortMode;
 }
@@ -95,7 +95,7 @@ export interface CollectionsPage {
 }
 
 export type Page =
-	LandingPage | CreditsPage | ResultsPage | BookmarksPage | DetailPage | CollectionPage | CollectionsPage;
+	LandingPage | CreditsPage | ResultsPage | LibraryPage | DetailPage | CollectionPage | CollectionsPage;
 
 /**
  * Where a page's data comes from. The app's `state` is one of these; the build assembles another
@@ -123,7 +123,7 @@ export function pageTitle(page: Page): string {
 			return `${page.collection?.name ?? "Collection not found"} — ${SITE_NAME}`;
 		case "collections":
 			return `Collections — ${SITE_NAME}`;
-		case "bookmarks":
+		case "library":
 			return page.q ? `${page.q} — Library — ${SITE_NAME}` : `Library — ${SITE_NAME}`;
 		case "credits":
 			return `Credits — ${SITE_NAME}`;

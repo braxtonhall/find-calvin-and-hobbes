@@ -154,10 +154,10 @@ test("a prerendered document", async (suite) => {
 	});
 
 	await suite.test("holds nothing for the bookmarks, which only the browser knows", () => {
-		const page: Page = { view: "bookmarks", q: "", sort: "rank" };
+		const page: Page = { view: "library", q: "", sort: "rank" };
 		const document = buildDocumentHtml(template, page, { ...options, path: "/library" });
 		assert.deepEqual(embeddedPage(document), page);
-		assert.equal(activeView(document, "bookmarks"), "");
+		assert.equal(activeView(document, "library"), "");
 		assert.match(document, /<title>Library — Find Calvin and Hobbes<\/title>/);
 	});
 

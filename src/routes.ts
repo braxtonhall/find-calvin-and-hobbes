@@ -55,7 +55,7 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 	// The same query a search takes, over the bookmarks only. Unlike `/search`, no query is a page
 	// of its own — every bookmark — so an empty `?q=` is not written; see `buildLibraryPath`.
 	if (path === LIBRARY_PATH) {
-		return { view: "bookmarks", q: params.get("q") ?? "", sort };
+		return { view: "library", q: params.get("q") ?? "", sort };
 	}
 
 	if (path === "/credits") {

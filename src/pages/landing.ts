@@ -24,9 +24,9 @@ export function buildLandingHtml(): string {
 			<button type="submit" class="landing-submit" id="landing-submit" title="Search" aria-label="Search">${SEARCH_ICON}</button>
 		</form>
 		<nav class="landing-links">
-			<a href="${addressOf(COLLECTIONS_PATH)}">Collections</a>
-			<span aria-hidden="true">·</span>
 			<a href="${addressOf(LIBRARY_PATH)}">Library</a>
+			<span aria-hidden="true">·</span>
+			<a href="${addressOf(COLLECTIONS_PATH)}">Collections</a>
 			<span aria-hidden="true">·</span>
 			<a href="${addressOf(CREDITS_PATH)}">Credits</a>
 		</nav>

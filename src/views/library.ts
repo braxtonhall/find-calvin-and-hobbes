@@ -1,4 +1,4 @@
-import "./bookmarks.css";
+import "./library.css";
 
 import { state } from "../state";
 import { SortMode } from "../types";
@@ -28,16 +28,16 @@ let bar: SearchBar | null = null;
  * once both the archive and the bookmarks have arrived — see `pageFor` — so an empty list here
  * means there really are none, or none the query matches.
  */
-export function renderBookmarks(query: string, sort: SortMode, arriving: boolean): void {
-	const element = document.getElementById("view-bookmarks")!;
+export function renderLibrary(query: string, sort: SortMode, arriving: boolean): void {
+	const element = document.getElementById("view-library")!;
 
 	if (arriving || !bar || !element.contains(bar.input)) {
 		element.innerHTML = `${buildBackAndHomeButtons(canGoBack())}
-			<h2 class="bookmarks-heading">Library</h2>
-			<div class="bookmarks-search"></div>`;
+			<h2 class="library-heading">Library</h2>
+			<div class="library-search"></div>`;
 		attachBackAndHomeHandlers(element);
-		bar = buildSearchBar(element.querySelector(".bookmarks-search")!, {
-			id: "bookmarks",
+		bar = buildSearchBar(element.querySelector(".library-search")!, {
+			id: "library",
 			placeholder: "Search bookmarks",
 			pathFor: buildLibraryPath,
 			// An empty box on this page is every bookmark, not a way home.
