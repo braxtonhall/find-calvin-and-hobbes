@@ -8,6 +8,7 @@ import { loadDescriptions } from "./details";
 import { isPlainClick, parseRoute } from "./router";
 import { buildComicPath } from "./routes";
 import { addressOf } from "./base-path";
+import { formatLongDate } from "./date-utils";
 
 export function updateGridStatesFromData(): void {
 	const cells = document.querySelectorAll(".cell");
@@ -76,7 +77,10 @@ function buildLabelSpans(prefixLength: number, weekCount: number, text: (period:
 
 const HIGHLIGHT_DEADZONE_DAYS = 2 * 7;
 
-function renderYearRail(cells: HTMLElement[]): void {
+/** Weeks to a `.grid-chunk`: small enough that a screenful is a handful, large enough to be few. */
+const WEEKS_PER_CHUNK = 8;
+
+function renderYearRail(grid: HTMLElement, weekCount: number): void {
 	const rail = document.getElementById("year-rail")!;
 	const sidebar = document.getElementById("sidebar")!;
 	const scroller = document.getElementById("grid-container")!;
@@ -90,6 +94,14 @@ function renderYearRail(cells: HTMLElement[]): void {
 		else bounds.set(year, { first: index, last: index });
 	}
 
+	// Where a week's row sits is worked out from the grid's own box rather than read off a cell: an
+	// off-screen chunk of the grid is skipped by the browser, and measuring a cell in one would have
+	// it laid out again on every scroll.
+	const rowGeometry = () => {
+		const gap = parseFloat(getComputedStyle(grid).rowGap) || 0;
+		return { gap, pitch: (grid.getBoundingClientRect().height + gap) / weekCount };
+	};
+
 	const entries = [...bounds].map(([year, { first, last }]) => {
 		const button = document.createElement("button");
 		button.type = "button";
@@ -101,13 +113,12 @@ function renderYearRail(cells: HTMLElement[]): void {
 		pill.textContent = `'${year.slice(2)}`;
 		button.appendChild(pill);
 
-		const firstCell = cells[first];
+		const firstWeek = state.allDays[first].weekIndex;
 		button.addEventListener("click", () => {
-			const offset = firstCell.getBoundingClientRect().top - cells[0].getBoundingClientRect().top;
-			scroller.scrollTo({ top: offset, behavior: "smooth" });
+			scroller.scrollTo({ top: firstWeek * rowGeometry().pitch, behavior: "smooth" });
 		});
 
-		return { button, firstCell, lastCell: cells[Math.max(first, last - HIGHLIGHT_DEADZONE_DAYS)] };
+		return { button, firstWeek, lastWeek: state.allDays[Math.max(first, last - HIGHLIGHT_DEADZONE_DAYS)].weekIndex };
 	});
 
 	rail.replaceChildren(...entries.map((entry) => entry.button));
@@ -115,9 +126,11 @@ function renderYearRail(cells: HTMLElement[]): void {
 	const updateActiveYears = () => {
 		const viewport = sidebar.getBoundingClientRect();
 		const top = viewport.top + header.getBoundingClientRect().height;
-		for (const { button, firstCell, lastCell } of entries) {
-			const onScreen =
-				firstCell.getBoundingClientRect().top < viewport.bottom && lastCell.getBoundingClientRect().bottom > top;
+		const gridTop = grid.getBoundingClientRect().top;
+		const { gap, pitch } = rowGeometry();
+		const cellSize = pitch - gap;
+		for (const { button, firstWeek, lastWeek } of entries) {
+			const onScreen = gridTop + firstWeek * pitch < viewport.bottom && gridTop + lastWeek * pitch + cellSize > top;
 			button.classList.toggle("year-rail-button--active", onScreen);
 			if (onScreen) button.setAttribute("aria-current", "true");
 			else button.removeAttribute("aria-current");
@@ -146,7 +159,17 @@ export function renderGrid(): void {
 	const grid = document.createElement("div");
 	grid.id = "grid";
 
-	const cells: HTMLElement[] = [];
+	const weekCount = state.allDays[state.allDays.length - 1].weekIndex + 1;
+
+	// The weeks are drawn in chunks the browser can skip while they are off screen (see
+	// `.grid-chunk`), so that lighting or dimming the whole grid only restyles the part in view.
+	const chunks: HTMLElement[] = [];
+	for (let firstWeek = 0; firstWeek < weekCount; firstWeek += WEEKS_PER_CHUNK) {
+		const chunk = document.createElement("div");
+		chunk.className = "grid-chunk";
+		chunk.style.setProperty("--chunk-weeks", String(Math.min(WEEKS_PER_CHUNK, weekCount - firstWeek)));
+		chunks.push(chunk);
+	}
 
 	for (const day of state.allDays) {
 		// An anchor, so that cmd-click opens the day in a new tab and right-click offers its address.
@@ -164,31 +187,19 @@ export function renderGrid(): void {
 		cell.draggable = false;
 		cell.dataset.date = day.date;
 
-		const [year, month, dayOfMonth] = day.date.split("-").map(Number);
-		const dateObject = new Date(Date.UTC(year, month - 1, dayOfMonth));
-		cell.setAttribute(
-			"aria-label",
-			dateObject.toLocaleDateString("en-US", {
-				weekday: "long",
-				year: "numeric",
-				month: "long",
-				day: "numeric",
-				timeZone: "UTC",
-			}) + (day.state !== "none" ? " — has comic" : ""),
-		);
+		cell.setAttribute("aria-label", formatLongDate(day.date) + (day.state !== "none" ? " — has comic" : ""));
 
 		// Only visible on mobile, where cells are large enough to hold a number.
 		const dateLabel = document.createElement("span");
 		dateLabel.className = "cell-date";
 		dateLabel.setAttribute("aria-hidden", "true");
-		dateLabel.textContent = String(dayOfMonth);
+		dateLabel.textContent = String(Number(day.date.substring(8, 10)));
 		cell.appendChild(dateLabel);
 
-		cells.push(cell);
-		grid.appendChild(cell);
+		chunks[Math.floor(day.weekIndex / WEEKS_PER_CHUNK)].appendChild(cell);
 	}
 
-	const weekCount = state.allDays[state.allDays.length - 1].weekIndex + 1;
+	grid.replaceChildren(...chunks);
 
 	const monthSpans = buildLabelSpans(7, weekCount, (month) => MONTH_NAMES[Number(month.substring(5, 7)) - 1]);
 	const yearSpans = buildLabelSpans(4, weekCount, (year) => `'${year.slice(2)}`);
@@ -198,7 +209,7 @@ export function renderGrid(): void {
 
 	layout.replaceChildren(grid, monthLabelsColumn, yearLabelsColumn);
 
-	renderYearRail(cells);
+	renderYearRail(grid, weekCount);
 
 	// The href does the navigating; this is only the scroll that used to ride along with it. Skipped
 	// for a modified click, which is leaving the current page where it stands — including its grid.
@@ -268,15 +279,7 @@ export function renderGrid(): void {
 	let lastMouseY = 0;
 
 	const updateTooltip = (cell: HTMLElement) => {
-		const [year, month, dayOfMonth] = cell.dataset.date!.split("-").map(Number);
-		const dateObject = new Date(Date.UTC(year, month - 1, dayOfMonth));
-		tooltip.textContent = dateObject.toLocaleDateString("en-US", {
-			weekday: "long",
-			year: "numeric",
-			month: "long",
-			day: "numeric",
-			timeZone: "UTC",
-		});
+		tooltip.textContent = formatLongDate(cell.dataset.date!);
 		const cellRect = cell.getBoundingClientRect();
 		tooltip.style.left = cellRect.right + 6 + "px";
 		tooltip.style.top = cellRect.top + cellRect.height / 2 + "px";

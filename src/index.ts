@@ -116,17 +116,29 @@ document.addEventListener("DOMContentLoaded", () => {
 		}
 	});
 
+	const sidebar = document.getElementById("sidebar")!;
+	const overlay = document.getElementById("mobile-overlay")!;
+
+	// The sidebar stays visible while it slides out, and is hidden once it is gone: hiding it restyles
+	// the whole grid, which done mid-slide would stall it (see `#sidebar` in components.css).
+	const setSidebarOpen = (open: boolean) => {
+		sidebar.classList.toggle("mobile-closing", !open && sidebar.classList.contains("mobile-visible"));
+		sidebar.classList.toggle("mobile-visible", open);
+		overlay.classList.toggle("visible", open);
+	};
+
+	const finishClosing = (event: TransitionEvent) => {
+		if (event.target !== sidebar || event.propertyName !== "transform") return;
+		if (!sidebar.classList.contains("mobile-visible")) sidebar.classList.remove("mobile-closing");
+	};
+	sidebar.addEventListener("transitionend", finishClosing);
+	sidebar.addEventListener("transitioncancel", finishClosing);
+
 	document.getElementById("mobile-grid-toggle")!.addEventListener("click", () => {
-		const sidebar = document.getElementById("sidebar")!;
-		const overlay = document.getElementById("mobile-overlay")!;
-		const isOpen = sidebar.classList.toggle("mobile-visible");
-		overlay.classList.toggle("visible", isOpen);
+		setSidebarOpen(!sidebar.classList.contains("mobile-visible"));
 	});
 
-	document.getElementById("mobile-overlay")!.addEventListener("click", () => {
-		document.getElementById("sidebar")!.classList.remove("mobile-visible");
-		document.getElementById("mobile-overlay")!.classList.remove("visible");
-	});
+	overlay.addEventListener("click", () => setSidebarOpen(false));
 
 	document.addEventListener("mousemove", (event) => {
 		if (state.keyboardNavActive) {
