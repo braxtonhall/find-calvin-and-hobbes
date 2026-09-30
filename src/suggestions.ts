@@ -33,16 +33,17 @@ export const SUGGESTED_QUERIES: readonly string[] = [
 	"time machine",
 	"yukon",
 	"water balloon",
+	"calvinball",
 	"waiting for the school bus",
 	"@month:december @day:24 @is:sunday",
-	"@year:1988",
 	"november 18 1985",
-	"@is:sunday calvinball",
 	"@is:sunday snowman",
-	"@is:sunday @year:1986",
-	"@year:1985",
+	"@is:sunday @year:1985",
 	`@month:${month} @day:${day}`,
 	"@in:sundaypages",
+	"@in:lazysunday",
+	"@in:tenthanniversary",
+	"@is:rerun",
 ];
 
 /**
