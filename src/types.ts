@@ -20,6 +20,10 @@ export interface Appearance {
 export interface Edition {
 	label: string;
 	isbn?: string[];
+	/** When the edition came out later than the collection it belongs to. */
+	pub_year?: number;
+	/** Its own cover, when it has one; otherwise it wears the collection's. */
+	image?: string;
 }
 
 export interface Collection {

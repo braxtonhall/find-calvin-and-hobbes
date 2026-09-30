@@ -15,7 +15,7 @@ import {
 } from "../pages/detail";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
-import { attachCellHighlightLink } from "./cell-highlight";
+import { attachCellHighlightLink, highlightCollection } from "./cell-highlight";
 
 function buildBookmarkButtonHandler(bookmarkButton: HTMLButtonElement, date: string): void {
 	isBookmarked(date).then((bookmarked) => {
@@ -89,7 +89,8 @@ function showCollectionTooltip(book: HTMLElement): void {
 	if (!collection) return;
 	const tooltip = getCollectionTooltip();
 
-	const pubYear = collection.pub_year.toString();
+	const edition = book.dataset.edition ? collection.editions?.[book.dataset.edition] : undefined;
+	const pubYear = (edition?.pub_year ?? collection.pub_year).toString();
 	let html = `<span class="collection-tooltip__name">${escHtml(collection.name)}</span> <span class="collection-tooltip__year">(${pubYear})</span>`;
 
 	const pageLines = book.dataset.pages ? book.dataset.pages.split("\n").filter(Boolean) : [];
@@ -152,6 +153,26 @@ function attachCollectionTooltipFollowers(): void {
 	main.addEventListener("load", follow, true);
 }
 
+/**
+ * Hovering a book shows its strips in the grid, as the list of books does. The ranges come from the
+ * collection index, so until it has loaded — a cold load — the hover does nothing.
+ */
+function attachBookHighlightHandlers(element: HTMLElement): void {
+	element.querySelectorAll<HTMLElement>(".collection-book").forEach((book) => {
+		// A book followed to its page is left focused, and hidden, which blurs it; by then the grid is
+		// the book page's to draw, so only this page while it is showing may touch it.
+		const show = () => {
+			const collection = state.collectionsById?.get(book.dataset.collectionId ?? "");
+			if (collection && element.classList.contains("active")) highlightCollection(collection);
+		};
+		const clear = () => element.classList.contains("active") && highlightCollection(null);
+		book.addEventListener("mouseenter", show);
+		book.addEventListener("focus", show);
+		book.addEventListener("mouseleave", clear);
+		book.addEventListener("blur", clear);
+	});
+}
+
 function attachCollectionBookHandlers(element: HTMLElement, page: DetailPage): void {
 	tooltipCollections = new Map(page.collections.map((collection) => [collection.id, collection]));
 
@@ -200,6 +221,7 @@ export function renderDetail(page: DetailPage, adopt: boolean = false): void {
 	if (bookmarkButton) buildBookmarkButtonHandler(bookmarkButton, page.date);
 
 	attachCollectionBookHandlers(element, page);
+	attachBookHighlightHandlers(element);
 
 	if (page.descriptions === null) {
 		loadDescriptions().then(() => {

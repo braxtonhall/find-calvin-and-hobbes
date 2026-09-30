@@ -109,6 +109,8 @@ test("a site mounted at /repo/", async (suite) => {
 		for (const comic of comics) if (comic.image) assert.match(comic.image, /^\/repo\/assets\/comics\//);
 		assert.ok(index.collections.length > 0);
 		for (const collection of index.collections) assert.match(collection.image, /^\/repo\/assets\//);
+		const editions = index.collections.flatMap((collection) => Object.values(collection.editions ?? {}));
+		for (const edition of editions) if (edition.image) assert.match(edition.image, /^\/repo\/assets\//);
 	});
 
 	await suite.test("links, fetches and unfurls from the mount", () => {

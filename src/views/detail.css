@@ -286,7 +286,6 @@
 	height: 64px;
 	position: relative;
 	cursor: pointer;
-	transition: transform 0.15s;
 	background: var(--grey);
 	border-radius: 3px;
 }
@@ -296,10 +295,6 @@
 	width: auto;
 	display: block;
 	border-radius: 3px;
-}
-
-.collection-book:hover {
-	transform: scale(1.1);
 }
 
 .collection-book--bw img {

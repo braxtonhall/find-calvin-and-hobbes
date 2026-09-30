@@ -48,7 +48,10 @@ export function generateCollectionIndex(collectionData: CollectionData, basePath
 
 		if (editions) {
 			collection.editions = Object.fromEntries(
-				Object.entries(editions).map(([name, { volumes: _volumes, ...meta }]) => [name, meta]),
+				Object.entries(editions).map(([name, { volumes: _volumes, ...meta }]) => [
+					name,
+					meta.image ? { ...meta, image: `${basePath}${meta.image.replace(/^\/+/, "")}` } : meta,
+				]),
 			);
 		}
 

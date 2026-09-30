@@ -122,8 +122,11 @@ function shortenEditionLabel(label: string): string {
 	return label.replace(/\s*\(.*\)\s*$/, "");
 }
 
+/** A book the strip is in, or one edition of it — each edition has its own cover, so its own entry. */
 interface AppearanceEntry {
 	collection: DetailCollection;
+	edition?: string;
+	image: string;
 	captionLines: string[];
 	tooltipLines: string[];
 }
@@ -138,10 +141,12 @@ function buildAppearanceEntries(
 		const collection = collectionsById.get(appearance.collection);
 		if (!collection) continue;
 
-		let entry = entriesById.get(appearance.collection);
+		const key = `${appearance.collection} ${appearance.edition ?? ""}`;
+		let entry = entriesById.get(key);
 		if (!entry) {
-			entry = { collection, captionLines: [], tooltipLines: [] };
-			entriesById.set(appearance.collection, entry);
+			const image = (appearance.edition && collection.editions?.[appearance.edition]?.image) || collection.image;
+			entry = { collection, edition: appearance.edition, image, captionLines: [], tooltipLines: [] };
+			entriesById.set(key, entry);
 		}
 
 		if (appearance.edition) {
@@ -149,8 +154,9 @@ function buildAppearanceEntries(
 			const fullLabel = edition ? edition.label : appearance.edition;
 			const totalMatch = fullLabel.match(/\((\d+)/);
 			const totalVolumes = totalMatch ? parseInt(totalMatch[1]) : 0;
-			const volumePart = appearance.volume ? ` ${appearance.volume}` : "";
-			entry.captionLines.push(`${fullLabel.charAt(0)}${volumePart}, ${formatPages(appearance.pages)}`);
+			// The volume and the page on lines of their own, since the two together are wider than a cover.
+			if (appearance.volume) entry.captionLines.push(`Book ${appearance.volume},`);
+			entry.captionLines.push(formatPages(appearance.pages));
 			entry.tooltipLines.push(
 				`${shortenEditionLabel(fullLabel)}, Book ${appearance.volume} of ${totalVolumes}, ${formatPages(appearance.pages).replace("p.", "page")}`,
 			);
@@ -163,22 +169,21 @@ function buildAppearanceEntries(
 	return [...entriesById.values()];
 }
 
-function buildCoverBoxHtml(
-	collection: DetailCollection,
-	alterationKey: string,
-	isSunday: boolean,
-	tooltipLines: string[],
-): string {
+function buildCoverBoxHtml(entry: AppearanceEntry, alterationKey: string, isSunday: boolean): string {
+	const { collection } = entry;
 	const isBlackAndWhite = isSunday && !collection.colour;
 	const bwClass = isBlackAndWhite ? " collection-book--bw" : "";
 	const alteration = collection.alterations && collection.alterations[alterationKey];
 	const badge = alteration ? '<div class="collection-book__badge">*</div>' : "";
+	// The collection's ratio holds the space until the cover loads; an edition's own cover may differ.
+	const ratio = entry.image === collection.image ? ` style="aspect-ratio: ${collection.aspectRatio}"` : "";
+	const edition = entry.edition ? ` data-edition="${escHtml(entry.edition)}"` : "";
 
-	return `<a class="collection-book${bwClass}" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}" data-bw="${isBlackAndWhite ? "1" : "0"}" data-alteration="${escHtml(alteration || "")}" data-pages="${escHtml(tooltipLines.join("\n"))}" style="aspect-ratio: ${collection.aspectRatio}"><img src="${escHtml(collection.image)}" alt="${escHtml(collection.name)}" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${badge}</a>`;
+	return `<a class="collection-book${bwClass}" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}"${edition} data-bw="${isBlackAndWhite ? "1" : "0"}" data-alteration="${escHtml(alteration || "")}" data-pages="${escHtml(entry.tooltipLines.join("\n"))}"${ratio}><img src="${escHtml(entry.image)}" alt="${escHtml(collection.name)}" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${badge}</a>`;
 }
 
 function wrapCollectionSection(inner: string): string {
-	return `<p class="detail-collections-heading">Printed in:</p>${inner}`;
+	return `<p class="detail-collections-heading">Collected in:</p>${inner}`;
 }
 
 function buildAppearancesSectionHtml(
@@ -199,7 +204,7 @@ function buildAppearancesSectionHtml(
 			const caption = entry.captionLines
 				.map((line) => `<span class="collection-pages__line">${escHtml(line)}</span>`)
 				.join("");
-			return `<div class="collection-entry">${buildCoverBoxHtml(entry.collection, alterationKey, isSunday, entry.tooltipLines)}<div class="collection-pages">${caption}</div></div>`;
+			return `<div class="collection-entry">${buildCoverBoxHtml(entry, alterationKey, isSunday)}<div class="collection-pages">${caption}</div></div>`;
 		})
 		.join("");
 

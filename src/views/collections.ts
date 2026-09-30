@@ -1,34 +1,10 @@
 import "./collections.css";
 
-import { isDateInCollection } from "../date-utils";
-import { anyCellInView } from "../utils";
 import { canGoBack } from "../router";
-import { CollectionsPage, CollectionSummary } from "../pages/page";
+import { CollectionsPage } from "../pages/page";
 import { buildCollectionsHtml } from "../pages/collections";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
-
-/**
- * Shows a book's strips in the grid as its own page does — its strips lit, the rest dimmed — or,
- * given `null`, puts the grid back as it was. The book's ranges are on the page, so this works on a
- * cold load before the archive has arrived.
- *
- * When none of the book's strips is on screen, the grid scrolls to its first one, the way a hovered
- * search result brings its strip into view. A book with any strip already showing leaves the grid
- * where it is, so running a finger down the list does not throw it about.
- */
-function highlightCollection(collection: CollectionSummary | null): void {
-	const matched: HTMLElement[] = [];
-	for (const cell of document.querySelectorAll<HTMLElement>(".cell")) {
-		const date = cell.dataset.date;
-		const matches = collection !== null && date !== undefined && isDateInCollection(date, collection);
-		cell.classList.toggle("cell--search-match", matches);
-		cell.classList.toggle("cell--search-nonmatch", collection !== null && !matches);
-		if (matches) matched.push(cell);
-	}
-	if (matched.length > 0 && !anyCellInView(matched)) {
-		matched[0].scrollIntoView({ block: "center", behavior: "smooth" });
-	}
-}
+import { highlightCollection } from "./cell-highlight";
 
 /** Draws the list of books, or — with `adopt` — takes over the one the build drew from the same `page`. */
 export function renderCollections(page: CollectionsPage, adopt: boolean = false): void {
