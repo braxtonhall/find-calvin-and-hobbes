@@ -4,6 +4,7 @@ import {
 	FILTER_FIELDS,
 	FilterField,
 	FilterOption,
+	chooseToken,
 	clearField,
 	insertToken,
 	removeToken,
@@ -126,7 +127,7 @@ function menuElement(): HTMLDivElement {
 		}
 		const row = element.closest<HTMLElement>(".filter-option");
 		if (row === null || open === null) return;
-		toggle(open.bar, open.field.options()[Number(row.dataset.index)]);
+		pick(open, open.field.options()[Number(row.dataset.index)]);
 	});
 
 	// Bound here as well as on the button, because while the reader is arrowing around the menu the
@@ -186,7 +187,7 @@ function buildMenu(): void {
 	element.innerHTML = `${heading}<div
 			class="filter-menu-options filter-menu-options--${field.shape}"
 			role="listbox"
-			aria-multiselectable="true"
+			aria-multiselectable="${field.single !== true}"
 			aria-label="${escHtml(field.heading ?? field.label)}"
 		>${rows}</div>${hasClearable(bar, field) ? CLEAR_HTML : ""}`;
 	element.classList.add("filter-menu--visible");
@@ -289,12 +290,12 @@ function write(bar: Bar, text: string): void {
 	paint(bar);
 }
 
-function toggle(bar: Bar, option: FilterOption): void {
+/** A row chosen: toggled in a field that takes several, and made the only one in a field that takes one. */
+function pick({ bar, field }: Dropdown, option: FilterOption): void {
 	const { target, selected } = bar;
-	write(
-		bar,
-		selected.has(option.token) ? removeToken(target.value, option.token) : insertToken(target.value, option.token),
-	);
+	if (field.single === true) write(bar, chooseToken(target.value, field, option.token));
+	else if (selected.has(option.token)) write(bar, removeToken(target.value, option.token));
+	else write(bar, insertToken(target.value, option.token));
 }
 
 function clearOpenField(): void {
@@ -335,7 +336,7 @@ function activateFocused(): void {
 	const row = active === null ? null : active.closest<HTMLElement>(".filter-option");
 	// Toggling never closes the menu: these are multi-selects, and a reader picking two years
 	// should not have to open the same dropdown twice.
-	if (row !== null) toggle(open.bar, open.field.options()[Number(row.dataset.index)]);
+	if (row !== null) pick(open, open.field.options()[Number(row.dataset.index)]);
 	// Nothing at all when the focus is still on the button, which is a menu the pointer opened and
 	// a reader who has not said which row they mean yet.
 	else if (active?.classList.contains("filter-menu-clear") === true) clearOpenField();

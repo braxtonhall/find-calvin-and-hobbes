@@ -24,12 +24,14 @@ export interface ValueTemplate {
 	hint: string;
 }
 
+/**
+ * Every filter takes a value, and a property a strip either has or lacks is an `@is:` tag rather
+ * than a filter of its own. That leaves a bare `@word` free to mean an operator.
+ */
 export interface FilterSpec {
 	name: string;
-	/** A flag carries no value at all; `@sunday:yes` is a misreading, not a narrower query. */
-	kind: "valued" | "flag";
 	hint: string;
-	/** Empty for a flag. Order is the order the menu shows them in. */
+	/** Order is the order the menu shows them in. */
 	templates: readonly ValueTemplate[];
 	/**
 	 * The values are a vocabulary that arrives with the archive rather than a shape spelled out
@@ -46,24 +48,28 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
 ];
 
 /**
- * Ordered as a reader would reach for them — the three calendar fields, then the date forms, then
- * the bounds, then the flags, and last the one valued filter that is not about time at all.
- * Not alphabetically: `@after` is not the thing to meet first, and `@in` is not the thing to meet
- * second.
+ * Ordered as a reader would reach for them — the two that are not about time, then the three
+ * calendar fields, then the date forms, then the bounds. Not alphabetically: `@after` is not the
+ * thing to meet first.
+ *
+ * Repeating a filter ORs where a strip can have only one value for it — one year, one month — and
+ * ANDs where it can have several: a strip is printed in many books, and can carry many tags.
  */
 export const FILTER_SPECS: readonly FilterSpec[] = [
 	{
 		name: "in",
-		kind: "valued",
-		hint: "Strips printed in one book",
+		hint: "Strips printed in a book",
 		vocabulary: true,
 		templates: [{ label: "book", hint: "a book of the archive" }],
 	},
-	{ name: "sunday", kind: "flag", hint: "Sunday strips only", templates: [] },
-	{ name: "daily", kind: "flag", hint: "Weekday strips only", templates: [] },
+	{
+		name: "is",
+		hint: "Strips with a tag",
+		vocabulary: true,
+		templates: [{ label: "tag", hint: "sunday, daily, reused, rerun, altered or empty" }],
+	},
 	{
 		name: "year",
-		kind: "valued",
 		hint: "Strips from one year",
 		templates: [
 			{ label: "YYYY", hint: "a four-digit year" },
@@ -72,7 +78,6 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 	},
 	{
 		name: "month",
-		kind: "valued",
 		hint: "Strips from one month, in every year",
 		templates: [
 			{ label: "MM", hint: "1 to 12" },
@@ -81,7 +86,6 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 	},
 	{
 		name: "day",
-		kind: "valued",
 		hint: "A day of the month, or a day of the week",
 		templates: [
 			{ label: "DD", hint: "1 to 31, a day of the month" },
@@ -90,24 +94,19 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 	},
 	{
 		name: "date",
-		kind: "valued",
 		hint: "Strips on a date",
 		templates: YEAR_FIRST,
 	},
 	{
 		name: "before",
-		kind: "valued",
 		hint: "Strips before a date, excluding it",
 		templates: YEAR_FIRST,
 	},
 	{
 		name: "after",
-		kind: "valued",
 		hint: "Strips after a date, excluding it",
 		templates: YEAR_FIRST,
 	},
-	{ name: "empty", kind: "flag", hint: "Strips with an empty transcript", templates: [] },
-	{ name: "altered", kind: "flag", hint: "Strips a book printed with changes", templates: [] },
 ];
 
 const BY_NAME = new Map(FILTER_SPECS.map((spec) => [spec.name, spec]));

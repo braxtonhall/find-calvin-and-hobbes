@@ -8,7 +8,7 @@ const day = now.getDate();
  *
  * The pool is deliberately half archive and half syntax. A reader who has never typed an `@` will
  * never see the autocomplete, so the only way the filter language reaches them is for the app to
- * use it in front of them: press the button on an empty box, watch `@sunday snowman` arrive
+ * use it in front of them: press the button on an empty box, watch `@is:sunday snowman` arrive
  * character by character and earn its pill, and the query is sitting there ready to be edited or
  * searched. Prose queries are what keep that from reading as a lesson — a filter arrives as one of
  * the things people search for rather than as documentation.
@@ -34,12 +34,12 @@ export const SUGGESTED_QUERIES: readonly string[] = [
 	"yukon",
 	"water balloon",
 	"waiting for the school bus",
-	"@month:december @day:24 @sunday",
+	"@month:december @day:24 @is:sunday",
 	"@year:1988",
 	"november 18 1985",
-	"@sunday calvinball",
-	"@sunday snowman",
-	"@sunday @year:1986",
+	"@is:sunday calvinball",
+	"@is:sunday snowman",
+	"@is:sunday @year:1986",
 	"@year:1985",
 	`@month:${month} @day:${day}`,
 	"@in:sundaypages",

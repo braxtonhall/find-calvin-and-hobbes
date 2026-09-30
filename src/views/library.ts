@@ -8,13 +8,10 @@ import { canGoBack } from "../router";
 import { buildLibraryPath } from "../routes";
 import { buildBackAndHomeButtons } from "../pages/nav-buttons";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
-import { attachRowHandlers, resultsHtml, SEARCH_LABELS, SourceLabels } from "./result-rows";
+import { attachRowHandlers, resultsHtml } from "./result-rows";
 import { SearchBar, buildSearchBar } from "./search-bar";
 
 const EMPTY = "No bookmarks found";
-
-// A bookmarked rerun day is here because it was bookmarked, not because its date matched anything.
-const LABELS: SourceLabels = { ...SEARCH_LABELS, rerun: "Rerun" };
 
 /**
  * Built with the page and kept while the reader searches it, as the search page's is — see
@@ -47,7 +44,7 @@ export function renderLibrary(query: string, sort: SortMode, arriving: boolean):
 
 	const results = searchBookmarks(query, sort, state.bookmarkedDates);
 	bar.update(query, sort, results.length);
-	bar.list.innerHTML = resultsHtml(results, EMPTY, LABELS);
+	bar.list.innerHTML = resultsHtml(results, EMPTY);
 	attachRowHandlers(bar.list);
 	// With a query the grid shows how well each bookmark matched, as the search page's does; without
 	// one, `updateGridState` lights every bookmark alike.

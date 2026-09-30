@@ -46,12 +46,15 @@ test("filters", async (suite) => {
 		assert.deepEqual([...parseQueryFilters("@IN:BOOK3").filters!.collections], ["book3"]);
 	});
 
-	await suite.test("books of one filter union", () => {
+	// A strip can be printed in many books, so asking for two is asking for both — where a year,
+	// which a strip has only one of, unions.
+	await suite.test("books of one filter intersect", () => {
 		const { filters } = parseQueryFilters("@in:book1 @in:book3");
 		assert.deepEqual([...filters!.collections].sort(), ["book1", "book3"]);
-		assert.ok(passesFilters(strip("1988-06-01", "book1"), filters!));
-		assert.ok(passesFilters(strip("1988-06-01", "book3"), filters!));
-		assert.ok(!passesFilters(strip("1988-06-01", "book5"), filters!));
+		assert.ok(passesFilters(strip("1988-06-01", "book1", "book3"), filters!));
+		assert.ok(passesFilters(strip("1988-06-01", "book1", "book3", "book5"), filters!));
+		assert.ok(!passesFilters(strip("1988-06-01", "book1"), filters!));
+		assert.ok(!passesFilters(strip("1988-06-01", "book3"), filters!));
 	});
 
 	await suite.test("a book intersects a date", () => {
@@ -150,26 +153,65 @@ test("filters", async (suite) => {
 		assert.ok(!passesFilters("1988-09-03", filters!));
 	});
 
-	await suite.test("the archive's own vocabulary", () => {
-		assert.deepEqual([...parseQueryFilters("@sunday").filters!.weekdays], [0]);
-		assert.deepEqual([...parseQueryFilters("@daily").filters!.weekdays].sort(), [1, 2, 3, 4, 5, 6]);
+	await suite.test("@is:sunday and @is:daily are the Sundays and everything else", () => {
+		const sunday = parseQueryFilters("@is:sunday").filters!;
+		const daily = parseQueryFilters("@is:daily").filters!;
+		assert.ok(passesFilters("1988-08-07", sunday));
+		assert.ok(!passesFilters("1988-08-08", sunday));
+		assert.ok(passesFilters("1988-08-08", daily));
+		assert.ok(passesFilters("1988-08-06", daily), "a Saturday is a daily");
+		assert.ok(!passesFilters("1988-08-07", daily));
 	});
 
-	// `@empty` is the third flag, but unlike `@sunday` and `@daily` it is not about the day at
-	// all: it is a fact about the strip's text, so only a strip can answer it, exactly as `@in`
-	// does for the books.
-	await suite.test("@empty matches a strip with an empty transcript", () => {
+	// A tag is its own field rather than a spelling of `@day:`, so it narrows a weekday rather than
+	// joining it.
+	await suite.test("@is:sunday narrows @day rather than widening it", () => {
+		assert.ok(!passesFilters("1988-08-07", parseQueryFilters("@is:sunday @day:monday").filters!));
+		assert.ok(!passesFilters("1988-08-08", parseQueryFilters("@is:sunday @day:monday").filters!));
+		assert.ok(passesFilters("1988-08-07", parseQueryFilters("@is:sunday @day:sunday").filters!));
+		assert.ok(passesFilters("1988-08-06", parseQueryFilters("@is:daily @day:saturday").filters!));
+	});
+
+	// A strip can carry many tags, so repeating `@is:` asks for all of them.
+	await suite.test("tags intersect", () => {
+		assert.ok(!passesFilters("1988-08-07", parseQueryFilters("@is:sunday @is:daily").filters!));
+		assert.ok(!passesFilters("1988-08-08", parseQueryFilters("@is:sunday @is:daily").filters!));
+		const wordlessSunday: Comic = { date: "1988-08-07", transcript: "" };
+		assert.ok(passesFilters(wordlessSunday, parseQueryFilters("@is:sunday @is:empty").filters!));
+		assert.ok(
+			!passesFilters({ ...wordlessSunday, date: "1988-08-08" }, parseQueryFilters("@is:sunday @is:empty").filters!),
+		);
+	});
+
+	// Which showing of a strip a row is belongs to the row, and only the search knows the reruns, so
+	// only its `run` answers these.
+	await suite.test("@is:reused and @is:rerun are answered by the row's run", () => {
+		const comic: Comic = { date: "1988-08-03", transcript: "" };
+		const reused = parseQueryFilters("@is:reused").filters!;
+		const rerun = parseQueryFilters("@is:rerun").filters!;
+		assert.ok(passesFilters(comic, reused, "reused"));
+		assert.ok(!passesFilters(comic, reused, "rerun"));
+		assert.ok(!passesFilters(comic, reused));
+		assert.ok(passesFilters(comic, rerun, "rerun"));
+		assert.ok(!passesFilters(comic, rerun, "reused"));
+		assert.ok(!passesFilters(comic, rerun));
+		assert.ok(!passesFilters(comic, parseQueryFilters("@is:reused @is:rerun").filters!, "rerun"));
+	});
+
+	// Not about the day at all: a fact about the strip's text, so only a strip can answer it,
+	// exactly as `@in` does for the books.
+	await suite.test("@is:empty matches a strip with an empty transcript", () => {
 		const wordless: Comic = { date: "1988-06-01", transcript: "" };
 		const spoken: Comic = { date: "1988-06-02", transcript: "Calvinball!" };
-		assert.ok(passesFilters(wordless, parseQueryFilters("@empty").filters!));
-		assert.ok(!passesFilters(spoken, parseQueryFilters("@empty").filters!));
+		assert.ok(passesFilters(wordless, parseQueryFilters("@is:empty").filters!));
+		assert.ok(!passesFilters(spoken, parseQueryFilters("@is:empty").filters!));
 		// A date cannot say whether a strip is wordless.
-		assert.ok(!passesFilters("1988-06-01", parseQueryFilters("@empty").filters!));
+		assert.ok(!passesFilters("1988-06-01", parseQueryFilters("@is:empty").filters!));
 	});
 
-	// `@altered` is read off the same appearances as `@in`, but it is a field of its own: altered in
-	// any book, whichever books `@in` names.
-	await suite.test("@altered matches a strip some book printed altered", () => {
+	// `@is:altered` is read off the same appearances as `@in`, but it is a field of its own: altered
+	// in any book, whichever books `@in` names.
+	await suite.test("@is:altered matches a strip some book printed altered", () => {
 		const changed: Comic = {
 			date: "1985-12-15",
 			transcript: "",
@@ -179,13 +221,13 @@ test("filters", async (suite) => {
 			],
 		};
 		const faithful = strip("1985-12-16", "book1", "book3");
-		assert.ok(passesFilters(changed, parseQueryFilters("@altered").filters!));
-		assert.ok(!passesFilters(faithful, parseQueryFilters("@altered").filters!));
-		assert.ok(passesFilters(changed, parseQueryFilters("@in:book1 @altered").filters!));
-		assert.ok(passesFilters(changed, parseQueryFilters("@in:book3 @altered").filters!));
-		assert.ok(!passesFilters(changed, parseQueryFilters("@in:book5 @altered").filters!));
+		assert.ok(passesFilters(changed, parseQueryFilters("@is:altered").filters!));
+		assert.ok(!passesFilters(faithful, parseQueryFilters("@is:altered").filters!));
+		assert.ok(passesFilters(changed, parseQueryFilters("@in:book1 @is:altered").filters!));
+		assert.ok(passesFilters(changed, parseQueryFilters("@in:book3 @is:altered").filters!));
+		assert.ok(!passesFilters(changed, parseQueryFilters("@in:book5 @is:altered").filters!));
 		// A date cannot say whether a book changed the strip.
-		assert.ok(!passesFilters("1985-12-15", parseQueryFilters("@altered").filters!));
+		assert.ok(!passesFilters("1985-12-15", parseQueryFilters("@is:altered").filters!));
 	});
 
 	// A filter is deliberate syntax, so it may demand an unambiguous order instead of guessing.
@@ -242,6 +284,8 @@ test("filters", async (suite) => {
 		assert.equal(filters, null);
 		assert.equal(residual, "@foo:bar");
 		assert.deepEqual(segments, ["@foo:bar"]);
+		// A tag is only a tag under `@is:`.
+		assert.equal(parseQueryFilters("@sunday").filters, null);
 	});
 
 	// A filter says where to look, not that something is there, so a year outside the archive is
@@ -289,12 +333,11 @@ test("filters", async (suite) => {
 			"@before:august-3",
 			// A book that is not one of the archive's is a typo rather than a place to look — unlike
 			// `@year:2001`, which is a real coordinate that honestly holds nothing.
-			"@sunday:yes",
-			"@empty:yes",
-			"@altered:yes",
 			"@year",
 			"@in",
 			"@in:snowman",
+			"@is",
+			"@is:monday",
 		]) {
 			assert.ok(parseQueryFilters(query).filters!.impossible, query);
 			assert.ok(!passesFilters("1988-08-03", parseQueryFilters(query).filters!), query);
@@ -357,18 +400,12 @@ test("scanning filters", async (suite) => {
 	});
 
 	await suite.test("every filter is reported, in the order it was written", () => {
-		const matches = scanFilters("@sunday @year:1988 snowman @month:aug");
+		const matches = scanFilters("@is:sunday @year:1988 snowman @month:aug");
 		assert.deepEqual(
 			matches.map((match) => match.name),
-			["sunday", "year", "month"],
+			["is", "year", "month"],
 		);
 		assert.ok(matches.every((match) => match.valid));
-	});
-
-	await suite.test("a flag is reported with no value", () => {
-		const [match] = scanFilters("@daily");
-		assert.equal(match.value, undefined);
-		assert.ok(match.valid);
 	});
 
 	// The same list `parseQueryFilters` calls impossible, one entry at a time, so the box can point
@@ -381,12 +418,11 @@ test("scanning filters", async (suite) => {
 			"@day:32",
 			"@day:funday",
 			"@before:august-3",
-			"@sunday:yes",
-			"@empty:yes",
-			"@altered:yes",
 			"@year",
 			"@in",
 			"@in:snowman",
+			"@is",
+			"@is:monday",
 		]) {
 			const matches = scanFilters(query);
 			assert.equal(matches.length, 1, query);
@@ -410,7 +446,7 @@ test("scanning filters", async (suite) => {
 
 	// Two callers, one scan: whatever the box paints as a filter is what the search will excise.
 	await suite.test("the spans account for exactly what parseQueryFilters removes", () => {
-		const query = "clean @year:1988 your @sunday room";
+		const query = "clean @year:1988 your @is:sunday room";
 		const matches = scanFilters(query);
 		let cursor = 0;
 		const pieces: string[] = [];

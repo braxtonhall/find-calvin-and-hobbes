@@ -268,7 +268,7 @@ export function attachQueryInput(input: HTMLInputElement): void {
 	 * The menu answers typing and nothing else.
 	 *
 	 * Arriving with a query already in the box — a followed link, the back button, the landing
-	 * page handing one over — must not open it: a finished `@sunday` would come up reading as a
+	 * page handing one over — must not open it: a finished `@is:sunday` would come up reading as a
 	 * filter still being written, and the reader who is here to look at results has to dismiss a
 	 * menu they never asked for. So the menu waits to be typed at, Escape puts it back to waiting,
 	 * and so does leaving the box.

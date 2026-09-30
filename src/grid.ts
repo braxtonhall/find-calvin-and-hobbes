@@ -216,7 +216,9 @@ export function renderGrid(): void {
 		// The two pages whose rows are the grid's cells, lit and dimmed; anywhere else a hover is
 		// only the tooltip.
 		if (route.view !== "results" && route.view !== "library") return;
-		if (cell.classList.contains("cell--none")) return;
+		// A rerun day holds no strip of its own — its strip is filed under the day it first ran — but it
+		// is a row all the same, so it is not the empty day `cell--none` otherwise means.
+		if (cell.classList.contains("cell--none") && !cell.classList.contains("cell--rerun")) return;
 		if (cell.classList.contains("cell--search-nonmatch")) return;
 
 		if (state.hoveredCell) {

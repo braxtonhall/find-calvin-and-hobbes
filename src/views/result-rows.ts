@@ -13,34 +13,35 @@ import { dateToCompact } from "../date-utils";
  * are rows no query found, so they arrive here as `SearchResult`s too. See `bookmarkResults`.
  */
 
-export type SourceLabels = Record<SearchResult["source"], string>;
-
 // A transcript match carries no label, as it always has: it is the default, and naming it would
 // put a badge on nearly every row. A date match is the one that needs saying, because nothing in
 // the text it shows is why it matched.
-export const SEARCH_LABELS: SourceLabels = {
+const SOURCE_LABELS: Record<SearchResult["source"], string> = {
 	transcript: "",
 	description: "Description",
 	date: "Date",
-	rerun: "Date · Rerun",
 	// Nothing: a filter-only query is every row it let through, so a badge on all of them says only
 	// what the query in the box above already says, and `@in:book3` rows are not date matches.
 	filter: "",
 };
 
 /**
- * The rows, or `empty` when there are none, each badged with what `labels` says of its source —
- * which depends on the page: a rerun in search is there because its date matched, and a rerun
- * among the bookmarks is not.
+ * What the row's badge says: how it matched, and whether it is a day its strip ran again — which is
+ * worth saying on every page, because the strip is not from the day in its header.
  */
-export function resultsHtml(results: SearchResult[], empty: string, labels: SourceLabels = SEARCH_LABELS): string {
+function labelOf(result: SearchResult): string {
+	return [SOURCE_LABELS[result.source], result.rerun ? "Rerun" : ""].filter(Boolean).join(" · ");
+}
+
+/** The rows, or `empty` when there are none, each badged with how it matched. */
+export function resultsHtml(results: SearchResult[], empty: string): string {
 	if (results.length === 0) {
 		return `<div class="results-empty">${empty}</div>`;
 	}
 
 	let html = "";
 	for (const result of results) {
-		const { comic, text, ranges, source } = result;
+		const { comic, text, ranges } = result;
 		const [year, month, day] = comic.date.split("-").map(Number);
 		const dateObject = new Date(Date.UTC(year, month - 1, day));
 		const dateFormatted = dateObject.toLocaleDateString("en-US", {
@@ -51,7 +52,7 @@ export function resultsHtml(results: SearchResult[], empty: string, labels: Sour
 			timeZone: "UTC",
 		});
 		const highlighted = highlightRanges(text, ranges);
-		const label = labels[source];
+		const label = labelOf(result);
 		const sourceTag = label ? `<span class="result-source">${label}</span>` : ``;
 
 		// An anchor rather than the `tabindex`/`role="button"` div it used to be: the row goes somewhere

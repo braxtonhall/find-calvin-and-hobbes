@@ -101,7 +101,6 @@ function everyValueOffered(): { name: string; typed: string; written: string; in
 
 	const found: { name: string; typed: string; written: string; insert: string }[] = [];
 	for (const spec of FILTER_SPECS) {
-		if (spec.kind === "flag") continue;
 		for (const value of typed) {
 			const text = `@${spec.name}:${value}`;
 			for (const row of completionsAt(text, text.length)?.rows ?? []) {
@@ -126,8 +125,9 @@ test("naming a filter", async (suite) => {
 
 	await suite.test("a partial name narrows by prefix", () => {
 		assert.deepEqual(names("@y|"), ["year"]);
-		assert.deepEqual(names("@d|"), ["daily", "day", "date"]);
-		assert.deepEqual(names("@da|"), ["daily", "day", "date"]);
+		assert.deepEqual(names("@d|"), ["day", "date"]);
+		assert.deepEqual(names("@da|"), ["day", "date"]);
+		assert.deepEqual(names("@i|"), ["in", "is"]);
 		assert.deepEqual(names("@dat|"), ["date"]);
 	});
 
@@ -149,10 +149,9 @@ test("naming a filter", async (suite) => {
 		assert.equal(row.template, "YYYY");
 	});
 
-	await suite.test("a flag inserts a trailing space and offers no shape", () => {
-		const row = at("@sunday|")!.rows[0];
-		assert.equal(row.insert, "@sunday ");
-		assert.equal(row.template, undefined);
+	// A tag is only a tag under `@is:`, so its bare name is not a filter to offer.
+	await suite.test("a tag's bare name offers nothing", () => {
+		assert.equal(at("@sunday|"), null);
 	});
 
 	await suite.test("the name is matched without regard to case", () => {
@@ -186,9 +185,12 @@ test("offering the values", async (suite) => {
 		assert.deepEqual(values("@after:19|").slice(0, 4), ["1985", "1985/11", "1985/11/18", "1986"]);
 	});
 
-	await suite.test("a colon after a flag has nothing to offer", () => {
-		assert.equal(at("@sunday:|"), null);
-		assert.equal(at("@sunday:yes|"), null);
+	await suite.test("@is: offers every tag, and each commits", () => {
+		assert.deepEqual(values("@is:|"), ["sunday", "daily", "reused", "rerun", "altered", "empty"]);
+		assert.deepEqual(values("@is:r|"), ["reused", "rerun"]);
+		assert.deepEqual(values("@is:rer|"), ["rerun"]);
+		assert.deepEqual(completions("@is:s|"), ["@is:sunday "]);
+		assert.equal(at("@is:x|"), null);
 	});
 
 	await suite.test("a colon after a name that is not a filter has nothing to offer", () => {
@@ -327,6 +329,8 @@ test("the values the archive can offer", async (suite) => {
 		let checked = 0;
 		for (const value of everyValueOffered()) {
 			if (value.written === value.typed) continue;
+			// A tag is not a day, and most tags are not answerable from one — see `hasTag`.
+			if (value.name === "is") continue;
 			assert.ok(namesRealStrips(value.name, value.written), `@${value.name}:${value.written}`);
 			checked++;
 		}
@@ -455,7 +459,7 @@ test("how long the list gets", async (suite) => {
 test("highlighting what is already there", async (suite) => {
 	await suite.test("a filter that parses is covered end to end", () => {
 		assert.deepEqual(spans("@year:1994|"), [["match", "@year:1994"]]);
-		assert.deepEqual(spans("@sunday|"), [["match", "@sunday"]]);
+		assert.deepEqual(spans("@is:sunday|"), [["match", "@is:sunday"]]);
 	});
 
 	await suite.test("a value still being typed is marked apart from the name it belongs to", () => {
@@ -514,16 +518,10 @@ test("highlighting what is already there", async (suite) => {
 		assert.deepEqual(spans("@year:abc|"), [["invalid", "@year:abc"]]);
 	});
 
-	// The colon does nothing here — `@sunday:` searches for what `@sunday` searches for — so the
-	// pill stops at the filter and leaves the stray character to look stray.
-	await suite.test("a colon a flag never asked for is left out of the pill", () => {
-		assert.deepEqual(spans("@sunday:|"), [["match", "@sunday"]]);
-	});
-
 	await suite.test("a value nothing will rescue is covered end to end as an error", () => {
 		assert.deepEqual(spans("@month:13|"), [["invalid", "@month:13"]]);
 		assert.deepEqual(spans("@day:funday|"), [["invalid", "@day:funday"]]);
-		assert.deepEqual(spans("@sunday:yes|"), [["invalid", "@sunday:yes"]]);
+		assert.deepEqual(spans("@is:monday|"), [["invalid", "@is:monday"]]);
 	});
 
 	await suite.test("every filter in the query is found, in the order they were typed", () => {
@@ -539,7 +537,7 @@ test("highlighting what is already there", async (suite) => {
 	});
 
 	await suite.test("a filter that is fine carries no reason", () => {
-		for (const span of filterSpans("@year:1988 @sunday", null)) assert.equal(span.reason, undefined);
+		for (const span of filterSpans("@year:1988 @is:sunday", null)) assert.equal(span.reason, undefined);
 	});
 });
 
@@ -564,8 +562,8 @@ test("explaining a filter that will not work", async (suite) => {
 		assert.equal(reason("@in"), "@in needs a value — book");
 	});
 
-	await suite.test("a flag carrying a value says so", () => {
-		assert.equal(reason("@sunday:yes"), "@sunday takes no value");
+	await suite.test("a tag that is not one says so", () => {
+		assert.equal(reason("@is:monday"), "@is:monday — not a known tag");
 	});
 });
 
@@ -636,7 +634,7 @@ test("a vocabulary that arrives with the data", async (suite) => {
 	// The one row before the colon still shows a shape, because there is nothing to fill in yet —
 	// and `book` is a word rather than a slot, which is the whole of what the filter takes.
 	await suite.test("the name row says the filter takes a book", () => {
-		assert.deepEqual(names("@i|"), ["in"]);
+		assert.deepEqual(names("@in|"), ["in"]);
 		assert.deepEqual(templates("@in|"), ["book"]);
 		assert.deepEqual(completions("@in|"), ["@in:"]);
 	});
@@ -725,7 +723,7 @@ test("a vocabulary that arrives with the data", async (suite) => {
 	await suite.test("the reason names the list rather than a shape", () => {
 		withBooks(() => {
 			const [broken] = filterSpans("@in:snowman", null);
-			assert.equal(broken.reason, "@in:snowman — not a book the archive has");
+			assert.equal(broken.reason, "@in:snowman — not a known book");
 		});
 	});
 
