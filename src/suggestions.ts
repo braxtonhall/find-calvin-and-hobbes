@@ -1,7 +1,30 @@
-const now = new Date();
+/** The years the archive covers in full, from January to December. */
+const FIRST_FULL_YEAR = 1986;
+const LAST_FULL_YEAR = 1995;
 
-const month = now.toLocaleString("en-US", { month: "short" }).toLowerCase();
-const day = now.getDate();
+/**
+ * Today's date in the strip's run: 2026 is 1986, 2035 is 1995, and 2036 starts again at 1986.
+ * If the date doesn't exist in that year (a leap day in a common year), use the day before.
+ */
+function getFeaturedDate(today: Date): Date {
+	const yearsInCycle = LAST_FULL_YEAR - FIRST_FULL_YEAR + 1;
+	const yearsSinceStart = today.getFullYear() - FIRST_FULL_YEAR;
+	const year = FIRST_FULL_YEAR + (yearsSinceStart % yearsInCycle);
+
+	const proposed = new Date(year, today.getMonth(), today.getDate());
+	const rolledIntoNextMonth = proposed.getMonth() !== today.getMonth();
+	if (rolledIntoNextMonth) {
+		return new Date(year, today.getMonth(), today.getDate() - 1);
+	}
+	return proposed;
+}
+
+function shortMonth(date: Date): string {
+	return date.toLocaleString("en-US", { month: "short" }).toLowerCase();
+}
+
+const today = new Date();
+const featuredDate = getFeaturedDate(today);
 
 /**
  * What the search box types into itself when it is empty and the reader presses submit.
@@ -39,11 +62,12 @@ export const SUGGESTED_QUERIES: readonly string[] = [
 	"november 18 1985",
 	"@is:sunday snowman",
 	"@is:sunday @year:1985",
-	`@month:${month} @day:${day}`,
 	"@in:sundaypages",
 	"@in:lazysunday",
 	"@in:tenthanniversary",
 	"@is:rerun",
+	`${shortMonth(featuredDate)} ${featuredDate.getDate()} ${featuredDate.getFullYear()}`,
+	`@month:${shortMonth(today)} @day:${today.getDate()}`,
 ];
 
 /**
