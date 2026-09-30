@@ -1,7 +1,8 @@
 /**
  * The values of a filter whose vocabulary arrives with the archive.
  *
- * `@year:` and `@month:` know their values from a constant; `@in:` cannot. The books are loaded
+ * `@year:` and `@month:` know their values from a constant; `@in:` cannot. `@is:` could, but its
+ * tags are a list of words to offer and check like the books are, so it lives here too. The books are loaded
  * data, and three separate places need to agree about them: the parser in `filter-query.ts`, which
  * decides whether `@in:snowman` is a mistake; the completion menu, which offers the ids and their
  * titles; and the filter bar, which fills a dropdown with them. None of the three may fetch
@@ -37,7 +38,21 @@ export interface Term {
  */
 export type Vocabulary = () => readonly Term[];
 
-const REGISTRY = new Map<string, Vocabulary>();
+/**
+ * `@is:`'s tags, which belong to the language rather than to the archive, so they are known from the
+ * start and never empty. Each is independent of the others — a strip can be a Sunday and altered —
+ * which is why repeating `@is:` asks for all of them rather than any.
+ */
+const TAGS: readonly Term[] = [
+	{ value: "sunday", hint: "A colour Sunday strip" },
+	{ value: "daily", hint: "A black-and-white daily" },
+	{ value: "reused", hint: "A strip on the day it first ran, later rerun" },
+	{ value: "rerun", hint: "A strip on the date it ran again" },
+	{ value: "altered", hint: "A strip a book printed with changes" },
+	{ value: "empty", hint: "A strip with an empty transcript" },
+];
+
+const REGISTRY = new Map<string, Vocabulary>([["is", () => TAGS]]);
 
 /** Teach a filter its values, for a vocabulary that arrives with the archive. */
 export function registerVocabulary(name: string, vocabulary: Vocabulary): void {

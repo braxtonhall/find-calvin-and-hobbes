@@ -114,7 +114,7 @@ function filterDate(compact: string, days: number): string {
 export function buildRangeSearchPath(entry: string, sundays: boolean = false): string {
 	const [start, end] = parseDailiesRange(entry);
 	const bounds = `@after:${filterDate(start, -1)} @before:${filterDate(end, 1)}`;
-	return buildSearchPath(sundays ? `${bounds} @sunday` : bounds, "date");
+	return buildSearchPath(sundays ? `${bounds} @is:sunday` : bounds, "date");
 }
 
 function buildRangeHtml(entry: string, sundays: boolean): string {

@@ -3,7 +3,7 @@ import { state } from "./state";
 import { COMPOUND_RELATIONS } from "./compounds";
 import { stem } from "./stem";
 import { DateExpression, DatePrecision, matchesExpression, parseDateExpression } from "./date-query";
-import { QueryFilters, parseQueryFilters, passesFilters } from "./filter-query";
+import { QueryFilters, Run, parseQueryFilters, passesFilters } from "./filter-query";
 
 export type HighlightRange = [number, number, boolean];
 
@@ -17,7 +17,13 @@ export interface SearchResult {
 	 * a filter admitted when there was nothing else in the query to match — a different claim, and
 	 * `@in:book3` is what makes the difference worth drawing.
 	 */
-	source: "transcript" | "description" | "date" | "rerun" | "filter";
+	source: "transcript" | "description" | "date" | "filter";
+	/**
+	 * The row is a day the strip ran again, shown under that day. Apart from `source` because it is
+	 * not a way of matching: a rerun day is here by its date, by its strip's words, or by a filter,
+	 * like any other row.
+	 */
+	rerun?: true;
 	matchedAlternate?: boolean;
 }
 
@@ -950,14 +956,18 @@ export function search(
 
 	const loweredQuery = trimmed.toLowerCase();
 	const { filters, residual, segments } = parseQueryFilters(loweredQuery);
+	// The rerun days a search may show. The library's search is over rows it holds, rerun days
+	// among them; the archive's shows a rerun day only where the reader asked about reruns — or,
+	// below, named its exact date.
+	const rerunDays = within ?? (filters?.tags.has("rerun") ? new Set(state.reruns.keys()) : null);
 
 	let results: SearchResult[];
 	if (residual === "") {
 		// Filters with nothing left to search: the filter is the whole query, so everything that
-		// passes it is a result. This is the only place a filter produces a row instead of removing
-		// one.
+		// passes it is a result. Beside `@is:rerun`, which brings the rerun days in to be judged, this
+		// is the only place a filter produces a row instead of removing one.
 		results = filterOnlyResults(filters!);
-		if (within !== null) results.push(...filteredReruns(filters!, within));
+		if (rerunDays !== null) results.push(...filteredReruns(filters!, rerunDays));
 	} else {
 		results = searchText(segments, residual, tuning);
 		// Implicit date search is all or nothing: `parseDateExpression` returns null unless the whole
@@ -966,10 +976,15 @@ export function search(
 		const expression = parseDateExpression(residual);
 		if (expression !== null) results = withDateMatches(results, expression, tuning);
 		// Before the filters, so that they judge a rerun by the date it ran again on, as its row shows.
-		if (within !== null) results = withReruns(results, within);
+		if (rerunDays !== null) results = withReruns(results, rerunDays);
 		// Filters restrict the finished set. Applied before the union, they would let a date match
 		// through that the reader had explicitly excluded.
-		if (filters !== null) results = results.filter((result) => passesFilters(result.comic, filters));
+		if (filters !== null) {
+			const originals = rerunOriginals();
+			results = results.filter((result) =>
+				passesFilters(result.comic, filters, runOf(result.comic, result.rerun === true, originals)),
+			);
+		}
 	}
 
 	if (within !== null) results = results.filter((result) => within.has(result.comic.date));
@@ -1049,7 +1064,7 @@ function withDateMatches(textResults: SearchResult[], expression: DateExpression
 	if (expression.precision === "exact") {
 		for (const [rerunDate, originalDate] of state.reruns) {
 			if (!matchesExpression(expression, rerunDate)) continue;
-			const rerun = rerunResult(rerunDate, originalDate, strength);
+			const rerun = rerunResult(rerunDate, originalDate, strength, "date");
 			if (rerun) results.push(rerun);
 		}
 	}
@@ -1058,7 +1073,12 @@ function withDateMatches(textResults: SearchResult[], expression: DateExpression
 }
 
 /** A rerun day's row: the strip that ran again, under the date it ran again on. */
-function rerunResult(rerunDate: string, originalDate: string, score: number): SearchResult | null {
+function rerunResult(
+	rerunDate: string,
+	originalDate: string,
+	score: number,
+	source: SearchResult["source"],
+): SearchResult | null {
 	const original = indexedComics.find(({ comic }) => comic.date === originalDate);
 	if (!original) return null;
 	return {
@@ -1066,14 +1086,29 @@ function rerunResult(rerunDate: string, originalDate: string, score: number): Se
 		text: original.comic.transcript,
 		ranges: [],
 		score,
-		source: "rerun",
+		source,
+		rerun: true,
 	};
+}
+
+/** The days a strip first ran on that it later ran again from. */
+function rerunOriginals(): Set<string> {
+	return new Set(state.reruns.values());
+}
+
+/** Which showing of a rerun strip the row is, for `@is:reused` and `@is:rerun`. */
+function runOf(comic: Comic, rerun: boolean, originals: Set<string>): Run | undefined {
+	if (rerun) return "rerun";
+	// A special is never the strip that ran again: `rerunResult` shows the day's daily.
+	if (!comic.id && originals.has(comic.date)) return "reused";
+	return undefined;
 }
 
 function filterOnlyResults(filters: QueryFilters): SearchResult[] {
 	const results: SearchResult[] = [];
+	const originals = rerunOriginals();
 	for (const indexed of indexedComics) {
-		if (!passesFilters(indexed.comic, filters)) continue;
+		if (!passesFilters(indexed.comic, filters, runOf(indexed.comic, false, originals))) continue;
 		// Every row ties, and `assignTiers` normalises on the top score, so the number only has to
 		// be positive; `broad` is the honest one, because a filter restricts rather than ranks.
 		//
@@ -1110,7 +1145,7 @@ export function bookmarkResults(dates: Set<string>): SearchResult[] {
 	}
 	for (const [rerunDate, originalDate] of state.reruns) {
 		if (!dates.has(rerunDate)) continue;
-		const rerun = rerunResult(rerunDate, originalDate, 0);
+		const rerun = rerunResult(rerunDate, originalDate, 0, "filter");
 		if (rerun) results.push(rerun);
 	}
 	return results.sort(compareChronologically);
@@ -1137,15 +1172,15 @@ function withReruns(results: SearchResult[], within: Set<string>): SearchResult[
 	}
 	if (rerunsOf.size === 0) return results;
 
-	const covered = new Set(results.filter((result) => result.source === "rerun").map((result) => result.comic.date));
+	const covered = new Set(results.filter((result) => result.rerun).map((result) => result.comic.date));
 	const reruns: SearchResult[] = [];
 	for (const result of results) {
 		// A special is never the strip that ran again: `rerunResult` shows the day's daily.
-		if (result.source === "rerun" || result.comic.id) continue;
+		if (result.rerun || result.comic.id) continue;
 		for (const rerunDate of rerunsOf.get(result.comic.date) ?? []) {
 			if (covered.has(rerunDate)) continue;
 			covered.add(rerunDate);
-			reruns.push({ ...result, comic: { ...result.comic, date: rerunDate, id: undefined }, source: "rerun" });
+			reruns.push({ ...result, comic: { ...result.comic, date: rerunDate, id: undefined }, rerun: true });
 		}
 	}
 	return [...results, ...reruns];
@@ -1156,8 +1191,8 @@ function filteredReruns(filters: QueryFilters, within: Set<string>): SearchResul
 	const results: SearchResult[] = [];
 	for (const [rerunDate, originalDate] of state.reruns) {
 		if (!within.has(rerunDate)) continue;
-		const rerun = rerunResult(rerunDate, originalDate, DATE_STRENGTH.broad);
-		if (rerun && passesFilters(rerun.comic, filters)) results.push(rerun);
+		const rerun = rerunResult(rerunDate, originalDate, DATE_STRENGTH.broad, "filter");
+		if (rerun && passesFilters(rerun.comic, filters, "rerun")) results.push(rerun);
 	}
 	return results;
 }

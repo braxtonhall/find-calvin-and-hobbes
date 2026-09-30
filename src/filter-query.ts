@@ -21,9 +21,15 @@ import { Comic } from "./types";
 
 /**
  * Every set is a field, and an empty one means "unconstrained", so `passesFilters` checks each
- * independently: values of one field union, and fields intersect.
- * `@day:saturday @day:sunday` is the weekend; `@day:1 @day:monday` is the Mondays that fell on
- * the first, because a day of the month and a day of the week are two fields under one name.
+ * independently, and fields intersect.
+ *
+ * Within a field, what repeating it means depends on how many values a strip can have. A strip ran
+ * in one year, on one day, so the values of `years`, `months`, `monthDays`, `weekdays` and
+ * `windows` union — intersecting them could only ever be empty. A strip can be printed in many
+ * books and carry many tags, so the values of `collections` and `tags` intersect.
+ * `@day:saturday @day:sunday` is the weekend; `@day:1 @day:monday` is the Mondays that fell on the
+ * first, because a day of the month and a day of the week are two fields under one name; and
+ * `@in:book1 @in:book3` is the strips printed in both.
  */
 export interface QueryFilters {
 	years: Set<number>;
@@ -31,35 +37,30 @@ export interface QueryFilters {
 	monthDays: Set<number>;
 	weekdays: Set<number>;
 	/**
-	 * The books a strip was printed in — a field like any other, and the one field here that is not
-	 * a fact about the day. See `printedIn` for why that costs `passesFilters` its date-only subject.
+	 * The books a strip was printed in, every one of them. Not a fact about the day — see `printedIn`
+	 * for why that costs `passesFilters` its date-only subject.
 	 */
 	collections: Set<string>;
+	/** Every `@is:` tag the strip must carry. See `hasTag`. */
+	tags: Set<string>;
 	windows: DateExpression[];
 	/** Strictly after this date, and strictly before the other — see `parseQueryFilters`. */
 	after: string | null;
 	before: string | null;
-	/**
-	 * The one filter that is a fact about the strip's text rather than its day or its shelf: whether
-	 * the transcript is empty. Like `collections`, it costs `passesFilters` a subject that is more
-	 * than a date — see `emptyTranscript`.
-	 */
-	empty: boolean;
-	/**
-	 * Whether any book printed the strip altered — a fact about the shelf, like `collections`, and,
-	 * like it, costs `passesFilters` a subject that is more than a date. See `printedAltered`.
-	 */
-	altered: boolean;
 	/** A recognised filter whose value could not be read. Nothing satisfies it. */
 	impossible: boolean;
 }
 
+/**
+ * Which showing of a rerun strip a row is: the day it first ran, or a day it ran again. Neither for
+ * a strip that only ran once, and neither where the caller cannot say — the reruns are the
+ * search's to know, not this module's.
+ */
+export type Run = "reused" | "rerun";
+
 // Derived from `FILTER_SPECS` rather than written out again, so the parser and the autocomplete
-// menu cannot disagree about which names exist. `@sunday` is the colour Sunday strips and
-// `@daily` the black-and-white dailies — the archive's own vocabulary, and `@daily` has no
-// `@day:` spelling because "not Sunday" is not a weekday.
-const VALUED_FILTERS = new Set(FILTER_SPECS.filter((spec) => spec.kind === "valued").map((spec) => spec.name));
-const FLAG_FILTERS = new Set(FILTER_SPECS.filter((spec) => spec.kind === "flag").map((spec) => spec.name));
+// menu cannot disagree about which names exist.
+const FILTERS = new Set(FILTER_SPECS.map((spec) => spec.name));
 const FILTER_PATTERN = /@([a-zA-Z]+)(?::(\S+))?/g;
 
 function emptyFilters(): QueryFilters {
@@ -69,11 +70,10 @@ function emptyFilters(): QueryFilters {
 		monthDays: new Set(),
 		weekdays: new Set(),
 		collections: new Set(),
+		tags: new Set(),
 		windows: [],
 		after: null,
 		before: null,
-		empty: false,
-		altered: false,
 		impossible: false,
 	};
 }
@@ -96,16 +96,6 @@ function windowBounds(expression: DateExpression): { from: string; to: string } 
 }
 
 function applyFilter(filters: QueryFilters, name: string, value: string | undefined): void {
-	if (FLAG_FILTERS.has(name)) {
-		// A flag carrying a value is a misunderstanding of the syntax, not a broader query.
-		if (value !== undefined) filters.impossible = true;
-		else if (name === "sunday") filters.weekdays.add(0);
-		else if (name === "empty") filters.empty = true;
-		else if (name === "altered") filters.altered = true;
-		else for (const weekday of [1, 2, 3, 4, 5, 6]) filters.weekdays.add(weekday);
-		return;
-	}
-
 	if (value === undefined) {
 		filters.impossible = true;
 		return;
@@ -146,6 +136,12 @@ function applyFilter(filters: QueryFilters, name: string, value: string | undefi
 		// being off the list is evidence of a mistake. Until the list arrives every id is taken on
 		// trust; see `knows`, where that is the whole point rather than a concession.
 		if (knows("in", value)) filters.collections.add(value);
+		else filters.impossible = true;
+		return;
+	}
+
+	if (name === "is") {
+		if (knows("is", value)) filters.tags.add(value);
 		else filters.impossible = true;
 		return;
 	}
@@ -220,7 +216,7 @@ export function scanFilters(text: string): FilterMatch[] {
 	FILTER_PATTERN.lastIndex = 0;
 	for (let match = FILTER_PATTERN.exec(text); match !== null; match = FILTER_PATTERN.exec(text)) {
 		const name = match[1].toLowerCase();
-		if (!VALUED_FILTERS.has(name) && !FLAG_FILTERS.has(name)) continue;
+		if (!FILTERS.has(name)) continue;
 		const value = match[2]?.toLowerCase();
 		// Validity is whatever `applyFilter` makes of the value, read back off a throwaway set
 		// rather than judged a second time here. There is one definition of a usable value.
@@ -277,43 +273,42 @@ export function parseQueryFilters(text: string): {
  * decide the question even in principle. A caller with a date in hand and an `@in:` filter to
  * satisfy is asking something it has not brought the evidence for.
  */
-function printedIn(subject: string | Comic, wanted: Set<string>): boolean {
+function printedIn(subject: string | Comic, collection: string): boolean {
 	if (typeof subject === "string") return false;
-	return (subject.appearances ?? []).some((appearance) => wanted.has(appearance.collection));
+	return (subject.appearances ?? []).some((appearance) => appearance.collection === collection);
 }
 
 /**
- * Whether any book printed the strip altered, which only a strip can answer.
+ * Whether the row carries the tag.
  *
- * The same reasoning as `printedIn`. It is a field of its own, so `@in:book1 @altered` is a strip
- * printed in Book 1 that some book — not necessarily Book 1 — altered.
- */
-function printedAltered(subject: string | Comic): boolean {
-	if (typeof subject === "string") return false;
-	return (subject.appearances ?? []).some((appearance) => appearance.altered === true);
-}
-
-/**
- * Whether the strip's transcript is empty, which only a strip can answer.
+ * `sunday` and `daily` are about the day, so a bare date answers them. The rest need more, and a
+ * subject that cannot answer fails them, for the reason `printedIn` gives:
  *
- * The same reasoning as `printedIn`: a date cannot stand in for one, and returning false rather
- * than true is the honest reading. A strip may carry an `alternate` beside an empty transcript,
- * but `@empty` is about the transcript field itself, not about whether the strip has any text at
- * all anywhere.
+ * - `altered` is whether any book printed the strip altered, so `@in:book1 @is:altered` is a strip
+ *   printed in Book 1 that some book — not necessarily Book 1 — altered.
+ * - `empty` is about the transcript field itself: a strip may carry an `alternate` beside an empty
+ *   transcript, and it is still empty.
+ * - `reused` and `rerun` are about the row rather than the strip — the same strip is one on the
+ *   day it first ran and the other on the day it ran again — so only the caller's `run` answers them.
  */
-function emptyTranscript(subject: string | Comic): boolean {
+function hasTag(subject: string | Comic, date: string, tag: string, run: Run | undefined): boolean {
+	if (tag === "sunday") return weekdayOf(date) === 0;
+	if (tag === "daily") return weekdayOf(date) !== 0;
+	if (tag === "reused" || tag === "rerun") return run === tag;
 	if (typeof subject === "string") return false;
-	return subject.transcript === "";
+	if (tag === "altered") return (subject.appearances ?? []).some((appearance) => appearance.altered === true);
+	if (tag === "empty") return subject.transcript === "";
+	return false;
 }
 
 /**
- * Whether one strip survives the filters.
+ * Whether one row survives the filters.
  *
  * The subject is a strip or, where every filter in play is about the calendar, just the day it ran
- * on — which every caller here in the search pipeline could give, and which the tests and the
- * completion menu still do. `@in:`, `@altered` and `@empty` want more than the date; see `printedIn`.
+ * on — which the tests and the completion menu still pass. `run` is which showing of a rerun strip
+ * the row is, where it is one; see `Run`.
  */
-export function passesFilters(subject: string | Comic, filters: QueryFilters): boolean {
+export function passesFilters(subject: string | Comic, filters: QueryFilters, run?: Run): boolean {
 	if (filters.impossible) return false;
 	const date = typeof subject === "string" ? subject : subject.date;
 	if (filters.years.size > 0 && !filters.years.has(Number(date.slice(0, 4)))) return false;
@@ -323,7 +318,7 @@ export function passesFilters(subject: string | Comic, filters: QueryFilters): b
 	if (filters.windows.length > 0 && !filters.windows.some((window) => matchesExpression(window, date))) return false;
 	if (filters.after !== null && date <= filters.after) return false;
 	if (filters.before !== null && date >= filters.before) return false;
-	if (filters.empty && !emptyTranscript(subject)) return false;
-	if (filters.altered && !printedAltered(subject)) return false;
-	return !(filters.collections.size > 0 && !printedIn(subject, filters.collections));
+	for (const collection of filters.collections) if (!printedIn(subject, collection)) return false;
+	for (const tag of filters.tags) if (!hasTag(subject, date, tag, run)) return false;
+	return true;
 }

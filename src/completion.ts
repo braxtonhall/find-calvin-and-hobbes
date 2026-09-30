@@ -33,7 +33,7 @@ import { MONTH_NAMES, WEEKDAY_NAMES, YEARS } from "./vocabulary";
 export interface Row {
 	/** The filter the row is about, without the `@`. */
 	name: string;
-	/** The value shape the row is about. Absent on a flag. */
+	/** The value shape the row is about. */
 	template?: string;
 	/**
 	 * The shape filled out into a real value — `1985/11`, `august` — which is what the row shows in
@@ -565,11 +565,7 @@ function tokenAt(text: string, caret: number): { start: number; end: number; bod
 }
 
 function nameRow(spec: FilterSpec): Row {
-	return spec.kind === "flag"
-		? // A flag is complete the moment it is named, so it brings its own trailing space and the
-			// reader carries straight on typing.
-			{ name: spec.name, hint: spec.hint, insert: `@${spec.name} ` }
-		: { name: spec.name, template: spec.templates[0]?.label, hint: spec.hint, insert: `@${spec.name}:` };
+	return { name: spec.name, template: spec.templates[0]?.label, hint: spec.hint, insert: `@${spec.name}:` };
 }
 
 /**
@@ -596,9 +592,8 @@ export function completionsAt(text: string, caret: number): Completion | null {
 	}
 
 	const spec = filterSpec(name);
-	// A colon after a flag, or after a name that is not a filter at all, has no completion to
-	// offer. The invalid tint and its tooltip are what explain those.
-	if (spec === undefined || spec.kind === "flag") return null;
+	// A colon after a name that is not a filter at all has no completion to offer.
+	if (spec === undefined) return null;
 
 	// Whether the filter works is the parser's business rather than a fourth opinion here, so no
 	// shape may claim to be filled inside a filter that would not run.
@@ -649,9 +644,8 @@ export function filterSpans(text: string, caret: number | null): FilterSpan[] {
 
 		// `FILTER_PATTERN` needs a non-empty value before it will take the colon, so a trailing one
 		// is left out of the match. It belongs to a filter that was going to be given a value all
-		// the same. It does not belong to a flag: `@sunday:` searches for exactly what `@sunday`
-		// does, and a pill over that colon would claim it was doing something.
-		const dangling = spec.kind === "valued" && match.value === undefined && text[match.end] === ":";
+		// the same.
+		const dangling = match.value === undefined && text[match.end] === ":";
 		const end = dangling ? match.end + 1 : match.end;
 		const nameEnd = match.start + 1 + match.name.length;
 
@@ -661,8 +655,7 @@ export function filterSpans(text: string, caret: number | null): FilterSpan[] {
 		}
 
 		const typing = caret !== null && caret >= match.start && caret <= end;
-		const onItsWay =
-			spec.kind === "valued" && spec.templates.some((template) => begins(spec, template, match.value ?? ""));
+		const onItsWay = spec.templates.some((template) => begins(spec, template, match.value ?? ""));
 		if (typing && onItsWay) {
 			spans.push({ start: match.start, end: nameEnd, kind: "name" });
 			// Nothing after the name yet, on a filter that is still only a name.
@@ -680,11 +673,10 @@ export function filterSpans(text: string, caret: number | null): FilterSpan[] {
 export function describeInvalid(match: FilterMatch): string {
 	const spec = filterSpec(match.name);
 	if (spec === undefined) return `@${match.name} is not a filter`;
-	if (spec.kind === "flag") return `@${spec.name} takes no value`;
 
 	const shapes = spec.templates.map((template) => template.label).join(" or ");
 	if (match.value === undefined) return `@${spec.name} needs a value — ${shapes}`;
 	// "expected book" would be true and useless. A vocabulary is never malformed, only unheard of.
-	if (spec.vocabulary === true) return `@${spec.name}:${match.value} — not a ${shapes} the archive has`;
+	if (spec.vocabulary === true) return `@${spec.name}:${match.value} — not a known ${shapes}`;
 	return `@${spec.name}:${match.value} — expected ${shapes}`;
 }

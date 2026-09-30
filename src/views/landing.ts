@@ -62,7 +62,7 @@ function typeStep(input: HTMLInputElement, query: string, landed: number): void 
  * teaching the die was for without spending the centre of the page advertising itself — it is found
  * by pressing the obvious button on an empty field, which is a thing readers do.
  *
- * Typed out rather than pasted in because watching `@sunday snowman` arrive character by character,
+ * Typed out rather than pasted in because watching `@is:sunday snowman` arrive character by character,
  * earning its pill as the name lands, is the whole lesson. It does not search: the query is left in
  * the box with the caret after it, and the next submit — or Enter — searches it by the ordinary
  * path, because the box is no longer empty.

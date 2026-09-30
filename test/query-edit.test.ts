@@ -1,7 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { registerVocabulary } from "../src/filter-vocabulary";
-import { FILTER_FIELDS, FilterField, clearField, insertToken, removeToken, selectedTokens } from "../src/query-edit";
+import {
+	FILTER_FIELDS,
+	FilterField,
+	chooseToken,
+	clearField,
+	insertToken,
+	removeToken,
+	selectedTokens,
+} from "../src/query-edit";
 
 /**
  * The `Book` field's rows are loaded data, so a test that wants them has to say so. Registered for
@@ -103,8 +111,8 @@ test("projection: query text to checkmarks", async (suite) => {
 		assert.deepEqual(checked("@year:1988"), { year: ["1988"] });
 		assert.deepEqual(checked("@month:august"), { month: ["August"] });
 		assert.deepEqual(checked("@day:3"), { day: ["3"] });
-		assert.deepEqual(checked("@sunday"), { format: ["Sundays"] });
-		assert.deepEqual(checked("@daily"), { format: ["Dailies"] });
+		assert.deepEqual(checked("@is:sunday"), { format: ["Sundays"] });
+		assert.deepEqual(checked("@is:daily"), { format: ["Dailies"] });
 	});
 
 	await suite.test("a hand-typed spelling checks the same box", () => {
@@ -127,7 +135,7 @@ test("projection: query text to checkmarks", async (suite) => {
 	});
 
 	await suite.test("checkmarks survive the words around them", () => {
-		assert.deepEqual(checked("clean @year:1988 your room @sunday"), { year: ["1988"], format: ["Sundays"] });
+		assert.deepEqual(checked("clean @year:1988 your room @is:sunday"), { year: ["1988"], format: ["Sundays"] });
 	});
 
 	await suite.test("what the bar has no box for checks nothing anywhere", () => {
@@ -138,8 +146,9 @@ test("projection: query text to checkmarks", async (suite) => {
 		assert.deepEqual(checked("@year:2001"), {});
 		// A book the archive does not have is not a filter at all, so it is not a checkmark either.
 		assert.deepEqual(checked("@in:snowman"), {});
-		// A flag carrying a value is a misreading of the syntax, not a narrower query.
-		assert.deepEqual(checked("@sunday:yes"), {});
+		// Only two of the tags are in the bar.
+		assert.deepEqual(checked("@is:rerun @is:reused @is:altered @is:empty"), {});
+		assert.deepEqual(checked("@is:monday"), {});
 		assert.deepEqual(checked("snow goons"), {});
 	});
 });
@@ -147,7 +156,7 @@ test("projection: query text to checkmarks", async (suite) => {
 test("insert: checkmarks to query text", async (suite) => {
 	await suite.test("an empty box gets the token and nothing else", () => {
 		assert.equal(insertToken("", "@year:1990"), "@year:1990");
-		assert.equal(insertToken("   ", "@sunday"), "@sunday");
+		assert.equal(insertToken("   ", "@is:sunday"), "@is:sunday");
 	});
 
 	await suite.test("the token is appended to a query that has no filter of its field", () => {
@@ -167,8 +176,10 @@ test("insert: checkmarks to query text", async (suite) => {
 	await suite.test("a field collects beside its own name and no other", () => {
 		assert.equal(insertToken("@year:1988 @month:august", "@year:1990"), "@year:1988 @year:1990 @month:august");
 		assert.equal(insertToken("@year:1988 @month:august", "@day:3"), "@year:1988 @month:august @day:3");
-		// The two flags are one field, so the second joins the first.
-		assert.equal(insertToken("@sunday snowman", "@daily"), "@sunday @daily snowman");
+		// The two tags are one field, so the second joins the first — and so does a tag the bar has
+		// no box for.
+		assert.equal(insertToken("@is:sunday snowman", "@is:daily"), "@is:sunday @is:daily snowman");
+		assert.equal(insertToken("@is:rerun snowman", "@is:sunday"), "@is:rerun @is:sunday snowman");
 	});
 
 	await suite.test("the words keep their order and their single spaces", () => {
@@ -209,10 +220,41 @@ test("remove: unchecking a box", async (suite) => {
 	});
 });
 
+test("choose: a field that takes one row at a time", async (suite) => {
+	await suite.test("only Format takes one", () => {
+		assert.deepEqual(
+			FILTER_FIELDS.filter((each) => each.single).map((each) => each.name),
+			["format"],
+		);
+	});
+
+	await suite.test("an empty field gets the token, as a check would", () => {
+		assert.equal(chooseToken("snowman", field("format"), "@is:sunday"), "snowman @is:sunday");
+	});
+
+	await suite.test("a second choice replaces the first where it stood", () => {
+		assert.equal(chooseToken("@is:sunday snowman", field("format"), "@is:daily"), "@is:daily snowman");
+		assert.equal(chooseToken("clean @is:daily your room", field("format"), "@is:sunday"), "clean @is:sunday your room");
+	});
+
+	await suite.test("choosing the row already chosen is not an edit", () => {
+		assert.equal(chooseToken("@is:sunday snowman", field("format"), "@is:sunday"), "@is:sunday snowman");
+	});
+
+	await suite.test("a hand-typed pair is settled to the one chosen", () => {
+		assert.equal(chooseToken("@is:sunday @is:daily snowman", field("format"), "@is:daily"), "@is:daily snowman");
+	});
+
+	await suite.test("the tags the bar has no box for are left alone", () => {
+		assert.equal(chooseToken("@is:rerun @is:sunday", field("format"), "@is:daily"), "@is:rerun @is:daily");
+	});
+});
+
 test("clear: the whole field at once", async (suite) => {
 	await suite.test("every token the field has a box for", () => {
 		assert.equal(clearField("@year:1988 @year:90 snow @month:august goons", field("year")), "snow @month:august goons");
-		assert.equal(clearField("@sunday @daily snowman", field("format")), "snowman");
+		assert.equal(clearField("@is:sunday @is:daily snowman", field("format")), "snowman");
+		assert.equal(clearField("@is:sunday @is:rerun snowman", field("format")), "@is:rerun snowman");
 		assert.equal(clearField("@in:book3 @year:1988 @in:book4", field("book")), "@year:1988");
 	});
 
@@ -234,7 +276,7 @@ test("round trip", async (suite) => {
 		"@month:aug @day:3",
 		"  spaceman   spiff  ",
 	];
-	const tokens = ["@year:1990", "@month:august", "@day:3", "@sunday", "@daily"];
+	const tokens = ["@year:1990", "@month:august", "@day:3", "@is:sunday", "@is:daily"];
 
 	for (const query of queries) {
 		for (const token of tokens) {

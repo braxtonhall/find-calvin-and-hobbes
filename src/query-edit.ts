@@ -19,9 +19,9 @@ import { MONTH_NAMES, YEARS } from "./vocabulary";
  * - **The bar is token-level, not semantic.** A field reflects tokens of its own name and nothing
  *   else, and no two fields own the same token. `@date:1988/9/3` does not check 1988 in `Year`, and
  *   `@day:saturday` checks nothing anywhere; both are left alone and left unrepresented. Reading
- *   the checkmarks off the parsed `QueryFilters` instead would look tidier and is a trap — `@sunday`,
- *   `@daily` and `@day:saturday` all write into the same `weekdays` set, so a semantic bar would
- *   have to guess which token an uncheck meant to remove.
+ *   the checkmarks off the parsed `QueryFilters` instead would look tidier and is a trap — `@year:88`
+ *   and `@year:1988` both write 1988 into the same `years` set, so a semantic bar could not say
+ *   which tokens an uncheck meant to remove.
  *
  * The bar is deliberately a subset. `@date:`, `@before:`, `@after:` and the weekday half of
  * `@day:` are not in it and not represented by it: it covers what is worth clicking, and the rest
@@ -57,6 +57,12 @@ export interface FilterField {
 	options: () => readonly FilterOption[];
 	/** 31 rows in a column is a bad list, so `Day` is laid out as a calendar instead. */
 	shape: "list" | "grid";
+	/**
+	 * One row at a time, where checking two could only ever match nothing: `@is:` tags intersect,
+	 * and no strip is both a Sunday and a daily. Picking a row replaces the one before it, and
+	 * `Clear` is how the field is emptied.
+	 */
+	single?: true;
 }
 
 function titled(word: string): string {
@@ -71,18 +77,18 @@ function range(from: number, to: number): number[] {
  * Coarse to fine and then format, which is the order a reader reaches for them — the same
  * reasoning `FILTER_SPECS` gives for the autocomplete menu, and not alphabetical.
  *
- * `Format` is the only path to `@sunday` and `@daily`, and it is the distinction a reader of this
- * archive actually thinks in: the colour full-page Sundays against the black-and-white dailies.
+ * `Format` is the only path to `@is:sunday` and `@is:daily`, and it is the distinction a reader of
+ * this archive actually thinks in: the colour full-page Sundays against the black-and-white dailies.
  * It is a strip format that merely coincides with a weekday, which is why it reads as its own
- * field rather than as a shape of `@day:`.
+ * field rather than as a shape of `@day:`. The other tags are not in the bar.
  */
 // Built once here rather than inside the thunks, which `paint` calls on every keystroke.
 const YEAR_OPTIONS = YEARS.map((year) => ({ token: `@year:${year}`, label: String(year) }));
 const MONTH_OPTIONS = MONTH_NAMES.map((month) => ({ token: `@month:${month}`, label: titled(month) }));
 const DAY_OPTIONS = range(1, 31).map((day) => ({ token: `@day:${day}`, label: String(day) }));
 const FORMAT_OPTIONS = [
-	{ token: "@sunday", label: "Sundays" },
-	{ token: "@daily", label: "Dailies" },
+	{ token: "@is:sunday", label: "Sundays" },
+	{ token: "@is:daily", label: "Dailies" },
 ];
 
 export const FILTER_FIELDS: readonly FilterField[] = [
@@ -113,8 +119,9 @@ export const FILTER_FIELDS: readonly FilterField[] = [
 	{
 		name: "format",
 		label: "Format",
-		owns: ["sunday", "daily"],
+		owns: ["is"],
 		shape: "list",
+		single: true,
 		options: () => FORMAT_OPTIONS,
 	},
 	{
@@ -163,7 +170,8 @@ function single<Value>(values: Set<Value>, format: (value: Value) => string): st
  */
 function tokenOf(text: string, match: FilterMatch): string | null {
 	if (!match.valid) return null;
-	if (match.name === "sunday" || match.name === "daily") return `@${match.name}`;
+	// A tag, like a book, has only the one spelling.
+	if (match.name === "is") return `@is:${match.value}`;
 	if (match.name !== "year" && match.name !== "month" && match.name !== "day" && match.name !== "in") return null;
 
 	const probe = parseQueryFilters(text.slice(match.start, match.end)).filters;
@@ -211,6 +219,21 @@ export function insertToken(text: string, token: string): string {
 		return head === "" ? token : `${head} ${token}`;
 	}
 	return `${text.slice(0, anchor)} ${token}${text.slice(anchor)}`;
+}
+
+/**
+ * The token as the field's only selection: written in beside the one it replaces, and every other
+ * row of the field taken out. Picking the row that is already the only one is not an edit.
+ */
+export function chooseToken(text: string, field: FilterField, token: string): string {
+	const inserted = selectedTokens(text).has(token) ? text : insertToken(text, token);
+	return removeTokens(
+		inserted,
+		field
+			.options()
+			.map((option) => option.token)
+			.filter((other) => other !== token),
+	);
 }
 
 /** Every token that says this one thing, however it was spelled. */

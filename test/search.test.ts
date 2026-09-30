@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { bookmarkResults, search, searchBookmarks, TUNING, Tuning } from "../src/search";
+import { bookmarkResults, search, searchBookmarks, SearchResult, TUNING, Tuning } from "../src/search";
 import { COMPOUND_CANONICAL_FORMS, COMPOUND_RELATIONS } from "../src/compounds";
 import { registerVocabulary } from "../src/filter-vocabulary";
 import { highlightRanges } from "../src/utils";
@@ -15,6 +15,11 @@ function scoreOf(query: string, date: string, tuning?: Tuning): number {
 	const result = search(query, "rank", tuning).find((candidate) => candidate.comic.date === date);
 	assert.ok(result, `expected ${date} to match "${query}"`);
 	return result.score;
+}
+
+/** How a row matched, and whether it is a day its strip ran again — which the badge says together. */
+function kindOf(result: SearchResult): string {
+	return result.rerun ? `${result.source} rerun` : result.source;
 }
 
 function sourceOf(query: string, date: string): string {
@@ -738,7 +743,8 @@ test("reruns appear only for exact date queries and use the original transcript"
 		const exact = search("may 5 1991", "rank");
 		assert.equal(exact.length, 1);
 		assert.equal(exact[0].comic.date, "1991-05-05");
-		assert.equal(exact[0].source, "rerun");
+		assert.equal(exact[0].source, "date");
+		assert.equal(exact[0].rerun, true);
 		assert.equal(exact[0].text, DATED[0].transcript);
 		assert.deepEqual(search("may 1991", "rank"), []);
 		assert.deepEqual(
@@ -756,11 +762,11 @@ test("bookmarks are rows in date order, a rerun day shows the strip that ran aga
 	try {
 		const results = bookmarkResults(new Set(["1991-05-05", "1989-08-03", "1988-08-03", "1990-01-01"]));
 		assert.deepEqual(
-			results.map((result) => [result.comic.date, result.source]),
+			results.map((result) => [result.comic.date, kindOf(result)]),
 			[
 				["1988-08-03", "filter"],
 				["1989-08-03", "filter"],
-				["1991-05-05", "rerun"],
+				["1991-05-05", "filter rerun"],
 			],
 		);
 		assert.equal(results[2].text, DATED[0].transcript);
@@ -777,26 +783,66 @@ test("a search of the bookmarks finds only bookmarks, and finds a bookmarked rer
 	try {
 		const bookmarked = new Set(["1991-05-05", "1989-08-03"]);
 		const rows = (query: string) =>
-			searchBookmarks(query, "date", bookmarked).map((result) => [result.comic.date, result.source]);
+			searchBookmarks(query, "date", bookmarked).map((result) => [result.comic.date, kindOf(result)]);
 
 		assert.deepEqual(rows(""), [
 			["1989-08-03", "filter"],
-			["1991-05-05", "rerun"],
+			["1991-05-05", "filter rerun"],
 		]);
 		assert.deepEqual(rows("snow goons"), [["1989-08-03", "transcript"]]);
 
 		const tiger = searchBookmarks("tiger", "rank", bookmarked);
 		assert.deepEqual(
-			tiger.map((result) => [result.comic.date, result.source]),
-			[["1991-05-05", "rerun"]],
+			tiger.map((result) => [result.comic.date, kindOf(result)]),
+			[["1991-05-05", "transcript rerun"]],
 			"the original is not bookmarked, so only the rerun day is here",
 		);
 		assert.ok(tiger[0].ranges.length > 0, "and it carries the highlight its strip earned");
 
-		assert.deepEqual(rows("1991-05-05"), [["1991-05-05", "rerun"]], "named by date, it is one row, not two");
-		assert.deepEqual(rows("@year:1991"), [["1991-05-05", "rerun"]], "a filter judges a rerun by its own date");
+		assert.deepEqual(rows("1991-05-05"), [["1991-05-05", "date rerun"]], "named by date, it is one row, not two");
+		assert.deepEqual(rows("@year:1991"), [["1991-05-05", "filter rerun"]], "a filter judges a rerun by its own date");
 		assert.deepEqual(rows("@year:1988 tiger"), [], "and not by the original's");
 		assert.deepEqual(rows("sandbox"), []);
+	} finally {
+		state.reruns = new Map();
+	}
+});
+
+test("@is:reused finds the strips that ran again, and @is:rerun the days they did", () => {
+	install(buildArchive(DATED));
+	state.reruns = new Map([
+		["1991-05-05", "1988-08-03"],
+		["1992-05-05", "1988-08-03"],
+		["1991-05-06", "1989-08-03"],
+	]);
+	try {
+		const rows = (query: string) => search(query, "date").map((result) => [result.comic.date, kindOf(result)]);
+
+		assert.deepEqual(rows("@is:reused"), [
+			["1988-08-03", "filter"],
+			["1989-08-03", "filter"],
+		]);
+		assert.deepEqual(rows("@is:rerun"), [
+			["1991-05-05", "filter rerun"],
+			["1991-05-06", "filter rerun"],
+			["1992-05-05", "filter rerun"],
+		]);
+		assert.deepEqual(rows("@is:reused @is:rerun"), [], "no row is both");
+
+		// Beside words, each narrows the text search — and `@is:rerun` brings the rerun days in to be
+		// narrowed, which is the one way a filter adds rows to a text search.
+		assert.deepEqual(rows("tiger"), [["1988-08-03", "transcript"]], "no rerun days unless asked for");
+		assert.deepEqual(rows("tiger @is:reused"), [["1988-08-03", "transcript"]]);
+		assert.deepEqual(rows("tiger @is:rerun"), [
+			["1991-05-05", "transcript rerun"],
+			["1992-05-05", "transcript rerun"],
+		]);
+		assert.deepEqual(rows("sandbox @is:reused"), [], "a strip that never ran again was not reused");
+
+		// A rerun day is judged by the day it ran again, and by everything its strip is.
+		assert.deepEqual(rows("@is:rerun @year:1992"), [["1992-05-05", "filter rerun"]]);
+		assert.deepEqual(rows("@is:rerun @year:1988"), []);
+		assert.deepEqual(rows("@is:reused @year:1989"), [["1989-08-03", "filter"]]);
 	} finally {
 		state.reruns = new Map();
 	}
@@ -924,8 +970,10 @@ test("a filter over the books a strip was printed in", () => {
 		assert.deepEqual(ranked("@in:book3 tiger"), ["1988-08-03"]);
 		assert.ok(ranked("tiger").length > ranked("@in:book3 tiger").length);
 
-		// One filter, two books: the values union, exactly as two years do.
-		assert.deepEqual(ranked("@in:book3 @in:book4").sort(), ["1988-08-03", "1989-08-03"]);
+		// One filter, two books: a strip is in many books, so it has to be in both — where two years,
+		// which a strip has only one of, union.
+		assert.deepEqual(ranked("@in:book3 @in:complete"), ["1988-08-03"]);
+		assert.deepEqual(ranked("@in:book3 @in:book4"), []);
 
 		// Two filters: the fields intersect.
 		assert.deepEqual(ranked("@in:complete @year:1989"), ["1989-08-03"]);

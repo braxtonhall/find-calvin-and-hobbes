@@ -14,13 +14,21 @@ Type words to search transcripts. Type `@` in the search box for the list of fil
 | `@date:`   | `@date:1988`, `@date:1988/9/3` | a date, at whatever precision you give   |
 | `@before:` | `@before:1990`                 | strips before that date, excluding it    |
 | `@after:`  | `@after:1987`                  | strips after that date, excluding it     |
-| `@sunday`  |                                | Sunday strips only                       |
-| `@daily`   |                                | weekday strips only                      |
 | `@in:`     | `@in:book3`, `@in:complete`    | strips printed in that book              |
+| `@is:`     | `@is:sunday`, `@is:rerun`      | strips with that tag                     |
 
-Repeating a filter widens; combining different ones narrows. `@day:saturday @day:sunday` is the
-weekend, while `@day:1 @day:monday` is the Mondays that fell on the first. Filters combine with
-ordinary words, so `@year:1988 snowman` searches 1988 alone.
+The tags are `sunday` and `daily` (the colour Sundays and the black-and-white dailies), `reused`
+(a strip on the day it first ran, where it was later rerun), `rerun` (a strip on a day it ran
+again), `altered` (a strip some book printed with changes) and `empty` (a strip with an empty
+transcript). Reruns only appear in results when the search asks for `@is:rerun`, or names the exact
+date one ran.
+
+Different filters narrow. Repeating a filter widens where a strip can have only one value for it —
+`@day:saturday @day:sunday` is the weekend, and `@year:1988 @year:1989` is either year — and narrows
+where it can have several: `@in:book1 @in:book3` is the strips printed in both books, and
+`@is:sunday @is:rerun` is the Sundays that ran again. `@day:1 @day:monday` is the Mondays that fell
+on the first, because a day of the month and a day of the week are different things. Filters combine
+with ordinary words, so `@year:1988 snowman` searches 1988 alone.
 
 `@in:` takes a book's id rather than its title, because a filter value takes no spaces. Type `@in:`
 and the menu lists every book the archive indexes with its title beside it, so `@in:book3` is _Yukon
