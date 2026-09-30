@@ -17,6 +17,7 @@ import {
 } from "./router";
 import { HOME_PATH, buildComicPath } from "./routes";
 import { getSameDayComicDate } from "./pages/detail";
+import { attachLifeEasterEgg } from "./life";
 
 function initialize(): void {
 	// The one filter whose values are loaded data. A thunk, so this can be registered before the
@@ -58,6 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
 	initialize();
 
 	window.addEventListener("popstate", () => handleRoute());
+
+	attachLifeEasterEgg();
 
 	document.addEventListener("keydown", (event) => {
 		const activeTag = (document.activeElement as HTMLElement | null)?.tagName;

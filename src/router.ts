@@ -1,6 +1,7 @@
 import { Route } from "./types";
 import { state } from "./state";
 import { scrollCellIntoViewIfNeeded } from "./utils";
+import { stopLife } from "./life";
 import { HOME_PATH, legacyHashPath, normalizePathname, parseRoutePath } from "./routes";
 import { addressOf, pathOf } from "./base-path";
 import { Page, pageTitle } from "./pages/page";
@@ -299,6 +300,9 @@ function showLoadingView(viewElement: HTMLElement, route: Route): void {
 }
 
 export function updateGridState(route: Route): void {
+	// Any page drawn, even one whose grid looks the same, ends a game of life.
+	stopLife();
+
 	if (state.hoveredCell) {
 		state.hoveredCell.classList.remove("cell--hover-highlight");
 		state.hoveredCell = null;

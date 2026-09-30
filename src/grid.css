@@ -140,6 +140,27 @@
 	background: var(--orange);
 }
 
+/* The Konami code's Game of Life (see life.ts): the living in their full colour, whatever their tier,
+   the dead dimmed. The id outranks every class-only rule above. */
+#grid[data-life] .cell {
+	background: var(--golden-dim);
+}
+#grid[data-life] .cell--none {
+	background: var(--grey-dim);
+}
+#grid[data-life] .cell--bookmarked {
+	background: var(--orange-dim);
+}
+#grid[data-life] .cell[data-alive] {
+	background: var(--golden);
+}
+#grid[data-life] .cell--none[data-alive] {
+	background: var(--grey);
+}
+#grid[data-life] .cell--bookmarked[data-alive] {
+	background: var(--orange);
+}
+
 .cell--selected {
 	box-shadow: 0 0 0 var(--cell-ring) var(--border);
 	z-index: 1;
