@@ -121,6 +121,7 @@ test("a site mounted at /repo/", async (suite) => {
 				alternates: [],
 				comics: [{ date: "1986-07-07", transcript: "Hi.", image: "/repo/assets/comics/19860707.gif" }],
 				rerunOf: null,
+				reruns: [],
 				prevDate: "1986-07-06",
 				nextDate: "1986-07-08",
 				collections: [],
@@ -144,7 +145,7 @@ test("a site mounted at /repo/", async (suite) => {
 			assert.match(view, /class="detail-home" href="\/repo\/"/);
 
 			const rerun = buildDetailHtml({ ...page, comics: [], rerunOf: "1986-07-07", date: "1991-05-05" }, false);
-			assert.match(rerun, /class="detail-rerun-link" href="\/repo\/1986-07-07" data-original-date="1986-07-07"/);
+			assert.match(rerun, /class="detail-rerun-link" href="\/repo\/1986-07-07" data-date="1986-07-07"/);
 		});
 	});
 });

@@ -194,11 +194,10 @@ function attachCollectionBookHandlers(element: HTMLElement, page: DetailPage): v
 	followCollectionTooltip();
 }
 
-function attachRerunLinkHandler(element: HTMLElement): void {
-	const link = element.querySelector<HTMLElement>(".detail-rerun-link");
-	if (!link) return;
-
-	attachCellHighlightLink(link, link.dataset.originalDate!);
+function attachRerunLinkHandlers(element: HTMLElement): void {
+	element.querySelectorAll<HTMLElement>(".detail-rerun-link").forEach((link) => {
+		attachCellHighlightLink(link, link.dataset.date!);
+	});
 }
 
 /**
@@ -213,7 +212,7 @@ export function renderDetail(page: DetailPage, adopt: boolean = false): void {
 	}
 
 	attachBackAndHomeHandlers(element);
-	attachRerunLinkHandler(element);
+	attachRerunLinkHandlers(element);
 
 	attachCopyLinkHandler(element);
 

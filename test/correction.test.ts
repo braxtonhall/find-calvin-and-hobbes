@@ -24,6 +24,7 @@ const detail: Page = {
 	alternates: [],
 	comics: [{ date: "1986-07-07", transcript: "Hi." }],
 	rerunOf: null,
+	reruns: [],
 	prevDate: null,
 	nextDate: null,
 	collections: [],

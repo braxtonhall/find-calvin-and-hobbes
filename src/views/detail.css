@@ -233,6 +233,11 @@
 	margin-bottom: 24px;
 }
 
+/* On an original day, below the strip: spaced like the "Collected in" heading that follows it. */
+.detail-rerun-banner--note {
+	margin: 24px 0 0 0;
+}
+
 .detail-rerun-link {
 	color: var(--golden);
 	text-decoration: none;

@@ -54,6 +54,8 @@ export interface DetailPage {
 	comics: Comic[];
 	/** The date of the strip that ran again on this one, when this is a rerun day and holds no strip of its own. */
 	rerunOf: string | null;
+	/** Every day the paper ran this page's strip again, in order; empty on a rerun day, which notes only its original. */
+	reruns: string[];
 	prevDate: string | null;
 	nextDate: string | null;
 	collections: DetailCollection[];

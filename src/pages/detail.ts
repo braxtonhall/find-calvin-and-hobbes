@@ -92,6 +92,20 @@ function summarizeCollections(source: PageSource, comics: Comic[]): DetailCollec
 	return [...summaries.values()];
 }
 
+const rerunsByOriginal = new WeakMap<Map<string, string>, Map<string, string[]>>();
+
+/** Every rerun of the strip first run on `originalDate`, in order. Indexed once per archive. */
+function findReruns(reruns: Map<string, string>, originalDate: string): string[] {
+	let byOriginal = rerunsByOriginal.get(reruns);
+	if (!byOriginal) {
+		byOriginal = new Map();
+		for (const [rerun, original] of reruns) byOriginal.set(original, [...(byOriginal.get(original) ?? []), rerun]);
+		for (const dates of byOriginal.values()) dates.sort();
+		rerunsByOriginal.set(reruns, byOriginal);
+	}
+	return byOriginal.get(originalDate) ?? [];
+}
+
 /** The page for a date, from whatever holds the archive — the app's state or the build's data. */
 export function detailPageFrom(source: PageSource, date: string, alternates: string[] = []): DetailPage {
 	const rerunOf = source.reruns.get(date) ?? null;
@@ -103,6 +117,7 @@ export function detailPageFrom(source: PageSource, date: string, alternates: str
 		alternates,
 		comics,
 		rerunOf,
+		reruns: rerunOf ? [] : findReruns(source.reruns, date),
 		prevDate: getAdjacentComicDate(source, date, -1),
 		nextDate: getAdjacentComicDate(source, date, 1),
 		collections: summarizeCollections(source, comics),
@@ -275,6 +290,8 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 
 		const aspectRatio = getAspectRatio(comic, isSunday);
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
+		// Only the day's own strip ran in the paper; a special never did, so never reran.
+		const rerunNoteHtml = !comic.id ? buildRerunNoteHtml(page.reruns) : "";
 		const collectionsHtml = buildAppearancesSectionHtml(
 			comic.appearances || [],
 			collectionsById,
@@ -287,6 +304,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
 			${transcriptHtml}
 			${readLinkHtml}
+			${rerunNoteHtml}
 			<div class="detail-collections-slot">${collectionsHtml}</div>
 		</div>`;
 	}
@@ -294,13 +312,24 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 	return bodies;
 }
 
-/**
- * A rerun day shows the strip it reran, so this sits above it as a note of where it's from.
- * `data-original-date` is what the view reads to light up that strip's cell in the grid while the
- * link is hovered.
- */
+/** A link to another day's strip. `data-date` is what the view reads to light up its cell in the grid while hovered. */
+function buildRerunLinkHtml(date: string): string {
+	return `<a class="detail-rerun-link" href="${addressOf(buildComicPath(date))}" data-date="${date}">${formatLongDate(date)}</a>`;
+}
+
+function joinRerunLinks(dates: string[]): string {
+	return dates.map(buildRerunLinkHtml).join(" and ");
+}
+
+/** A rerun day shows the strip it reran, so this sits above it as a note of where it's from. */
 function buildRerunBannerHtml(originalDate: string): string {
-	return `<p class="detail-rerun-banner">Originally ran <a class="detail-rerun-link" href="${addressOf(buildComicPath(originalDate))}" data-original-date="${originalDate}">${formatLongDate(originalDate)}</a></p>`;
+	return `<p class="detail-rerun-banner">Originally ran ${buildRerunLinkHtml(originalDate)}</p>`;
+}
+
+/** An original day's note of when the paper ran its strip again, beside where it was collected. */
+function buildRerunNoteHtml(reruns: string[]): string {
+	if (reruns.length === 0) return "";
+	return `<p class="detail-rerun-banner detail-rerun-banner--note">Reran ${joinRerunLinks(reruns)}</p>`;
 }
 
 export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
