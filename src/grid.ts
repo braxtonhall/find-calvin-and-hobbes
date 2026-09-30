@@ -153,6 +153,18 @@ function renderYearRail(grid: HTMLElement, weekCount: number): void {
 	updateActiveYears();
 }
 
+/**
+ * Marks the chunks on screen, for `.grid-chunk--in-view`. The viewport is the root, so the sidebar
+ * on desktop and the grid's own scroller on mobile both clip it — and a closed mobile sidebar,
+ * being off screen, has none.
+ */
+function watchChunksInView(chunks: HTMLElement[]): void {
+	const observer = new IntersectionObserver((entries) => {
+		for (const entry of entries) entry.target.classList.toggle("grid-chunk--in-view", entry.isIntersecting);
+	});
+	for (const chunk of chunks) observer.observe(chunk);
+}
+
 export function renderGrid(): void {
 	const layout = document.getElementById("grid-layout")!;
 
@@ -200,6 +212,7 @@ export function renderGrid(): void {
 	}
 
 	grid.replaceChildren(...chunks);
+	watchChunksInView(chunks);
 
 	const monthSpans = buildLabelSpans(7, weekCount, (month) => MONTH_NAMES[Number(month.substring(5, 7)) - 1]);
 	const yearSpans = buildLabelSpans(4, weekCount, (year) => `'${year.slice(2)}`);

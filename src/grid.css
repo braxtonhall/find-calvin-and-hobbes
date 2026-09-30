@@ -84,6 +84,15 @@
 		calc(var(--chunk-weeks) * var(--cell-size) + (var(--chunk-weeks) - 1) * var(--grid-gap));
 }
 
+/*
+ * Chrome keeps chunks drawn for some way beyond the screen, and every cell in them would fade when
+ * the grid is lit or dimmed. Only the chunks actually in view (see `watchChunksInView`) fade; the
+ * rest change at once, where no one sees them.
+ */
+.grid-chunk:not(.grid-chunk--in-view) .cell {
+	transition: none;
+}
+
 .grid-chunk:has(.cell--selected) {
 	z-index: 1;
 }

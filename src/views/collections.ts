@@ -4,7 +4,7 @@ import { canGoBack } from "../router";
 import { CollectionsPage } from "../pages/page";
 import { buildCollectionsHtml } from "../pages/collections";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
-import { highlightCollection } from "./cell-highlight";
+import { clearCollectionSoon, highlightCollection } from "./cell-highlight";
 
 /** Draws the list of books, or — with `adopt` — takes over the one the build drew from the same `page`. */
 export function renderCollections(page: CollectionsPage, adopt: boolean = false): void {
@@ -18,7 +18,7 @@ export function renderCollections(page: CollectionsPage, adopt: boolean = false)
 		// A row followed to its book is left focused, and hidden, which blurs it; by then the grid is
 		// the book page's to draw, so only the list while it is showing may touch it.
 		const show = () => element.classList.contains("active") && highlightCollection(collection);
-		const clear = () => element.classList.contains("active") && highlightCollection(null);
+		const clear = () => element.classList.contains("active") && clearCollectionSoon();
 		row.addEventListener("mouseenter", show);
 		row.addEventListener("focus", show);
 		row.addEventListener("mouseleave", clear);
