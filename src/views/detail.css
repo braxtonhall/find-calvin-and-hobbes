@@ -227,15 +227,13 @@
 	padding: 40px 0;
 }
 
-.detail-rerun-banner {
+.detail-reruns {
+	list-style: none;
+	margin: 0;
+	padding: 0;
 	font-size: 13px;
+	line-height: 1.6;
 	color: var(--text-muted);
-	margin-bottom: 24px;
-}
-
-/* On an original day, below the strip: spaced like the "Collected in" heading that follows it. */
-.detail-rerun-banner--note {
-	margin: 24px 0 0 0;
 }
 
 .detail-rerun-link {
@@ -251,6 +249,50 @@
 	font-size: 12px;
 	color: var(--text-muted);
 	margin: 24px 0 8px 0;
+}
+
+.detail-collected {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+}
+
+.detail-collected__toggle {
+	flex: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 20px;
+	/* As tall as the covers beside it, so the chevron sits at their middle. */
+	height: 64px;
+	margin-left: -4px;
+	padding: 0;
+	background: none;
+	border: none;
+	color: var(--text-muted);
+	cursor: pointer;
+}
+
+.detail-collected__toggle:hover {
+	color: var(--golden);
+}
+
+.detail-collected__toggle svg {
+	transition: transform 0.15s;
+}
+
+.detail-collected--expanded .detail-collected__toggle {
+	/* Now beside the list's first row. */
+	height: 36px;
+}
+
+.detail-collected--expanded .detail-collected__toggle svg {
+	transform: rotate(90deg);
+}
+
+.detail-collected--expanded .detail-collections,
+.detail-collected:not(.detail-collected--expanded) .detail-printings {
+	display: none;
 }
 
 .detail-collections {
@@ -281,16 +323,10 @@
 	display: block;
 }
 
-.detail-collections--empty {
-	font-style: italic;
-	color: var(--text-muted);
-}
-
 .collection-book {
 	display: block;
 	height: 64px;
 	position: relative;
-	cursor: pointer;
 	background: var(--grey);
 	border-radius: 3px;
 }
@@ -322,52 +358,107 @@
 	z-index: 1;
 }
 
-.collection-tooltip {
-	position: fixed;
-	pointer-events: none;
-	z-index: 10000;
-	background: rgba(0, 0, 0, 0.85);
-	color: #fff;
-	padding: 8px 10px;
-	border-radius: 4px;
+.detail-printings {
+	flex: 1;
+	/* Wide enough for the longest name on one line, so the arrows stay near the book they step through. */
+	max-width: 600px;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.printing {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.printing__book {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: 1;
+	min-width: 0;
+	color: inherit;
+	text-decoration: none;
+}
+
+.printing__cover {
+	flex: none;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 36px;
+}
+
+/* Shrinks to the cover, so the badge sits on its corner whatever its shape. */
+.printing__cover-image {
+	position: relative;
+	display: flex;
+	max-width: 100%;
+	max-height: 100%;
+}
+
+.printing__cover img {
+	max-width: 100%;
+	max-height: 36px;
+	border-radius: 2px;
+}
+
+/* The cover row's badge, scaled to the list's smaller covers. */
+.printing__badge {
+	top: -4px;
+	right: -4px;
+	width: 13px;
+	height: 13px;
+	font-size: 9px;
+	line-height: 13px;
+}
+
+.printing__cover--bw img {
+	filter: grayscale(100%);
+}
+
+.printing__text {
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
 	font-size: 13px;
-	white-space: nowrap;
-	opacity: 0;
-	transition: opacity 0.1s;
+	line-height: 1.35;
 }
 
-.collection-tooltip--visible {
-	opacity: 1;
+a.printing__book:hover .printing__name {
+	color: var(--golden);
 }
 
-.collection-tooltip__name {
-	font-weight: 600;
-}
-
-.collection-tooltip__year {
-	font-size: 11px;
-	color: #aaa;
-}
-
-.collection-tooltip__pages {
-	margin-top: 4px;
+.printing__year,
+.printing__detail {
 	font-size: 12px;
-	color: #ddd;
-	white-space: normal;
-	max-width: 260px;
-	line-height: 1.4;
+	color: var(--text-muted);
 }
 
-.collection-tooltip__divider {
-	border-top: 1px solid rgba(255, 255, 255, 0.15);
-	margin-top: 5px;
-	padding-top: 5px;
-	font-size: 11px;
-	color: #aaa;
+.printing__alteration {
 	font-style: italic;
-	line-height: 1.4;
-	white-space: normal;
-	max-width: 260px;
+}
+
+.printing__nav {
+	flex: none;
+	display: flex;
+	gap: 6px;
+}
+
+.printing__nav > .nav-btn {
+	margin-left: 0;
+}
+
+.printings__empty {
+	font-size: 13px;
+	font-style: italic;
+	color: var(--text-muted);
 }
 
 .detail-image-wrapper {

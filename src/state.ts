@@ -11,7 +11,6 @@ export interface AppState {
 	hoveredCell: HTMLElement | null;
 	collectionIndex: CollectionIndex | null;
 	collectionsById: Map<string, Collection> | null;
-	collectionTooltip: HTMLElement | null;
 	keyboardNavActive: boolean;
 	bookmarkedDates: Set<string>;
 	/** Whether IndexedDB has answered — or failed to — so an empty `bookmarkedDates` means none. */
@@ -32,7 +31,6 @@ export const state: AppState = {
 	hoveredCell: null,
 	collectionIndex: null,
 	collectionsById: null,
-	collectionTooltip: null,
 	keyboardNavActive: false,
 	bookmarkedDates: new Set(),
 	bookmarksLoaded: false,

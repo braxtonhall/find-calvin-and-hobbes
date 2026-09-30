@@ -46,6 +46,11 @@ export type DetailCollection = Pick<
 	"id" | "name" | "pub_year" | "image" | "colour" | "aspectRatio" | "editions" | "alterations"
 >;
 
+export interface BookNeighbours {
+	prev: string | null;
+	next: string | null;
+}
+
 export interface DetailPage {
 	view: "detail";
 	date: string;
@@ -55,9 +60,12 @@ export interface DetailPage {
 	/** The date of the strip that ran again on this one, when this is a rerun day and holds no strip of its own. */
 	rerunOf: string | null;
 	/** Every day the paper ran this page's strip again, in order; empty on a rerun day, which notes only its original. */
-	reruns: string[];
 	prevDate: string | null;
 	nextDate: string | null;
+	/** The days the newspaper ran this page's strip: the original, then each rerun, in order. */
+	runs: string[];
+	/** The strips either side of each of this page's strips in each book, by `printingKey`. */
+	bookNeighbours: Record<string, BookNeighbours>;
 	collections: DetailCollection[];
 	/** By comic key; `null` while the descriptions are still on their way, which draws a skeleton. */
 	descriptions: Record<string, string> | null;
