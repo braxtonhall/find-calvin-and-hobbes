@@ -5,7 +5,7 @@ import { SearchResult } from "../search";
 import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
 import { buildComicPath } from "../routes";
 import { addressOf } from "../base-path";
-import { dateToCompact } from "../date-utils";
+import { dateToCompact, formatLongDate } from "../date-utils";
 
 /**
  * The rows of strips a page lists — the search results, and the bookmarks — and what they do to the
@@ -42,15 +42,7 @@ export function resultsHtml(results: SearchResult[], empty: string): string {
 	let html = "";
 	for (const result of results) {
 		const { comic, text, ranges } = result;
-		const [year, month, day] = comic.date.split("-").map(Number);
-		const dateObject = new Date(Date.UTC(year, month - 1, day));
-		const dateFormatted = dateObject.toLocaleDateString("en-US", {
-			weekday: "long",
-			year: "numeric",
-			month: "long",
-			day: "numeric",
-			timeZone: "UTC",
-		});
+		const dateFormatted = formatLongDate(comic.date);
 		const highlighted = highlightRanges(text, ranges);
 		const label = labelOf(result);
 		const sourceTag = label ? `<span class="result-source">${label}</span>` : ``;

@@ -7,6 +7,7 @@ import { HOME_PATH, buildSearchPath } from "../routes";
 import { filterMenuHasFocus } from "./filter-bar";
 import { attachRowHandlers, resultsHtml } from "./result-rows";
 import { SearchBar, buildSearchBar } from "./search-bar";
+import { isTouchDevice } from "../utils";
 
 /**
  * The count moved to the filter bar and dropped the query on the way — `12 results`, not
@@ -44,8 +45,9 @@ export function renderResults(query: string, sort: SortMode): void {
 	// Arriving from another view, rather than typing here or stepping through the rows. The filter
 	// menu counts as being here: it is floated on `document.body` rather than nested in this element,
 	// so `contains` cannot see a reader who is standing on one of its rows — and the search that
-	// follows a checkmark comes back through here 200ms later.
-	if (!element.contains(document.activeElement) && !filterMenuHasFocus()) {
+	// follows a checkmark comes back through here 200ms later. Never on a touchscreen, where the focus
+	// would raise a keyboard over the results.
+	if (!isTouchDevice() && !element.contains(document.activeElement) && !filterMenuHasFocus()) {
 		bar.input.focus();
 		bar.input.setSelectionRange(bar.input.value.length, bar.input.value.length);
 	}

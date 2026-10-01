@@ -55,15 +55,56 @@
 }
 
 #grid {
+	display: flex;
+	flex-direction: column;
+	gap: var(--grid-gap);
+}
+
+/*
+ * A run of weeks (see `WEEKS_PER_CHUNK`) that the browser skips styling and drawing while it is off
+ * screen, so that lighting or dimming every cell only costs the cells in view. A skipped chunk takes
+ * the size it would have, to the pixel, so the scrollbar and the label columns beside it stay true.
+ *
+ * Skipping also clips a chunk to its box, and the rings reach past their cells. The bleed gives them
+ * room, and is taken back by the margin so the chunks still sit a gap apart. It overlaps the
+ * neighbouring chunks, so the chunk lets pointers through to the cells beneath it, and the chunk
+ * holding a ring is raised so the ring is not drawn under the next chunk's cells.
+ */
+.grid-chunk {
+	--chunk-bleed: 12px;
 	display: grid;
 	grid-template-columns: repeat(7, var(--cell-size));
 	grid-auto-rows: var(--cell-size);
 	gap: var(--grid-gap);
+	padding: var(--chunk-bleed);
+	margin: calc(-1 * var(--chunk-bleed));
+	pointer-events: none;
+	content-visibility: auto;
+	contain-intrinsic-size: calc(7 * var(--cell-size) + 6 * var(--grid-gap))
+		calc(var(--chunk-weeks) * var(--cell-size) + (var(--chunk-weeks) - 1) * var(--grid-gap));
+}
+
+/*
+ * Chrome keeps chunks drawn for some way beyond the screen, and every cell in them would fade when
+ * the grid is lit or dimmed. Only the chunks actually in view (see `watchChunksInView`) fade; the
+ * rest change at once, where no one sees them.
+ */
+.grid-chunk:not(.grid-chunk--in-view) .cell {
+	transition: none;
+}
+
+.grid-chunk:has(.cell--selected) {
+	z-index: 1;
+}
+
+.grid-chunk:has(.cell--hover-highlight) {
+	z-index: 2;
 }
 
 .cell {
 	border-radius: var(--cell-radius);
 	cursor: pointer;
+	pointer-events: auto;
 	color: inherit;
 	text-decoration: none;
 	transition:

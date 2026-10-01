@@ -53,14 +53,16 @@ export function getCollectionCoverage(collection: Collection): string[] {
 	return coverage;
 }
 
+const COMPACT_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
+	month: "long",
+	day: "numeric",
+	year: "numeric",
+	timeZone: "UTC",
+});
+
 /** `June 5, 1988`, from `19880605`. */
 export function formatCompactDate(compact: string): string {
-	return compactToDate(compact).toLocaleDateString("en-US", {
-		month: "long",
-		day: "numeric",
-		year: "numeric",
-		timeZone: "UTC",
-	});
+	return COMPACT_DATE_FORMAT.format(compactToDate(compact));
 }
 
 /** How many days the month has, February included, since the year is always known here. */
@@ -81,13 +83,17 @@ export function isSabbatical(dateStr: string): boolean {
 	return SABBATICALS.some(([sabbaticalStart, sabbaticalEnd]) => dateStr >= sabbaticalStart && dateStr <= sabbaticalEnd);
 }
 
-/** `Monday, July 7, 1986` — the long form the detail page and the grid tooltips share. */
+// Made once: `toLocaleDateString` builds a formatter on every call, which the grid, with a label for
+// every day of the run, felt as a tenth of a second at startup.
+const LONG_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
+	weekday: "long",
+	year: "numeric",
+	month: "long",
+	day: "numeric",
+	timeZone: "UTC",
+});
+
+/** `Monday, July 7, 1986` — the long form the detail page, the search results and the grid share. */
 export function formatLongDate(date: string): string {
-	return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
-		weekday: "long",
-		year: "numeric",
-		month: "long",
-		day: "numeric",
-		timeZone: "UTC",
-	});
+	return LONG_DATE_FORMAT.format(new Date(`${date}T00:00:00Z`));
 }

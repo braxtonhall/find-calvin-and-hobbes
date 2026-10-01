@@ -24,6 +24,15 @@ export function highlightRanges(text: string, ranges: readonly HighlightRange[])
 	return html + escHtml(text.slice(index));
 }
 
+/**
+ * Whether the reader is on a touchscreen, where focusing a box raises a keyboard over half the page.
+ * Asked of the device's capabilities rather than its user agent, and asked fresh each time, since a
+ * tablet can gain or lose a mouse.
+ */
+export function isTouchDevice(): boolean {
+	return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+}
+
 /** Whether any of `cells` is wholly inside the part of the grid on screen, below its sticky header. */
 export function anyCellInView(cells: Iterable<HTMLElement>): boolean {
 	const sidebar = document.getElementById("sidebar")!;
@@ -32,7 +41,18 @@ export function anyCellInView(cells: Iterable<HTMLElement>): boolean {
 	const top = header.getBoundingClientRect().bottom;
 	const bottom = Math.min(sidebar.getBoundingClientRect().bottom, container.getBoundingClientRect().bottom);
 
+	// Each cell's chunk is asked first. An off-screen chunk is skipped by the browser, and measuring a
+	// cell inside one would have it styled and laid out only to learn that it is off screen.
+	const chunksInView = new Map<Element, boolean>();
 	for (const cell of cells) {
+		const chunk = cell.parentElement!;
+		let chunkInView = chunksInView.get(chunk);
+		if (chunkInView === undefined) {
+			const chunkRect = chunk.getBoundingClientRect();
+			chunkInView = chunkRect.bottom > top && chunkRect.top < bottom;
+			chunksInView.set(chunk, chunkInView);
+		}
+		if (!chunkInView) continue;
 		const cellRect = cell.getBoundingClientRect();
 		if (cellRect.top >= top && cellRect.bottom <= bottom) return true;
 	}

@@ -13,7 +13,7 @@ import { Collection, Comic } from "../src/types";
 import { Page, PageSource } from "../src/pages/page";
 import { detailPageFrom } from "../src/pages/detail";
 import { buildRangeSearchPath, collectionPageFrom } from "../src/pages/collection";
-import { parseQueryFilters, passesFilters } from "../src/filter-query";
+import { admits, parseQuery } from "../src/boolean-query";
 import { parseRoutePath } from "../src/routes";
 import { collectionsPageFrom } from "../src/pages/collections";
 import { isDateInCollection } from "../src/date-utils";
@@ -137,15 +137,17 @@ test("a prerendered document", async (suite) => {
 				const route = parseRoutePath(pathname, "?" + search);
 				assert.equal(route?.view, "results");
 				assert.equal(route?.sort, "date");
-				const { filters, residual } = parseQueryFilters(route!.q!);
-				assert.equal(residual, "", `${entry} is all filter`);
-				assert.ok(passesFilters(iso(start), filters!), `${entry} keeps its first day`);
-				assert.ok(passesFilters(iso(end), filters!), `${entry} keeps its last day`);
-				assert.ok(!passesFilters(iso(start, -1), filters!), `${entry} stops at its first day`);
-				assert.ok(!passesFilters(iso(end, 1), filters!), `${entry} stops at its last day`);
+				const branches = parseQuery(route!.q!);
+				assert.equal(branches.length, 1, `${entry} is one plain query`);
+				const [branch] = branches;
+				assert.deepEqual(branch.segments, [], `${entry} is all filter`);
+				assert.ok(admits(branch, iso(start)), `${entry} keeps its first day`);
+				assert.ok(admits(branch, iso(end)), `${entry} keeps its last day`);
+				assert.ok(!admits(branch, iso(start, -1)), `${entry} stops at its first day`);
+				assert.ok(!admits(branch, iso(end, 1)), `${entry} stops at its last day`);
 				// A Sundays-only book's range spans the weekdays between its Sundays; the search must not.
 				assert.deepEqual(
-					allDates.filter((date) => passesFilters(date, filters!)),
+					allDates.filter((date) => admits(branch, date)),
 					held.filter((date) => date >= iso(start) && date <= iso(end)),
 					`${collection.id} ${entry} finds the book's strips and no others`,
 				);

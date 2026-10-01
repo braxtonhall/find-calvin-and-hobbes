@@ -18,6 +18,7 @@ import { renderLibrary } from "./views/library";
 import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
 import { updateCorrectionLink } from "./views/correction";
+import { cancelCollectionClear } from "./views/cell-highlight";
 
 export function parseRoute(): Route {
 	const path = pathOf(location.pathname);
@@ -300,8 +301,10 @@ function showLoadingView(viewElement: HTMLElement, route: Route): void {
 }
 
 export function updateGridState(route: Route): void {
-	// Any page drawn, even one whose grid looks the same, ends a game of life.
+	// Any page drawn, even one whose grid looks the same, ends a game of life — and a book's hover
+	// still waiting to be cleared, which would otherwise undo the page's own lighting.
 	stopLife();
+	cancelCollectionClear();
 
 	if (state.hoveredCell) {
 		state.hoveredCell.classList.remove("cell--hover-highlight");

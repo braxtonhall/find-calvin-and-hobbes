@@ -14,7 +14,7 @@ import {
 } from "../pages/detail";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
-import { attachCellHighlightLink, highlightCollection } from "./cell-highlight";
+import { attachCellHighlightLink, clearCollectionSoon, highlightCollection } from "./cell-highlight";
 
 function buildBookmarkButtonHandler(bookmarkButton: HTMLButtonElement, date: string): void {
 	isBookmarked(date).then((bookmarked) => {
@@ -80,7 +80,7 @@ function attachBookHighlightHandlers(element: HTMLElement): void {
 			const collection = state.collectionsById?.get(book.dataset.collectionId ?? "");
 			if (collection && element.classList.contains("active")) highlightCollection(collection);
 		};
-		const clear = () => element.classList.contains("active") && highlightCollection(null);
+		const clear = () => element.classList.contains("active") && clearCollectionSoon();
 		book.addEventListener("mouseenter", show);
 		book.addEventListener("focus", show);
 		book.addEventListener("mouseleave", clear);

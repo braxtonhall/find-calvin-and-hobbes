@@ -5,7 +5,7 @@ import { knows } from "./filter-vocabulary";
 import { Comic } from "./types";
 
 /**
- * The `@name:value` syntax: reading it out of a query, and deciding what survives it.
+ * The `@name:value` syntax: reading one filter out of a query, and deciding whether a row survives it.
  *
  * Most of the vocabulary is about when a strip ran, so most of this file is downstream of
  * `date-query.ts` and reads its values with that parser in `"filter"` mode — see `DateSource` for
@@ -14,42 +14,30 @@ import { Comic } from "./types";
  * date at all. The shared machinery below — the one scanner, the one notion of a usable value, the
  * one predicate — is the whole vocabulary, of which the date filters are most but no longer all.
  *
- * Nothing here rewrites the query. `search` hands the same string to the text pipeline it always
- * did, minus the spans the filters occupied, so nothing here can change what a filterless query
- * returns.
+ * A filter here is one atom and nothing more. How filters combine — side by side, under `@or`,
+ * under `@not` — is `boolean-query.ts`: different fields intersect, and repeating a field widens
+ * where a strip has only one value for it (`@year:1988 @year:1989` is either year), and for the
+ * books (`@in:book1 @in:book3` is either book), and narrows for the tags (`@is:sunday @is:rerun` is
+ * the Sundays that ran again).
  */
 
 /**
- * Every set is a field, and an empty one means "unconstrained", so `passesFilters` checks each
- * independently, and fields intersect.
+ * One filter, read. A filter whose value could not be read is not one of these — see `readFilter`.
  *
- * Within a field, what repeating it means depends on how many values a strip can have. A strip ran
- * in one year, on one day, so the values of `years`, `months`, `monthDays`, `weekdays` and
- * `windows` union — intersecting them could only ever be empty. A strip can be printed in many
- * books and carry many tags, so the values of `collections` and `tags` intersect.
- * `@day:saturday @day:sunday` is the weekend; `@day:1 @day:monday` is the Mondays that fell on the
- * first, because a day of the month and a day of the week are two fields under one name; and
- * `@in:book1 @in:book3` is the strips printed in both.
+ * `@day:` is two kinds under one name, a day of the month and a day of the week, so it reads to
+ * whichever its value is. `@after:` and `@before:` are held as the bound itself, exclusive: the
+ * last day of the span they name, or the first.
  */
-export interface QueryFilters {
-	years: Set<number>;
-	months: Set<number>;
-	monthDays: Set<number>;
-	weekdays: Set<number>;
-	/**
-	 * The books a strip was printed in, every one of them. Not a fact about the day — see `printedIn`
-	 * for why that costs `passesFilters` its date-only subject.
-	 */
-	collections: Set<string>;
-	/** Every `@is:` tag the strip must carry. See `hasTag`. */
-	tags: Set<string>;
-	windows: DateExpression[];
-	/** Strictly after this date, and strictly before the other — see `parseQueryFilters`. */
-	after: string | null;
-	before: string | null;
-	/** A recognised filter whose value could not be read. Nothing satisfies it. */
-	impossible: boolean;
-}
+export type Filter =
+	| { kind: "year"; year: number }
+	| { kind: "month"; month: number }
+	| { kind: "monthDay"; day: number }
+	| { kind: "weekday"; weekday: number }
+	| { kind: "in"; collection: string }
+	| { kind: "is"; tag: string }
+	| { kind: "date"; expression: DateExpression }
+	| { kind: "after"; bound: string }
+	| { kind: "before"; bound: string };
 
 /**
  * Which showing of a rerun strip a row is: the day it first ran, or a day it ran again. Neither for
@@ -61,22 +49,9 @@ export type Run = "reused" | "rerun";
 // Derived from `FILTER_SPECS` rather than written out again, so the parser and the autocomplete
 // menu cannot disagree about which names exist.
 const FILTERS = new Set(FILTER_SPECS.map((spec) => spec.name));
-const FILTER_PATTERN = /@([a-zA-Z]+)(?::(\S+))?/g;
-
-function emptyFilters(): QueryFilters {
-	return {
-		years: new Set(),
-		months: new Set(),
-		monthDays: new Set(),
-		weekdays: new Set(),
-		collections: new Set(),
-		tags: new Set(),
-		windows: [],
-		after: null,
-		before: null,
-		impossible: false,
-	};
-}
+// A value stops at a parenthesis, so `(@in:book1 @or @in:book3)` closes its group rather than
+// asking for a book called `book3)`. No value of any filter can contain one.
+const FILTER_PATTERN = /@([a-zA-Z]+)(?::([^\s()]+))?/g;
 
 /**
  * The span a filter value names, as inclusive ISO bounds. Needs a year — `@before:august-3` has
@@ -95,38 +70,32 @@ function windowBounds(expression: DateExpression): { from: string; to: string } 
 	return { from: exact, to: exact };
 }
 
-function applyFilter(filters: QueryFilters, name: string, value: string | undefined): void {
-	if (value === undefined) {
-		filters.impossible = true;
-		return;
-	}
+/**
+ * The filter a name and value make, or null where the value is unusable.
+ *
+ * Null is a statement about the reader rather than the archive: `@month:13` is a mistake, and
+ * `boolean-query.ts` lets nothing through a clause that holds one, negated or not.
+ */
+export function readFilter(name: string, value: string | undefined): Filter | null {
+	if (value === undefined) return null;
 
 	if (name === "year") {
 		const year = parseYear(value, "filter");
-		if (year === null) filters.impossible = true;
-		else filters.years.add(year);
-		return;
+		return year === null ? null : { kind: "year", year };
 	}
 
 	if (name === "month") {
 		const named = MONTHS.get(value);
 		const numeric = /^\d{1,2}$/.test(value) ? Number(value) : NaN;
 		const month = named ?? (numeric >= 1 && numeric <= 12 ? numeric : null);
-		if (month === null || month === undefined) filters.impossible = true;
-		else filters.months.add(month);
-		return;
+		return month === null ? null : { kind: "month", month };
 	}
 
 	if (name === "day") {
 		const weekday = WEEKDAYS.get(value);
-		if (weekday !== undefined) {
-			filters.weekdays.add(weekday);
-			return;
-		}
+		if (weekday !== undefined) return { kind: "weekday", weekday };
 		const monthDay = /^\d{1,2}$/.test(value) ? Number(value) : NaN;
-		if (monthDay >= 1 && monthDay <= 31) filters.monthDays.add(monthDay);
-		else filters.impossible = true;
-		return;
+		return monthDay >= 1 && monthDay <= 31 ? { kind: "monthDay", day: monthDay } : null;
 	}
 
 	if (name === "in") {
@@ -135,54 +104,22 @@ function applyFilter(filters: QueryFilters, name: string, value: string | undefi
 		// that a year is an open domain and the books are a closed vocabulary of proper nouns, so
 		// being off the list is evidence of a mistake. Until the list arrives every id is taken on
 		// trust; see `knows`, where that is the whole point rather than a concession.
-		if (knows("in", value)) filters.collections.add(value);
-		else filters.impossible = true;
-		return;
+		return knows("in", value) ? { kind: "in", collection: value } : null;
 	}
 
-	if (name === "is") {
-		if (knows("is", value)) filters.tags.add(value);
-		else filters.impossible = true;
-		return;
-	}
+	if (name === "is") return knows("is", value) ? { kind: "is", tag: value } : null;
 
 	// `@date`, `@before` and `@after` all read a date the same way: year first, and with no
 	// requirement that the year be one the archive holds. See `DateSource` for both reasons.
 	// `@date:1988/9/3` is September 3rd, never March 9th, and `@after:1984` is a real bound.
 	const expression = parseDateExpression(value, "filter");
-	if (expression === null) {
-		filters.impossible = true;
-		return;
-	}
-
-	if (name === "date") {
-		filters.windows.push(expression);
-		return;
-	}
+	if (expression === null) return null;
+	if (name === "date") return { kind: "date", expression };
 
 	const bounds = windowBounds(expression);
-	if (bounds === null) {
-		filters.impossible = true;
-		return;
-	}
-	// Exclusive of the whole named span, so `@after:1987 @before:1990` is exactly 1989 — two
-	// different fields, and fields intersect.
-	//
-	// Repeated bounds are one field, so they union, like every other repeated value:
-	// `@before:1990 @before:1993` is "before 1990 or before 1993", which is before 1993. That
-	// keeps the widest bound rather than the tightest, and it keeps the meaning independent of the
-	// order they were typed in — the alternative, letting the last one win, would quietly discard
-	// something the reader wrote and make the same two filters mean two different things.
-	if (name === "after") filters.after = filters.after === null ? bounds.to : minOf(filters.after, bounds.to);
-	else filters.before = filters.before === null ? bounds.from : maxOf(filters.before, bounds.from);
-}
-
-function maxOf(one: string, other: string): string {
-	return one >= other ? one : other;
-}
-
-function minOf(one: string, other: string): string {
-	return one <= other ? one : other;
+	if (bounds === null) return null;
+	// Exclusive of the whole named span, so `@after:1987 @before:1990` is exactly 1989.
+	return name === "after" ? { kind: "after", bound: bounds.to } : { kind: "before", bound: bounds.from };
 }
 
 /** One recognised filter, and where it sits in the text it was found in. */
@@ -192,14 +129,16 @@ export interface FilterMatch {
 	/** Offsets covering the whole `@name:value` run, so a caller can paint over it or replace it. */
 	start: number;
 	end: number;
-	/** A recognised name whose value `applyFilter` could actually use. */
+	/** What `readFilter` made of it, so no caller has to read the value a second time. */
+	filter: Filter | null;
+	/** A recognised name whose value `readFilter` could actually use. */
 	valid: boolean;
 }
 
 /**
  * Every recognised filter in the text, in order, with its span.
  *
- * This is the scan `parseQueryFilters` performs anyway, exposed because the search box needs the
+ * This is the scan `boolean-query.ts` performs anyway, exposed because the search box needs the
  * same answer for a different purpose: to tint a filter where it stands, and to say which one is
  * malformed. A second scanner would be a second opinion about what counts as a filter and the two
  * would eventually disagree, so there is only this one and both callers read it.
@@ -218,51 +157,18 @@ export function scanFilters(text: string): FilterMatch[] {
 		const name = match[1].toLowerCase();
 		if (!FILTERS.has(name)) continue;
 		const value = match[2]?.toLowerCase();
-		// Validity is whatever `applyFilter` makes of the value, read back off a throwaway set
-		// rather than judged a second time here. There is one definition of a usable value.
-		const probe = emptyFilters();
-		applyFilter(probe, name, value);
+		const filter = readFilter(name, value);
 		matches.push({
 			name,
 			value,
 			start: match.index,
 			end: match.index + match[0].length,
-			valid: !probe.impossible,
+			filter,
+			valid: filter !== null,
 		});
 	}
 
 	return matches;
-}
-
-/**
- * Pulls every recognised filter out of the query.
- *
- * `segments` is the text between the filters, and it matters beyond bookkeeping: a filter lifted
- * out of the middle of a query must not join the words either side of it, or `clean @year:1988
- * your room` would earn the contiguous-phrase bonus for a phrase nobody typed. `search` turns
- * those boundaries into breaks in the run bonus.
- */
-export function parseQueryFilters(text: string): {
-	filters: QueryFilters | null;
-	residual: string;
-	segments: string[];
-} {
-	const matches = scanFilters(text);
-	if (matches.length === 0) return { filters: null, residual: text, segments: [text] };
-
-	const filters = emptyFilters();
-	const pieces: string[] = [];
-	let cursor = 0;
-
-	for (const match of matches) {
-		applyFilter(filters, match.name, match.value);
-		pieces.push(text.slice(cursor, match.start));
-		cursor = match.end;
-	}
-
-	pieces.push(text.slice(cursor));
-	const segments = pieces.map((piece) => piece.trim()).filter(Boolean);
-	return { filters, residual: segments.join(" "), segments };
 }
 
 /**
@@ -302,23 +208,32 @@ function hasTag(subject: string | Comic, date: string, tag: string, run: Run | u
 }
 
 /**
- * Whether one row survives the filters.
+ * Whether one row satisfies one filter.
  *
- * The subject is a strip or, where every filter in play is about the calendar, just the day it ran
- * on — which the tests and the completion menu still pass. `run` is which showing of a rerun strip
- * the row is, where it is one; see `Run`.
+ * The subject is a strip or, where the filter is about the calendar, just the day it ran on —
+ * which the tests and the completion menu still pass. `run` is which showing of a rerun strip the
+ * row is, where it is one; see `Run`.
  */
-export function passesFilters(subject: string | Comic, filters: QueryFilters, run?: Run): boolean {
-	if (filters.impossible) return false;
+export function passesFilter(subject: string | Comic, filter: Filter, run?: Run): boolean {
 	const date = typeof subject === "string" ? subject : subject.date;
-	if (filters.years.size > 0 && !filters.years.has(Number(date.slice(0, 4)))) return false;
-	if (filters.months.size > 0 && !filters.months.has(Number(date.slice(5, 7)))) return false;
-	if (filters.monthDays.size > 0 && !filters.monthDays.has(Number(date.slice(8, 10)))) return false;
-	if (filters.weekdays.size > 0 && !filters.weekdays.has(weekdayOf(date))) return false;
-	if (filters.windows.length > 0 && !filters.windows.some((window) => matchesExpression(window, date))) return false;
-	if (filters.after !== null && date <= filters.after) return false;
-	if (filters.before !== null && date >= filters.before) return false;
-	for (const collection of filters.collections) if (!printedIn(subject, collection)) return false;
-	for (const tag of filters.tags) if (!hasTag(subject, date, tag, run)) return false;
-	return true;
+	switch (filter.kind) {
+		case "year":
+			return Number(date.slice(0, 4)) === filter.year;
+		case "date":
+			return matchesExpression(filter.expression, date);
+		case "month":
+			return Number(date.slice(5, 7)) === filter.month;
+		case "monthDay":
+			return Number(date.slice(8, 10)) === filter.day;
+		case "weekday":
+			return weekdayOf(date) === filter.weekday;
+		case "in":
+			return printedIn(subject, filter.collection);
+		case "is":
+			return hasTag(subject, date, filter.tag, run);
+		case "after":
+			return date > filter.bound;
+		case "before":
+			return date < filter.bound;
+	}
 }

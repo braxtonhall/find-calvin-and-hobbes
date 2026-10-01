@@ -183,6 +183,12 @@
 		margin: auto 16px 16px;
 	}
 
+	/*
+	 * Only the transform is animated, which the compositor can do alone. `visibility` — which keeps
+	 * the closed sidebar out of the tab order — is inherited, so changing it restyles every cell in
+	 * the grid; it is switched outside the slide instead, by `setSidebarOpen`, with `--closing`
+	 * holding it visible until the slide out has finished. The shadow is hidden along with it.
+	 */
 	#sidebar {
 		display: flex;
 		position: fixed;
@@ -191,18 +197,17 @@
 		overflow: hidden;
 		transform: translateX(-100%);
 		visibility: hidden;
-		pointer-events: none;
-		transition:
-			transform 0.3s ease-in-out,
-			visibility 0.3s,
-			box-shadow 0.3s;
+		box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
+		transition: transform 0.3s ease-in-out;
 	}
 
 	#sidebar.mobile-visible {
 		transform: translateX(0);
+	}
+
+	#sidebar.mobile-visible,
+	#sidebar.mobile-closing {
 		visibility: visible;
-		pointer-events: auto;
-		box-shadow: 2px 0 8px rgba(0, 0, 0, 0.2);
 	}
 
 	.mobile-grid-toggle {

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { Completion, Row, completionsAt, describeInvalid, filterSpans } from "../src/completion";
 import { FILTER_SPECS } from "../src/filter-spec";
 import { registerVocabulary } from "../src/filter-vocabulary";
-import { parseQueryFilters, passesFilters, scanFilters } from "../src/filter-query";
+import { passesFilter, scanFilters } from "../src/filter-query";
 import { RANGE_END, RANGE_START } from "../src/constants";
 import { isSabbatical } from "../src/date-utils";
 import { MONTH_NAMES, WEEKDAY_NAMES, YEARS } from "../src/vocabulary";
@@ -76,8 +76,8 @@ for (let stamp = Date.parse(RANGE_START); stamp <= Date.parse(RANGE_END); stamp 
  */
 function namesRealStrips(name: string, value: string): boolean {
 	const spelled = name === "before" || name === "after" ? "date" : name;
-	const { filters } = parseQueryFilters(`@${spelled}:${value}`);
-	return filters !== null && ARCHIVE.some((date) => passesFilters(date, filters));
+	const filter = scanFilters(`@${spelled}:${value}`)[0]?.filter;
+	return filter != null && ARCHIVE.some((date) => passesFilter(date, filter));
 }
 
 /**
@@ -116,11 +116,15 @@ function everyValueOffered(): { name: string; typed: string; written: string; in
 const ALPHABET = [..."0123456789", ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(97 + index))];
 
 test("naming a filter", async (suite) => {
-	await suite.test("a bare @ offers every filter there is", () => {
-		assert.deepEqual(
-			names("@|"),
-			FILTER_SPECS.map((spec) => spec.name),
-		);
+	await suite.test("a bare @ offers every filter there is, then the operators", () => {
+		assert.deepEqual(names("@|"), [...FILTER_SPECS.map((spec) => spec.name), "and", "or", "not"]);
+	});
+
+	await suite.test("an operator narrows by prefix, under the filters", () => {
+		assert.deepEqual(names("@a|"), ["after", "and"]);
+		assert.deepEqual(names("@n|"), ["not"]);
+		assert.deepEqual(names("@or|"), ["or"]);
+		assert.deepEqual(completions("@no|"), ["@not "]);
 	});
 
 	await suite.test("a partial name narrows by prefix", () => {
@@ -740,5 +744,51 @@ test("a vocabulary that arrives with the data", async (suite) => {
 		assert.deepEqual(templates("@in|"), ["book"]);
 		assert.deepEqual(spans("@in:book3|"), [["match", "@in:book3"]]);
 		assert.deepEqual(spans("@in:snowman|"), [["match", "@in:snowman"]]);
+	});
+});
+
+test("painting the operators", async (suite) => {
+	await suite.test("an operator with something on both sides is settled", () => {
+		assert.deepEqual(spans("calvin @or hobbes"), [["match", "@or"]]);
+		assert.deepEqual(spans("calvin @and @not hobbes"), [
+			["match", "@and"],
+			["match", "@not"],
+		]);
+		assert.deepEqual(spans("@not (snow @year:1988)"), [
+			["match", "@not"],
+			["match", "@year:1988"],
+		]);
+	});
+
+	await suite.test("an operator at the end is settled while the query is being written", () => {
+		assert.deepEqual(spans("@not|"), [["match", "@not"]]);
+		assert.deepEqual(spans("@not |"), [["match", "@not"]]);
+		assert.deepEqual(spans("calvin @or |"), [["match", "@or"]]);
+		assert.deepEqual(spans("calvin @and|"), [["match", "@and"]]);
+	});
+
+	await suite.test("and a mistake once it is not", () => {
+		assert.deepEqual(spans("@not"), [["invalid", "@not"]]);
+		assert.deepEqual(spans("calvin @or "), [["invalid", "@or"]]);
+		assert.equal(filterSpans("calvin @or", null)[0].reason, "@or needs something after it");
+	});
+
+	await suite.test("an operator with nothing after it is a mistake wherever more follows", () => {
+		assert.deepEqual(spans("(calvin @or) hobbes|"), [["invalid", "@or"]]);
+		assert.deepEqual(spans("calvin @not @or hobbes|"), [
+			["invalid", "@not"],
+			["invalid", "@or"],
+		]);
+	});
+
+	await suite.test("@and and @or with nothing before them are a mistake at once", () => {
+		assert.deepEqual(spans("@or|"), [["invalid", "@or"]]);
+		assert.deepEqual(spans("@and hobbes|"), [["invalid", "@and"]]);
+		assert.deepEqual(spans("(@or hobbes)|"), [["invalid", "@or"]]);
+		assert.equal(filterSpans("@or hobbes", null)[0].reason, "@or needs something before it");
+	});
+
+	await suite.test("a name that only begins with an operator is not one", () => {
+		assert.deepEqual(spans("@orange @nothing|"), []);
 	});
 });

@@ -53,7 +53,8 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
  * thing to meet first.
  *
  * Repeating a filter ORs where a strip can have only one value for it — one year, one month — and
- * ANDs where it can have several: a strip is printed in many books, and can carry many tags.
+ * for the books, which mostly share no strips; and ANDs for the tags, which a strip carries several
+ * of. See `WIDENING` in `boolean-query.ts`.
  */
 export const FILTER_SPECS: readonly FilterSpec[] = [
 	{

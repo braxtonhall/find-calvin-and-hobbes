@@ -4,11 +4,15 @@ import {
 	FILTER_FIELDS,
 	FilterField,
 	FilterOption,
+	Join,
+	JoinState,
 	chooseToken,
 	clearField,
 	insertToken,
+	joinOf,
 	removeToken,
 	selectedTokens,
+	setJoin,
 } from "../query-edit";
 import { naturalHeight, onViewportShift, place, shed, viewport } from "../placement";
 import { escHtml } from "../utils";
@@ -64,6 +68,28 @@ const GRID_COLUMNS = 7;
  * values rather than a Tab that would close the menu on its way out.
  */
 const CLEAR_HTML = `<button type="button" class="filter-menu-clear" tabindex="-1">Clear</button>`;
+
+/**
+ * Any or all, below the rows of a field that `joins` and only while two or more of them are ticked,
+ * which is the only time the question means anything. Below rather than above, so its coming and
+ * going never shifts the rows under the pointer. Dressed as `Clear` is, apart from the values
+ * by a rule, and the choice made is filled the way a checked row is — neither, for a query typed with
+ * its rows joined both ways, which a click on either then settles. Real buttons with
+ * `tabindex="-1"`, for the reason `Clear` gives: the arrows reach them on the same walk as the rows.
+ */
+function joinHtml(join: JoinState): string {
+	const choice = (value: Join) => `<button
+			type="button"
+			class="filter-menu-join-option"
+			role="radio"
+			aria-checked="${join === value}"
+			data-join="${value}"
+			tabindex="-1"
+		>${value}</button>`;
+	return `<div class="filter-menu-join" role="radiogroup" aria-label="Printed in">
+			<span>In</span>${choice("any")}${choice("all")}<span>of these</span>
+		</div>`;
+}
 
 /**
  * The order the dropdowns give way in on a screen too narrow for all of them, first to go first.
@@ -125,6 +151,11 @@ function menuElement(): HTMLDivElement {
 			clearOpenField();
 			return;
 		}
+		const choice = element.closest<HTMLElement>(".filter-menu-join-option");
+		if (choice !== null) {
+			joinOpenField(choice.dataset.join as Join);
+			return;
+		}
 		const row = element.closest<HTMLElement>(".filter-option");
 		if (row === null || open === null) return;
 		pick(open, open.field.options()[Number(row.dataset.index)]);
@@ -184,12 +215,13 @@ function buildMenu(): void {
 		.options()
 		.map((option, index) => optionHtml(bar, field, option, index))
 		.join("");
+	const join = field.joins === true ? joinOf(bar.target.value, field) : null;
 	element.innerHTML = `${heading}<div
 			class="filter-menu-options filter-menu-options--${field.shape}"
 			role="listbox"
 			aria-multiselectable="${field.single !== true}"
 			aria-label="${escHtml(field.heading ?? field.label)}"
-		>${rows}</div>${hasClearable(bar, field) ? CLEAR_HTML : ""}`;
+		>${rows}</div>${join === null ? "" : joinHtml(join)}${hasClearable(bar, field) ? CLEAR_HTML : ""}`;
 	element.classList.add("filter-menu--visible");
 	positionMenu();
 }
@@ -207,6 +239,20 @@ function paintMenu(): void {
 		const checked = bar.selected.has(field.options()[Number(row.dataset.index)].token);
 		row.classList.toggle("filter-option--checked", checked);
 		row.setAttribute("aria-selected", String(checked));
+	}
+
+	// The toggle comes with the second checkmark and goes with it, in place below the rows.
+	const joinRow = element.querySelector<HTMLElement>(".filter-menu-join");
+	const join = field.joins === true ? joinOf(bar.target.value, field) : null;
+	if (join !== null && joinRow === null) {
+		element.querySelector(".filter-menu-options")?.insertAdjacentHTML("afterend", joinHtml(join));
+	} else if (join === null && joinRow !== null) {
+		if (joinRow.contains(document.activeElement)) open.button.focus();
+		joinRow.remove();
+	} else if (join !== null && joinRow !== null) {
+		for (const choice of joinRow.querySelectorAll<HTMLElement>(".filter-menu-join-option")) {
+			choice.setAttribute("aria-checked", String(choice.dataset.join === join));
+		}
 	}
 
 	const clear = element.querySelector<HTMLButtonElement>(".filter-menu-clear");
@@ -253,7 +299,8 @@ function openMenu(dropdown: Dropdown, at: number | null): void {
 	open = dropdown;
 	dropdown.button.setAttribute("aria-expanded", "true");
 	buildMenu();
-	if (at !== null) focusStops()[at]?.focus();
+	// By the rows alone: the toggle above them is a stop on the walk, but not one `at` counts.
+	if (at !== null) menuElement().querySelectorAll<HTMLElement>(".filter-option")[at]?.focus();
 }
 
 /**
@@ -303,6 +350,11 @@ function clearOpenField(): void {
 	write(open.bar, clearField(open.bar.target.value, open.field));
 }
 
+function joinOpenField(join: Join): void {
+	if (open === null) return;
+	write(open.bar, setJoin(open.bar.target.value, open.field, join));
+}
+
 /** Where the focus lands when the menu is opened from the keyboard: the first checked row. */
 function firstChecked(dropdown: Dropdown): number {
 	const index = dropdown.field.options().findIndex((option) => dropdown.bar.selected.has(option.token));
@@ -310,11 +362,14 @@ function firstChecked(dropdown: Dropdown): number {
 }
 
 /**
- * Every row the arrows visit, in the order they visit them: the values, and the `Clear` after them
- * where there is one. Document order, which is the order they read in.
+ * Every row the arrows visit, in the order they visit them: the values, then the any-or-all below
+ * them where there is one, and the `Clear` after that where there is one. Document order, which is
+ * the order they read in.
  */
 function focusStops(): HTMLElement[] {
-	return [...menuElement().querySelectorAll<HTMLElement>(".filter-option, .filter-menu-clear")];
+	return [
+		...menuElement().querySelectorAll<HTMLElement>(".filter-menu-join-option, .filter-option, .filter-menu-clear"),
+	];
 }
 
 function moveFocus(step: number): void {
@@ -329,7 +384,7 @@ function moveFocus(step: number): void {
 	stops[next].focus();
 }
 
-/** Whatever the focus is standing on: a value to toggle, or the `Clear` below them. */
+/** Whatever the focus is standing on: a value to toggle, or any or all and the `Clear` below them. */
 function activateFocused(): void {
 	if (open === null) return;
 	const active = document.activeElement as HTMLElement | null;
@@ -340,6 +395,7 @@ function activateFocused(): void {
 	// Nothing at all when the focus is still on the button, which is a menu the pointer opened and
 	// a reader who has not said which row they mean yet.
 	else if (active?.classList.contains("filter-menu-clear") === true) clearOpenField();
+	else if (active?.classList.contains("filter-menu-join-option") === true) joinOpenField(active.dataset.join as Join);
 }
 
 /**
@@ -540,7 +596,7 @@ export function buildFilterBar(input: HTMLInputElement): FilterBar {
 	}));
 	for (const dropdown of bar.dropdowns) attachDropdown(dropdown);
 
-	// Straight off the box rather than out of the render, so a hand-typed `@year:88` ticks 1988 on
+	// Straight off the box rather than out of the render, so a hand-typed `@month:aug` ticks August on
 	// the keystroke that finishes it instead of 200ms later when the search comes back.
 	input.addEventListener("input", () => paint(bar));
 
