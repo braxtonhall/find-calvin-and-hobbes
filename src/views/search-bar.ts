@@ -6,6 +6,7 @@ import { replaceSearch } from "../router";
 import { buildFilterBar } from "./filter-bar";
 import { attachQueryInput, syncQueryInput } from "./query-input";
 import { attachRowFocusHandler } from "./result-rows";
+import { isTouchDevice } from "../utils";
 
 const DATE_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
 	<rect x="2" y="3.5" width="12" height="10" rx="1.5" /><path d="M2 6.5h12M5.5 2v3M10.5 2v3" />
@@ -71,6 +72,7 @@ export function buildSearchBar(element: HTMLElement, options: SearchBarOptions):
 				id="${options.id}-input"
 				placeholder="${options.placeholder}"
 				autocomplete="off"
+				enterkeyhint="search"
 			/>
 			<button class="results-clear" aria-label="Clear search">&times;</button>
 			<button class="results-sort"></button>
@@ -114,6 +116,8 @@ export function buildSearchBar(element: HTMLElement, options: SearchBarOptions):
 		if (event.key === "Enter") {
 			event.preventDefault();
 			if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
+			// Search is done with the keyboard, which would otherwise stay up over the results.
+			if (isTouchDevice()) input.blur();
 			const inputQuery = input.value.trim();
 			if (!inputQuery) {
 				onEmpty();

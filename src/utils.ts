@@ -24,6 +24,15 @@ export function highlightRanges(text: string, ranges: readonly HighlightRange[])
 	return html + escHtml(text.slice(index));
 }
 
+/**
+ * Whether the reader is on a touchscreen, where focusing a box raises a keyboard over half the page.
+ * Asked of the device's capabilities rather than its user agent, and asked fresh each time, since a
+ * tablet can gain or lose a mouse.
+ */
+export function isTouchDevice(): boolean {
+	return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+}
+
 /** Whether any of `cells` is wholly inside the part of the grid on screen, below its sticky header. */
 export function anyCellInView(cells: Iterable<HTMLElement>): boolean {
 	const sidebar = document.getElementById("sidebar")!;

@@ -5,6 +5,7 @@ import { buildSearchPath } from "../routes";
 import { buildLandingHtml } from "../pages/landing";
 import { randomQuery } from "../suggestions";
 import { attachQueryInput, editQueryInput } from "./query-input";
+import { isTouchDevice } from "../utils";
 
 /** Fast enough not to be a wait, slow enough that the `@` and the pill it earns can be read. */
 const TYPE_INTERVAL = 32;
@@ -94,7 +95,8 @@ export function renderLanding(adopt: boolean = false): void {
 	// under the logo, and the control lives in room the input already reserves for it with its own
 	// right padding. The highlight mirror copies that padding at runtime, so the pills stay put.
 	input.parentElement!.appendChild(submit);
-	input.focus();
+	// Not on a touchscreen, where the focus would raise a keyboard the reader never asked for.
+	if (!isTouchDevice()) input.focus();
 
 	// The button never takes the focus, so the caret stays in the box through a click on it. Which
 	// also keeps the blur below meaning what it says: the reader looked away, rather than pressed
@@ -114,7 +116,12 @@ export function renderLanding(adopt: boolean = false): void {
 			return;
 		}
 		const query = input.value.trim();
-		if (query === "") startTypeOut(input);
-		else navigate(buildSearchPath(query));
+		if (query === "") {
+			startTypeOut(input);
+			return;
+		}
+		// Search is done with the keyboard, which would otherwise stay up over the results.
+		if (isTouchDevice()) input.blur();
+		navigate(buildSearchPath(query));
 	});
 }

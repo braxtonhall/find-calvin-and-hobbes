@@ -20,6 +20,7 @@ export function buildLandingHtml(): string {
 				id="landing-input"
 				placeholder="Search comics..."
 				autocomplete="off"
+				enterkeyhint="search"
 			/>
 			<button type="submit" class="landing-submit" id="landing-submit" title="Search" aria-label="Search">${SEARCH_ICON}</button>
 		</form>
