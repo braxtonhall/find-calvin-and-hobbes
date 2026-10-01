@@ -24,6 +24,7 @@
 import { RANGE_END, RANGE_START } from "./constants";
 import { MONTHS, WEEKDAYS, parseDateExpression } from "./date-query";
 import { FilterMatch, scanFilters } from "./filter-query";
+import { scanOperators } from "./boolean-query";
 import { dateToString, isSabbatical, lastDayOf } from "./date-utils";
 import { FILTER_SPECS, FilterSpec, ValueTemplate, filterSpec } from "./filter-spec";
 import { terms } from "./filter-vocabulary";
@@ -569,6 +570,17 @@ function nameRow(spec: FilterSpec): Row {
 }
 
 /**
+ * The operators, offered under the filters rather than among them: they are how filters and words
+ * combine, not things to search for, and the reader who typed `@` was most likely after a filter.
+ * Accepting one brings its space, because an operator has no value to go on and type.
+ */
+const OPERATOR_ROWS: readonly Row[] = [
+	{ name: "and", hint: "Both sides, strictly", insert: "@and " },
+	{ name: "or", hint: "Either side", insert: "@or " },
+	{ name: "not", hint: "Without what follows", insert: "@not " },
+];
+
+/**
  * The menu for a caret position, or null when there should be no menu.
  *
  * Past the colon the rows are values to accept — see `valueRows` for where they come from, and
@@ -587,7 +599,10 @@ export function completionsAt(text: string, caret: number): Completion | null {
 	const value = parts[2]?.toLowerCase();
 
 	if (value === undefined) {
-		const rows = FILTER_SPECS.filter((spec) => spec.name.startsWith(name)).map(nameRow);
+		const rows = [
+			...FILTER_SPECS.filter((spec) => spec.name.startsWith(name)).map(nameRow),
+			...OPERATOR_ROWS.filter((row) => row.name.startsWith(name)),
+		];
 		return rows.length === 0 ? null : { start: token.start, end: token.end, rows };
 	}
 
@@ -634,6 +649,10 @@ export interface FilterSpan {
  * — a space, a return, a click elsewhere — and it becomes the mistake it looks like. A value that
  * could never work, though, is wrong the moment it is typed: nothing about waiting rescues
  * `@month:13`, so it goes red where it stands.
+ *
+ * The operators are painted here too, by the same rules: `@and` and `@or` with nothing before them
+ * are wrong where they stand, and any operator with nothing after it is only unfinished while it is
+ * the last thing in a query still being written.
  */
 export function filterSpans(text: string, caret: number | null): FilterSpan[] {
 	const spans: FilterSpan[] = [];
@@ -666,7 +685,23 @@ export function filterSpans(text: string, caret: number | null): FilterSpan[] {
 		spans.push({ start: match.start, end, kind: "invalid", reason: describeInvalid(match) });
 	}
 
-	return spans;
+	for (const operator of scanOperators(text)) {
+		const { start, end } = operator;
+		const name = `@${operator.operator}`;
+		const joins = operator.operator !== "not";
+		if (joins && !operator.before) {
+			spans.push({ start, end, kind: "invalid", reason: `${name} needs something before it` });
+			continue;
+		}
+		// The same benefit of the doubt `@year:` gets, for as long as the query is being written and
+		// nothing has been put after the operator yet — not only while the caret is touching it,
+		// because the space that comes after an operator is part of typing it.
+		const last = text.slice(operator.end).trim() === "";
+		if (operator.after || (caret !== null && last)) spans.push({ start, end, kind: "match" });
+		else spans.push({ start, end, kind: "invalid", reason: `${name} needs something after it` });
+	}
+
+	return spans.sort((one, other) => one.start - other.start);
 }
 
 /** Why a filter the parser rejected was rejected, in one line, for the tooltip on it. */

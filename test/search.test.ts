@@ -848,6 +848,55 @@ test("@is:reused finds the strips that ran again, and @is:rerun the days they di
 	}
 });
 
+test("@or unions branches, and the old rerun query comes back through it", () => {
+	install(buildArchive(DATED));
+	state.reruns = new Map([["1991-05-05", "1988-08-03"]]);
+	try {
+		const rows = (query: string) => search(query, "date").map((result) => [result.comic.date, kindOf(result)]);
+
+		assert.deepEqual(rows("tiger @or wasteland"), [
+			["1988-08-03", "transcript"],
+			["1988-08-10", "transcript"],
+		]);
+		// Originals and their reruns together.
+		assert.deepEqual(rows("@is:reused @or @is:rerun"), [
+			["1988-08-03", "filter"],
+			["1991-05-05", "filter rerun"],
+		]);
+		// A branch of words beside a branch of filters.
+		assert.deepEqual(rows("goons @or @date:1988/8/10"), [
+			["1988-08-10", "filter"],
+			["1989-08-03", "transcript"],
+		]);
+	} finally {
+		state.reruns = new Map();
+	}
+});
+
+test("a row two branches found is one row, scored above either alone", () => {
+	install(buildArchive(DATED));
+	const both = search("tiger @or pounces", "rank").filter((result) => result.comic.date === "1988-08-03");
+	assert.equal(both.length, 1);
+	assert.ok(both[0].score > scoreOf("tiger", "1988-08-03"));
+	assert.ok(both[0].score > scoreOf("pounces", "1988-08-03"));
+});
+
+test("a word under @not is matched literally, in any inflection", () => {
+	install(buildArchive(DATED));
+	const dates = (query: string) => search(query, "date").map((result) => result.comic.date);
+	assert.deepEqual(dates("goons"), ["1989-08-03"]);
+	// The description counts as much as the transcript.
+	assert.deepEqual(dates("goons @not snowman"), []);
+	assert.deepEqual(dates("goons @not march"), []);
+	// Another inflection of the word is the word. A near spelling is not, and nor is an irregular
+	// plural, which is beyond what the stemmer reaches.
+	assert.deepEqual(dates("tiger @not tigers"), []);
+	assert.deepEqual(dates("goons @not snowy"), ["1989-08-03"]);
+	assert.deepEqual(dates("goons @not snowmen"), ["1989-08-03"]);
+	// A filter under `@not` judges every strip in the archive when nothing else is asked.
+	assert.ok(!dates("@not @year:1988").some((date) => date.startsWith("1988")));
+});
+
 test("only a whole query is read as a date", () => {
 	install(buildArchive(DATED));
 	for (const query of ["august", "sunday", "1812", "1988 august tiger", "tiger 1988"]) {
@@ -970,10 +1019,12 @@ test("a filter over the books a strip was printed in", () => {
 		assert.deepEqual(ranked("@in:book3 tiger"), ["1988-08-03"]);
 		assert.ok(ranked("tiger").length > ranked("@in:book3 tiger").length);
 
-		// One filter, two books: a strip is in many books, so it has to be in both — where two years,
-		// which a strip has only one of, union.
-		assert.deepEqual(ranked("@in:book3 @in:complete"), ["1988-08-03"]);
-		assert.deepEqual(ranked("@in:book3 @in:book4"), []);
+		// One filter, two books: either, as two years are, since two books mostly share no strips — and
+		// both, where the reader says so.
+		assert.deepEqual(ranked("@in:book3 @in:complete").sort(), ["1988-08-03", "1988-08-10", "1989-08-03"]);
+		assert.deepEqual(ranked("@in:book3 @in:book4").sort(), ["1988-08-03", "1989-08-03"]);
+		assert.deepEqual(ranked("@in:book3 @and @in:complete"), ["1988-08-03"]);
+		assert.deepEqual(ranked("@in:book3 @and @in:book4"), []);
 
 		// Two filters: the fields intersect.
 		assert.deepEqual(ranked("@in:complete @year:1989"), ["1989-08-03"]);

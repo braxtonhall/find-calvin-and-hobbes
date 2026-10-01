@@ -23,7 +23,9 @@
 	gap: 8px;
 }
 
-.results-input {
+/* The input alone until `attachQueryInput` wraps it, and then the wrapper, which takes the frame. */
+.results-input,
+.results-search-bar .query-box {
 	flex: 1;
 	padding: 10px 14px;
 	font-size: 15px;
@@ -36,7 +38,13 @@
 	transition: border-color 0.2s;
 }
 
-.results-input:focus {
+/* The height stays the input's, so the whole of it is somewhere to tap. */
+.results-search-bar .query-box {
+	padding-block: 0;
+}
+
+.results-input:focus,
+.results-search-bar .query-box:focus-within {
 	border-color: var(--golden);
 }
 

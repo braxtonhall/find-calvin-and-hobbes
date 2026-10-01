@@ -19,7 +19,9 @@
 	padding: 0 24px;
 }
 
-.landing-input {
+/* The input alone until `attachQueryInput` wraps it, and then the wrapper, which takes the frame. */
+.landing-input,
+.landing-form .query-box {
 	width: 100%;
 	/* Room on the right for the submit button, which sits inside the box rather than beside it. */
 	padding: 16px 56px 16px 20px;
@@ -33,7 +35,13 @@
 	transition: border-color 0.2s;
 }
 
-.landing-input:focus {
+/* The height stays the input's, so the whole of it is somewhere to tap. */
+.landing-form .query-box {
+	padding-block: 0;
+}
+
+.landing-input:focus,
+.landing-form .query-box:focus-within {
 	border-color: var(--golden);
 }
 
@@ -45,7 +53,8 @@
 .landing-submit {
 	position: absolute;
 	top: 50%;
-	right: 9px;
+	/* Measured from inside the box's 2px border. */
+	right: 7px;
 	transform: translateY(-50%);
 	display: grid;
 	place-items: center;

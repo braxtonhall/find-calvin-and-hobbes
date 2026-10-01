@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { SUGGESTED_QUERIES, randomQuery } from "../src/suggestions";
-import { parseQueryFilters } from "../src/filter-query";
+import { scanFilters } from "../src/filter-query";
 import { registerVocabulary } from "../src/filter-vocabulary";
 import { loadCollectionData } from "../build-chain/collectionPages";
 import { generateCollectionIndex } from "../build-chain/generateCollectionIndex";
@@ -28,11 +28,13 @@ test("the suggestion pool", async (suite) => {
 	});
 
 	// The guard that matters: a filter typo in the pool is a die that lands on an empty page, and
-	// `impossible` is exactly how the parser reports a filter nothing can satisfy.
+	// An invalid match is exactly how the parser reports a filter nothing can satisfy.
 	await suite.test("asks for nothing the parser cannot satisfy", () => {
 		for (const query of SUGGESTED_QUERIES) {
-			const { filters } = parseQueryFilters(query);
-			assert.notEqual(filters?.impossible, true, query);
+			assert.ok(
+				scanFilters(query).every((match) => match.valid),
+				query,
+			);
 		}
 	});
 

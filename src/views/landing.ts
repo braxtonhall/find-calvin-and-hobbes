@@ -92,9 +92,9 @@ export function renderLanding(adopt: boolean = false): void {
 	const submit = document.getElementById("landing-submit") as HTMLButtonElement;
 	attachQueryInput(input);
 	// Into the box the widget just built, rather than beside it: the page keeps one rounded field
-	// under the logo, and the control lives in room the input already reserves for it with its own
-	// right padding. The highlight mirror copies that padding at runtime, so the pills stay put.
-	input.parentElement!.appendChild(submit);
+	// under the logo, and the control lives in room the box already reserves for it with its own
+	// right padding.
+	input.closest(".query-box")!.appendChild(submit);
 	// Not on a touchscreen, where the focus would raise a keyboard the reader never asked for.
 	if (!isTouchDevice()) input.focus();
 

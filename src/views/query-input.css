@@ -9,15 +9,50 @@
 	flex: 1;
 }
 
+/*
+ * The frame: border, fill and the side padding all live here, styled per page alongside the input
+ * they used to be on (`landing.css`, `results.css`). What it frames is `.query-scroll`, so the text
+ * is cut off at the inside of the padding, the same place an input of its own would cut it.
+ */
 .query-box {
 	position: relative;
+	cursor: text;
 }
 
-.query-box > input {
+/*
+ * The one thing that scrolls, with the input and its pills both inside it.
+ *
+ * An input scrolls its text inside itself, out of reach, so pills painted outside it can only copy
+ * its `scrollLeft` after the fact — and the elastic overscroll on a Mac never shows up in
+ * `scrollLeft` at all, so the pills would hold still while the text bounced past and back. Here
+ * the input is as wide as its text and never scrolls; this does, and takes everything with it.
+ */
+.query-scroll {
 	position: relative;
-	width: 100%;
-	/* The mirror behind carries the fill, so its rounded corners are the ones on show. */
+	overflow: auto hidden;
+	scrollbar-width: none;
+}
+
+.query-scroll::-webkit-scrollbar {
+	display: none;
+}
+
+/* See the `mousedown` listener in `attachQueryInput`. */
+.query-box--selecting > :not(.query-scroll) {
+	pointer-events: none;
+}
+
+/* Only the vertical padding stays on the input, so a tap anywhere in the box's height lands on it. */
+.query-scroll > input {
+	position: relative;
+	display: block;
+	/* As wide as its text, set by `fitWidth`, and never narrower than the box. */
+	min-width: 100%;
+	padding-inline: 0;
 	background: transparent;
+	border: 0;
+	border-radius: 0;
+	transition: none;
 }
 
 /*
@@ -27,18 +62,16 @@
  * by the input — and a sub-pixel disagreement about font metrics shows up as a slightly wide
  * pill rather than as ghosting. Everything that decides where a glyph lands is copied off the
  * input at runtime by `syncMetrics`, because the two inputs this attaches to are deliberately
- * styled differently: 18px text in a 2px border on the landing page, 15px in 1px in the results
- * bar, 16px on a phone.
+ * styled differently: 18px text on the landing page, 15px in the results bar, 16px on a phone.
+ *
+ * Its width is the text's, which is what `fitWidth` sizes the input by.
  */
 .query-highlights {
 	position: absolute;
-	inset: 0;
-	overflow: hidden;
+	top: 0;
+	left: 0;
 	white-space: pre;
 	color: transparent;
-	background: var(--bg-sidebar);
-	border-style: solid;
-	border-color: transparent;
 	pointer-events: none;
 }
 
