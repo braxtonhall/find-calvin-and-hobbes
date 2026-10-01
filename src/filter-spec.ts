@@ -74,7 +74,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		hint: "Strips from one year",
 		templates: [
 			{ label: "YYYY", hint: "a four-digit year" },
-			{ label: "YY", hint: "two digits, so 88 is 1988" },
+			{ label: "YY", hint: "any year ending in those two digits" },
 		],
 	},
 	{

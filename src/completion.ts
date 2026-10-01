@@ -358,10 +358,13 @@ function archiveValues(depth: number, fields: string[]): Day[] {
 function namesArchiveDay(value: string): boolean {
 	const expression = parseDateExpression(value, "filter");
 	if (expression === null || expression.candidates.length !== 1) return false;
-	const { year, month, day } = expression.candidates[0];
+	const { year, ending, month, day } = expression.candidates[0];
 	if (year === undefined) return false;
-	const exact = [String(year), month === undefined ? "" : padded(month), day === undefined ? "" : padded(day)];
-	return archiveValues(1, exact).length > 0;
+	// An ending names whichever archive years end in it — `@date:19` none of them, though eleven
+	// begin with it.
+	const years = YEARS.filter((archived) => (ending ? archived % 100 : archived) === year);
+	const rest = [month === undefined ? "" : padded(month), day === undefined ? "" : padded(day)];
+	return years.some((archived) => archiveValues(1, [String(archived), ...rest]).length > 0);
 }
 
 /**
@@ -369,20 +372,24 @@ function namesArchiveDay(value: string): boolean {
  * accepting a row never rewrites a character that was right — `@date:1988/09/03` is finished off
  * rather than restyled into `1988/9/3`.
  */
-function fieldText(typed: string, value: number, width: number, compact: boolean): string {
+function fieldText(typed: string, value: number, width: number, compact: boolean, ending: boolean): string {
 	const plain = String(value);
 	const wide = plain.padStart(width, "0");
 	if (typed === plain || typed === wide) return typed;
-	// A two-digit year is a spelling of its own, and one the parser reads: `@date:88` stays 88.
-	if (width === 4 && typed === wide.slice(2)) return typed;
+	// A two-digit year is a spelling of its own where the filter reads one: `@date:88` stays 88,
+	// every year ending in it. A bound needs the whole year, so `@before:88` is written out.
+	if (ending && width === 4 && typed === wide.slice(2)) return typed;
 	return compact ? wide : plain;
 }
 
-/** One of the archive's days written out to the depth of one shape, in the reader's own spelling. */
-function writeDate(typed: Typed, day: Day, depth: number): string {
+/**
+ * One of the archive's days written out to the depth of one shape, in the reader's own spelling —
+ * as far as the filter can read it. `ending` is whether it reads a year by its last two digits.
+ */
+function writeDate(typed: Typed, day: Day, depth: number, ending: boolean): string {
 	const values = [day.year, day.month, day.day];
 	const written = DATE_FIELDS.slice(0, depth).map((field, index) =>
-		fieldText(typed.fields[index] ?? "", values[index], field.width, typed.compact),
+		fieldText(typed.fields[index] ?? "", values[index], field.width, typed.compact, ending),
 	);
 	return written.join(typed.compact ? "" : typed.separator);
 }
@@ -472,7 +479,7 @@ function builtOffers(spec: FilterSpec, value: string, parses: boolean): Offer[] 
 	const days = depth === given ? here : archiveValues(depth, typed.fields);
 
 	function offerFor(day: Day, at: number): Offer {
-		const written = writeDate(typed, day, at);
+		const written = writeDate(typed, day, at, spec.name === "date");
 		return { value: written, shape: shapeAt(spec, at), commits: written === value || at === DATE_FIELDS.length };
 	}
 

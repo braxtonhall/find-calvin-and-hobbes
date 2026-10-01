@@ -120,7 +120,6 @@ test("projection: query text to checkmarks", async (suite) => {
 	});
 
 	await suite.test("a hand-typed spelling checks the same box", () => {
-		assert.deepEqual(checked("@year:88"), { year: ["1988"] });
 		assert.deepEqual(checked("@month:aug"), { month: ["August"] });
 		assert.deepEqual(checked("@month:8"), { month: ["August"] });
 		assert.deepEqual(checked("@DAY:03"), { day: ["3"] });
@@ -148,6 +147,8 @@ test("projection: query text to checkmarks", async (suite) => {
 		assert.deepEqual(checked("@date:1988/9/3"), {});
 		assert.deepEqual(checked("@before:1990 @after:1987"), {});
 		assert.deepEqual(checked("@year:2001"), {});
+		// Every year ending in 88, which is not one box however few such years the archive holds.
+		assert.deepEqual(checked("@year:88"), {});
 		// A book the archive does not have is not a filter at all, so it is not a checkmark either.
 		assert.deepEqual(checked("@in:snowman"), {});
 		// Only two of the tags are in the bar.
@@ -216,12 +217,12 @@ test("insert: checkmarks to query text", async (suite) => {
 
 test("remove: unchecking a box", async (suite) => {
 	await suite.test("a differently spelled token clears from its own checkbox", () => {
-		assert.equal(removeToken("@year:88", "@year:1988"), "");
+		assert.equal(removeToken("@month:8", "@month:august"), "");
 		assert.equal(removeToken("@month:aug snowman", "@month:august"), "snowman");
 	});
 
 	await suite.test("every span that says the same thing goes", () => {
-		assert.equal(removeToken("@year:1988 snow @year:88 goons", "@year:1988"), "snow goons");
+		assert.equal(removeToken("@month:august snow @month:aug goons", "@month:august"), "snow goons");
 	});
 
 	await suite.test("the surrounding words and the other tokens are left alone", () => {
@@ -390,7 +391,10 @@ test("choose: a field that takes one row at a time", async (suite) => {
 
 test("clear: the whole field at once", async (suite) => {
 	await suite.test("every token the field has a box for", () => {
-		assert.equal(clearField("@year:1988 @year:90 snow @month:august goons", field("year")), "snow @month:august goons");
+		assert.equal(
+			clearField("@year:1988 @year:1990 snow @month:august goons", field("year")),
+			"snow @month:august goons",
+		);
 		assert.equal(clearField("@is:sunday @is:daily snowman", field("format")), "snowman");
 		assert.equal(clearField("@is:sunday @is:rerun snowman", field("format")), "@is:rerun snowman");
 		assert.equal(clearField("@in:book3 @year:1988 @in:book4", field("book")), "@year:1988");

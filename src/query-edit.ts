@@ -21,9 +21,9 @@ import { MONTH_NAMES, YEARS } from "./vocabulary";
  * - **The bar is token-level, not semantic.** A field reflects tokens of its own name and nothing
  *   else, and no two fields own the same token. `@date:1988/9/3` does not check 1988 in `Year`, and
  *   `@day:saturday` checks nothing anywhere; both are left alone and left unrepresented. Reading
- *   the checkmarks off what the query matches instead would look tidier and is a trap — `@year:88`
- *   and `@year:1988` both match 1988, so a semantic bar could not say which tokens an uncheck meant
- *   to remove.
+ *   the checkmarks off what the query matches instead would look tidier and is a trap —
+ *   `@month:aug` and `@date:1988/8` both keep August 1988, so a semantic bar could not say which
+ *   tokens an uncheck meant to remove.
  *
  * The bar is deliberately a subset. `@date:`, `@before:`, `@after:` and the weekday half of
  * `@day:` are not in it and not represented by it: it covers what is worth clicking, and the rest
@@ -179,11 +179,11 @@ function fieldFor(token: string): FilterField | undefined {
  * rather than a second value parser that will eventually disagree with `readFilter` about whether
  * `aug` is a month.
  *
- * Reading it settles spelling for free. `@year:88`, `@month:aug` and `@month:august` all resolve to
- * the values they mean, so a hand-typed query lights up the same checkmarks a clicked one does —
- * and it is what lets `@year:88` be cleared by unchecking 1988. It also needs no special case for
- * the values the bar has no box for: `@day:saturday` reads as a weekday, which no cell in the 1–31
- * grid matches, and `@month:13` reads as nothing at all.
+ * Reading it settles spelling for free. `@month:aug` and `@month:august` both resolve to the month
+ * they mean, so a hand-typed query lights up the same checkmarks a clicked one does. It also needs
+ * no special case for the values the bar has no box for: `@day:saturday` reads as a weekday, which
+ * no cell in the 1–31 grid matches; `@year:88` is every year ending in 88, which is not one box in
+ * the list however few of them the archive holds; and `@month:13` reads as nothing at all.
  */
 function tokenOf(match: FilterMatch): string | null {
 	const filter = match.filter;
@@ -191,7 +191,10 @@ function tokenOf(match: FilterMatch): string | null {
 	// A tag, like a book, has only the one spelling.
 	if (filter.kind === "is") return `@is:${filter.tag}`;
 	if (filter.kind === "in") return `@in:${filter.collection}`;
-	if (filter.kind === "year") return `@year:${filter.year}`;
+	if (filter.kind === "year") {
+		const { year, ending } = filter.expression.candidates[0];
+		return ending ? null : `@year:${year}`;
+	}
 	if (filter.kind === "month") return `@month:${MONTH_NAMES[filter.month - 1]}`;
 	if (filter.kind === "monthDay") return `@day:${filter.day}`;
 	return null;

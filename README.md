@@ -6,16 +6,16 @@ A searchable, browsable archive of every Calvin and Hobbes comic strip (1985–1
 
 Type words to search transcripts. Type `@` in the search box for the list of filters.
 
-| Filter     | Example                        | Meaning                                  |
-| ---------- | ------------------------------ | ---------------------------------------- |
-| `@year:`   | `@year:1990`, `@year:88`       | strips from that year                    |
-| `@month:`  | `@month:8`, `@month:august`    | that month, in every year                |
-| `@day:`    | `@day:3`, `@day:saturday`      | a day of the month, or a day of the week |
-| `@date:`   | `@date:1988`, `@date:1988/9/3` | a date, at whatever precision you give   |
-| `@before:` | `@before:1990`                 | strips before that date, excluding it    |
-| `@after:`  | `@after:1987`                  | strips after that date, excluding it     |
-| `@in:`     | `@in:book3`, `@in:complete`    | strips printed in that book              |
-| `@is:`     | `@is:sunday`, `@is:rerun`      | strips with that tag                     |
+| Filter     | Example                        | Meaning                                                   |
+| ---------- | ------------------------------ | --------------------------------------------------------- |
+| `@year:`   | `@year:1990`, `@year:88`       | strips from that year, or any year ending in those digits |
+| `@month:`  | `@month:8`, `@month:august`    | that month, in every year                                 |
+| `@day:`    | `@day:3`, `@day:saturday`      | a day of the month, or a day of the week                  |
+| `@date:`   | `@date:1988`, `@date:1988/9/3` | a date, at whatever precision you give                    |
+| `@before:` | `@before:1990`                 | strips before that date, excluding it                     |
+| `@after:`  | `@after:1987`                  | strips after that date, excluding it                      |
+| `@in:`     | `@in:book3`, `@in:complete`    | strips printed in that book                               |
+| `@is:`     | `@is:sunday`, `@is:rerun`      | strips with that tag                                      |
 
 The tags are `sunday` and `daily` (the colour Sundays and the black-and-white dailies), `reused`
 (a strip on the day it first ran, where it was later rerun), `rerun` (a strip on a day it ran
@@ -54,6 +54,10 @@ Filter values are read year first — `@date:1988/9/3` is September 3rd, never M
 no spaces. A bare date typed on its own is understood without any `@`, as long as it starts from
 the year: `1988`, `august 1988` and `august 3 1988` are all dates, while a day in every year is
 what `@month:august @day:3` is for.
+
+A two-digit year is every year ending in those digits, never a guess at the century: `@year:88`,
+`@date:88/9/3` and a bare `aug 3 '88` all mean any year ending in 88 — in this archive, only
+1988 — while `@before:` and `@after:` need all four digits, because a bound has to be a single day.
 
 ## Build
 

@@ -27,6 +27,9 @@ import { dateToString, weekdayOf } from "./date-utils";
  * - **A year a reader typed must be one the archive could have.** The range comes from
  *   `RANGE_START` and `RANGE_END`, so `2001-09-11` and `1812` stay text queries rather than
  *   becoming dates with nothing behind them. A filter value is exempt — see `DateSource`.
+ * - **Two digits are a year's ending, never a guess at its century.** `aug 3 '88` is August 3rd in
+ *   every year ending in 88 — in this archive 1988, and in one that reached back far enough, 1888
+ *   as well. It is the same kind of answer an ambiguous numeric date gets: every reading, kept.
  * - **An ambiguous numeric date means both readings.** `9/3/1988` is September 3rd *and*
  *   March 9th; no locale convention is imposed. A reader who wants one writes `1988/9/3`.
  *   Filter values are the exception — again, see `DateSource`.
@@ -44,6 +47,7 @@ import { dateToString, weekdayOf } from "./date-utils";
 
 const MIN_YEAR = Number(RANGE_START.slice(0, 4));
 const MAX_YEAR = Number(RANGE_END.slice(0, 4));
+const ARCHIVE_YEARS = Array.from({ length: MAX_YEAR - MIN_YEAR + 1 }, (_, offset) => MIN_YEAR + offset);
 
 export const MONTHS = new Map<string, number>([
 	["january", 1],
@@ -97,6 +101,11 @@ export type DatePrecision = "exact" | "narrow" | "broad";
 /** One reading of what the reader wrote, as the components they actually gave. */
 export interface DateCandidate {
 	year?: number;
+	/**
+	 * `year` is only the last two digits, and the reading is every year that ends in them. A query
+	 * never leaves this set — see `inArchive` — so only a filter's value carries it.
+	 */
+	ending?: true;
 	month?: number;
 	day?: number;
 	weekday?: number;
@@ -147,39 +156,40 @@ const ORDINAL_PATTERN = /^(\d{1,2})(?:st|nd|rd|th)$/;
 // A leading apostrophe is how a year gets abbreviated in prose: `aug 3 '88`.
 const DIGITS_PATTERN = /^'?(\d+)$/;
 
+/** A year as it was written: the whole of it, or the two digits it ends in. */
+interface YearReading {
+	year: number;
+	ending?: true;
+}
+
 /**
- * A two-digit year is read as the century that lands inside the archive, and every value in that
- * band exceeds 31 — so `aug 90` is 1990, and nothing in the band could have been meant as a day.
- * A filter may name a year outside the archive, and there the century falls back to the archive's
- * own, since the whole strip ran in the 1900s.
+ * A query's two-digit year has to end some year of the archive, as its four-digit year has to be
+ * one, and that is also what keeps a small number a day: in this archive no year ends in 01 to
+ * 31, so `aug 12` is not a date. An archive that reached such a year would read `aug 12` as one,
+ * and `9/3/12` in more ways than it does now — every reading kept, as ever.
  */
-function resolveYear(numeric: Numeric, source: DateSource): number | null {
+function resolveYear(numeric: Numeric, source: DateSource): YearReading | null {
 	if (numeric.ordinal) return null;
 	if (numeric.digits === 4) {
-		if (source === "filter") return numeric.value;
-		return numeric.value >= MIN_YEAR && numeric.value <= MAX_YEAR ? numeric.value : null;
+		if (source === "filter") return { year: numeric.value };
+		return numeric.value >= MIN_YEAR && numeric.value <= MAX_YEAR ? { year: numeric.value } : null;
 	}
 	// Exactly two, not "at most two": a single digit is never a year, and letting one through
 	// would read `aug 3` as August 1903 the moment the range stopped saying otherwise.
 	if (numeric.digits !== 2) return null;
-	for (const century of [1900, 2000]) {
-		const year = century + numeric.value;
-		if (year >= MIN_YEAR && year <= MAX_YEAR) return year;
-	}
-	return source === "filter" ? 1900 + numeric.value : null;
+	if (source === "query" && !ARCHIVE_YEARS.some((year) => year % 100 === numeric.value)) return null;
+	return { year: numeric.value, ending: true };
 }
 
 /**
- * A year standing on its own, as `@year:` gets it: two digits or four, and nothing else.
- *
- * Exported so `filter-query.ts` can read a year without knowing what a token is. The shape of a
- * year — how many digits it may have, which century two of them mean — is settled in one place,
- * and `resolveYear` is that place for both callers.
+ * A query's reading, as the archive years it can mean. An ending becomes every one of them, so
+ * that the checks below — whether the day exists, whether it fell on the weekday given — are made
+ * against real years rather than a pattern.
  */
-export function parseYear(text: string, source: DateSource): number | null {
-	const digits = /^\d{2}(?:\d{2})?$/.exec(text)?.[0];
-	if (digits === undefined) return null;
-	return resolveYear({ value: Number(digits), digits: digits.length, ordinal: false }, source);
+function inArchive(candidate: DateCandidate): DateCandidate[] {
+	if (candidate.ending === undefined) return [candidate];
+	const { ending: _ending, ...rest } = candidate;
+	return ARCHIVE_YEARS.filter((year) => year % 100 === candidate.year).map((year) => ({ ...rest, year }));
 }
 
 /** Every date that gets this far names its year, so February 29th is decided rather than guessed. */
@@ -188,9 +198,19 @@ function isRealDate(year: number, month: number, day: number): boolean {
 	return probe.getUTCMonth() === month - 1 && probe.getUTCDate() === day;
 }
 
+/**
+ * Whether some year the candidate can mean has this day. Only February 29th depends on which
+ * year, and every ending divisible by four ends a leap year — 00 included, which ends 2000.
+ */
+function isRealDay(candidate: DateCandidate & { year: number; month: number; day: number }): boolean {
+	if (candidate.ending === undefined) return isRealDate(candidate.year, candidate.month, candidate.day);
+	if (candidate.month === 2 && candidate.day === 29) return candidate.year % 4 === 0;
+	return isRealDate(2000, candidate.month, candidate.day);
+}
+
 function compactCandidate(digits: string, source: DateSource): DateCandidate | null {
-	const year = resolveYear({ value: Number(digits.slice(0, 4)), digits: 4, ordinal: false }, source);
-	if (year === null) return null;
+	const year = resolveYear({ value: Number(digits.slice(0, 4)), digits: 4, ordinal: false }, source)?.year;
+	if (year === undefined) return null;
 	const month = Number(digits.slice(4, 6));
 	if (month < 1 || month > 12) return null;
 	if (digits.length === 6) return { year, month };
@@ -227,9 +247,9 @@ function assign(numbers: Numeric[], roles: Role[], source: DateSource): DateCand
 		const role = roles[index];
 		if (numeric.ordinal && role !== "day") return null;
 		if (role === "year") {
-			const year = resolveYear(numeric, source);
-			if (year === null) return null;
-			candidate.year = year;
+			const reading = resolveYear(numeric, source);
+			if (reading === null) return null;
+			Object.assign(candidate, reading);
 		} else if (role === "month") {
 			if (numeric.digits > 2 || numeric.value < 1 || numeric.value > 12) return null;
 			candidate.month = numeric.value;
@@ -242,7 +262,7 @@ function assign(numbers: Numeric[], roles: Role[], source: DateSource): DateCand
 }
 
 function sameCandidate(one: DateCandidate, other: DateCandidate): boolean {
-	return one.year === other.year && one.month === other.month && one.day === other.day;
+	return one.year === other.year && one.ending === other.ending && one.month === other.month && one.day === other.day;
 }
 
 function collect(numbers: Numeric[], orderings: Role[][], source: DateSource): DateCandidate[] {
@@ -302,8 +322,8 @@ function fromMonthName(month: number, numbers: Numeric[], source: DateSource): D
 	// The one number beside a month name is its year. `august 3` names a day in every year, which
 	// `@month:august @day:3` asks for and a date cannot.
 	if (numbers.length === 1) {
-		const year = resolveYear(numbers[0], source);
-		return year === null ? [] : [{ month, year }];
+		const reading = resolveYear(numbers[0], source);
+		return reading === null ? [] : [{ month, ...reading }];
 	}
 
 	if (numbers.length === 2) {
@@ -373,23 +393,25 @@ export function parseDateExpression(text: string, source: DateSource = "query"):
 	}
 
 	const valid: DateCandidate[] = [];
-	for (const candidate of candidates) {
+	for (const candidate of source === "query" ? candidates.flatMap(inArchive) : candidates) {
 		// Nothing is a date without its year: a month, a day and a weekday are ordinary words on
 		// their own, and a month with a day is a filter's business rather than a date.
 		if (candidate.year === undefined) continue;
 		if (
 			candidate.day !== undefined &&
 			candidate.month !== undefined &&
-			!isRealDate(candidate.year, candidate.month, candidate.day)
+			!isRealDay({ ...candidate, year: candidate.year, month: candidate.month, day: candidate.day })
 		)
 			continue;
+		if (valid.some((existing) => sameCandidate(existing, candidate))) continue;
 		if (weekday === undefined) {
 			valid.push(candidate);
 			continue;
 		}
 		// Where the whole date is known the weekday is decidable now, and disagreement kills that
-		// reading. Where it is not, the weekday rides along and narrows the strips that match.
-		if (candidate.month !== undefined && candidate.day !== undefined) {
+		// reading. Where it is not — no day, or only the ending of a year — the weekday rides along
+		// and narrows the strips that match.
+		if (candidate.month !== undefined && candidate.day !== undefined && candidate.ending === undefined) {
 			if (weekdayOf(dateToString(candidate.year, candidate.month, candidate.day)) !== weekday) continue;
 			valid.push({ ...candidate, weekday });
 			continue;
@@ -402,7 +424,10 @@ export function parseDateExpression(text: string, source: DateSource = "query"):
 }
 
 function matchesCandidate(candidate: DateCandidate, date: string): boolean {
-	if (candidate.year !== undefined && candidate.year !== Number(date.slice(0, 4))) return false;
+	if (candidate.year !== undefined) {
+		const year = Number(date.slice(0, 4));
+		if ((candidate.ending ? year % 100 : year) !== candidate.year) return false;
+	}
 	if (candidate.month !== undefined && candidate.month !== Number(date.slice(5, 7))) return false;
 	if (candidate.day !== undefined && candidate.day !== Number(date.slice(8, 10))) return false;
 	return !(candidate.weekday !== undefined && candidate.weekday !== weekdayOf(date));

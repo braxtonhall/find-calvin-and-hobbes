@@ -1,5 +1,5 @@
 import { dateToString, lastDayOf, weekdayOf } from "./date-utils";
-import { DateExpression, MONTHS, WEEKDAYS, matchesExpression, parseDateExpression, parseYear } from "./date-query";
+import { DateExpression, MONTHS, WEEKDAYS, matchesExpression, parseDateExpression } from "./date-query";
 import { FILTER_SPECS } from "./filter-spec";
 import { knows } from "./filter-vocabulary";
 import { Comic } from "./types";
@@ -29,7 +29,7 @@ import { Comic } from "./types";
  * last day of the span they name, or the first.
  */
 export type Filter =
-	| { kind: "year"; year: number }
+	| { kind: "year"; expression: DateExpression }
 	| { kind: "month"; month: number }
 	| { kind: "monthDay"; day: number }
 	| { kind: "weekday"; weekday: number }
@@ -54,14 +54,15 @@ const FILTERS = new Set(FILTER_SPECS.map((spec) => spec.name));
 const FILTER_PATTERN = /@([a-zA-Z]+)(?::([^\s()]+))?/g;
 
 /**
- * The span a filter value names, as inclusive ISO bounds. Needs a year — `@before:august-3` has
- * no computable edge — and cannot take a weekday, which picks days out of a span rather than
+ * The span a filter value names, as inclusive ISO bounds. Needs a whole year — `@before:august-3`
+ * and `@before:88` have no computable edge — and cannot take a weekday, which picks days out of a span rather than
  * bounding one.
  */
 function windowBounds(expression: DateExpression): { from: string; to: string } | null {
 	if (expression.candidates.length !== 1) return null;
-	const { year, month, day, weekday } = expression.candidates[0];
-	if (year === undefined || weekday !== undefined) return null;
+	const { year, ending, month, day, weekday } = expression.candidates[0];
+	// Every year ending in 88 has no edge either: a bound is one day, so it needs the whole year.
+	if (year === undefined || ending !== undefined || weekday !== undefined) return null;
 	if (month === undefined) return { from: dateToString(year, 1, 1), to: dateToString(year, 12, 31) };
 	if (day === undefined) {
 		return { from: dateToString(year, month, 1), to: dateToString(year, month, lastDayOf(year, month)) };
@@ -80,8 +81,15 @@ export function readFilter(name: string, value: string | undefined): Filter | nu
 	if (value === undefined) return null;
 
 	if (name === "year") {
-		const year = parseYear(value, "filter");
-		return year === null ? null : { kind: "year", year };
+		// A year is read by the date parser, as `@date:` reads one, so the two agree about what a
+		// year is: four digits, or two that are every year ending in them — `@year:88` is 1988 here
+		// and would be 1888 as well in an archive that reached it. Only a year, though: `@year:` is
+		// not a second spelling of `@date:1988/8`.
+		const expression = parseDateExpression(value, "filter");
+		if (expression === null || expression.candidates.length !== 1) return null;
+		const { month, day, weekday } = expression.candidates[0];
+		if (month !== undefined || day !== undefined || weekday !== undefined) return null;
+		return { kind: "year", expression };
 	}
 
 	if (name === "month") {
@@ -218,7 +226,6 @@ export function passesFilter(subject: string | Comic, filter: Filter, run?: Run)
 	const date = typeof subject === "string" ? subject : subject.date;
 	switch (filter.kind) {
 		case "year":
-			return Number(date.slice(0, 4)) === filter.year;
 		case "date":
 			return matchesExpression(filter.expression, date);
 		case "month":
