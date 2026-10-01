@@ -1,0 +1,1557 @@
+tigertrap:
+  description: Calvin traps a tiger, Hobbes, in the backyard with a sandwich-baited rope.
+  dates: ["19851118", "19851119"]
+
+susiearrives:
+  description: Susie Derkins joins Calvin's class and he immediately insults her.
+  dates: ["19851203", "19851204", "19851205", "19851206"]
+
+hobbesgift:
+  description: Calvin readies for Santa on Christmas Eve but forgets Hobbes's gift.
+  dates: ["19851223", "19851224", "19851225"]
+
+hobbeslove:
+  description: Calvin and Hobbes discuss kissing girls and what makes them attractive.
+  dates: ["19860102", "19860103"]
+
+passingnotes:
+  description: Susie's passed notes land her and Calvin in the principal's office.
+  dates: ["19860113", "19860114", "19860115", "19860116", "19860117", "19860118"]
+
+flooded:
+  description: Calvin floods the house, and Dad's poll numbers drop.
+  dates: ["19860127", "19860128"]
+
+moeintro:
+  description: Moe the class bully takes Calvin's ball and swing.
+  dates: ["19860130", "19860131", "19860201"]
+
+valentine:
+  description: Calvin sends Susie a hate-mail valentine with dumpster flowers.
+  dates: ["19860212", "19860213", "19860214"]
+
+babysitless:
+  description: Alone for an evening, Calvin and Hobbes rent a scary movie.
+  dates: ["19860304", "19860305", "19860306"]
+
+barbershop:
+  description: Calvin tries to get an outrageous haircut from the barber.
+  dates: ["19860313", "19860314"]
+
+doctorvisit:
+  description: Calvin gets a checkup at the doctor's office.
+  dates: ["19860331", "19860401"]
+
+gofishing:
+  description: Calvin goes fishing at the pier with little success.
+  dates: ["19860418", "19860419"]
+
+humaninsect:
+  description: Calvin the human insect shows off his insect strength.
+  dates: ["19860512", "19860513"]
+
+rosalynfirst:
+  description: Rosalyn babysits, locks Calvin in the garage, and he ambushes her car.
+  dates: ["19860515", "19860516", "19860517"]
+
+cubscouts:
+  description: Calvin and Hobbes get lost on a Cub Scout outing.
+  dates: ["19860519", "19860520", "19860521", "19860522"]
+
+dogstolehobbes:
+  description: A dog steals Hobbes, and Susie rescues him for her tea party.
+  dates: ["19860526", "19860527", "19860528", "19860529", "19860530", "19860531"]
+
+moetiger:
+  description: Calvin asks Hobbes to eat Moe, who's coming to beat him up.
+  dates: ["19860603", "19860604"]
+
+bathshark:
+  description: Calvin's bath turns into a shark-infested adventure.
+  dates: ["19860612", "19860613"]
+
+cowboysindians:
+  description: Calvin and Hobbes play rowdy shooting games.
+  dates: ["19860618", "19860619"]
+
+cabintrip:
+  description: The family's lakeside cabin vacation bores Calvin and Mom, delights Dad.
+  dates:
+    [
+      "19860707",
+      "19860708",
+      "19860709",
+      "19860710",
+      "19860711",
+      "19860712",
+      "19860714",
+      "19860715",
+      "19860716",
+      "19860717",
+    ]
+
+swimlessons:
+  description: Calvin hates swimming lessons taught by Rosalyn.
+  dates: ["19860721", "19860722", "19860723", "19860724", "19860725", "19860726"]
+
+susieapology:
+  description: Calvin brushes off Susie, then lets her play.
+  dates: ["19860728", "19860729", "19860730"]
+
+frozenface:
+  description: Calvin and Hobbes try to freeze their faces in hideous expressions.
+  dates: ["19860811", "19860812", "19860813", "19860814"]
+
+invisibleelixir:
+  description: Calvin drinks an elixir and turns invisible.
+  dates: ["19860828", "19860829"]
+
+bicycleattack:
+  description: Calvin tries to ride his new bicycle, which seems to attack him.
+  dates: ["19860901", "19860902", "19860903", "19860904"]
+
+moeextortion:
+  description: Moe extorts Calvin's money until Mom calls the school.
+  dates: ["19860922", "19860923", "19860924", "19860925"]
+
+actingcool:
+  description: Calvin tries to teach Hobbes to act cool.
+  dates: ["19860929", "19860930", "19861001"]
+
+halloweenprep:
+  description: Calvin and Hobbes prepare for Halloween and suffer the candy afterward.
+  dates: ["19861029", "19861030", "19861031", "19861101"]
+
+sickmom:
+  description: Mom falls ill and Calvin and Dad struggle to care for her.
+  dates: ["19861103", "19861104", "19861105", "19861106", "19861107", "19861108"]
+
+onionplay:
+  description: Calvin plays an onion in the school play but gets stuck in his costume.
+  dates:
+    [
+      "19861110",
+      "19861111",
+      "19861112",
+      "19861113",
+      "19861114",
+      "19861115",
+      "19861117",
+      "19861118",
+      "19861119",
+      "19861120",
+      "19861121",
+    ]
+
+rosalynbedtime:
+  description: Calvin and Hobbes provoke Rosalyn and are sent to bed early.
+  dates: ["19861201", "19861202", "19861203", "19861204", "19861205", "19861206"]
+
+ouija:
+  description: Calvin and Hobbes consult a Ouija board.
+  dates: ["19861217", "19861218", "19861219"]
+
+claygift:
+  description: Calvin sculpts a clay Christmas present for his parents.
+  dates: ["19861222", "19861223"]
+
+susieinsult:
+  description: Calvin calls Susie a name, feels guilty, and apologizes.
+  dates: ["19870112", "19870113", "19870114", "19870115", "19870116", "19870117"]
+
+susiebirthday:
+  description: Hobbes is invited to Susie's birthday party and Calvin tags along.
+  dates:
+    [
+      "19870119",
+      "19870120",
+      "19870121",
+      "19870122",
+      "19870123",
+      "19870124",
+      "19870126",
+      "19870127",
+      "19870128",
+      "19870129",
+      "19870130",
+    ]
+
+reportcard:
+  description: Calvin's bad report card means mandatory homework time.
+  dates: ["19870202", "19870203", "19870204"]
+
+picturehair:
+  description: Calvin styles his hair with Crisco and paints his stomach for school pictures.
+  dates: ["19870223", "19870224", "19870225", "19870226", "19870227", "19870228"]
+
+amnesia:
+  description: Calvin fakes amnesia after a bad test score.
+  dates: ["19870302", "19870303", "19870304", "19870305", "19870306"]
+
+raccoon:
+  description: Calvin and Hobbes find an injured baby raccoon and then grieve its death.
+  dates: ["19870309", "19870310", "19870311", "19870312", "19870313", "19870314", "19870316", "19870317", "19870318"]
+
+condos:
+  description: Bulldozers clear the woods for a condominium development.
+  dates: ["19870319", "19870320", "19870321"]
+
+transmogtiger:
+  description: Calvin transmogrifies into a tiger, then changes back.
+  dates:
+    [
+      "19870323",
+      "19870324",
+      "19870325",
+      "19870326",
+      "19870327",
+      "19870328",
+      "19870330",
+      "19870331",
+      "19870401",
+      "19870402",
+      "19870403",
+    ]
+
+rippedpants:
+  description: Calvin rips his pants at recess and must go to the chalkboard.
+  dates: ["19870406", "19870407", "19870408", "19870409", "19870410", "19870411"]
+
+substituteteacher:
+  description: A substitute teacher takes over Miss Wormwood's class.
+  dates: ["19870413", "19870414", "19870415"]
+
+brainreport:
+  description: Calvin prepares and gives an oral report on the brain with noodles.
+  dates: ["19870420", "19870421", "19870422", "19870423"]
+
+zombies:
+  description: Calvin and Hobbes play zombies.
+  dates: ["19870427", "19870428", "19870429", "19870430"]
+
+haircut:
+  description: Hobbes botches Calvin's haircut and draws hair on his head.
+  dates:
+    [
+      "19870511",
+      "19870512",
+      "19870513",
+      "19870514",
+      "19870515",
+      "19870516",
+      "19870518",
+      "19870519",
+      "19870520",
+      "19870521",
+    ]
+
+homepounce:
+  description: Hobbes pounces on Calvin whenever he comes home.
+  dates: ["19870526", "19870527", "19870528", "19870529"]
+
+magiccarpet:
+  description: Calvin and Hobbes fly the hallway rug to Dad's office but go unnoticed.
+  dates: ["19870615", "19870616", "19870617", "19870618", "19870619", "19870620"]
+
+cookies:
+  description: Calvin schemes to get cookies from Mom.
+  dates: ["19870708", "19870709"]
+
+waterfight:
+  description: Susie joins a water fight, and Hobbes defects to her side.
+  dates: ["19870713", "19870714", "19870715", "19870716", "19870717", "19870718"]
+
+doctor:
+  description: Calvin is sick and terrorizes the doctor.
+  dates: ["19870728", "19870729", "19870730", "19870731"]
+
+rainycamping:
+  description: The family's camping trip is rained out.
+  dates:
+    [
+      "19870810",
+      "19870811",
+      "19870812",
+      "19870813",
+      "19870814",
+      "19870815",
+      "19870816",
+      "19870817",
+      "19870818",
+      "19870819",
+      "19870820",
+    ]
+
+timemachine:
+  description: Calvin's time machine aims for the future but lands among dinosaurs.
+  dates:
+    [
+      "19870831",
+      "19870901",
+      "19870902",
+      "19870903",
+      "19870904",
+      "19870905",
+      "19870907",
+      "19870908",
+      "19870909",
+      "19870910",
+      "19870911",
+    ]
+
+secede:
+  description: Calvin secedes from the family, heads for the Yukon, and loses Hobbes.
+  dates:
+    [
+      "19870914",
+      "19870915",
+      "19870916",
+      "19870917",
+      "19870918",
+      "19870919",
+      "19870920",
+      "19870921",
+      "19870922",
+      "19870923",
+      "19870924",
+      "19870925",
+      "19870926",
+      "19870927",
+      "19870928",
+      "19870929",
+      "19870930",
+    ]
+
+rosalynmovie:
+  description: Rosalyn babysits and Calvin tries to escape, then reports hostages.
+  dates: ["19871005", "19871006", "19871007", "19871008", "19871009", "19871010"]
+
+#TODO review loose gags?
+susieclass:
+  description: Calvin bothers Susie in class.
+  dates: ["19871013", "19871014"]
+
+moehobbes:
+  description: Calvin brings Hobbes to school to scare off Moe.
+  dates: ["19871019", "19871020", "19871021", "19871022", "19871023", "19871024"]
+
+pollpast:
+  description: Calvin digs up Dad's embarrassing past for a character poll.
+  dates: ["19871109", "19871110"]
+
+sungoingout:
+  description: Calvin fears the sun is going out as winter nears.
+  dates: ["19871123", "19871124", "19871125", "19871126"]
+
+escapeartist:
+  description: Calvin has Hobbes tie him to a chair and cannot escape.
+  dates: ["19871130", "19871201", "19871202", "19871203", "19871204", "19871205"]
+
+santadoubt:
+  description: Calvin questions Santa's fairness and existence before Christmas.
+  dates: ["19871216", "19871217", "19871218", "19871219", "19871221", "19871222", "19871223", "19871224", "19871225"]
+
+snowfort:
+  description: Calvin and Hobbes build an invulnerable snow fort.
+  dates: ["19871230", "19871231", "19880101", "19880102"]
+
+hobbesmath:
+  description: Hobbes helps Calvin with his math homework.
+  dates: ["19880105", "19880106"]
+
+unclemax:
+  description: Dad's brother Max visits and Calvin tries to leave with him.
+  dates:
+    [
+      "19880111",
+      "19880112",
+      "19880113",
+      "19880114",
+      "19880115",
+      "19880116",
+      "19880118",
+      "19880119",
+      "19880120",
+      "19880121",
+      "19880122",
+    ]
+
+mercury:
+  description: Calvin slacks on his planet Mercury report with Susie.
+  dates:
+    [
+      "19880125",
+      "19880126",
+      "19880127",
+      "19880128",
+      "19880129",
+      "19880130",
+      "19880201",
+      "19880202",
+      "19880203",
+      "19880204",
+    ]
+
+transmogrifiergun:
+  description: Calvin's Transmogrifier Gun malfunctions and leaves him an owl.
+  dates:
+    [
+      "19880208",
+      "19880209",
+      "19880210",
+      "19880211",
+      "19880212",
+      "19880213",
+      "19880214",
+      "19880215",
+      "19880216",
+      "19880217",
+      "19880218",
+      "19880219",
+      "19880220",
+    ]
+
+rosalynsitting:
+  description: Rosalyn babysits and Calvin makes her earn her pay.
+  dates: ["19880222", "19880223", "19880224", "19880225", "19880226", "19880227", "19880229", "19880301", "19880302"]
+
+tigerlife:
+  description: Calvin tries living like a tiger until he learns tigers are endangered.
+  dates:
+    [
+      "19880307",
+      "19880308",
+      "19880309",
+      "19880310",
+      "19880311",
+      "19880312",
+      "19880314",
+      "19880315",
+      "19880316",
+      "19880317",
+      "19880318",
+      "19880319",
+      "19880321",
+      "19880322",
+      "19880323",
+      "19880324",
+    ]
+
+doorpounce:
+  description: Hobbes pounces on Calvin the moment he gets home.
+  dates: ["19880325", "19880326"]
+
+dadpolls:
+  description: Calvin offers to be Dad's image consultant after bad polls.
+  dates: ["19880411", "19880412", "19880413", "19880414", "19880415"]
+
+modelplane:
+  description: Calvin and Hobbes botch building a model Phantom jet.
+  dates: ["19880419", "19880420", "19880421", "19880422", "19880423", "19880424"]
+
+calvinosaur:
+  description: Calvin and Hobbes dig up litter and build a dinosaur from it.
+  dates:
+    [
+      "19880502",
+      "19880503",
+      "19880504",
+      "19880505",
+      "19880506",
+      "19880507",
+      "19880509",
+      "19880510",
+      "19880511",
+      "19880512",
+    ]
+
+binoculars:
+  description: Calvin breaks Dad's binoculars and agonizes over confessing.
+  dates:
+    [
+      "19880516",
+      "19880517",
+      "19880518",
+      "19880519",
+      "19880520",
+      "19880521",
+      "19880523",
+      "19880524",
+      "19880525",
+      "19880526",
+    ]
+
+beesting:
+  description: Hobbes claims a bee is on Calvin's back, then declares opposite day.
+  dates: ["19880530", "19880531", "19880601", "19880602"]
+
+campingtrip:
+  description: The family goes camping and Dad turns grouchy.
+  dates:
+    [
+      "19880613",
+      "19880614",
+      "19880615",
+      "19880616",
+      "19880617",
+      "19880618",
+      "19880620",
+      "19880621",
+      "19880622",
+      "19880623",
+      "19880624",
+      "19880625",
+      "19880627",
+      "19880628",
+      "19880629",
+    ]
+
+balloonboy:
+  description: Calvin floats away on a balloon, then transmogrifies himself home.
+  dates:
+    [
+      "19880704",
+      "19880705",
+      "19880706",
+      "19880707",
+      "19880708",
+      "19880709",
+      "19880711",
+      "19880712",
+      "19880713",
+      "19880714",
+      "19880715",
+    ]
+
+zooday:
+  description: Calvin wanders off at the zoo and Dad finds him at the tigers.
+  dates:
+    [
+      "19880718",
+      "19880719",
+      "19880720",
+      "19880721",
+      "19880722",
+      "19880723",
+      "19880725",
+      "19880726",
+      "19880727",
+      "19880728",
+    ]
+
+tunapounce:
+  description: Hobbes's sudden pounces leave Calvin jumpy and on edge.
+  dates: ["19880802", "19880803"]
+
+leakyfaucet:
+  description: Calvin tries to fix the bathroom faucet and floods the bathroom.
+  dates: ["19880808", "19880809", "19880810", "19880811", "19880812", "19880813", "19880815", "19880816", "19880817"]
+
+schoolstarts:
+  description: Calvin grumbles about school starting again.
+  dates: ["19880905", "19880906", "19880907", "19880908"]
+
+marstrip:
+  description: Calvin and Hobbes flee polluted Earth for Mars, then return.
+  dates:
+    [
+      "19880912",
+      "19880913",
+      "19880914",
+      "19880915",
+      "19880916",
+      "19880917",
+      "19880919",
+      "19880920",
+      "19880921",
+      "19880922",
+      "19880923",
+      "19880924",
+      "19880926",
+      "19880927",
+      "19880928",
+      "19880929",
+      "19880930",
+      "19881001",
+    ]
+
+nightsick:
+  description: Calvin gets sick at night and stays home from school.
+  dates: ["19881010", "19881011", "19881012", "19881013", "19881014", "19881015", "19881017", "19881018", "19881019"]
+
+stupendouscostume:
+  description: Calvin gets his Stupendous Man costume.
+  dates: ["19881102", "19881103"]
+
+badmood:
+  description: Calvin announces he is in a bad mood and no one cares.
+  dates: ["19881123", "19881124", "19881125"]
+
+christmasphoto:
+  description: Calvin makes faces while Dad tries to take a Christmas card photo.
+  dates: ["19881214", "19881215", "19881216", "19881217"]
+
+schooltrouble:
+  description: Calvin dresses oddly for school and gets in mysterious trouble.
+  dates: ["19881228", "19881229"]
+
+spivskip:
+  description: Calvin tries to skip school as Spaceman Spiff but gets caught.
+  dates: ["19890116", "19890117", "19890118", "19890119", "19890120", "19890121"]
+
+flushnotes:
+  description: Calvin holds Rosalyn's study notes hostage in the bathroom.
+  dates:
+    [
+      "19890206",
+      "19890207",
+      "19890208",
+      "19890209",
+      "19890210",
+      "19890211",
+      "19890213",
+      "19890214",
+      "19890215",
+      "19890216",
+      "19890217",
+      "19890218",
+    ]
+
+sugarbeanie:
+  description: Calvin eats endless cereal to get a propeller beanie that won't fly.
+  dates:
+    [
+      "19890227",
+      "19890228",
+      "19890301",
+      "19890302",
+      "19890303",
+      "19890304",
+      "19890306",
+      "19890307",
+      "19890308",
+      "19890309",
+      "19890310",
+      "19890311",
+      "19890313",
+      "19890314",
+      "19890315",
+      "19890316",
+      "19890317",
+      "19890318",
+    ]
+
+insects:
+  description: Calvin fakes a forgotten insect collection and gets Susie in trouble.
+  dates:
+    [
+      "19890320",
+      "19890321",
+      "19890322",
+      "19890323",
+      "19890324",
+      "19890325",
+      "19890327",
+      "19890328",
+      "19890329",
+      "19890330",
+      "19890331",
+      "19890401",
+      "19890403",
+      "19890404",
+      "19890405",
+      "19890406",
+      "19890407",
+    ]
+
+hiccups:
+  description: Calvin gets the hiccups and Hobbes tries to scare them away.
+  dates: ["19890417", "19890418", "19890419", "19890420", "19890421"]
+
+breakin:
+  description: Calvin's family returns from a wedding to find the house burgled.
+  dates:
+    [
+      "19890424",
+      "19890425",
+      "19890426",
+      "19890427",
+      "19890428",
+      "19890429",
+      "19890501",
+      "19890502",
+      "19890503",
+      "19890504",
+      "19890505",
+      "19890506",
+      "19890508",
+      "19890509",
+      "19890510",
+      "19890511",
+      "19890512",
+      "19890513",
+    ]
+
+runawaycar:
+  description: Calvin starts a club, rolls the car into a ditch, and runs away.
+  dates:
+    [
+      "19890515",
+      "19890516",
+      "19890517",
+      "19890518",
+      "19890519",
+      "19890520",
+      "19890522",
+      "19890523",
+      "19890524",
+      "19890525",
+      "19890526",
+      "19890527",
+      "19890529",
+      "19890530",
+      "19890531",
+      "19890601",
+      "19890602",
+      "19890603",
+      "19890605",
+      "19890606",
+      "19890607",
+      "19890608",
+      "19890609",
+      "19890610",
+    ]
+
+cleanroom:
+  description: Calvin and Hobbes rush cleaning his room by stuffing everything in the closet.
+  dates: ["19890619", "19890620", "19890621", "19890622", "19890623"]
+
+itchyisland:
+  description: The family endures another miserable camping trip on Itchy Island.
+  dates:
+    [
+      "19890717",
+      "19890718",
+      "19890719",
+      "19890720",
+      "19890721",
+      "19890722",
+      "19890723",
+      "19890724",
+      "19890725",
+      "19890726",
+      "19890727",
+      "19890728",
+      "19890729",
+    ]
+
+museum:
+  description: The family visits the natural history museum.
+  dates: ["19890809", "19890810", "19890811", "19890812"]
+
+bedrobot:
+  description: Calvin and Hobbes try to build a robot to make his bed.
+  dates: ["19890828", "19890829", "19890830", "19890831", "19890901", "19890902"]
+
+firstday:
+  description: Calvin endures his first day back at school.
+  dates: ["19890904", "19890905", "19890906", "19890907", "19890908"]
+
+moetruck:
+  description: Moe steals Calvin's toy truck and Calvin cannot get it back.
+  dates:
+    [
+      "19890911",
+      "19890912",
+      "19890913",
+      "19890914",
+      "19890915",
+      "19890916",
+      "19890918",
+      "19890919",
+      "19890920",
+      "19890921",
+    ]
+
+lockedout:
+  description: Calvin tricks Rosalyn outside and locks her out.
+  dates:
+    [
+      "19890925",
+      "19890926",
+      "19890927",
+      "19890928",
+      "19890929",
+      "19890930",
+      "19891002",
+      "19891003",
+      "19891004",
+      "19891005",
+      "19891006",
+      "19891007",
+    ]
+
+palomarlens:
+  description: Stupendous Man fries Calvin's school with a giant telescope lens.
+  dates: ["19891009", "19891010", "19891011", "19891012", "19891013", "19891014"]
+
+reportcardtalk:
+  description: Dad talks to Calvin about his report card and homework.
+  dates: ["19891018", "19891019"]
+
+batreport:
+  description: Calvin bluffs his way through a school report on bats.
+  dates: ["19891027", "19891028", "19891030", "19891031", "19891101", "19891102", "19891103", "19891104"]
+
+gravityreverse:
+  description: Calvin's gravity reverses, then he grows until he falls off the Earth.
+  dates:
+    [
+      "19891113",
+      "19891114",
+      "19891115",
+      "19891116",
+      "19891117",
+      "19891118",
+      "19891120",
+      "19891121",
+      "19891122",
+      "19891123",
+      "19891124",
+      "19891125",
+      "19891127",
+      "19891128",
+      "19891129",
+      "19891130",
+      "19891201",
+      "19891202",
+    ]
+
+santagood:
+  description: Calvin struggles to be good so Santa will bring presents.
+  dates: ["19891211", "19891212", "19891213", "19891214", "19891215", "19891216", "19891217"]
+
+householdnews:
+  description: Calvin starts a newspaper reporting on household events.
+  dates: ["19891220", "19891221"]
+
+duplicator:
+  description: Calvin duplicates himself, and the clones multiply and cause trouble.
+  dates:
+    [
+      "19900108",
+      "19900109",
+      "19900110",
+      "19900111",
+      "19900112",
+      "19900113",
+      "19900115",
+      "19900116",
+      "19900117",
+      "19900118",
+      "19900119",
+      "19900120",
+      "19900122",
+      "19900123",
+      "19900124",
+      "19900125",
+      "19900126",
+      "19900127",
+      "19900129",
+      "19900130",
+      "19900131",
+      "19900201",
+    ]
+
+#TODO review loose gags?
+snowballmiss:
+  description: Calvin gets caught throwing snowballs at Susie and others.
+  dates: ["19900202", "19900203"]
+
+tracerquiz:
+  description: Tracer Bullet investigates a math word problem about two trains of thought.
+  dates: ["19900205", "19900206", "19900207", "19900208", "19900209", "19900210"]
+
+snowart:
+  description: Calvin pursues ever more abstract snow sculpture.
+  dates: ["19900220", "19900221", "19900222"]
+
+rosalynthree:
+  description: Calvin fights babysitter Rosalyn as Stupendous Man and gets punished.
+  dates:
+    [
+      "19900326",
+      "19900327",
+      "19900328",
+      "19900329",
+      "19900330",
+      "19900331",
+      "19900402",
+      "19900403",
+      "19900404",
+      "19900405",
+      "19900406",
+      "19900407",
+      "19900409",
+      "19900410",
+      "19900411",
+      "19900412",
+    ]
+
+baseballteam:
+  description: Moe pressures Calvin into joining the recess baseball team.
+  dates:
+    [
+      "19900417",
+      "19900418",
+      "19900419",
+      "19900420",
+      "19900421",
+      "19900423",
+      "19900424",
+      "19900425",
+      "19900426",
+      "19900427",
+      "19900428",
+      "19900430",
+      "19900501",
+      "19900502",
+      "19900503",
+      "19900504",
+      "19900505",
+    ]
+
+spiffescape:
+  description: Spaceman Spiff ditches school, then gets in trouble for it.
+  dates: ["19900521", "19900522", "19900523", "19900524", "19900525", "19900526"]
+
+chickenpox:
+  description: Calvin catches chicken pox.
+  dates: ["19900611", "19900612", "19900613", "19900614", "19900615", "19900616"]
+
+notv:
+  description: Dad bans TV, so Calvin is forced to play outside.
+  dates: ["19900618", "19900619", "19900620", "19900621", "19900622", "19900623"]
+
+dinophotos:
+  description: Calvin and Hobbes time travel to photograph Jurassic dinosaurs.
+  dates:
+    [
+      "19900625",
+      "19900626",
+      "19900627",
+      "19900628",
+      "19900629",
+      "19900630",
+      "19900702",
+      "19900703",
+      "19900704",
+      "19900705",
+      "19900706",
+      "19900707",
+    ]
+
+killerbike:
+  description: Calvin is stalked by his supposedly murderous bicycle.
+  dates: ["19900712", "19900713", "19900714", "19900716", "19900717", "19900718", "19900719", "19900720", "19900721"]
+
+grossransom:
+  description: Calvin plots against Susie and ransoms her doll, and she retaliates.
+  dates:
+    [
+      "19900820",
+      "19900821",
+      "19900822",
+      "19900823",
+      "19900824",
+      "19900825",
+      "19900827",
+      "19900828",
+      "19900829",
+      "19900830",
+      "19900831",
+      "19900901",
+      "19900903",
+      "19900904",
+      "19900905",
+      "19900906",
+      "19900907",
+      "19900908",
+    ]
+
+mathquiz:
+  description: After a parent-teacher conference, Calvin bets Susie on a math quiz and flunks.
+  dates:
+    [
+      "19900910",
+      "19900911",
+      "19900912",
+      "19900913",
+      "19900914",
+      "19900915",
+      "19900917",
+      "19900918",
+      "19900919",
+      "19900920",
+      "19900921",
+      "19900922",
+      "19900924",
+      "19900925",
+      "19900926",
+      "19900927",
+      "19900928",
+      "19900929",
+    ]
+
+cardboardtv:
+  description: Calvin pretends he has his own TV show with a cardboard screen.
+  dates: ["19901001", "19901002", "19901003", "19901004", "19901005"]
+
+facemask:
+  description: Calvin wears a mask on the back of his head to foil Hobbes' pounces.
+  dates: ["19901022", "19901023", "19901024", "19901025"]
+
+dinodrawings:
+  description: Miss Wormwood objects to Calvin's dinosaur drawings.
+  dates: ["19901031", "19901101", "19901102", "19901103"]
+
+diorama:
+  description: Calvin scrambles to build a desert diorama for school.
+  dates: ["19901113", "19901114", "19901115", "19901116", "19901117"]
+
+santalawyer:
+  description: Calvin hires Hobbes as his lawyer to prove to Santa he was good.
+  dates:
+    [
+      "19901211",
+      "19901212",
+      "19901213",
+      "19901214",
+      "19901215",
+      "19901216",
+      "19901217",
+      "19901218",
+      "19901219",
+      "19901220",
+      "19901221",
+      "19901222",
+      "19901223",
+    ]
+
+goonarmy:
+  description: Calvin brings a snowman to life and it builds an army of snow goons.
+  dates:
+    [
+      "19901231",
+      "19910101",
+      "19910102",
+      "19910103",
+      "19910104",
+      "19910105",
+      "19910107",
+      "19910108",
+      "19910109",
+      "19910110",
+      "19910111",
+      "19910112",
+      "19910114",
+      "19910115",
+      "19910116",
+      "19910117",
+      "19910118",
+      "19910119",
+    ]
+
+spiritaway:
+  description: Calvin insists his body is present but his spirit is unavailable.
+  dates: ["19910128", "19910129", "19910130", "19910131"]
+
+stupendoussnowball:
+  description: Stupendous Man drops a giant snowball on Susie, and Mom threatens his costume.
+  dates: ["19910211", "19910212", "19910213", "19910214", "19910215", "19910216"]
+
+tracerlamp:
+  description: Tracer Bullet investigates who broke the living room lamp.
+  dates: ["19910225", "19910226", "19910227", "19910228", "19910301", "19910302"]
+
+goodside:
+  description: Calvin duplicates his good side, which falls for Susie.
+  dates:
+    [
+      "19910318",
+      "19910319",
+      "19910320",
+      "19910321",
+      "19910322",
+      "19910323",
+      "19910325",
+      "19910326",
+      "19910327",
+      "19910328",
+      "19910329",
+      "19910330",
+      "19910401",
+      "19910402",
+      "19910403",
+    ]
+
+calvinthebold:
+  description: Calvin demands to be called Calvin the Bold.
+  dates: ["19910408", "19910409", "19910410"]
+
+grossanthem:
+  description: G.R.O.S.S. splits over the anthem and then ambushes Susie with rotten apples.
+  dates: ["19910422", "19910423", "19910424", "19910425", "19910426", "19910427", "19910429", "19910430", "19910501"]
+
+homework:
+  description: Calvin boasts that skipping homework boosts his self-esteem.
+  dates: ["19920210", "19920211", "19920212"]
+
+avantgarde:
+  description: Calvin builds pretentious avant-garde snowmen and seeks a grant.
+  dates: ["19920219", "19920220"]
+
+mud:
+  description: Calvin discovers the joys of mud and tracks it everywhere.
+  dates: ["19920304", "19920305", "19920306", "19920307"]
+
+boydestiny:
+  description: Calvin insists on being called Calvin, Boy of Destiny.
+  dates: ["19920319", "19920320", "19920321"]
+
+lewisclark:
+  description: Calvin flubs Miss Wormwood's history questions.
+  dates: ["19920325", "19920326"]
+
+bikefix:
+  description: Dad fixes his bicycle and heads out in full riding gear.
+  dates: ["19920409", "19920410"]
+
+horoscope:
+  description: Calvin trusts astrology until a horoscope has Susie finding him irresistible.
+  dates:
+    [
+      "19920413",
+      "19920414",
+      "19920415",
+      "19920416",
+      "19920417",
+      "19920418",
+      "19920420",
+      "19920421",
+      "19920422",
+      "19920423",
+      "19920424",
+      "19920425",
+    ]
+
+chewingmag:
+  description: Calvin subscribes to a magazine for gum chewers.
+  dates: ["19920504", "19920505", "19920506", "19920507", "19920508"]
+
+storytime:
+  description: Calvin time-travels to get his homework story written by future selves.
+  dates:
+    [
+      "19920520",
+      "19920521",
+      "19920522",
+      "19920523",
+      "19920525",
+      "19920526",
+      "19920527",
+      "19920528",
+      "19920529",
+      "19920530",
+      "19920601",
+      "19920602",
+      "19920603",
+      "19920604",
+      "19920605",
+      "19920606",
+    ]
+
+greatideas:
+  description: Calvin sells great ideas from a sidewalk booth.
+  dates: ["19920615", "19920616", "19920617"]
+
+modelingclay:
+  description: Calvin and Hobbes sculpt with modeling clay.
+  dates: ["19920622", "19920623", "19920624", "19920625", "19920626", "19920627"]
+
+cloudomen:
+  description: Calvin sees a cloud shaped like himself and fears an omen.
+  dates: ["19920706", "19920707"]
+
+captainsteroid:
+  description: Calvin raves about his Captain Steroid comic books.
+  dates: ["19920720", "19920721", "19920722"]
+
+underbed:
+  description: Calvin tries to cope with the monsters under his bed.
+  dates: ["19920817", "19920818", "19920819", "19920820", "19920821", "19920822"]
+
+journal:
+  description: Calvin starts a journal of his brilliant thoughts.
+  dates: ["19920825", "19920826"]
+
+fakephotos:
+  description: Calvin stages photos to fake a well-adjusted childhood.
+  dates: ["19920916", "19920917", "19920918"]
+
+#TODO review loose gags?
+schoolgripes:
+  description: Calvin complains about going to school.
+  dates: ["19920923", "19920924"]
+
+denial:
+  description: Calvin uses denial to dodge homework and baths.
+  dates: ["19920928", "19920929", "19920930"]
+
+football:
+  description: Calvin and Hobbes squabble over a football.
+  dates: ["19921023", "19921024", "19921025"]
+
+#TODO review (removed 19921029)
+recess:
+  description: Calvin enjoys his routine at school recess.
+  dates: ["19921026", "19921027", "19921028"]
+
+footballagain:
+  description: Calvin fumbles and flubs football again.
+  dates: ["19921030", "19921031"]
+
+mysterypal:
+  description: Calvin gets coded hate mail that turns out to be from Hobbes.
+  dates:
+    [
+      "19921102",
+      "19921103",
+      "19921104",
+      "19921105",
+      "19921106",
+      "19921107",
+      "19921109",
+      "19921110",
+      "19921111",
+      "19921112",
+      "19921113",
+      "19921114",
+    ]
+
+#TODO review (added 19921211)
+santaletters:
+  description: Calvin writes manipulative letters to Santa.
+  dates: ["19921208", "19921209", "19921210", "19921211"]
+
+goodforsanta:
+  description: Calvin tries to be good to impress Santa.
+  dates: ["19921217", "19921218", "19921219", "19921220", "19921221", "19921222", "19921223", "19921224"]
+
+coldschool:
+  description: Calvin refuses to get out of bed and dreads school.
+  dates: ["19930104", "19930105", "19930106"]
+
+stupendoustest:
+  description: Stupendous Man takes over Calvin's history test after Calvin gets stuck in his locker.
+  dates:
+    [
+      "19930222",
+      "19930223",
+      "19930224",
+      "19930225",
+      "19930226",
+      "19930227",
+      "19930301",
+      "19930302",
+      "19930303",
+      "19930304",
+      "19930305",
+      "19930306",
+    ]
+
+safetyposter:
+  description: Calvin enters a school traffic safety poster contest with a gory poster.
+  dates:
+    [
+      "19930426",
+      "19930427",
+      "19930428",
+      "19930429",
+      "19930430",
+      "19930501",
+      "19930503",
+      "19930504",
+      "19930505",
+      "19930506",
+      "19930507",
+      "19930508",
+    ]
+
+wormsnickel:
+  description: Calvin tries to eat five worms for Susie's nickel until Mom stops him.
+  dates: ["19930517", "19930518", "19930519", "19930520", "19930521", "19930522"]
+
+bigpicture:
+  description: Calvin complains that nobody likes people who see the big picture.
+  dates: ["19930601", "19930602"]
+
+answeringmachine:
+  description: After Calvin hangs up on a caller, Mom wants an answering machine.
+  dates: ["19930609", "19930610"]
+
+powerfulcomputer:
+  description: Calvin poses as the world's most powerful computer in a cardboard box.
+  dates: ["19930706", "19930707"]
+
+#TODO review (added 19930821)
+grosswaterballoons:
+  description: G.R.O.S.S. plots a fake-code water balloon ambush on Susie, which backfires.
+  dates:
+    [
+      "19930802",
+      "19930803",
+      "19930804",
+      "19930805",
+      "19930806",
+      "19930807",
+      "19930809",
+      "19930810",
+      "19930811",
+      "19930812",
+      "19930813",
+      "19930814",
+      "19930816",
+      "19930817",
+      "19930818",
+      "19930819",
+      "19930820",
+      "19930821",
+    ]
+
+bikebattle:
+  description: Calvin battles his bicycle, which he is convinced is out to get him.
+  dates: ["19930830", "19930831", "19930901", "19930902"]
+
+attitudeads:
+  description: Calvin sees that commercials sell attitude rather than products.
+  dates: ["19931011", "19931012"]
+
+euphoria:
+  description: Calvin refuses mere happiness and demands euphoria.
+  dates: ["19931020", "19931021"]
+
+contracts:
+  description: Calvin makes Moe, Dad, Miss Wormwood, Susie, and Hobbes sign contracts.
+  dates: ["19931025", "19931026", "19931027", "19931028", "19931029"]
+
+fatherbook:
+  description: Dad claims fathers get a book that explains everything.
+  dates: ["19931030", "19931101"]
+
+enhanceotron:
+  description: Calvin enlarges his brain with a thinking cap to write a tyrannosaur report.
+  dates:
+    [
+      "19931115",
+      "19931116",
+      "19931117",
+      "19931118",
+      "19931119",
+      "19931120",
+      "19931122",
+      "19931123",
+      "19931124",
+      "19931125",
+      "19931126",
+      "19931127",
+      "19931128",
+      "19931129",
+      "19931130",
+      "19931201",
+      "19931202",
+      "19931203",
+      "19931204",
+    ]
+
+santascheme:
+  description: Calvin writes complaining, scheming letters to Santa.
+  dates: ["19931214", "19931215", "19931216"]
+
+#TODO review (merged into snowballrestraint)
+# slushballtemptation:
+#   description: Calvin resists snowballing Susie so Santa will still bring presents.
+#   dates: ["19931217", "19931218", "19931219"]
+
+#TODO review (merge of slushballtemptation + snowballhoard)
+snowballrestraint:
+  description: Calvin struggles not to throw snowballs before Christmas.
+  dates: ["19931217", "19931218", "19931219", "19931220", "19931221", "19931222", "19931223", "19931224", "19931225"]
+
+#TODO review (merged into snowballrestraint)
+# snowballhoard:
+#   description: Calvin hoards snowballs and fights the urge to throw them before Christmas.
+#   dates: ["19931220", "19931221", "19931222", "19931223", "19931224", "19931225"]
+
+plymouthtest:
+  description: Calvin sasses his way through a Plymouth Rock history test.
+  dates: ["19940127", "19940128"]
+
+repeating:
+  description: Calvin repeats everything Hobbes says to annoy him until Hobbes turns the tables.
+  dates: ["19940203", "19940204", "19940205"]
+
+mathnightmare:
+  description: Calvin dreams his homework burns, then dodges doing it through a snow day.
+  dates:
+    [
+      "19940307",
+      "19940308",
+      "19940309",
+      "19940310",
+      "19940311",
+      "19940312",
+      "19940314",
+      "19940315",
+      "19940316",
+      "19940317",
+      "19940318",
+      "19940319",
+    ]
+
+schoolweather:
+  description: Calvin complains about school on both gray and sunny days.
+  dates: ["19950116", "19950117"]
+
+loosetooth:
+  description: Calvin loses a baby tooth and schemes for tooth fairy money.
+  dates: ["19950206", "19950207"]
+
+scents:
+  description: Calvin and Hobbes discuss smells and animal words for them.
+  dates: ["19950213", "19950214"]
+
+viciousball:
+  description: Calvin is attacked by a baseball with teeth.
+  dates: ["19950314", "19950315"]
+
+susiestays:
+  description: Susie must stay at Calvin's house, and he plots to trap her.
+  dates:
+    [
+      "19950320",
+      "19950321",
+      "19950322",
+      "19950323",
+      "19950324",
+      "19950325",
+      "19950327",
+      "19950328",
+      "19950329",
+      "19950330",
+      "19950331",
+      "19950401",
+    ]
+
+futureletters:
+  description: Calvin receives letters he wrote to his future self.
+  dates: ["19950419", "19950420"]
+
+chewingfitness:
+  description: Calvin reads Chewing magazine about fitness and gear for gum chewing.
+  dates: ["19950424", "19950425", "19950426", "19950427"]
+
+#TODO review loose gags?
+bubbles:
+  description: Calvin blows soap bubbles that behave oddly.
+  dates: ["19950515", "19950520"]
+
+biteball:
+  description: Calvin's baseball bites his glove and bat.
+  dates: ["19950516", "19950517", "19950518", "19950519"]
+
+kneecapper:
+  description: Calvin and Susie dread their rumored-deadly substitute teacher.
+  dates: ["19950529", "19950530"]
+
+bikelesson:
+  description: Dad teaches a terrified Calvin to ride a bicycle.
+  dates: ["19950619", "19950620", "19950621", "19950622", "19950623", "19950624", "19950625"]
+
+librarybook:
+  description: Calvin gives Hobbes a library book, then reads it himself.
+  dates: ["19950703", "19950704", "19950705", "19950706"]
+
+postmodernist:
+  description: Calvin pontificates about art as a suburban post-modernist.
+  dates: ["19950713", "19950714", "19950715"]
+
+popculture:
+  description: Calvin rants about violence in popular culture.
+  dates: ["19950724", "19950725", "19950726"]
+
+waterballoons:
+  description: Calvin tries to hide water balloons from Susie and Hobbes.
+  dates: ["19950814", "19950815"]
+
+rosalyncalvinball:
+  description: Rosalyn babysits and plays Calvinball with Calvin.
+  dates:
+    [
+      "19950904",
+      "19950905",
+      "19950906",
+      "19950907",
+      "19950908",
+      "19950909",
+      "19950911",
+      "19950912",
+      "19950913",
+      "19950914",
+      "19950915",
+      "19950916",
+    ]
+
+groceries:
+  description: Dad rants about too many grocery product choices.
+  dates: ["19950920", "19950921"]
+
+leafcollection:
+  description: Calvin trades Earth to aliens for a leaf collection.
+  dates:
+    [
+      "19951002",
+      "19951003",
+      "19951004",
+      "19951005",
+      "19951006",
+      "19951007",
+      "19951009",
+      "19951010",
+      "19951011",
+      "19951012",
+      "19951013",
+      "19951014",
+      "19951016",
+      "19951017",
+      "19951018",
+      "19951019",
+      "19951020",
+      "19951021",
+    ]
+
+babypictures:
+  description: Calvin looks at his baby photos with Hobbes.
+  dates: ["19951117", "19951118"]
+
+santaplea:
+  description: Calvin writes letters to Santa and tries to seem good.
+  dates: ["19951205", "19951206", "19951207", "19951208", "19951209"]
+
+snowballstockpile:
+  description: Calvin boasts about his huge snowball stockpile.
+  dates: ["19951212", "19951213"]
+
+aliensreturn:
+  description: The aliens return to protest Earth's snowy winters.
+  dates: ["19951219", "19951220", "19951221", "19951222", "19951223"]
