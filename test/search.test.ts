@@ -1041,3 +1041,71 @@ test("a filter over the books a strip was printed in", () => {
 		registerVocabulary("in", () => []);
 	}
 });
+
+test("a quoted phrase must be said as written, in order and side by side", () => {
+	install(buildArchive(DATED));
+	const dates = (query: string) => search(query, "date").map((result) => result.comic.date);
+	assert.deepEqual(dates('"snow goons"'), ["1989-08-03"]);
+	assert.deepEqual(dates("“Snow Goons”"), ["1989-08-03"]);
+	assert.deepEqual(dates('"goons snow"'), []);
+	assert.deepEqual(dates('"snow the march"'), []);
+	// Punctuation between the words is not part of what was said.
+	install(buildArchive([{ date: "2000-01-01", transcript: "Clean your room, Calvin!" }]));
+	assert.deepEqual(dates('"room calvin"'), ["2000-01-01"]);
+});
+
+test("a quoted word is not extended, inflected, or corrected", () => {
+	install(buildArchive(DATED));
+	const dates = (query: string) => search(query, "date").map((result) => result.comic.date);
+	assert.deepEqual(dates("goon"), ["1989-08-03"]);
+	assert.deepEqual(dates('"goon"'), []);
+	assert.deepEqual(dates("tigar"), ["1988-08-03"]);
+	assert.deepEqual(dates('"tigar"'), []);
+	assert.deepEqual(dates('"tiger"'), ["1988-08-03"]);
+	// The same word unquoted beside the phrase still reaches as far as it ever did.
+	assert.deepEqual(dates('"snow goons" goon'), ["1989-08-03"]);
+});
+
+test("a quoted phrase finds a compound spelled the other way", () => {
+	install(buildArchive(DATED));
+	const dates = (query: string) => search(query, "date").map((result) => result.comic.date);
+	assert.deepEqual(dates('"snow man"'), ["1989-08-03"]);
+	install(buildArchive([{ date: "2000-01-01", transcript: "Look at my snow man!" }]));
+	assert.deepEqual(dates('"snowman"'), ["2000-01-01"]);
+});
+
+test("only the phrase is highlighted, common words and all", () => {
+	install(buildArchive(DATED));
+	const [result] = search('"on the march"', "rank");
+	assert.deepEqual(highlightRanges(result.text, result.ranges).match(/<mark[^>]*>[^<]*<\/mark>/g), [
+		"<mark>on</mark>",
+		"<mark>the</mark>",
+		"<mark>march</mark>",
+	]);
+});
+
+test("a quoted date is text, not a date", () => {
+	install(buildArchive(DATED));
+	for (const query of ['"august 3 1988"', '"1988-08-03"', "“1988/8/3”", '"1988', '"august" 1988']) {
+		assert.deepEqual(
+			search(query, "rank").filter((result) => result.source === "date"),
+			[],
+			query,
+		);
+	}
+	assert.deepEqual(
+		search('"1988"', "rank").map((result) => [result.comic.date, result.source]),
+		[["1988-10-27", "transcript"]],
+	);
+});
+
+test("@not takes a quoted phrase whole", () => {
+	install(buildArchive(DATED));
+	const dates = (query: string) => search(query, "date").map((result) => result.comic.date);
+	const keeps = (query: string) => dates(query).includes("1989-08-03");
+	assert.ok(keeps("march"));
+	assert.ok(!keeps('march @not "snow goons"'));
+	assert.ok(keeps('march @not "goons snow"'), "the words are there, but not as that phrase");
+	assert.ok(!keeps('march @not "snow man"'), "the description's snowman is the phrase");
+	assert.ok(keeps('march @not "snowmen"'), "and a quoted word is not inflected");
+});

@@ -792,3 +792,25 @@ test("painting the operators", async (suite) => {
 		assert.deepEqual(spans("@orange @nothing|"), []);
 	});
 });
+
+test("quotation marks", async (suite) => {
+	await suite.test("there is no menu inside a quotation", () => {
+		assert.equal(at('"rosalyn @|'), null);
+		assert.equal(at('"rosalyn @o|r baby"'), null);
+		assert.equal(at("“snow @ye|"), null);
+	});
+
+	await suite.test("the menu comes back outside one", () => {
+		assert.deepEqual(names('"rosalyn" @o|'), ["or"]);
+		assert.deepEqual(names('"rosalyn"@o|'), ["or"]);
+	});
+
+	await suite.test("nothing inside a quotation is painted", () => {
+		assert.deepEqual(spans('"rosalyn @or baby @year:1988"'), []);
+		assert.deepEqual(spans('"rosalyn @or baby @year:1988|'), []);
+		assert.deepEqual(spans('"rosalyn" @or "baby" @year:1988'), [
+			["match", "@or"],
+			["match", "@year:1988"],
+		]);
+	});
+});

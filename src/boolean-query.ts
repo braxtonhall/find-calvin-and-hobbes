@@ -1,4 +1,4 @@
-import { Filter, FilterMatch, Run, passesFilter, scanFilters } from "./filter-query";
+import { Filter, FilterMatch, QuotedSpan, Run, passesFilter, quoted, quotedSpans, scanFilters } from "./filter-query";
 import { Comic } from "./types";
 
 /**
@@ -23,8 +23,12 @@ import { Comic } from "./types";
  *   @year:1989` is nothing.
  *
  * The parse is lenient, because it runs on every keystroke and a reader halfway through typing is
- * not wrong: an unclosed parenthesis closes at the end, a stray one is dropped, and an operator
- * with nothing to work on is ignored.
+ * not wrong: an unclosed parenthesis or quotation closes at the end, a stray parenthesis is dropped,
+ * and an operator with nothing to work on is ignored.
+ *
+ * A quotation is one atom, a phrase, and everything in it is text: `"rosalyn @or baby"` is the
+ * words `rosalyn or baby` in that order, not a choice between two of them. So `@not "baby sitter"`
+ * is anything that does not say baby sitter, where `@not baby sitter` is sitter without baby.
  *
  * What comes out is not a tree. A query is distributed into an OR of plain queries — branches —
  * each of which is exactly what a query was before any of this: words, ranked together as one
@@ -35,7 +39,11 @@ import { Comic } from "./types";
  * what it returns.
  */
 
-/** A word, or a run of anything that is not an operator, a filter, a parenthesis or a space. */
+/**
+ * A word, or a run of anything that is not an operator, a filter, a parenthesis or a space — or a
+ * quoted phrase, held with its marks straightened and closed so that `search.ts` can tell the two
+ * apart: `"baby sitter"`.
+ */
 interface TextLeaf {
 	kind: "text";
 	text: string;
@@ -54,6 +62,9 @@ type Leaf = TextLeaf | FilterLeaf;
 type Node = Leaf | { kind: "and" | "or"; items: Node[] } | { kind: "not"; item: Node };
 
 type Token = Leaf | { kind: "open" } | { kind: "close" } | { kind: "operator"; operator: Operator };
+
+/** A quotation with nothing in it: found, so its marks are not taken for text, and then dropped. */
+type Gap = { kind: "empty" };
 
 type Operator = "and" | "or" | "not";
 
@@ -98,29 +109,58 @@ export interface Branch {
 	clauses: Constraint[][];
 }
 
+/**
+ * Where the operators are: every `@and`, `@or` and `@not` that is not part of a filter's value or
+ * between quotation marks.
+ */
+function operatorMatches(text: string, filters: FilterMatch[], quotes: QuotedSpan[]) {
+	return [...text.matchAll(OPERATOR_PATTERN)].filter(
+		(match) =>
+			!quoted(quotes, match.index) &&
+			!filters.some((filter) => match.index >= filter.start && match.index < filter.end),
+	);
+}
+
+/**
+ * The phrase between a pair of quotation marks, as the atom `TextLeaf` describes, or null for one
+ * with nothing in it to look for — `""`, or `"  "` — which is dropped as an empty `()` is.
+ */
+function phraseText(inner: string): string | null {
+	const words = inner.trim().split(/\s+/).join(" ");
+	return words === "" ? null : `"${words}"`;
+}
+
 function tokenize(text: string): Token[] {
 	const filters = scanFilters(text);
+	const quotes = quotedSpans(text);
 	const inFilter = (index: number) => filters.some((match) => index >= match.start && index < match.end);
 
 	interface Span {
 		start: number;
 		end: number;
-		token: Token;
+		token: Token | Gap;
 	}
 	const spans: Span[] = filters.map((match) => ({
 		start: match.start,
 		end: match.end,
 		token: { kind: "filter", match, position: 0 },
 	}));
-	OPERATOR_PATTERN.lastIndex = 0;
-	for (let match = OPERATOR_PATTERN.exec(text); match !== null; match = OPERATOR_PATTERN.exec(text)) {
-		if (inFilter(match.index)) continue;
+	for (const match of operatorMatches(text, filters, quotes)) {
 		const operator = match[1].toLowerCase() as Operator;
 		spans.push({ start: match.index, end: match.index + match[0].length, token: { kind: "operator", operator } });
 	}
 	for (const match of text.matchAll(/[()]/g)) {
-		if (inFilter(match.index)) continue;
+		if (inFilter(match.index) || quoted(quotes, match.index)) continue;
 		spans.push({ start: match.index, end: match.index + 1, token: { kind: match[0] === "(" ? "open" : "close" } });
+	}
+	for (const quote of quotes) {
+		const phrase = phraseText(quote.inner);
+		// Still a span when it is empty, so that its marks are not read as a word of their own.
+		spans.push({
+			start: quote.start,
+			end: quote.end,
+			token: phrase === null ? { kind: "empty" } : { kind: "text", text: phrase, position: 0 },
+		});
 	}
 	spans.sort((one, other) => one.start - other.start);
 
@@ -138,7 +178,8 @@ function tokenize(text: string): Token[] {
 		const { token } = span;
 		// A parenthesis takes no position, so it never separates two words: in
 		// `(rosalyn @or baby) sitter`, `baby sitter` is still a phrase the reader wrote.
-		if (token.kind === "filter") token.position = position++;
+		if (token.kind === "empty") continue;
+		if (token.kind === "filter" || token.kind === "text") token.position = position++;
 		if (token.kind === "operator") position++;
 		tokens.push(token);
 	}
@@ -403,10 +444,7 @@ export function scanOperators(text: string): OperatorMatch[] {
 
 	// `tokenize` keeps no offsets, so the operators are found again in the text, in the same order.
 	const found: OperatorMatch[] = [];
-	const filters = scanFilters(text);
-	const offsets = [...text.matchAll(OPERATOR_PATTERN)].filter(
-		(match) => !filters.some((filter) => match.index >= filter.start && match.index < filter.end),
-	);
+	const offsets = operatorMatches(text, scanFilters(text), quotedSpans(text));
 	let next = 0;
 	for (const [index, token] of tokens.entries()) {
 		if (token.kind !== "operator") continue;
