@@ -286,6 +286,8 @@ interface FieldHits {
 interface CompoundQuery {
 	parts: string[];
 	start: number;
+	/** The reader quoted it, so every word of every occurrence is highlighted — see `matchRanges`. */
+	quoted?: true;
 }
 
 interface Summary {
@@ -840,16 +842,34 @@ function orderedSubsequence(order: number[], hits: FieldHits, breaks: Set<number
 	return { lcs: previous[columns], run };
 }
 
-function matchRanges(field: IndexedField, hits: FieldHits, expansions: Expansion[], floor: number): HighlightRange[] {
+/**
+ * `phrases` are the quoted runs, highlighted whole wherever the field says them. Their words cannot
+ * be left to the hits: a description expansion drops a common word before it can be one, and the
+ * floor here would drop it from a transcript, so `"in the yard"` would light up as `yard` alone —
+ * when the phrase, not its rarest word, is what the reader needs to see matched.
+ */
+function matchRanges(
+	field: IndexedField,
+	hits: FieldHits,
+	expansions: Expansion[],
+	floor: number,
+	phrases: CompoundQuery[],
+): HighlightRange[] {
 	const anyAboveFloor = expansions.some((expansion) => expansion.rarity >= floor);
 	const ranges: HighlightRange[] = [];
 	const byStart = new Map<number, number>();
 
+	for (const phrase of phrases) {
+		for (const position of compoundSequencePositions(field, phrase.parts)) {
+			const start = field.starts[position];
+			if (byStart.has(start)) continue;
+			byStart.set(start, ranges.length);
+			ranges.push([start, field.ends[position], true]);
+		}
+	}
+
 	for (let index = 0; index < hits.positions.length; index++) {
-		// A quoted word is highlighted however common it is: it is part of the phrase the reader
-		// asked for, and the phrase is what has to be seen to have matched.
-		const expansion = expansions[hits.terms[index]];
-		if (anyAboveFloor && !expansion.verbatim && expansion.rarity < floor) continue;
+		if (anyAboveFloor && expansions[hits.terms[index]].rarity < floor) continue;
 		const position = hits.positions[index];
 		// Deduped on the span rather than the position: both halves of a split compound sit
 		// at different positions but cover the same characters, and would emit it twice.
@@ -864,7 +884,7 @@ function matchRanges(field: IndexedField, hits: FieldHits, expansions: Expansion
 		ranges.push([start, field.ends[position], hits.literal[index]]);
 	}
 
-	return ranges;
+	return ranges.sort((one, other) => one[0] - other[0]);
 }
 
 function scoreTranscript(
@@ -894,7 +914,13 @@ function scoreTranscript(
 	return {
 		strength: summary.base / summary.ceiling / lengthPivot(field, corpus, tuning.transcriptLengthNormalization),
 		multiplier: 1 + tuning.sequenceWeight * (lcs / order.length) + tuning.runWeight * proportionalRun ** 2,
-		ranges: matchRanges(field, hits, expansions, tuning.transcriptIdfFloor),
+		ranges: matchRanges(
+			field,
+			hits,
+			expansions,
+			tuning.transcriptIdfFloor,
+			compoundQueries.filter((query) => query.quoted),
+		),
 	};
 }
 
@@ -924,7 +950,13 @@ function scoreDescription(
 
 	return {
 		score: summary.base / summary.ceiling / lengthPivot(field, corpus, tuning.descriptionLengthNormalization),
-		ranges: matchRanges(field, hits, expansions, tuning.descriptionIdfFloor),
+		ranges: matchRanges(
+			field,
+			hits,
+			expansions,
+			tuning.descriptionIdfFloor,
+			compoundQueries.filter((query) => query.quoted),
+		),
 	};
 }
 
@@ -1139,7 +1171,7 @@ function searchText(segments: string[], residual: string, tuning: Tuning): Searc
 			sequenceOffset += parts.length;
 			return parts;
 		});
-		if (phrase && words.length > 0) compoundQueries.push({ parts: words, start });
+		if (phrase && words.length > 0) compoundQueries.push({ parts: words, start, quoted: true });
 		for (const word of words) (phrase ? quotedTerms : looseTerms).add(word);
 		return words;
 	};

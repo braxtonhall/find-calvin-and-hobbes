@@ -58,6 +58,7 @@ export const SUGGESTED_QUERIES: readonly string[] = [
 	"water balloon",
 	"calvinball",
 	"waiting for the school bus",
+	'rosalyn @or "baby sitter"',
 	"@month:december @day:24 @is:sunday",
 	"november 18 1985",
 	"@is:sunday snowman",

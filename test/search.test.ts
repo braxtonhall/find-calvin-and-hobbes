@@ -1084,6 +1084,25 @@ test("only the phrase is highlighted, common words and all", () => {
 	]);
 });
 
+test("a quoted phrase in a description is highlighted whole, common words and all", () => {
+	install(
+		buildArchive([
+			{
+				date: "1989-08-03",
+				transcript: "Snow goons are on the march.",
+				description: "Calvin builds a snowman in the yard.",
+			},
+		]),
+	);
+	const [result] = search('"in the yard"', "rank");
+	assert.equal(result.source, "description");
+	assert.deepEqual(highlightRanges(result.text, result.ranges).match(/<mark[^>]*>[^<]*<\/mark>/g), [
+		"<mark>in</mark>",
+		"<mark>the</mark>",
+		"<mark>yard</mark>",
+	]);
+});
+
 test("a quoted date is text, not a date", () => {
 	install(buildArchive(DATED));
 	for (const query of ['"august 3 1988"', '"1988-08-03"', "“1988/8/3”", '"1988', '"august" 1988']) {
