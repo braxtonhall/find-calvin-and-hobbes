@@ -24,11 +24,26 @@ transcript). Reruns only appear in results when the search asks for `@is:rerun`,
 date one ran.
 
 Different filters narrow. Repeating a filter widens where a strip can have only one value for it —
-`@day:saturday @day:sunday` is the weekend, and `@year:1988 @year:1989` is either year — and narrows
-where it can have several: `@in:book1 @in:book3` is the strips printed in both books, and
-`@is:sunday @is:rerun` is the Sundays that ran again. `@day:1 @day:monday` is the Mondays that fell
+`@day:saturday @day:sunday` is the weekend, and `@year:1988 @year:1989` is either year — and for
+books, which mostly share no strips: `@in:book1 @in:book3` is the strips printed in either book
+(`@in:book1 @and @in:book3` is both). Writing `@or` between some of them changes nothing:
+`@year:1988 @or @year:1989 @year:1990` is any of the three years. Repeating a tag narrows: `@is:sunday @is:rerun` is the Sundays
+that ran again. `@day:1 @day:monday` is the Mondays that fell
 on the first, because a day of the month and a day of the week are different things. Filters combine
 with ordinary words, so `@year:1988 snowman` searches 1988 alone.
+
+Three operators combine words and filters, tightest first:
+
+| Operator | Example                         | Meaning                                        |
+| -------- | ------------------------------- | ---------------------------------------------- |
+| `@not`   | `snowman @not @is:sunday`       | without the next word, filter, or `(group)`    |
+| `@or`    | `@day:saturday @or @day:sunday` | either the word, filter or `(group)` each side |
+| `@and`   | `@year:1988 @and @month:8`      | both — a space, without the widening above     |
+
+So `rosalyn @or baby sitter` is `(rosalyn @or baby) sitter`; the phrase needs parentheses,
+`rosalyn @or (baby sitter)`. `@not baby sitter` is sitter without baby, and `@not (baby sitter)` is
+anything without both. A word under `@not` is matched literally, in any inflection, rather than
+searched for.
 
 `@in:` takes a book's id rather than its title, because a filter value takes no spaces. Type `@in:`
 and the menu lists every book the archive indexes with its title beside it, so `@in:book3` is _Yukon

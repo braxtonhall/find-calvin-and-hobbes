@@ -3,7 +3,8 @@ import { state } from "./state";
 import { COMPOUND_RELATIONS } from "./compounds";
 import { stem } from "./stem";
 import { DateExpression, DatePrecision, matchesExpression, parseDateExpression } from "./date-query";
-import { QueryFilters, Run, parseQueryFilters, passesFilters } from "./filter-query";
+import { Run } from "./filter-query";
+import { Branch, admits, asksForReruns, constrains, parseQuery } from "./boolean-query";
 
 export type HighlightRange = [number, number, boolean];
 
@@ -238,6 +239,8 @@ interface IndexedComic {
 	comic: Comic;
 	transcripts: IndexedField[];
 	description: IndexedField | null;
+	/** The stem of every word in every field, made the first time a word under `@not` asks. */
+	stems?: Set<string>;
 }
 
 interface Corpus {
@@ -306,6 +309,10 @@ interface TranscriptMatch {
 }
 
 let indexedComics: IndexedComic[] = [];
+// A row's strip, for the questions only the index can answer. A rerun row is a copy of its strip
+// under another date, so it is found by the date it first ran on instead — see `indexedFor`.
+let indexedByComic = new Map<Comic, IndexedComic>();
+let indexedDailies = new Map<string, IndexedComic>();
 let indexedSource: Comic[] | null = null;
 let indexedDescriptions: Map<string, string> | null = null;
 let transcriptCorpus = emptyCorpus("transcript");
@@ -412,6 +419,8 @@ function ensureIndex(): void {
 	indexedSource = state.comics;
 	indexedDescriptions = state.descriptions;
 	indexedComics = [];
+	indexedByComic = new Map();
+	indexedDailies = new Map();
 	transcriptCorpus = emptyCorpus("transcript");
 	descriptionCorpus = emptyCorpus("description");
 	expansionCache.clear();
@@ -433,7 +442,10 @@ function ensureIndex(): void {
 			descriptionFields.push([description]);
 		}
 
-		indexedComics.push({ comic, transcripts, description });
+		const indexed = { comic, transcripts, description };
+		indexedComics.push(indexed);
+		indexedByComic.set(comic, indexed);
+		if (!comic.id) indexedDailies.set(comic.date, indexed);
 	}
 
 	indexInflections(transcriptCorpus);
@@ -954,38 +966,11 @@ export function search(
 		cachedTuning = tuning;
 	}
 
-	const loweredQuery = trimmed.toLowerCase();
-	const { filters, residual, segments } = parseQueryFilters(loweredQuery);
-	// The rerun days a search may show. The library's search is over rows it holds, rerun days
-	// among them; the archive's shows a rerun day only where the reader asked about reruns — or,
-	// below, named its exact date.
-	const rerunDays = within ?? (filters?.tags.has("rerun") ? new Set(state.reruns.keys()) : null);
-
-	let results: SearchResult[];
-	if (residual === "") {
-		// Filters with nothing left to search: the filter is the whole query, so everything that
-		// passes it is a result. Beside `@is:rerun`, which brings the rerun days in to be judged, this
-		// is the only place a filter produces a row instead of removing one.
-		results = filterOnlyResults(filters!);
-		if (rerunDays !== null) results.push(...filteredReruns(filters!, rerunDays));
-	} else {
-		results = searchText(segments, residual, tuning);
-		// Implicit date search is all or nothing: `parseDateExpression` returns null unless the whole
-		// residual is a date, so the text query is never rewritten and the coverage arithmetic in
-		// `rankedSearch` never sees a stray year or day number.
-		const expression = parseDateExpression(residual);
-		if (expression !== null) results = withDateMatches(results, expression, tuning);
-		// Before the filters, so that they judge a rerun by the date it ran again on, as its row shows.
-		if (rerunDays !== null) results = withReruns(results, rerunDays);
-		// Filters restrict the finished set. Applied before the union, they would let a date match
-		// through that the reader had explicitly excluded.
-		if (filters !== null) {
-			const originals = rerunOriginals();
-			results = results.filter((result) =>
-				passesFilters(result.comic, filters, runOf(result.comic, result.rerun === true, originals)),
-			);
-		}
-	}
+	const branches = parseQuery(trimmed.toLowerCase());
+	let results = union(
+		branches.map((branch) => searchBranch(branch, tuning, within)),
+		tuning,
+	);
 
 	if (within !== null) results = results.filter((result) => within.has(result.comic.date));
 
@@ -998,6 +983,100 @@ export function search(
 	}
 
 	return results;
+}
+
+/**
+ * One plain query — see `Branch` — searched as every query was before `@or` existed.
+ */
+function searchBranch(branch: Branch, tuning: Tuning, within: Set<string> | null): SearchResult[] {
+	const residual = branch.segments.join(" ");
+	// The rerun days a search may show. The library's search is over rows it holds, rerun days
+	// among them; the archive's shows a rerun day only where the reader asked about reruns — or,
+	// below, named its exact date.
+	const rerunDays = within ?? (asksForReruns(branch) ? new Set(state.reruns.keys()) : null);
+
+	if (residual === "") {
+		// Filters with nothing left to search: the filter is the whole query, so everything that
+		// passes it is a result. Beside `@is:rerun`, which brings the rerun days in to be judged, this
+		// is the only place a filter produces a row instead of removing one. A branch with neither
+		// words nor anything to judge by would be the whole archive, which nobody asked for.
+		if (!constrains(branch)) return [];
+		const results = filterOnlyResults(branch);
+		if (rerunDays !== null) results.push(...filteredReruns(branch, rerunDays));
+		return results;
+	}
+
+	let results = searchText(branch.segments, residual, tuning);
+	// Implicit date search is all or nothing: `parseDateExpression` returns null unless the whole
+	// residual is a date, so the text query is never rewritten and the coverage arithmetic in
+	// `rankedSearch` never sees a stray year or day number.
+	const expression = parseDateExpression(residual);
+	if (expression !== null) results = withDateMatches(results, expression, tuning);
+	// Before the filters, so that they judge a rerun by the date it ran again on, as its row shows.
+	if (rerunDays !== null) results = withReruns(results, rerunDays);
+	// Filters restrict the finished set. Applied before the union, they would let a date match
+	// through that the reader had explicitly excluded.
+	if (constrains(branch)) {
+		const originals = rerunOriginals();
+		results = results.filter((result) =>
+			admitsRow(branch, result.comic, runOf(result.comic, result.rerun === true, originals)),
+		);
+	}
+	return results;
+}
+
+/**
+ * Every row any branch found, once. A row two branches both found is scored the way two kinds of
+ * evidence for one strip always are here — the better score, plus a share of the others — and shows
+ * whatever its best branch found in it. Folded best first, so the order the branches were written
+ * in does not move a score.
+ */
+function union(branches: SearchResult[][], tuning: Tuning): SearchResult[] {
+	if (branches.length === 1) return branches[0];
+	const found = new Map<string, SearchResult[]>();
+	for (const results of branches) {
+		for (const result of results) {
+			const key = `${result.comic.date}|${result.comic.id ?? ""}|${result.rerun === true}`;
+			const rows = found.get(key);
+			if (rows === undefined) found.set(key, [result]);
+			else rows.push(result);
+		}
+	}
+	return [...found.values()].map((rows) => {
+		const [best, ...rest] = rows.sort((one, other) => other.score - one.score);
+		let score = best.score;
+		for (const row of rest) score = Math.max(score, row.score) + tuning.agreementBonus * Math.min(score, row.score);
+		return { ...best, score };
+	});
+}
+
+/** The index's entry for a row's strip: the strip itself, or for a rerun row the strip it reran. */
+function indexedFor(comic: Comic): IndexedComic | undefined {
+	const indexed = indexedByComic.get(comic);
+	if (indexed !== undefined) return indexed;
+	const original = state.reruns.get(comic.date);
+	return original === undefined ? undefined : indexedDailies.get(original);
+}
+
+/**
+ * Whether the row's strip says every word of the text, in any field and in any inflection — the
+ * literal question a word under `@not` asks, as `Constraint` explains. Text with no words in it says
+ * nothing that could be absent, so no row contains it.
+ */
+function containsText(indexed: IndexedComic | undefined, text: string): boolean {
+	const words = [...text.matchAll(WORD_PATTERN)].map((match) => stem(match[0].toLowerCase()));
+	if (indexed === undefined || words.length === 0) return false;
+	if (indexed.stems === undefined) {
+		indexed.stems = new Set();
+		for (const field of [...indexed.transcripts, ...(indexed.description ? [indexed.description] : [])]) {
+			for (const word of [...field.sourceWords, ...field.words]) indexed.stems.add(stem(word));
+		}
+	}
+	return words.every((word) => indexed.stems!.has(word));
+}
+
+function admitsRow(branch: Branch, comic: Comic, run: Run | undefined): boolean {
+	return admits(branch, comic, run, (text) => containsText(indexedFor(comic), text));
 }
 
 /**
@@ -1104,11 +1183,11 @@ function runOf(comic: Comic, rerun: boolean, originals: Set<string>): Run | unde
 	return undefined;
 }
 
-function filterOnlyResults(filters: QueryFilters): SearchResult[] {
+function filterOnlyResults(branch: Branch): SearchResult[] {
 	const results: SearchResult[] = [];
 	const originals = rerunOriginals();
 	for (const indexed of indexedComics) {
-		if (!passesFilters(indexed.comic, filters, runOf(indexed.comic, false, originals))) continue;
+		if (!admitsRow(branch, indexed.comic, runOf(indexed.comic, false, originals))) continue;
 		// Every row ties, and `assignTiers` normalises on the top score, so the number only has to
 		// be positive; `broad` is the honest one, because a filter restricts rather than ranks.
 		//
@@ -1187,12 +1266,12 @@ function withReruns(results: SearchResult[], within: Set<string>): SearchResult[
 }
 
 /** The rerun days in `within` that a filter-only query lets through, which `filterOnlyResults` never visits. */
-function filteredReruns(filters: QueryFilters, within: Set<string>): SearchResult[] {
+function filteredReruns(branch: Branch, within: Set<string>): SearchResult[] {
 	const results: SearchResult[] = [];
 	for (const [rerunDate, originalDate] of state.reruns) {
 		if (!within.has(rerunDate)) continue;
 		const rerun = rerunResult(rerunDate, originalDate, DATE_STRENGTH.broad, "filter");
-		if (rerun && passesFilters(rerun.comic, filters, "rerun")) results.push(rerun);
+		if (rerun && admitsRow(branch, rerun.comic, "rerun")) results.push(rerun);
 	}
 	return results;
 }
