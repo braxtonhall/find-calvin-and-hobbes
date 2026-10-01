@@ -33,11 +33,6 @@ const METRICS = [
 	"paddingRight",
 	"paddingBottom",
 	"paddingLeft",
-	"borderTopWidth",
-	"borderRightWidth",
-	"borderBottomWidth",
-	"borderLeftWidth",
-	"borderRadius",
 ] as const;
 
 /**
@@ -224,7 +219,7 @@ export function editQueryInput(input: HTMLInputElement, value: string, arriving 
 }
 
 export function attachQueryInput(input: HTMLInputElement): void {
-	if (input.parentElement?.classList.contains("query-box")) return;
+	if (input.parentElement?.classList.contains("query-scroll")) return;
 
 	// `renderLanding` rebuilds its input from scratch on every visit, so the widget it was attached
 	// to last time is now holding a detached node. Drop it here rather than waiting for a resize.
@@ -236,6 +231,8 @@ export function attachQueryInput(input: HTMLInputElement): void {
 	field.className = "query-field";
 	const box = document.createElement("div");
 	box.className = "query-box";
+	const scroller = document.createElement("div");
+	scroller.className = "query-scroll";
 	const highlights = document.createElement("div");
 	highlights.className = "query-highlights";
 	highlights.setAttribute("aria-hidden", "true");
@@ -246,7 +243,8 @@ export function attachQueryInput(input: HTMLInputElement): void {
 	note.setAttribute("role", "status");
 
 	input.replaceWith(field);
-	box.append(highlights, input);
+	scroller.append(highlights, input);
+	box.append(scroller);
 	field.append(box, note);
 
 	input.setAttribute("role", "combobox");
@@ -277,10 +275,61 @@ export function attachQueryInput(input: HTMLInputElement): void {
 	let focused = document.activeElement === input;
 	/** The broken pill the pointer is inside, which outranks the one the caret is inside. */
 	let hovered: HTMLElement | null = null;
+	/** Whether the mouse button went down on the input and has not come back up yet. */
+	let pressing = false;
 
 	function syncMetrics(): void {
 		const computed = getComputedStyle(input);
 		for (const property of METRICS) highlights.style[property] = computed[property];
+	}
+
+	/**
+	 * Make the input as wide as its text, which is what keeps it from scrolling inside itself.
+	 *
+	 * The mirror holds the same text in the same font, so its width is the measurement. The two
+	 * pixels spare are the caret's, at the very end: without them the input would scroll by that
+	 * much, out of step with the pills.
+	 */
+	function fitWidth(): void {
+		input.style.width = `${Math.ceil(highlights.getBoundingClientRect().width) + 2}px`;
+	}
+
+	/** Where the caret sits along the text, in the scroller's own coordinates. */
+	function caretX(): number {
+		const caret = input.selectionDirection === "backward" ? input.selectionStart : input.selectionEnd;
+		if (caret === null) return 0;
+		// Found in the mirror rather than the input, which keeps its glyph positions to itself.
+		const walker = document.createTreeWalker(highlights, NodeFilter.SHOW_TEXT);
+		let remaining = caret;
+		for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
+			const length = node.textContent!.length;
+			if (remaining > length) {
+				remaining -= length;
+				continue;
+			}
+			// Measured off a whole character either side rather than off a collapsed range, which
+			// some browsers answer with an empty rectangle.
+			if (length === 0) continue;
+			const range = document.createRange();
+			const start = remaining > 0 ? remaining - 1 : 0;
+			range.setStart(node, start);
+			range.setEnd(node, start + 1);
+			const rect = range.getBoundingClientRect();
+			const origin = highlights.getBoundingClientRect().left;
+			return (remaining > 0 ? rect.right : rect.left) - origin;
+		}
+		return 0;
+	}
+
+	/**
+	 * Scroll just far enough to keep the caret in view, which is what the input would have done for
+	 * itself had it been the thing scrolling.
+	 */
+	function followCaret(): void {
+		const x = caretX();
+		const room = scroller.clientWidth;
+		if (x < scroller.scrollLeft) scroller.scrollLeft = x;
+		else if (x + 2 > scroller.scrollLeft + room) scroller.scrollLeft = x + 2 - room;
 	}
 
 	function rowCount(): number {
@@ -327,8 +376,8 @@ export function attachQueryInput(input: HTMLInputElement): void {
 	function pillAt(x: number, y: number): HTMLElement | null {
 		// The pills are painted behind the input and take no pointer events of their own — they
 		// would otherwise swallow the clicks that place the caret — so the pointer is tested
-		// against their boxes by hand. Clipped by the mirror, which scrolls with the text.
-		const bounds = highlights.getBoundingClientRect();
+		// against their boxes by hand. Clipped by the scroller, which is where the text is cut off.
+		const bounds = scroller.getBoundingClientRect();
 		if (x < bounds.left || x > bounds.right || y < bounds.top || y > bounds.bottom) return null;
 		for (const pill of highlights.querySelectorAll<HTMLElement>(".query-pill--invalid")) {
 			const rect = pill.getBoundingClientRect();
@@ -365,14 +414,21 @@ export function attachQueryInput(input: HTMLInputElement): void {
 		updateTip();
 	}
 
-	function refresh(): void {
+	/**
+	 * `follow` says whether the caret may have moved somewhere out of view: by a key, or by an edit.
+	 * Not by the mouse, which can only put it somewhere the reader is looking — and which leaves
+	 * the caret at the right-hand end of a selection dragged leftwards, so following it would scroll
+	 * the box away the moment the button came up.
+	 */
+	function refresh(follow = true): void {
 		const text = input.value;
 		const caret = input.selectionStart;
 		completion = completionsAt(text, caret ?? text.length);
 
 		spans = filterSpans(text, writing ? caret : null);
 		highlights.innerHTML = paintHighlights(text, spans);
-		highlights.scrollLeft = input.scrollLeft;
+		fitWidth();
+		if (follow) followCaret();
 
 		const broken = spans.find((span) => span.kind === "invalid");
 		note.textContent = broken?.reason ?? "";
@@ -481,20 +537,56 @@ export function attachQueryInput(input: HTMLInputElement): void {
 		refresh();
 	});
 
-	input.addEventListener("click", refresh);
-	input.addEventListener("scroll", () => {
-		highlights.scrollLeft = input.scrollLeft;
-		updateTip();
+	// A selection dragged past the end of the text has the browser asking what is under the
+	// pointer, and an answer that is not the text — the landing page's submit button, sitting in
+	// the box's padding — snaps the selection to the far end. So for as long as the button is held,
+	// nothing else in the box is there to be found.
+	// The primary button only: the others raise a context menu, which keeps the `mouseup` for itself.
+	input.addEventListener("mousedown", (event) => {
+		if (event.button !== 0) return;
+		pressing = true;
+		box.classList.add("query-box--selecting");
+		window.addEventListener(
+			"mouseup",
+			() => {
+				pressing = false;
+				box.classList.remove("query-box--selecting");
+			},
+			{ once: true },
+		);
+	});
+
+	// A frame late, because a click inside a selection only collapses it after the click has been
+	// dispatched: read now, the caret is still the far end of the old selection, and the menu would
+	// be offering completions for somewhere the reader has just clicked away from.
+	input.addEventListener("click", () => requestAnimationFrame(() => refresh(false)));
+	scroller.addEventListener("scroll", updateTip);
+	// Never meant to happen, with the input as wide as its text; if a browser scrolls it anyway,
+	// the pills behind would be out of step with it.
+	input.addEventListener("scroll", () => (input.scrollLeft = 0));
+
+	// The padding either side of the scroller is still the box, and a click there should land in
+	// the input the way it would on an input with that padding of its own: at whichever end is
+	// nearer. The submit button on the landing page lives in that padding and handles itself.
+	box.addEventListener("mousedown", (event) => {
+		if (event.target !== box || event.button !== 0) return;
+		event.preventDefault();
+		const bounds = scroller.getBoundingClientRect();
+		const end = event.clientX > bounds.left + bounds.width / 2 ? input.value.length : 0;
+		input.focus({ preventScroll: true });
+		input.setSelectionRange(end, end);
+		refresh();
 	});
 
 	input.addEventListener("keyup", (event) => {
 		if (CARET_KEYS.has(event.key)) refresh();
 	});
 
-	// The caret scrolls the input after the keystroke's default action, not during it.
-	input.addEventListener("keydown", () => {
-		requestAnimationFrame(() => (highlights.scrollLeft = input.scrollLeft));
-	});
+	// The caret moves after the keystroke's default action, not during it. Keys only: a selection
+	// dragged by the mouse is left to the browser, which scrolls the scroller for it as it would
+	// any other, and following the caret on top of that runs away — every scroll slides more text
+	// under the held pointer, the selection grows to meet it, and the box races to the end.
+	input.addEventListener("keydown", () => requestAnimationFrame(followCaret));
 
 	field.addEventListener("mousemove", (event) => {
 		const pill = pillAt(event.clientX, event.clientY);
@@ -512,7 +604,9 @@ export function attachQueryInput(input: HTMLInputElement): void {
 	input.addEventListener("focus", () => {
 		focused = true;
 		owner = widget;
-		refresh();
+		// A click focuses the input before it places the caret, so the caret here is still the old
+		// one, and following it would scroll the text out from under the pointer.
+		refresh(!pressing);
 	});
 
 	input.addEventListener("blur", () => {
@@ -521,8 +615,9 @@ export function attachQueryInput(input: HTMLInputElement): void {
 		writing = false;
 		if (owner === widget) owner = null;
 		// Repainted rather than only re-hidden: a filter left half-written is a mistake once the
-		// reader has walked away from it, however excusable it was under the caret.
-		refresh();
+		// reader has walked away from it, however excusable it was under the caret. Left where it
+		// was scrolled to, too: the caret is not going anywhere.
+		refresh(false);
 	});
 
 	const widget: Widget = {
@@ -532,6 +627,8 @@ export function attachQueryInput(input: HTMLInputElement): void {
 		reposition,
 		resync() {
 			syncMetrics();
+			fitWidth();
+			followCaret();
 			reposition();
 		},
 	};
