@@ -494,6 +494,13 @@ function builtOffers(spec: FilterSpec, value: string, parses: boolean): Offer[] 
 		offers.splice(1, 0, ...deeper);
 	}
 
+	// Two digits a filter cannot read, since a bound needs the whole year, are still a year the
+	// reader has named. Where they end just one archive year, that year is the row on top, so Tab
+	// writes `@before:88` out as `1988` and reopens on its months, as `@date:198` does.
+	if (!parses && given === 1 && typed.fields[0].length === 2 && here.length === 1) {
+		offers.unshift(offerFor(here[0], 1));
+	}
+
 	const shape = shapeAt(spec, given);
 	const whole = parses && shape !== undefined && fills(spec, shape, value);
 	// The reader's own value goes on top where it is whole and real — or where the archive has
