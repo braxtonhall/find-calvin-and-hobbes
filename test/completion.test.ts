@@ -190,10 +190,10 @@ test("offering the values", async (suite) => {
 	});
 
 	await suite.test("@is: offers every tag, and each commits", () => {
-		assert.deepEqual(values("@is:|"), ["sunday", "daily", "reused", "rerun", "altered", "empty"]);
+		assert.deepEqual(values("@is:|"), ["sunday", "daily", "reused", "rerun", "altered", "empty", "standalone"]);
 		assert.deepEqual(values("@is:r|"), ["reused", "rerun"]);
 		assert.deepEqual(values("@is:rer|"), ["rerun"]);
-		assert.deepEqual(completions("@is:s|"), ["@is:sunday "]);
+		assert.deepEqual(completions("@is:s|"), ["@is:sunday ", "@is:standalone "]);
 		assert.equal(at("@is:x|"), null);
 	});
 
@@ -794,5 +794,27 @@ test("painting the operators", async (suite) => {
 
 	await suite.test("a name that only begins with an operator is not one", () => {
 		assert.deepEqual(spans("@orange @nothing|"), []);
+	});
+});
+
+test("quotation marks", async (suite) => {
+	await suite.test("there is no menu inside a quotation", () => {
+		assert.equal(at('"rosalyn @|'), null);
+		assert.equal(at('"rosalyn @o|r baby"'), null);
+		assert.equal(at("“snow @ye|"), null);
+	});
+
+	await suite.test("the menu comes back outside one", () => {
+		assert.deepEqual(names('"rosalyn" @o|'), ["or"]);
+		assert.deepEqual(names('"rosalyn"@o|'), ["or"]);
+	});
+
+	await suite.test("nothing inside a quotation is painted", () => {
+		assert.deepEqual(spans('"rosalyn @or baby @year:1988"'), []);
+		assert.deepEqual(spans('"rosalyn @or baby @year:1988|'), []);
+		assert.deepEqual(spans('"rosalyn" @or "baby" @year:1988'), [
+			["match", "@or"],
+			["match", "@year:1988"],
+		]);
 	});
 });

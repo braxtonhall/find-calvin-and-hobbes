@@ -1,9 +1,9 @@
 import { Appearance, Comic } from "../types";
 import { escHtml } from "../utils";
 import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
-import { buildCollectionPath, buildComicPath } from "../routes";
+import { buildArcPath, buildCollectionPath, buildComicPath } from "../routes";
 import { addressOf } from "../base-path";
-import { DetailCollection, DetailPage, PageSource } from "./page";
+import { BookNeighbours, DetailArc, DetailCollection, DetailPage, PageSource, arcRange } from "./page";
 import { buildBackAndHomeButtons } from "./nav-buttons";
 
 export function getAdjacentComicDate(
@@ -64,7 +64,7 @@ export function descriptionsFor(descriptions: Map<string, string>, comics: Comic
 	return subset;
 }
 
-function summarizeCollections(source: PageSource, comics: Comic[]): DetailCollection[] {
+export function summarizeCollections(source: PageSource, comics: Comic[]): DetailCollection[] {
 	if (!source.collectionsById) return [];
 	const keys = comics.map(comicKey);
 	const summaries = new Map<string, DetailCollection>();
@@ -92,18 +92,109 @@ function summarizeCollections(source: PageSource, comics: Comic[]): DetailCollec
 	return [...summaries.values()];
 }
 
+/** One row of "Printed in": a strip in a book, or in one edition of a book that has editions. */
+function printingKey(comic: Comic, appearance: Pick<Appearance, "collection" | "edition">): string {
+	return `${comicKey(comic)} ${appearance.collection} ${appearance.edition ?? ""}`;
+}
+
+interface BookOrder {
+	/** Every printing in the book, in reading order. */
+	dates: string[];
+	indexByComic: Map<string, number>;
+}
+
+/**
+ * Each book's (or edition's) strips in the order a reader meets them: by volume, then page. Strips
+ * sharing a page go by date, which is the order the books lay them out in. Built once per archive,
+ * since every strip's page asks of the same one.
+ */
+const bookOrders = new WeakMap<Map<string, Comic[]>, Map<string, BookOrder>>();
+
+function getBookOrders(comicsByDate: Map<string, Comic[]>): Map<string, BookOrder> {
+	const cached = bookOrders.get(comicsByDate);
+	if (cached) return cached;
+
+	const entriesByBook = new Map<string, { comic: Comic; volume: number; page: number }[]>();
+	for (const comics of comicsByDate.values()) {
+		for (const comic of comics) {
+			for (const appearance of comic.appearances || []) {
+				const book = `${appearance.collection} ${appearance.edition ?? ""}`;
+				if (!entriesByBook.has(book)) entriesByBook.set(book, []);
+				entriesByBook.get(book)!.push({ comic, volume: appearance.volume ?? 0, page: appearance.pages[0] ?? 0 });
+			}
+		}
+	}
+
+	const orders = new Map<string, BookOrder>();
+	for (const [book, entries] of entriesByBook) {
+		entries.sort(
+			(a, b) =>
+				a.volume - b.volume ||
+				a.page - b.page ||
+				a.comic.date.localeCompare(b.comic.date) ||
+				comicKey(a.comic).localeCompare(comicKey(b.comic)),
+		);
+		orders.set(book, {
+			dates: entries.map((entry) => entry.comic.date),
+			indexByComic: new Map(entries.map((entry, index) => [comicKey(entry.comic), index])),
+		});
+	}
+	bookOrders.set(comicsByDate, orders);
+	return orders;
+}
+
+/** The nearest strip in `dates` from `index` that is on another day — a day's page shows all of its strips. */
+function stepToOtherDay(dates: string[], index: number, direction: -1 | 1): string | null {
+	for (let i = index + direction; i >= 0 && i < dates.length; i += direction) {
+		if (dates[i] !== dates[index]) return dates[i];
+	}
+	return null;
+}
+
+function findBookNeighbours(source: PageSource, comics: Comic[]): Record<string, BookNeighbours> {
+	const orders = getBookOrders(source.comicsByDate);
+	const neighbours: Record<string, BookNeighbours> = {};
+	for (const comic of comics) {
+		for (const appearance of comic.appearances || []) {
+			const key = printingKey(comic, appearance);
+			if (neighbours[key]) continue;
+			const order = orders.get(`${appearance.collection} ${appearance.edition ?? ""}`);
+			const index = order?.indexByComic.get(comicKey(comic));
+			if (!order || index === undefined) continue;
+			neighbours[key] = {
+				prev: stepToOtherDay(order.dates, index, -1),
+				next: stepToOtherDay(order.dates, index, 1),
+			};
+		}
+	}
+	return neighbours;
+}
+
 const rerunsByOriginal = new WeakMap<Map<string, string>, Map<string, string[]>>();
 
-/** Every rerun of the strip first run on `originalDate`, in order. Indexed once per archive. */
-function findReruns(reruns: Map<string, string>, originalDate: string): string[] {
-	let byOriginal = rerunsByOriginal.get(reruns);
+/** The original day and every rerun of it, in order. */
+function findRuns(source: PageSource, originalDate: string): string[] {
+	let byOriginal = rerunsByOriginal.get(source.reruns);
 	if (!byOriginal) {
 		byOriginal = new Map();
-		for (const [rerun, original] of reruns) byOriginal.set(original, [...(byOriginal.get(original) ?? []), rerun]);
-		for (const dates of byOriginal.values()) dates.sort();
-		rerunsByOriginal.set(reruns, byOriginal);
+		for (const [rerun, original] of source.reruns) {
+			byOriginal.set(original, [...(byOriginal.get(original) ?? []), rerun]);
+		}
+		rerunsByOriginal.set(source.reruns, byOriginal);
 	}
-	return byOriginal.get(originalDate) ?? [];
+	return [originalDate, ...(byOriginal.get(originalDate) ?? []).sort()];
+}
+
+/**
+ * The arcs of the day's own strip — not a special's, which is never in one. On a rerun day that is
+ * the strip shown, so the widget follows it back to the dates it first ran on.
+ */
+function arcsOf(source: PageSource, comics: Comic[]): DetailArc[] {
+	const daily = comics.find((comic) => !comic.id);
+	return (daily?.arcs ?? []).flatMap((id) => {
+		const arc = source.arcsById?.get(id);
+		return arc ? [{ id: arc.id, description: arc.description, dates: arc.dates }] : [];
+	});
 }
 
 /** The page for a date, from whatever holds the archive — the app's state or the build's data. */
@@ -117,113 +208,181 @@ export function detailPageFrom(source: PageSource, date: string, alternates: str
 		alternates,
 		comics,
 		rerunOf,
-		reruns: rerunOf ? [] : findReruns(source.reruns, date),
 		prevDate: getAdjacentComicDate(source, date, -1),
 		nextDate: getAdjacentComicDate(source, date, 1),
+		runs: comics.length > 0 ? findRuns(source, rerunOf ?? date) : [],
+		bookNeighbours: findBookNeighbours(source, comics),
 		collections: summarizeCollections(source, comics),
 		descriptions: source.descriptions ? descriptionsFor(source.descriptions, comics) : null,
+		arcs: arcsOf(source, comics),
 	};
 }
 
-function formatPages(pages: number[], long: boolean = false): string {
+/**
+ * `p. 22` or `pp. 22–24` — or, `spelled`, `page 22` and `pages 22–24`, where there is room for words.
+ */
+function formatPages(pages: number[], spelled: boolean = false): string {
 	if (pages.length === 0) return "";
-	if (pages.length === 1) return long ? `Page ${pages[0]}` : `p. ${pages[0]}`;
+	if (pages.length === 1) return `${spelled ? "page" : "p."} ${pages[0]}`;
 	const isContiguous = pages.every((page, index) => index === 0 || page === pages[index - 1] + 1);
-	const list = isContiguous ? `${pages[0]}–${pages[pages.length - 1]}` : pages.join(", ");
-	return long ? `Pages ${list}` : `pp. ${list}`;
+	return `${spelled ? "pages" : "pp."} ${isContiguous ? `${pages[0]}–${pages[pages.length - 1]}` : pages.join(", ")}`;
 }
 
 function shortenEditionLabel(label: string): string {
 	return label.replace(/\s*\(.*\)\s*$/, "");
 }
 
-/** A book the strip is in, or one edition of it — each edition has its own cover, so its own entry. */
-interface AppearanceEntry {
+/** A book the strip is in, or one edition of it — each edition has its own pages, so its own row. */
+interface Printing {
+	key: string;
 	collection: DetailCollection;
 	edition?: string;
+	name: string;
+	year: number;
 	image: string;
-	captionLines: string[];
-	tooltipLines: string[];
+	/** Where the strip is, one per volume it is in: the volume, when the book has them, and the pages. */
+	places: { volume?: number; pages: number[] }[];
 }
 
-function buildAppearanceEntries(
+function buildPrintings(
 	appearances: Appearance[],
 	collectionsById: Map<string, DetailCollection>,
-): AppearanceEntry[] {
-	const entriesById = new Map<string, AppearanceEntry>();
+	keyOf: (appearance: Appearance) => string,
+): Printing[] {
+	const printingsByKey = new Map<string, Printing>();
 
 	for (const appearance of appearances) {
 		const collection = collectionsById.get(appearance.collection);
 		if (!collection) continue;
 
-		const key = `${appearance.collection} ${appearance.edition ?? ""}`;
-		let entry = entriesById.get(key);
-		if (!entry) {
-			const image = (appearance.edition && collection.editions?.[appearance.edition]?.image) || collection.image;
-			entry = { collection, edition: appearance.edition, image, captionLines: [], tooltipLines: [] };
-			entriesById.set(key, entry);
+		const key = keyOf(appearance);
+		let printing = printingsByKey.get(key);
+		if (!printing) {
+			const edition = appearance.edition ? collection.editions?.[appearance.edition] : undefined;
+			printing = {
+				key,
+				collection,
+				edition: appearance.edition,
+				name: appearance.edition
+					? `${collection.name}, ${shortenEditionLabel(edition?.label ?? appearance.edition)}`
+					: collection.name,
+				year: edition?.pub_year ?? collection.pub_year,
+				image: edition?.image ?? collection.image,
+				places: [],
+			};
+			printingsByKey.set(key, printing);
 		}
 
-		if (appearance.edition) {
-			const edition = collection.editions && collection.editions[appearance.edition];
-			const fullLabel = edition ? edition.label : appearance.edition;
-			const totalMatch = fullLabel.match(/\((\d+)/);
-			const totalVolumes = totalMatch ? parseInt(totalMatch[1]) : 0;
-			// The volume and the page on lines of their own, since the two together are wider than a cover.
-			if (appearance.volume) entry.captionLines.push(`Book ${appearance.volume},`);
-			entry.captionLines.push(formatPages(appearance.pages));
-			entry.tooltipLines.push(
-				`${shortenEditionLabel(fullLabel)}, Book ${appearance.volume} of ${totalVolumes}, ${formatPages(appearance.pages).replace("p.", "page")}`,
-			);
-		} else {
-			entry.captionLines.push(formatPages(appearance.pages));
-			entry.tooltipLines.push(formatPages(appearance.pages, true));
-		}
+		const { volume, pages } = appearance;
+		printing.places.push(volume ? { volume, pages } : { pages });
 	}
 
-	return [...entriesById.values()];
+	return [...printingsByKey.values()];
 }
 
-function buildCoverBoxHtml(entry: AppearanceEntry, alterationKey: string, isSunday: boolean): string {
-	const { collection } = entry;
+const BOOK_ICON = `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+function buildBookArrowHtml(date: string | null, direction: -1 | 1): string {
+	const arrow = direction === -1 ? "&larr;" : "&rarr;";
+	const title = direction === -1 ? "Previous strip in this book" : "Next strip in this book";
+	return date
+		? `<a class="nav-btn book__arrow" href="${addressOf(buildComicPath(date))}" data-date="${date}" title="${title}" aria-label="${title}">${arrow}</a>`
+		: `<span class="nav-btn nav-btn--disabled book__arrow" title="${direction === -1 ? "First" : "Last"} strip in this book">${arrow}</span>`;
+}
+
+/** The badge on a cover whose printing of the strip was altered: an asterisk, which says what it means when hovered. */
+const ALTERATION_BADGE = `<span class="collection-book__badge"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1v8M1.54 3l6.92 4M1.54 7l6.92-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="collection-book__badge-label">Altered</span></span>`;
+
+/**
+ * One book the strip is in, as a cover that can be selected. The cover over the volume and page the
+ * strip is on is all the row shows. Selected, it opens a popup above it with the book's name, the
+ * way to its page, and arrows through its strips: the `<template>` is what the view fills the popup
+ * with, inert until then.
+ *
+ * `neighbours` is `null` where there is no one strip to step from, as on an arc's page. `data-book`
+ * is the book and edition, which the view reads to keep a book selected from one strip to the next.
+ */
+function buildBookHtml(
+	printing: Printing,
+	neighbours: BookNeighbours | undefined | null,
+	alterationKey: string,
+	isSunday: boolean,
+): string {
+	const { collection } = printing;
 	const isBlackAndWhite = isSunday && !collection.colour;
-	const bwClass = isBlackAndWhite ? " collection-book--bw" : "";
 	const alteration = collection.alterations && collection.alterations[alterationKey];
-	const badge = alteration ? '<div class="collection-book__badge">*</div>' : "";
 	// The collection's ratio holds the space until the cover loads; an edition's own cover may differ.
-	const ratio = entry.image === collection.image ? ` style="aspect-ratio: ${collection.aspectRatio}"` : "";
-	const edition = entry.edition ? ` data-edition="${escHtml(entry.edition)}"` : "";
+	const ratio =
+		printing.image === collection.image && collection.aspectRatio
+			? ` style="aspect-ratio: ${collection.aspectRatio}"`
+			: "";
+	// One short line for the label under the cover: `Bk 1 · p. 357`, the volume shortened to fit.
+	const caption = printing.places
+		.map((place) => (place.volume ? `Bk ${place.volume} · ${formatPages(place.pages)}` : formatPages(place.pages)))
+		.join(", ");
+	// The popup has room for the words: `Book 1, page 357`.
+	const where = printing.places.map((place) =>
+		place.volume ? `Book ${place.volume}, ${formatPages(place.pages, true)}` : formatPages(place.pages, true),
+	);
+	// Black and white is about the page the strip is on, so it goes on that line; an alteration gets its own.
+	const colour = isBlackAndWhite ? " · Black & white" : "";
+	const notes = alteration ? [`Altered · ${alteration}`] : [];
+	const book = `${collection.id} ${printing.edition ?? ""}`;
 
-	return `<a class="collection-book${bwClass}" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}"${edition} data-bw="${isBlackAndWhite ? "1" : "0"}" data-alteration="${escHtml(alteration || "")}" data-pages="${escHtml(entry.tooltipLines.join("\n"))}"${ratio}><img src="${escHtml(entry.image)}" alt="${escHtml(collection.name)}" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${badge}</a>`;
+	const cover = `<button type="button" class="book__cover" aria-haspopup="dialog" aria-expanded="false" data-collection-id="${escHtml(collection.id)}" aria-label="${escHtml(printing.name)}"><span class="collection-entry"><span class="collection-book${isBlackAndWhite ? " collection-book--bw" : ""}"${ratio}><img src="${escHtml(printing.image)}" alt="" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${alteration ? ALTERATION_BADGE : ""}</span><span class="collection-pages">${caption}</span></span></button>`;
+
+	// The way to the book's page sits between the arrows through it — alone, where there are none.
+	const goTo = `<a class="nav-btn book__go" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}" title="Go to this book" aria-label="Go to this book">${BOOK_ICON}</a>`;
+	const nav =
+		neighbours === null
+			? `<span class="book__nav">${goTo}</span>`
+			: `<span class="book__nav">${buildBookArrowHtml(neighbours?.prev ?? null, -1)}${goTo}${buildBookArrowHtml(neighbours?.next ?? null, 1)}</span>`;
+	const card = `<template class="book__card">
+		<div class="book__text">
+			<a class="book__name" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}">${escHtml(printing.name)}</a> <span class="book__year">${printing.year}</span>
+			<span class="book__line">${escHtml(where.join("; ") + colour)}</span>
+			${notes.map((note) => `<span class="book__line book__note">${escHtml(note)}</span>`).join("")}
+		</div>
+		${nav}
+	</template>`;
+
+	return `<div class="book" data-book="${escHtml(book)}">${cover}${card}</div>`;
 }
 
-function wrapCollectionSection(inner: string): string {
-	return `<p class="detail-collections-heading">Collected in:</p>${inner}`;
+/**
+ * The books a strip is in: a row of covers, any one of which opens a popup with the rest.
+ * `neighbours` is by printing key, or `null` where there are no arrows, as on an arc's page.
+ */
+function buildPrintingsSectionHtml(
+	printings: Printing[],
+	neighbours: Record<string, BookNeighbours> | null,
+	alterationKey: string,
+	isSunday: boolean,
+): string {
+	const heading = `<p class="detail-collections-heading">Collected in</p>`;
+	if (printings.length === 0) {
+		return `${heading}<p class="printings__empty">Not reprinted in any book</p>`;
+	}
+
+	const books = printings
+		.map((printing) => buildBookHtml(printing, neighbours && neighbours[printing.key], alterationKey, isSunday))
+		.join("");
+	return `${heading}<div class="detail-collections">${books}</div>`;
 }
 
-function buildAppearancesSectionHtml(
+/** The books an arc is in, from the appearances its page gathers: one row per book and edition. */
+export function buildAppearancesSectionHtml(
 	appearances: Appearance[],
 	collectionsById: Map<string, DetailCollection>,
 	alterationKey: string,
 	isSunday: boolean,
 ): string {
-	const entries = buildAppearanceEntries(appearances, collectionsById);
-	if (entries.length === 0) {
-		return wrapCollectionSection(
-			`<div class="detail-collections detail-collections--empty">Not reprinted in any book</div>`,
-		);
-	}
-
-	const boxes = entries
-		.map((entry) => {
-			const caption = entry.captionLines
-				.map((line) => `<span class="collection-pages__line">${escHtml(line)}</span>`)
-				.join("");
-			return `<div class="collection-entry">${buildCoverBoxHtml(entry, alterationKey, isSunday)}<div class="collection-pages">${caption}</div></div>`;
-		})
-		.join("");
-
-	return wrapCollectionSection(`<div class="detail-collections">${boxes}</div>`);
+	const printings = buildPrintings(
+		appearances,
+		collectionsById,
+		(appearance) => `${appearance.collection} ${appearance.edition ?? ""}`,
+	);
+	return buildPrintingsSectionHtml(printings, null, alterationKey, isSunday);
 }
 
 function getAspectRatio(comic: Comic, isSunday: boolean): number {
@@ -290,11 +449,11 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 
 		const aspectRatio = getAspectRatio(comic, isSunday);
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
-		// Only the day's own strip ran in the paper; a special never did, so never reran.
-		const rerunNoteHtml = !comic.id ? buildRerunNoteHtml(page.reruns) : "";
-		const collectionsHtml = buildAppearancesSectionHtml(
-			comic.appearances || [],
-			collectionsById,
+		// Only the day's own strip ran in the paper; a special never did, so never reran, and is in no arc.
+		const runsHtml = !comic.id ? buildRunsHtml(page, date) : "";
+		const collectionsHtml = buildPrintingsSectionHtml(
+			buildPrintings(comic.appearances || [], collectionsById, (appearance) => printingKey(comic, appearance)),
+			page.bookNeighbours,
 			comicKey(comic),
 			isSunday,
 		);
@@ -304,7 +463,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
 			${transcriptHtml}
 			${readLinkHtml}
-			${rerunNoteHtml}
+			${runsHtml}
 			<div class="detail-collections-slot">${collectionsHtml}</div>
 		</div>`;
 	}
@@ -321,15 +480,45 @@ function joinRerunLinks(dates: string[]): string {
 	return dates.map(buildRerunLinkHtml).join(" and ");
 }
 
+/**
+ * One step along an arc, boxed like the header's arrows but at the end of the arc's own line, which
+ * says what they step through. An end of the arc keeps its arrow, disabled, so neither one moves.
+ */
+function buildArcStepHtml(date: string | undefined, direction: "prev" | "next"): string {
+	const arrow = direction === "prev" ? "&larr;" : "&rarr;";
+	if (!date) {
+		return `<span class="nav-btn nav-btn--disabled" title="${direction === "prev" ? "First" : "Last"} strip in this arc">${arrow}</span>`;
+	}
+	const label = direction === "prev" ? "Previous strip in this arc" : "Next strip in this arc";
+	return `<a class="nav-btn detail-arc-step" href="${addressOf(buildComicPath(date))}" data-date="${date}" title="${label}" aria-label="${label}">${arrow}</a>`;
+}
+
+/**
+ * `Part 2 of 4 in the Nov 18–19, 1985 arc`, with its arrows at the end of the line. The range is the
+ * way to the arc's page; `data-arc-id` is what the view reads to light up the whole arc while it is
+ * hovered, and its title is the arc's description.
+ */
+function buildArcLineHtml(arc: DetailArc, date: string): string {
+	const index = arc.dates.indexOf(date);
+	const link = `<a class="detail-rerun-link detail-arc-link" href="${escHtml(addressOf(buildArcPath(arc.id)))}" data-arc-id="${escHtml(arc.id)}" title="${escHtml(arc.description)}">${escHtml(arcRange(arc))}</a>`;
+	const steps = buildArcStepHtml(arc.dates[index - 1], "prev") + buildArcStepHtml(arc.dates[index + 1], "next");
+	return `<li class="detail-run detail-arc"><span class="detail-arc__text">Part ${index + 1} of ${arc.dates.length} in the ${link} arc</span><span class="detail-arc__nav">${steps}</span></li>`;
+}
+
 /** A rerun day shows the strip it reran, so this sits above it as a note of where it's from. */
 function buildRerunBannerHtml(originalDate: string): string {
 	return `<p class="detail-rerun-banner">Originally ran ${buildRerunLinkHtml(originalDate)}</p>`;
 }
 
-/** An original day's note of when the paper ran its strip again, beside where it was collected. */
-function buildRerunNoteHtml(reruns: string[]): string {
-	if (reruns.length === 0) return "";
-	return `<p class="detail-rerun-banner detail-rerun-banner--note">Reran ${joinRerunLinks(reruns)}</p>`;
+/**
+ * When else the paper ran the strip on an original day, and the arcs it is part of, together under
+ * the strip. A rerun day's reruns are empty; where its strip is from is said above it instead.
+ */
+function buildRunsHtml(page: DetailPage, date: string): string {
+	const reruns = page.rerunOf ? [] : page.runs.slice(1);
+	const rerun = reruns.length > 0 ? `<li class="detail-run">Reran ${joinRerunLinks(reruns)}</li>` : "";
+	const lines = rerun + page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("");
+	return lines ? `<ul class="detail-runs">${lines}</ul>` : "";
 }
 
 export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {

@@ -67,7 +67,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		name: "is",
 		hint: "Strips with a tag",
 		vocabulary: true,
-		templates: [{ label: "tag", hint: "sunday, daily, reused, rerun, altered or empty" }],
+		templates: [{ label: "tag", hint: "sunday, daily, reused, rerun, altered, empty or standalone" }],
 	},
 	{
 		name: "year",

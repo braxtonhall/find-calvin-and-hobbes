@@ -82,6 +82,16 @@
 	margin: 24px 0 8px 0;
 }
 
+/* A section that folds away: its heading is the toggle, and says so only by its marker and cursor. */
+summary.collection-section-heading {
+	cursor: pointer;
+	width: fit-content;
+}
+
+summary.collection-section-heading:hover {
+	color: var(--golden);
+}
+
 .collection-extras {
 	list-style: disc;
 	padding-left: 20px;
@@ -126,7 +136,7 @@
 	margin-bottom: 2px;
 }
 
-/* Each end of a range is its strip, styled like the rerun banner's link to the strip it reran. */
+/* Each end of a range is its strip, styled like a strip page's rerun links to the strip it reran. */
 .collection-range-date {
 	color: var(--golden);
 	text-decoration: none;

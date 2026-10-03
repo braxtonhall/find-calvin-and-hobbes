@@ -23,7 +23,7 @@
 
 import { RANGE_END, RANGE_START } from "./constants";
 import { MONTHS, WEEKDAYS, parseDateExpression } from "./date-query";
-import { FilterMatch, scanFilters } from "./filter-query";
+import { FilterMatch, quoted, quotedSpans, scanFilters } from "./filter-query";
 import { scanOperators } from "./boolean-query";
 import { dateToString, isSabbatical, lastDayOf } from "./date-utils";
 import { FILTER_SPECS, FilterSpec, ValueTemplate, filterSpec } from "./filter-spec";
@@ -553,21 +553,25 @@ function valueRows(spec: FilterSpec, value: string, parses: boolean): Row[] {
  * Found by walking left to the nearest `@` without crossing whitespace, which matches what the
  * parser will do with the same text: `FILTER_PATTERN` has no word-boundary requirement, so
  * `bill@year:1990` really is a filter and the menu should say so rather than quietly disagree.
+ *
+ * Nor across a quotation mark, and never from inside a quotation: the parser reads everything
+ * there as text, so there is nothing for a menu to complete — and an open quotation runs to the end
+ * of the query, so `"rosalyn @` is the phrase being typed rather than a filter being started.
  */
 function tokenAt(text: string, caret: number): { start: number; end: number; body: string } | null {
 	let start = -1;
 	for (let index = caret; index > 0; index--) {
 		const character = text[index - 1];
-		if (/\s/.test(character)) break;
+		if (/[\s"“”]/.test(character)) break;
 		if (character === "@") {
 			start = index - 1;
 			break;
 		}
 	}
-	if (start === -1) return null;
+	if (start === -1 || quoted(quotedSpans(text), start)) return null;
 
 	let end = caret;
-	while (end < text.length && !/\s/.test(text[end])) end++;
+	while (end < text.length && !/[\s"“”]/.test(text[end])) end++;
 
 	return { start, end, body: text.slice(start, end) };
 }

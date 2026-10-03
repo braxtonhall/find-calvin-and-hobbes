@@ -1,5 +1,5 @@
 import { negatedFilters } from "./boolean-query";
-import { FilterMatch, scanFilters } from "./filter-query";
+import { FilterMatch, quotedSpans, scanFilters } from "./filter-query";
 import { terms } from "./filter-vocabulary";
 import { MONTH_NAMES, YEARS } from "./vocabulary";
 
@@ -298,6 +298,11 @@ function glueBeside(text: string, field: FilterField): string {
 	return gap === "or" ? " @or " : gap === "and" ? " @and " : " ";
 }
 
+/** The text with its last quotation closed, where it was left open. */
+function closeQuote(text: string): string {
+	return quotedSpans(text).at(-1)?.closed === false ? `${text}"` : text;
+}
+
 /**
  * The token, written in immediately after the last filter of the same field, else appended.
  *
@@ -317,7 +322,9 @@ export function insertToken(text: string, token: string): string {
 	}
 
 	if (anchor === null) {
-		const head = text.replace(/\s+$/, "");
+		// An open quotation runs to the end of the query, and a token appended inside it would be
+		// part of the phrase rather than a filter. Closing it first changes nothing it meant.
+		const head = closeQuote(text.replace(/\s+$/, ""));
 		return head === "" ? token : `${head} ${token}`;
 	}
 	const glue = field.joins === true ? glueBeside(text, field) : " ";

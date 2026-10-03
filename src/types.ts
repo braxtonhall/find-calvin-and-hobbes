@@ -7,6 +7,8 @@ export interface Comic {
 	sort?: number;
 	aspectRatio?: number;
 	appearances?: Appearance[];
+	/** The arcs the strip belongs to, by id. None does to more than one today, but nothing forbids it. */
+	arcs?: string[];
 }
 
 export interface Appearance {
@@ -50,6 +52,19 @@ export interface CollectionIndex {
 	collection_extras?: Record<string, string[]>;
 }
 
+/**
+ * A story told over several strips. It has no title: it is named by its dates and described in a
+ * sentence, as `arcs.yaml` writes it.
+ */
+export interface Arc {
+	id: string;
+	description: string;
+	/** Its strips' dates, in order. */
+	dates: string[];
+	/** The books that print every strip of it, once per book however many editions it has, in publication order. */
+	collections: string[];
+}
+
 export interface Day {
 	date: string;
 	weekIndex: number;
@@ -60,7 +75,7 @@ export interface Day {
 export type SortMode = "date" | "rank";
 
 export interface Route {
-	view: "landing" | "results" | "detail" | "collection" | "collections" | "library" | "credits";
+	view: "landing" | "results" | "detail" | "collection" | "collections" | "arc" | "arcs" | "library" | "credits";
 	q?: string;
 	sort?: SortMode;
 	date?: string;

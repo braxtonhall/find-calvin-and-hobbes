@@ -1,0 +1,77 @@
+#view-arc.active,
+#view-arcs.active {
+	display: block;
+	/* The corrections link floats over the bottom of the page; the last line clears it. */
+	padding: 20px 20px 56px;
+}
+
+@media (max-width: 768px) {
+	/* On mobile the link follows the page instead of floating over it, so there is nothing to clear. */
+	#view-arc.active,
+	#view-arcs.active {
+		padding-bottom: 20px;
+	}
+}
+
+/* Under the date range, where a book's page has its type: the sentence the arc is told in. */
+.arc-description {
+	font-size: 14px;
+	color: var(--text);
+	line-height: 1.5;
+	margin-bottom: 8px;
+}
+
+/* The search results' rows, sized to a sentence rather than to a transcript. */
+.arc-strips .result-row {
+	min-height: 0;
+	padding: 12px 0;
+}
+
+.arc-strips .result-row:first-of-type {
+	padding-top: 12px;
+}
+
+.arc-strips .result-body,
+.arc-strips .result-text {
+	height: auto;
+}
+
+.arc-collections {
+	margin-top: 24px;
+}
+
+/* A list of arcs: rows of the list of books, with nothing where the cover goes. */
+.arc-row .collections-info {
+	flex: 1;
+}
+
+/* The arc's length, against the longest arc there is. Quiet, so it reads as a measure, not a control. */
+.arc-length {
+	height: 3px;
+	margin-top: 6px;
+	border-radius: 2px;
+	background: var(--grey);
+	transition: background 0.1s;
+}
+
+.arc-row:hover .arc-length,
+.arc-row:focus-visible .arc-length {
+	background: var(--golden);
+}
+
+/*
+ * A year's heading stays at the top while its arcs scroll under it, so a row's year — which the row
+ * leaves out — is always on screen. Padded rather than spaced, so nothing shows through above it.
+ */
+.arc-year {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	margin: 0;
+	padding: 24px 0 8px;
+	background: var(--bg);
+}
+
+.arc-year-group:first-child > .arc-year {
+	padding-top: 8px;
+}

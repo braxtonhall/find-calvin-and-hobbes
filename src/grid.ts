@@ -1,6 +1,6 @@
 import "./grid.css";
 
-import { Day } from "./types";
+import { Arc, Day } from "./types";
 import { computeDays } from "./days";
 import { scrollCellIntoViewIfNeeded } from "./utils";
 import { state } from "./state";
@@ -361,6 +361,18 @@ export async function loadComicData(): Promise<void> {
 		return;
 	}
 
+	// Side by side: neither needs the other, so the arcs add no wait to a page that only wants the
+	// books, and either can fail without taking the other with it.
+	await Promise.all([loadCollectionIndex(), loadArcs()]);
+
+	state.dataLoaded = true;
+	updateGridStatesFromData();
+	document.getElementById("loading")!.classList.add("hidden");
+
+	resumeRoute();
+}
+
+async function loadCollectionIndex(): Promise<void> {
 	try {
 		const collectionsResponse = await fetch(addressOf("/collection-index.json"));
 		const collectionIndex = await collectionsResponse.json();
@@ -372,12 +384,18 @@ export async function loadComicData(): Promise<void> {
 	} catch {
 		// collection data unavailable — "Appears in" section won't render
 	}
+}
 
-	state.dataLoaded = true;
-	updateGridStatesFromData();
-	document.getElementById("loading")!.classList.add("hidden");
-
-	resumeRoute();
+async function loadArcs(): Promise<void> {
+	try {
+		const arcsResponse = await fetch(addressOf("/arcs.json"));
+		if (!arcsResponse.ok) throw new Error(`HTTP ${arcsResponse.status}`);
+		const arcs: Arc[] = await arcsResponse.json();
+		state.arcs = arcs;
+		state.arcsById = new Map(arcs.map((arc) => [arc.id, arc]));
+	} catch {
+		// arc data unavailable — no arc lines on a strip's page, and the arc pages say so
+	}
 }
 
 // ─── Re-import from router (circular dependency resolved at runtime) ────────

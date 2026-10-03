@@ -121,11 +121,13 @@ test("a site mounted at /repo/", async (suite) => {
 				alternates: [],
 				comics: [{ date: "1986-07-07", transcript: "Hi.", image: "/repo/assets/comics/19860707.gif" }],
 				rerunOf: null,
-				reruns: [],
 				prevDate: "1986-07-06",
 				nextDate: "1986-07-08",
+				runs: ["1986-07-07"],
+				bookNeighbours: {},
 				collections: [],
 				descriptions: {},
+				arcs: [],
 			};
 			const document = buildDocumentHtml(template, page, {
 				siteUrl: "https://user.github.io/repo",
@@ -144,7 +146,10 @@ test("a site mounted at /repo/", async (suite) => {
 			assert.match(view, /data-href="\/repo\/1986-07-07"/);
 			assert.match(view, /class="detail-home" href="\/repo\/"/);
 
-			const rerun = buildDetailHtml({ ...page, comics: [], rerunOf: "1986-07-07", date: "1991-05-05" }, false);
+			const rerun = buildDetailHtml(
+				{ ...page, rerunOf: "1986-07-07", date: "1991-05-05", runs: ["1986-07-07", "1991-05-05"] },
+				false,
+			);
 			assert.match(rerun, /class="detail-rerun-link" href="\/repo\/1986-07-07" data-date="1986-07-07"/);
 		});
 	});

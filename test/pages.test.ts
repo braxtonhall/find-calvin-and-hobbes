@@ -8,14 +8,17 @@ import { exportComicsJson } from "../build-chain/exportComicsJson";
 import { exportRerunsJson } from "../build-chain/reruns";
 import { exportDescriptions } from "../build-chain/exportDescriptions";
 import { generateCollectionIndex } from "../build-chain/generateCollectionIndex";
+import { loadArcs } from "../build-chain/arcs";
 import { computeDays } from "../src/days";
-import { Collection, Comic } from "../src/types";
+import { Arc, Collection, Comic } from "../src/types";
 import { Page, PageSource } from "../src/pages/page";
 import { detailPageFrom } from "../src/pages/detail";
 import { buildRangeSearchPath, collectionPageFrom } from "../src/pages/collection";
 import { admits, parseQuery } from "../src/boolean-query";
 import { parseRoutePath } from "../src/routes";
 import { collectionsPageFrom } from "../src/pages/collections";
+import { arcPageFrom } from "../src/pages/arc";
+import { arcsPageFrom } from "../src/pages/arcs";
 import { isDateInCollection } from "../src/date-utils";
 import { buildDocumentHtml, buildViewHtml, PAGE_DATA_ID } from "../src/pages/shell";
 import { loadPageLayout, pageAssetPath } from "../build-chain/siteConfig";
@@ -32,10 +35,10 @@ const template = fs.readFileSync(path.join(PROJECT_DIR, "src", "index.html"), "u
 
 function loadSource(): PageSource {
 	const collectionData = loadCollectionData(PROJECT_DIR);
-	const comics: Comic[] = JSON.parse(exportComicsJson(PROJECT_DIR, collectionData));
-	const reruns: Record<string, string> = JSON.parse(
-		exportRerunsJson(PROJECT_DIR, loadComicSource(path.join(PROJECT_DIR, "comics.yaml"))),
-	);
+	const comicSource = loadComicSource(path.join(PROJECT_DIR, "comics.yaml"));
+	const arcs: Arc[] = loadArcs(PROJECT_DIR, comicSource, collectionData);
+	const comics: Comic[] = JSON.parse(exportComicsJson(PROJECT_DIR, collectionData, "/", arcs));
+	const reruns: Record<string, string> = JSON.parse(exportRerunsJson(PROJECT_DIR, comicSource));
 	const collectionIndex = JSON.parse(generateCollectionIndex(collectionData));
 	const descriptions: Record<string, string> = JSON.parse(exportDescriptions(PROJECT_DIR));
 
@@ -54,6 +57,8 @@ function loadSource(): PageSource {
 		collectionIndex,
 		collectionsById,
 		descriptions: new Map(Object.entries(descriptions)),
+		arcs,
+		arcsById: new Map(arcs.map((arc) => [arc.id, arc])),
 	};
 }
 
@@ -93,7 +98,7 @@ test("a prerendered document", async (suite) => {
 	await suite.test("holds the view its embedded data draws, for a book", () => {
 		for (const collection of source.collectionIndex!.collections) {
 			const page = collectionPageFrom(source, collection.id);
-			const document = buildDocumentHtml(template, page, { ...options, path: `/collection/${collection.id}` });
+			const document = buildDocumentHtml(template, page, { ...options, path: `/book/${collection.id}` });
 			const embedded = embeddedPage(document);
 			assert.deepEqual(embedded, page);
 			assert.equal(activeView(document, "collection"), buildViewHtml(embedded, false));
@@ -165,11 +170,11 @@ test("a prerendered document", async (suite) => {
 
 	await suite.test("holds the view its embedded data draws, for the list of books", () => {
 		const page = collectionsPageFrom(source);
-		const document = buildDocumentHtml(template, page, { ...options, path: "/collections" });
+		const document = buildDocumentHtml(template, page, { ...options, path: "/books" });
 		const embedded = embeddedPage(document);
 		assert.deepEqual(embedded, page);
 		assert.equal(activeView(document, "collections"), buildViewHtml(embedded, false));
-		assert.match(document, /<title>Collections — Find Calvin and Hobbes<\/title>/);
+		assert.match(document, /<title>Books — Find Calvin and Hobbes<\/title>/);
 
 		assert.deepEqual(
 			page.collections.map((collection) => collection.id),
@@ -181,6 +186,86 @@ test("a prerendered document", async (suite) => {
 			const hovered = [...source.comicsByDate.keys()].filter((date) => isDateInCollection(date, summary));
 			assert.deepEqual(hovered, collectionPageFrom(source, summary.id).dates, `${summary.id} lights its strips`);
 		}
+	});
+
+	await suite.test("holds the view its embedded data draws, for every arc and the list of them", () => {
+		const arcs = arcsPageFrom(source);
+		const document = buildDocumentHtml(template, arcs, { ...options, path: "/arcs" });
+		assert.deepEqual(embeddedPage(document), arcs);
+		assert.equal(activeView(document, "arcs"), buildViewHtml(arcs, false));
+		assert.match(document, /<title>Arcs — Find Calvin and Hobbes<\/title>/);
+
+		for (const arc of source.arcs!) {
+			const page = arcPageFrom(source, arc.id);
+			const document = buildDocumentHtml(template, page, { ...options, path: `/arc/${arc.id}` });
+			const embedded = embeddedPage(document);
+			assert.deepEqual(embedded, page);
+			assert.equal(activeView(document, "arc"), buildViewHtml(embedded, false));
+		}
+	});
+
+	await suite.test("finds an arc's strips, its books, and the arcs either side of it", () => {
+		const arcs = source.arcs!;
+		arcs.forEach((arc, index) => {
+			const page = arcPageFrom(source, arc.id);
+			assert.deepEqual(
+				page.strips.map((strip) => strip.date),
+				arc.dates,
+			);
+			for (const strip of page.strips) assert.ok(strip.text, `${arc.id} says what happens on ${strip.date}`);
+			assert.deepEqual(
+				page.collections.map((collection) => collection.id),
+				arc.collections,
+			);
+			// One cover per book, however many editions it has.
+			const covers = buildViewHtml(page, false).match(/class="collection-book[ "]/g) ?? [];
+			assert.equal(covers.length, arc.collections.length, `${arc.id} shows each book once`);
+			assert.equal(page.prev?.id ?? null, arcs[index - 1]?.id ?? null);
+			assert.equal(page.next?.id ?? null, arcs[index + 1]?.id ?? null);
+		});
+		assert.equal(arcPageFrom(source, "nosucharc").arc, null);
+	});
+
+	await suite.test("lists every arc on /arcs, scaled to the longest, and a book's in full only", () => {
+		const longest = Math.max(...source.arcs!.map((arc) => arc.dates.length));
+		const all = arcsPageFrom(source).list;
+		assert.equal(all.longest, longest);
+		assert.deepEqual(
+			all.arcs.map((arc) => arc.id),
+			source.arcs!.map((arc) => arc.id),
+		);
+		for (const collection of source.collectionIndex!.collections) {
+			const list = collectionPageFrom(source, collection.id).arcs;
+			assert.equal(list.longest, longest, `${collection.id} scales its bars to the archive`);
+			const held = new Set(collectionPageFrom(source, collection.id).dates);
+			for (const arc of list.arcs) {
+				for (const date of arc.dates) assert.ok(held.has(date), `${collection.id} holds all of ${arc.id}`);
+			}
+			assert.equal(
+				list.arcs.length,
+				source.arcs!.filter((arc) => arc.collections.includes(collection.id)).length,
+				`${collection.id} lists each arc it holds once`,
+			);
+		}
+	});
+
+	await suite.test("puts a line on each strip of an arc, and none on a special", () => {
+		for (const arc of source.arcs!) {
+			arc.dates.forEach((date, index) => {
+				const page = detailPageFrom(source, date);
+				assert.deepEqual(
+					page.arcs.map((detailArc) => detailArc.id),
+					[arc.id],
+				);
+				const html = buildViewHtml(page, false);
+				assert.ok(html.includes(`Part ${index + 1} of ${arc.dates.length} in the`), `${date} says which part`);
+			});
+		}
+		// A rerun day follows the strip it shows back to its arc.
+		const [rerunDate, original] = [...source.reruns].find(([, date]) =>
+			source.arcs!.some((arc) => arc.dates.includes(date)),
+		)!;
+		assert.ok(detailPageFrom(source, rerunDate).arcs.some((arc) => arc.dates.includes(original)));
 	});
 
 	await suite.test("names itself and where it lives", () => {

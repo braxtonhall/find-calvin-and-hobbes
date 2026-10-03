@@ -1,11 +1,10 @@
 import "./detail.css";
 
 import { state } from "../state";
-import { escHtml } from "../utils";
 import { loadDescriptions } from "../details";
 import { isBookmarked, toggleBookmark } from "../bookmarks";
 import { canGoBack, parseRoute } from "../router";
-import { DetailCollection, DetailPage } from "../pages/page";
+import { DetailPage } from "../pages/page";
 import {
 	buildDescriptionSlotContents,
 	buildDetailHtml,
@@ -16,6 +15,7 @@ import {
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
 import { attachCellHighlightLink, clearCollectionSoon, highlightCollection } from "./cell-highlight";
+import { attachBookHandlers } from "./books";
 
 function buildBookmarkButtonHandler(bookmarkButton: HTMLButtonElement, date: string): void {
 	isBookmarked(date).then((bookmarked) => {
@@ -57,146 +57,33 @@ function patchDetailBlocks(element: HTMLElement, page: DetailPage): void {
 	}
 }
 
-let lastMouseX = 0;
-let lastMouseY = 0;
-let tooltipFollowersAttached = false;
-
-/** The books the covers on the page belong to — what the tooltip reads, since it has only the cover's id. */
-let tooltipCollections = new Map<string, DetailCollection>();
-
 /**
- * One tooltip element for the life of the page, made the first time a page with covers on it
- * asks. Made here rather than when the collection index loads, because a prerendered page has
- * its covers before the index does.
+ * Hovering — or focusing — any link to another day's strip lights up its cell: the header's arrows,
+ * a run in the paper, a step through an arc. A book's arrows are in its popup, which does its own.
  */
-function getCollectionTooltip(): HTMLElement {
-	if (!state.collectionTooltip) {
-		state.collectionTooltip = document.createElement("div");
-		state.collectionTooltip.className = "collection-tooltip";
-		document.body.appendChild(state.collectionTooltip);
-	}
-	return state.collectionTooltip;
-}
-
-function hideCollectionTooltip(): void {
-	state.collectionTooltip?.classList.remove("collection-tooltip--visible");
-}
-
-function showCollectionTooltip(book: HTMLElement): void {
-	const collectionId = book.dataset.collectionId;
-	if (!collectionId) return;
-	const collection = tooltipCollections.get(collectionId);
-	if (!collection) return;
-	const tooltip = getCollectionTooltip();
-
-	const edition = book.dataset.edition ? collection.editions?.[book.dataset.edition] : undefined;
-	const pubYear = (edition?.pub_year ?? collection.pub_year).toString();
-	let html = `<span class="collection-tooltip__name">${escHtml(collection.name)}</span> <span class="collection-tooltip__year">(${pubYear})</span>`;
-
-	const pageLines = book.dataset.pages ? book.dataset.pages.split("\n").filter(Boolean) : [];
-	if (pageLines.length > 0) {
-		html += `<div class="collection-tooltip__pages">${pageLines.map((line) => escHtml(line)).join("<br>")}</div>`;
-	}
-
-	const notes: string[] = [];
-	if (book.dataset.bw === "1") {
-		notes.push("Printed in black & white");
-	}
-	const alteration = book.dataset.alteration;
-	if (alteration) {
-		notes.push(alteration);
-	}
-	if (notes.length > 0) {
-		html += `<div class="collection-tooltip__divider">${notes.map((note) => escHtml(note)).join("<br>")}</div>`;
-	}
-
-	tooltip.innerHTML = html;
-	const bookRect = book.getBoundingClientRect();
-	const tooltipWidth = tooltip.offsetWidth;
-	const tooltipHeight = tooltip.offsetHeight;
-	const center = bookRect.left + bookRect.width / 2;
-	const pad = 8;
-	const left = Math.max(pad, Math.min(center - tooltipWidth / 2, window.innerWidth - tooltipWidth - pad));
-	tooltip.style.left = left + "px";
-	tooltip.style.transform = "none";
-	tooltip.style.top = Math.max(0, bookRect.top - tooltipHeight - pad) + "px";
-	tooltip.classList.add("collection-tooltip--visible");
-}
-
-function followCollectionTooltip(): void {
-	const tooltip = state.collectionTooltip;
-	if (!tooltip || !tooltip.classList.contains("collection-tooltip--visible")) return;
-	const elementUnder = document.elementFromPoint(lastMouseX, lastMouseY);
-	const book = elementUnder?.closest<HTMLElement>(".collection-book");
-	if (!book) {
-		hideCollectionTooltip();
-		return;
-	}
-	showCollectionTooltip(book);
-}
-
-function attachCollectionTooltipFollowers(): void {
-	if (tooltipFollowersAttached) return;
-	tooltipFollowersAttached = true;
-
-	document.addEventListener("mousemove", (event) => {
-		lastMouseX = event.clientX;
-		lastMouseY = event.clientY;
-	});
-
-	// Wait a frame so the layout has settled after the scroll/resize/load that triggered us.
-	const follow = () => requestAnimationFrame(followCollectionTooltip);
-	const main = document.getElementById("main")!;
-	main.addEventListener("scroll", follow);
-	window.addEventListener("resize", follow);
-	// Image loads reflow the page around the tooltip; load doesn't bubble, so capture it.
-	main.addEventListener("load", follow, true);
+function attachStripLinkHandlers(element: HTMLElement): void {
+	element
+		.querySelectorAll<HTMLElement>("a#nav-prev, a#nav-next, a.detail-rerun-link[data-date], a.detail-arc-step")
+		.forEach((link) => {
+			attachCellHighlightLink(link, link.dataset.date!);
+		});
 }
 
 /**
- * Hovering a book shows its strips in the grid, as the list of books does. The ranges come from the
- * collection index, so until it has loaded — a cold load — the hover does nothing.
+ * Hovering an arc's range lights up the whole arc in the grid, as a book's cover lights up the book.
+ * The arc's dates are on the page, so this works on a cold load too.
  */
-function attachBookHighlightHandlers(element: HTMLElement): void {
-	element.querySelectorAll<HTMLElement>(".collection-book").forEach((book) => {
-		// A book followed to its page is left focused, and hidden, which blurs it; by then the grid is
-		// the book page's to draw, so only this page while it is showing may touch it.
-		const show = () => {
-			const collection = state.collectionsById?.get(book.dataset.collectionId ?? "");
-			if (collection && element.classList.contains("active")) highlightCollection(collection);
-		};
+function attachArcLinkHandlers(element: HTMLElement, page: DetailPage): void {
+	const arcs = new Map(page.arcs.map((arc) => [arc.id, arc]));
+	element.querySelectorAll<HTMLElement>(".detail-arc-link").forEach((link) => {
+		const arc = arcs.get(link.dataset.arcId ?? "");
+		if (!arc) return;
+		const show = () => element.classList.contains("active") && highlightCollection(new Set(arc.dates));
 		const clear = () => element.classList.contains("active") && clearCollectionSoon();
-		book.addEventListener("mouseenter", show);
-		book.addEventListener("focus", show);
-		book.addEventListener("mouseleave", clear);
-		book.addEventListener("blur", clear);
-	});
-}
-
-function attachCollectionBookHandlers(element: HTMLElement, page: DetailPage): void {
-	tooltipCollections = new Map(page.collections.map((collection) => [collection.id, collection]));
-
-	// The cover's href does the navigating. This only clears the tooltip out of the way of whatever
-	// the click turns out to be — including a cmd-click, which leaves this page standing.
-	element.querySelectorAll<HTMLElement>(".collection-book").forEach((book) => {
-		book.addEventListener("click", hideCollectionTooltip);
-	});
-
-	if (tooltipCollections.size === 0) return;
-
-	attachCollectionTooltipFollowers();
-
-	element.querySelectorAll<HTMLElement>(".collection-book").forEach((book) => {
-		book.addEventListener("mouseenter", () => showCollectionTooltip(book));
-		book.addEventListener("mouseleave", hideCollectionTooltip);
-	});
-
-	followCollectionTooltip();
-}
-
-function attachRerunLinkHandlers(element: HTMLElement): void {
-	element.querySelectorAll<HTMLElement>(".detail-rerun-link").forEach((link) => {
-		attachCellHighlightLink(link, link.dataset.date!);
+		link.addEventListener("mouseenter", show);
+		link.addEventListener("focus", show);
+		link.addEventListener("mouseleave", clear);
+		link.addEventListener("blur", clear);
 	});
 }
 
@@ -212,15 +99,14 @@ export function renderDetail(page: DetailPage, adopt: boolean = false): void {
 	}
 
 	attachBackAndHomeHandlers(element);
-	attachRerunLinkHandlers(element);
+	attachStripLinkHandlers(element);
+	attachArcLinkHandlers(element, page);
+	attachBookHandlers(element);
 
 	attachCopyLinkHandler(element);
 
 	const bookmarkButton = element.querySelector<HTMLButtonElement>("#bookmark-btn");
 	if (bookmarkButton) buildBookmarkButtonHandler(bookmarkButton, page.date);
-
-	attachCollectionBookHandlers(element, page);
-	attachBookHighlightHandlers(element);
 
 	if (page.descriptions === null) {
 		loadDescriptions().then(() => {
