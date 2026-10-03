@@ -126,6 +126,7 @@ test("a site mounted at /repo/", async (suite) => {
 				nextDate: "1986-07-08",
 				collections: [],
 				descriptions: {},
+				arcs: [],
 			};
 			const document = buildDocumentHtml(template, page, {
 				siteUrl: "https://user.github.io/repo",

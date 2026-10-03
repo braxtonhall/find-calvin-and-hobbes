@@ -29,6 +29,7 @@ const detail: Page = {
 	nextDate: null,
 	collections: [],
 	descriptions: {},
+	arcs: [],
 };
 
 const rerun: Page = { ...detail, date: "1995-12-31", rerunOf: "1986-07-07" };
@@ -42,6 +43,7 @@ const collection: Page = {
 	dates: [],
 	prev: null,
 	next: null,
+	arcs: { arcs: [], longest: 0 },
 };
 
 function document(page: Page, routePath: string, overrides: Partial<typeof options> = {}): string {
@@ -110,7 +112,7 @@ test("a document's corrections link", async (suite) => {
 		assert.match(link(document(detail, "/1986-07-07")), /entry.1138251038=https%3A%2F%2Fexample.test%2F1986-07-07/);
 		assert.doesNotMatch(link(document(detail, "/1986-07-07")), /entry.762468410=Rerun/);
 		assert.match(link(document(rerun, "/1995-12-31")), /entry.762468410=Comic&amp;entry.762468410=Rerun/);
-		assert.match(link(document(collection, "/collection/yukonho")), /entry.762468410=Collection/);
+		assert.match(link(document(collection, "/book/yukonho")), /entry.762468410=Collection/);
 		assert.doesNotMatch(link(document({ view: "credits" }, "/credits")), /entry.762468410/);
 	});
 

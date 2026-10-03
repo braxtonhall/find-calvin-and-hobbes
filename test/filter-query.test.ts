@@ -239,6 +239,21 @@ test("filters", async (suite) => {
 		assert.ok(!passes("1988-06-01", "@is:empty"));
 	});
 
+	// Like `@is:empty`, a fact about the strip that a date cannot answer: which arcs it is in.
+	await suite.test("@is:standalone matches a strip in no arc", () => {
+		const alone: Comic = { date: "1988-06-01", transcript: "" };
+		const inArc: Comic = { date: "1988-06-02", transcript: "", arcs: ["camping"] };
+		const special: Comic = { date: "1988-06-02", transcript: "", id: "poster" };
+		assert.ok(passes(alone, "@is:standalone"));
+		assert.ok(!passes(inArc, "@is:standalone"));
+		assert.ok(passes(special, "@is:standalone"), "a special is never in an arc");
+		assert.ok(passes(inArc, "@not @is:standalone"), "not standalone is in an arc");
+		assert.ok(!passes(alone, "@not @is:standalone"));
+		// A rerun row is the strip it shows under another date, so it is in that strip's arcs.
+		assert.ok(!passes({ ...inArc, date: "1993-06-02" }, "@is:standalone", "rerun"));
+		assert.ok(!passes("1988-06-01", "@is:standalone"));
+	});
+
 	// `@is:altered` is read off the same appearances as `@in`, but it is a field of its own: altered
 	// in any book, whichever books `@in` names.
 	await suite.test("@is:altered matches a strip some book printed altered", () => {

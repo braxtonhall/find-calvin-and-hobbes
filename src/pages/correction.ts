@@ -34,6 +34,7 @@ export function correctionKinds(view: Page["view"], rerun: boolean): string[] {
 		case "collection":
 		case "collections":
 			return ["Collection"];
+		// The form has no box for an arc, so the reader says what is wrong in their own words.
 		default:
 			return [];
 	}

@@ -1,9 +1,9 @@
 import { Appearance, Comic } from "../types";
 import { escHtml } from "../utils";
 import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
-import { buildCollectionPath, buildComicPath } from "../routes";
+import { buildArcPath, buildCollectionPath, buildComicPath } from "../routes";
 import { addressOf } from "../base-path";
-import { DetailCollection, DetailPage, PageSource } from "./page";
+import { DetailArc, DetailCollection, DetailPage, PageSource, arcRange } from "./page";
 import { buildBackAndHomeButtons } from "./nav-buttons";
 
 export function getAdjacentComicDate(
@@ -64,7 +64,7 @@ export function descriptionsFor(descriptions: Map<string, string>, comics: Comic
 	return subset;
 }
 
-function summarizeCollections(source: PageSource, comics: Comic[]): DetailCollection[] {
+export function summarizeCollections(source: PageSource, comics: Comic[]): DetailCollection[] {
 	if (!source.collectionsById) return [];
 	const keys = comics.map(comicKey);
 	const summaries = new Map<string, DetailCollection>();
@@ -106,6 +106,18 @@ function findReruns(reruns: Map<string, string>, originalDate: string): string[]
 	return byOriginal.get(originalDate) ?? [];
 }
 
+/**
+ * The arcs of the day's own strip — not a special's, which is never in one. On a rerun day that is
+ * the strip shown, so the widget follows it back to the dates it first ran on.
+ */
+function arcsOf(source: PageSource, comics: Comic[]): DetailArc[] {
+	const daily = comics.find((comic) => !comic.id);
+	return (daily?.arcs ?? []).flatMap((id) => {
+		const arc = source.arcsById?.get(id);
+		return arc ? [{ id: arc.id, description: arc.description, dates: arc.dates }] : [];
+	});
+}
+
 /** The page for a date, from whatever holds the archive — the app's state or the build's data. */
 export function detailPageFrom(source: PageSource, date: string, alternates: string[] = []): DetailPage {
 	const rerunOf = source.reruns.get(date) ?? null;
@@ -122,6 +134,7 @@ export function detailPageFrom(source: PageSource, date: string, alternates: str
 		nextDate: getAdjacentComicDate(source, date, 1),
 		collections: summarizeCollections(source, comics),
 		descriptions: source.descriptions ? descriptionsFor(source.descriptions, comics) : null,
+		arcs: arcsOf(source, comics),
 	};
 }
 
@@ -198,10 +211,10 @@ function buildCoverBoxHtml(entry: AppearanceEntry, alterationKey: string, isSund
 }
 
 function wrapCollectionSection(inner: string): string {
-	return `<p class="detail-collections-heading">Collected in:</p>${inner}`;
+	return `<p class="detail-collections-heading">Collected in</p>${inner}`;
 }
 
-function buildAppearancesSectionHtml(
+export function buildAppearancesSectionHtml(
 	appearances: Appearance[],
 	collectionsById: Map<string, DetailCollection>,
 	alterationKey: string,
@@ -290,8 +303,8 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 
 		const aspectRatio = getAspectRatio(comic, isSunday);
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
-		// Only the day's own strip ran in the paper; a special never did, so never reran.
-		const rerunNoteHtml = !comic.id ? buildRerunNoteHtml(page.reruns) : "";
+		// Only the day's own strip ran in the paper; a special never did, so never reran, and is in no arc.
+		const runsHtml = !comic.id ? buildRunsHtml(page, date) : "";
 		const collectionsHtml = buildAppearancesSectionHtml(
 			comic.appearances || [],
 			collectionsById,
@@ -304,7 +317,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
 			${transcriptHtml}
 			${readLinkHtml}
-			${rerunNoteHtml}
+			${runsHtml}
 			<div class="detail-collections-slot">${collectionsHtml}</div>
 		</div>`;
 	}
@@ -321,15 +334,44 @@ function joinRerunLinks(dates: string[]): string {
 	return dates.map(buildRerunLinkHtml).join(" and ");
 }
 
+/**
+ * One step along an arc, boxed like the header's arrows but at the end of the arc's own line, which
+ * says what they step through. An end of the arc keeps its arrow, disabled, so neither one moves.
+ */
+function buildArcStepHtml(date: string | undefined, direction: "prev" | "next"): string {
+	const arrow = direction === "prev" ? "&larr;" : "&rarr;";
+	if (!date) {
+		return `<span class="nav-btn nav-btn--disabled" title="${direction === "prev" ? "First" : "Last"} strip in this arc">${arrow}</span>`;
+	}
+	const label = direction === "prev" ? "Previous strip in this arc" : "Next strip in this arc";
+	return `<a class="nav-btn detail-arc-step" href="${addressOf(buildComicPath(date))}" data-date="${date}" title="${label}" aria-label="${label}">${arrow}</a>`;
+}
+
+/**
+ * `Part 2 of 4 in the Nov 18–19, 1985 arc`, with its arrows at the end of the line. The range is the
+ * way to the arc's page; `data-arc-id` is what the view reads to light up the whole arc while it is
+ * hovered, and its title is the arc's description.
+ */
+function buildArcLineHtml(arc: DetailArc, date: string): string {
+	const index = arc.dates.indexOf(date);
+	const link = `<a class="detail-rerun-link detail-arc-link" href="${escHtml(addressOf(buildArcPath(arc.id)))}" data-arc-id="${escHtml(arc.id)}" title="${escHtml(arc.description)}">${escHtml(arcRange(arc))}</a>`;
+	const steps = buildArcStepHtml(arc.dates[index - 1], "prev") + buildArcStepHtml(arc.dates[index + 1], "next");
+	return `<li class="detail-run detail-arc"><span class="detail-arc__text">Part ${index + 1} of ${arc.dates.length} in the ${link} arc</span><span class="detail-arc__nav">${steps}</span></li>`;
+}
+
 /** A rerun day shows the strip it reran, so this sits above it as a note of where it's from. */
 function buildRerunBannerHtml(originalDate: string): string {
 	return `<p class="detail-rerun-banner">Originally ran ${buildRerunLinkHtml(originalDate)}</p>`;
 }
 
-/** An original day's note of when the paper ran its strip again, beside where it was collected. */
-function buildRerunNoteHtml(reruns: string[]): string {
-	if (reruns.length === 0) return "";
-	return `<p class="detail-rerun-banner detail-rerun-banner--note">Reran ${joinRerunLinks(reruns)}</p>`;
+/**
+ * When else the paper ran the strip on an original day, and the arcs it is part of, together under
+ * the strip. A rerun day's reruns are empty; where its strip is from is said above it instead.
+ */
+function buildRunsHtml(page: DetailPage, date: string): string {
+	const rerun = page.reruns.length > 0 ? `<li class="detail-run">Reran ${joinRerunLinks(page.reruns)}</li>` : "";
+	const lines = rerun + page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("");
+	return lines ? `<ul class="detail-runs">${lines}</ul>` : "";
 }
 
 export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {

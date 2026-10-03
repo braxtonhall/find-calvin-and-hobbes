@@ -8,6 +8,9 @@ import { buildCreditsHtml } from "./credits";
 import { buildDetailHtml } from "./detail";
 import { buildCollectionHtml } from "./collection";
 import { buildCollectionsHtml } from "./collections";
+import { buildArcHtml } from "./arc";
+import { buildArcsHtml } from "./arcs";
+import { arcRange } from "./page";
 import { buildCorrectionLinkHtml } from "./correction";
 
 /**
@@ -20,7 +23,17 @@ import { buildCorrectionLinkHtml } from "./correction";
  * so the app can pick the page up where the build left it without fetching the archive first.
  */
 
-export const VIEWS = ["landing", "results", "detail", "collection", "collections", "library", "credits"] as const;
+export const VIEWS = [
+	"landing",
+	"results",
+	"detail",
+	"collection",
+	"collections",
+	"arc",
+	"arcs",
+	"library",
+	"credits",
+] as const;
 
 export const PAGE_DATA_ID = "page-data";
 
@@ -66,6 +79,13 @@ function pageDescription(page: Page): string {
 		}
 		case "collections":
 			return "Every Calvin and Hobbes book, in the order they were published, and which strips each one holds.";
+		case "arc": {
+			const { arc } = page;
+			if (!arc) return DEFAULT_DESCRIPTION;
+			return `A Calvin and Hobbes story arc, ${arcRange(arc)}: ${arc.description}`;
+		}
+		case "arcs":
+			return "Every Calvin and Hobbes story arc, in the order they ran, and the strips each one is told in.";
 		default:
 			return DEFAULT_DESCRIPTION;
 	}
@@ -121,6 +141,10 @@ export function buildViewHtml(page: Page, canGoBack: boolean): string {
 			return buildCollectionHtml(page, canGoBack);
 		case "collections":
 			return buildCollectionsHtml(page, canGoBack);
+		case "arc":
+			return buildArcHtml(page, canGoBack);
+		case "arcs":
+			return buildArcsHtml(page, canGoBack);
 		case "results":
 			// The rows are the app's to draw: they depend on the query, and there is no file per query.
 			return "";

@@ -97,3 +97,21 @@ const LONG_DATE_FORMAT = new Intl.DateTimeFormat("en-US", {
 export function formatLongDate(date: string): string {
 	return LONG_DATE_FORMAT.format(new Date(`${date}T00:00:00Z`));
 }
+
+const SHORT_MONTH_FORMAT = new Intl.DateTimeFormat("en-US", { month: "short", timeZone: "UTC" });
+
+/**
+ * `Nov 18–19, 1985`, `Nov 30 – Dec 2, 1985`, or `Dec 28, 1987 – Jan 9, 1988`, from two ISO dates.
+ * Without the year where something around it already says it, unless the range crosses into the
+ * next one, which the year alone would get wrong.
+ */
+export function formatDateRange(start: string, end: string, withYear: boolean = true): string {
+	const [startYear, startMonth, startDay] = start.split("-").map(Number);
+	const [endYear, endMonth, endDay] = end.split("-").map(Number);
+	const month = (date: string) => SHORT_MONTH_FORMAT.format(new Date(`${date}T00:00:00Z`));
+	if (startYear !== endYear) return `${month(start)} ${startDay}, ${startYear} – ${month(end)} ${endDay}, ${endYear}`;
+	const year = withYear ? `, ${startYear}` : "";
+	if (start === end) return `${month(start)} ${startDay}${year}`;
+	if (startMonth === endMonth) return `${month(start)} ${startDay}–${endDay}${year}`;
+	return `${month(start)} ${startDay} – ${month(end)} ${endDay}${year}`;
+}

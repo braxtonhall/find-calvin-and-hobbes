@@ -1,9 +1,9 @@
 import { escHtml } from "../src/utils";
 
 /**
- * The sitemap names the pages worth a crawler's first look: the home page, the credits, and the
- * collections. Nothing in the static HTML links a collection from the home page, so this is how a
- * crawler that runs no script finds them.
+ * The sitemap names the pages worth a crawler's first look: the home page, the credits, the books
+ * and the arcs. Nothing in the static HTML links a book or an arc from the home page, so this is how
+ * a crawler that runs no script finds them.
  *
  * The comic pages are left out on purpose. They are indexable, and reachable — each links to the
  * one before and after it, and the grid links them all once the script runs — but listing all

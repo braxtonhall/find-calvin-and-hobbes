@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Appearance, CollectionData } from "./collectionPages";
 import { loadComicSource } from "./comicSource";
+import { Arc } from "../src/types";
 
 const EXTENSIONS = [".gif", ".jpg", ".jpeg", ".png", ".webp", ".bmp"];
 
@@ -29,10 +30,22 @@ interface Entry {
 	sort?: number;
 	aspectRatio?: number;
 	appearances?: Appearance[];
+	arcs?: string[];
 }
 
-/** `basePath` is where the site is mounted, `/` or `/prefix/`; the image paths are written from it. */
-export function exportComicsJson(projectDir: string, collectionData: CollectionData, basePath: string = "/"): string {
+/**
+ * `basePath` is where the site is mounted, `/` or `/prefix/`; the image paths are written from it.
+ *
+ * Each strip carries the ids of the arcs it belongs to, so a question about a strip's arcs — whether
+ * `@is:standalone` lets it through, say — is answered from the strip alone. Only the dailies and
+ * Sundays: an arc is made of the strips that ran in the paper, and a special never did.
+ */
+export function exportComicsJson(
+	projectDir: string,
+	collectionData: CollectionData,
+	basePath: string = "/",
+	arcs: Arc[] = [],
+): string {
 	const assetsDir = path.join(projectDir, "assets", "comics");
 	const source = loadComicSource(path.join(projectDir, "comics.yaml"));
 
@@ -40,6 +53,11 @@ export function exportComicsJson(projectDir: string, collectionData: CollectionD
 		const appearances = collectionData.appearancesByComic.get(lookupKey);
 		if (appearances && appearances.length) entry.appearances = appearances;
 	};
+
+	const arcsByDate = new Map<string, string[]>();
+	for (const arc of arcs) {
+		for (const date of arc.dates) arcsByDate.set(date, [...(arcsByDate.get(date) ?? []), arc.id]);
+	}
 
 	const entries: Entry[] = [];
 
@@ -52,6 +70,8 @@ export function exportComicsJson(projectDir: string, collectionData: CollectionD
 		const img = findImage(dateStr, assetsDir, basePath);
 		if (img) entry.image = img;
 		attachAppearances(entry, dateStr);
+		const dailyArcs = arcsByDate.get(entry.date);
+		if (dailyArcs) entry.arcs = dailyArcs;
 		entries.push(entry);
 	}
 

@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+	ARCS_PATH,
+	BOOKS_PATH,
 	LIBRARY_PATH,
+	buildArcPath,
 	buildLibraryPath,
 	buildCollectionPath,
 	buildComicPath,
@@ -10,13 +13,15 @@ import {
 	legacyHashPath,
 	normalizePathname,
 	parseRoutePath,
+	redirectedPath,
 } from "../src/routes";
 
 test("routes", async (suite) => {
 	await suite.test("every path a builder writes parses back to the route it was built from", () => {
 		assert.deepEqual(parseRoutePath("/", ""), { view: "landing" });
 		assert.deepEqual(parseRoutePath("/credits", ""), { view: "credits" });
-		assert.deepEqual(parseRoutePath(COLLECTIONS_PATH, ""), { view: "collections" });
+		assert.deepEqual(parseRoutePath(BOOKS_PATH, ""), { view: "collections" });
+		assert.deepEqual(parseRoutePath(ARCS_PATH, ""), { view: "arcs" });
 		assert.deepEqual(parseRoutePath(LIBRARY_PATH, ""), { view: "library", q: "", sort: "rank" });
 
 		const [libraryPath, libraryQuery] = buildLibraryPath("snow goons & co", "date").split("?");
@@ -45,6 +50,7 @@ test("routes", async (suite) => {
 		});
 
 		assert.deepEqual(parseRoutePath(buildCollectionPath("yukonho"), ""), { view: "collection", id: "yukonho" });
+		assert.deepEqual(parseRoutePath(buildArcPath("tigertrap"), ""), { view: "arc", id: "tigertrap" });
 
 		const [searchPath, searchQuery] = buildSearchPath("snow goons & co", "date").split("?");
 		assert.deepEqual(parseRoutePath(searchPath, "?" + searchQuery), {
@@ -62,20 +68,34 @@ test("routes", async (suite) => {
 		assert.equal(normalizePathname("/1986-07-07/"), "/1986-07-07");
 		assert.equal(normalizePathname("/1986-07-07.html"), "/1986-07-07");
 		assert.equal(normalizePathname("/1986-07-07/index.html"), "/1986-07-07");
-		assert.equal(normalizePathname("/collection/yukonho.html"), "/collection/yukonho");
+		assert.equal(normalizePathname("/book/yukonho.html"), "/book/yukonho");
 		assert.equal(normalizePathname("/index.html"), "/");
 		assert.equal(normalizePathname("/"), "/");
 		assert.deepEqual(parseRoutePath("/credits/", ""), { view: "credits" });
-		assert.deepEqual(parseRoutePath("/collections/", ""), { view: "collections" });
-		assert.deepEqual(parseRoutePath("/collections.html", ""), { view: "collections" });
+		assert.deepEqual(parseRoutePath("/books/", ""), { view: "collections" });
+		assert.deepEqual(parseRoutePath("/arcs.html", ""), { view: "arcs" });
 		assert.deepEqual(parseRoutePath("/library/", ""), { view: "library", q: "", sort: "rank" });
 		assert.deepEqual(parseRoutePath("/library.html", ""), { view: "library", q: "", sort: "rank" });
+	});
+
+	// On purpose, and with no forwarding: a book's old address is not ours any more.
+	await suite.test("a book lives at /book, and its old address goes nowhere", () => {
+		assert.equal(buildCollectionPath("yukonho"), "/book/yukonho");
+		assert.equal(parseRoutePath("/collection/yukonho", ""), null);
+	});
+
+	await suite.test("the old list of books is the books tab, under the books' own address", () => {
+		assert.deepEqual(parseRoutePath(COLLECTIONS_PATH, ""), { view: "collections" });
+		assert.equal(redirectedPath(COLLECTIONS_PATH), BOOKS_PATH);
+		assert.equal(redirectedPath(BOOKS_PATH), null);
+		assert.equal(redirectedPath(ARCS_PATH), null);
 	});
 
 	await suite.test("an address that is not ours is nobody's", () => {
 		assert.equal(parseRoutePath("/comic/1986-07-07", ""), null);
 		assert.equal(parseRoutePath("/1986/07/07", ""), null);
-		assert.equal(parseRoutePath("/collection/Not-An-Id", ""), null);
+		assert.equal(parseRoutePath("/book/Not-An-Id", ""), null);
+		assert.equal(parseRoutePath("/arc/Not-An-Id", ""), null);
 		assert.equal(parseRoutePath("/404", ""), null);
 	});
 
@@ -84,7 +104,7 @@ test("routes", async (suite) => {
 		assert.equal(legacyHashPath("#/credits"), "/credits");
 		assert.equal(legacyHashPath("#/comic/1986-07-07"), "/1986-07-07");
 		assert.equal(legacyHashPath("#/comic/1986-07-07?alternate=19860707"), "/1986-07-07?alternate=19860707");
-		assert.equal(legacyHashPath("#/collection/yukonho"), "/collection/yukonho");
+		assert.equal(legacyHashPath("#/collection/yukonho"), "/book/yukonho");
 		assert.equal(legacyHashPath("#/search?q=snow%20goons&sort=date"), "/search?q=snow%20goons&sort=date");
 		// Not a route at all, so not a legacy one either: the skip link's target, and no hash.
 		assert.equal(legacyHashPath("#main"), null);

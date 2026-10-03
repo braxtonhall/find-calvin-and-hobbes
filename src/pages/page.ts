@@ -1,5 +1,6 @@
-import { Collection, Comic, CollectionIndex, Day, SortMode } from "../types";
+import { Appearance, Arc, Collection, Comic, CollectionIndex, Day, SortMode } from "../types";
 import { SITE_NAME } from "../routes";
+import { formatDateRange } from "../date-utils";
 
 /**
  * What a page is made of, as plain data.
@@ -61,7 +62,12 @@ export interface DetailPage {
 	collections: DetailCollection[];
 	/** By comic key; `null` while the descriptions are still on their way, which draws a skeleton. */
 	descriptions: Record<string, string> | null;
+	/** The arcs the page's strip belongs to — on a rerun day, the arcs of the strip it shows. */
+	arcs: DetailArc[];
 }
+
+/** An arc as a strip's page names it: enough to say which part this is, step along it, and light it up. */
+export type DetailArc = Pick<Arc, "id" | "description" | "dates">;
 
 export interface CollectionPage {
 	view: "collection";
@@ -75,9 +81,60 @@ export interface CollectionPage {
 	/** The books either side of this one in publication order, which the arrows step to. */
 	prev: CollectionNeighbour | null;
 	next: CollectionNeighbour | null;
+	/** The arcs the book prints in full, in the order it prints them. */
+	arcs: ArcList;
 }
 
 export type CollectionNeighbour = Pick<Collection, "id" | "name">;
+
+/** The slice of an arc a list of arcs needs: its row, and in its dates, the strips it lights in the grid. */
+export type ArcSummary = Pick<Arc, "id" | "description" | "dates">;
+
+/**
+ * A list of arcs, as `/arcs` and a book's page both draw it.
+ *
+ * `longest` is the longest arc in the whole archive rather than in the list, so that an arc's length
+ * bar is the same width wherever it is drawn.
+ */
+export interface ArcList {
+	arcs: ArcSummary[];
+	longest: number;
+}
+
+export interface ArcsPage {
+	view: "arcs";
+	/** Every arc, oldest first. */
+	list: ArcList;
+}
+
+/** A strip as an arc's page lists it: its date, and what happens in it. */
+export interface ArcStrip {
+	date: string;
+	text: string;
+}
+
+/** The arc either side of this one, named by its dates since an arc has no title. */
+export interface ArcNeighbour {
+	id: string;
+	range: string;
+}
+
+export interface ArcPage {
+	view: "arc";
+	id: string;
+	/** `null` when the id names no arc. */
+	arc: Arc | null;
+	arcsLoaded: boolean;
+	strips: ArcStrip[];
+	/**
+	 * Where each book that holds the whole arc prints it: one appearance per volume, with the pages of
+	 * all the arc's strips together. A book with several editions is shown in one of them.
+	 */
+	appearances: Appearance[];
+	collections: DetailCollection[];
+	prev: ArcNeighbour | null;
+	next: ArcNeighbour | null;
+}
 
 /**
  * The slice of a book the list of books needs: enough to draw its row, and — in the ranges and
@@ -97,7 +154,15 @@ export interface CollectionsPage {
 }
 
 export type Page =
-	LandingPage | CreditsPage | ResultsPage | LibraryPage | DetailPage | CollectionPage | CollectionsPage;
+	| LandingPage
+	| CreditsPage
+	| ResultsPage
+	| LibraryPage
+	| DetailPage
+	| CollectionPage
+	| CollectionsPage
+	| ArcPage
+	| ArcsPage;
 
 /**
  * Where a page's data comes from. The app's `state` is one of these; the build assembles another
@@ -111,6 +176,14 @@ export interface PageSource {
 	collectionIndex: CollectionIndex | null;
 	collectionsById: Map<string, Collection> | null;
 	descriptions: Map<string, string> | null;
+	/** Oldest first; `null` until they have loaded. */
+	arcs: Arc[] | null;
+	arcsById: Map<string, Arc> | null;
+}
+
+/** An arc by its dates: `Nov 18–19, 1985`. */
+export function arcRange(arc: Pick<Arc, "dates">, withYear: boolean = true): string {
+	return formatDateRange(arc.dates[0], arc.dates[arc.dates.length - 1], withYear);
 }
 
 export function pageTitle(page: Page): string {
@@ -124,7 +197,11 @@ export function pageTitle(page: Page): string {
 		case "collection":
 			return `${page.collection?.name ?? "Collection not found"} — ${SITE_NAME}`;
 		case "collections":
-			return `Collections — ${SITE_NAME}`;
+			return `Books — ${SITE_NAME}`;
+		case "arc":
+			return `${page.arc ? arcRange(page.arc) : "Arc not found"} — ${SITE_NAME}`;
+		case "arcs":
+			return `Arcs — ${SITE_NAME}`;
 		case "library":
 			return page.q ? `${page.q} — Library — ${SITE_NAME}` : `Library — ${SITE_NAME}`;
 		case "credits":

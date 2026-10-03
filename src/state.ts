@@ -1,4 +1,4 @@
-import { Comic, CollectionIndex, Collection, Day, Route } from "./types";
+import { Arc, Comic, CollectionIndex, Collection, Day, Route } from "./types";
 
 export interface AppState {
 	comics: Comic[];
@@ -11,6 +11,8 @@ export interface AppState {
 	hoveredCell: HTMLElement | null;
 	collectionIndex: CollectionIndex | null;
 	collectionsById: Map<string, Collection> | null;
+	arcs: Arc[] | null;
+	arcsById: Map<string, Arc> | null;
 	collectionTooltip: HTMLElement | null;
 	keyboardNavActive: boolean;
 	bookmarkedDates: Set<string>;
@@ -32,6 +34,8 @@ export const state: AppState = {
 	hoveredCell: null,
 	collectionIndex: null,
 	collectionsById: null,
+	arcs: null,
+	arcsById: null,
 	collectionTooltip: null,
 	keyboardNavActive: false,
 	bookmarkedDates: new Set(),
