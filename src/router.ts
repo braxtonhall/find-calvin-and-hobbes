@@ -21,6 +21,7 @@ import { loadDescriptions } from "./details";
 import { renderLibrary } from "./views/library";
 import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
+import { closeBookPopup } from "./views/books";
 import { updateCorrectionLink } from "./views/correction";
 import { cancelCollectionClear } from "./views/cell-highlight";
 
@@ -254,6 +255,9 @@ export function handleRoute(prerendered: Page | null = null): void {
 	// Arriving at any view leaves them behind; staying on one with a search bar keeps whichever one
 	// is open, because a search re-rendered on a keystroke comes through here too.
 	if (arriving || (route.view !== "results" && route.view !== "library")) closeFilterMenu();
+	// A book's popup the same way, but on every page: any page with covers on it is drawn afresh, and
+	// opens the popup again itself if its book is still selected.
+	closeBookPopup();
 
 	document.querySelectorAll(".view").forEach((element) => {
 		if (element === viewElement) return;

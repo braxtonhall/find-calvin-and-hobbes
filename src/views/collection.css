@@ -136,7 +136,7 @@ summary.collection-section-heading:hover {
 	margin-bottom: 2px;
 }
 
-/* Each end of a range is its strip, styled like the rerun banner's link to the strip it reran. */
+/* Each end of a range is its strip, styled like a strip page's rerun links to the strip it reran. */
 .collection-range-date {
 	color: var(--golden);
 	text-decoration: none;

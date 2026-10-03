@@ -11,7 +11,7 @@ import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
 import { clearCollectionSoon, highlightCollection } from "./cell-highlight";
 import { attachRowFocusHandler, attachRowHandlers } from "./result-rows";
-import { attachBookHighlightHandlers, attachCollectionBookHandlers } from "./detail";
+import { attachBookHandlers } from "./books";
 
 /**
  * Hovering a row of an arc list lights that arc in the grid; leaving it goes back to `back`, what the
@@ -69,6 +69,5 @@ export function renderArc(page: ArcPage, adopt: boolean = false): void {
 		rowFocusAttached = true;
 	}
 
-	attachCollectionBookHandlers(element, page.collections);
-	attachBookHighlightHandlers(element, dates);
+	attachBookHandlers(element, dates);
 }
