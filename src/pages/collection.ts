@@ -160,6 +160,23 @@ function buildRangeHtml(entry: string, sundays: boolean): string {
 	return `${buildRangeDateLink(start)} ${dash} ${buildRangeDateLink(end)}`;
 }
 
+/**
+ * The strips the book prints differently from the paper, oldest first, each led by a link to its
+ * strip, in rows like the date ranges'. An alteration is keyed as a strip's page keys it: by its
+ * compact date, or by a special's id, which has no date of its own to link to.
+ */
+function buildAlterationsHtml(alterations: Record<string, string>): string {
+	const entries = Object.entries(alterations).sort(([a], [b]) => a.localeCompare(b));
+	if (entries.length === 0) return "";
+	const items = entries
+		.map(([key, text]) => {
+			const strip = /^\d{8}$/.test(key) ? buildRangeDateLink(key) : escHtml(key);
+			return `<div class="collection-range">${strip} &middot; ${escHtml(text)}</div>`;
+		})
+		.join("");
+	return `<p class="collection-section-heading">Alterations</p><div class="collection-ranges">${items}</div>`;
+}
+
 export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): string {
 	const { collection } = page;
 
@@ -231,6 +248,7 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 			<div class="collection-ranges">${rangesHtml}</div>
 		</details>
 		${arcsHtml}
+		${buildAlterationsHtml(collection.alterations ?? {})}
 		${extrasHtml}
 		${collection.links && collection.links.length > 0 ? `<p class="collection-section-heading">Links</p><div class="collection-links">${collection.links.map((link) => `<a class="collection-link" href="${escHtml(link.href)}" target="_blank" rel="noopener">${escHtml(link.title)}</a>`).join("")}</div>` : ``}
 	</div>`;

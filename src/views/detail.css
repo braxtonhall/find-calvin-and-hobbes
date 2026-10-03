@@ -58,8 +58,11 @@
 	margin-bottom: 10px;
 }
 
+/* A day with more than one strip rules them apart, in the grey the sidebar is ruled off in. */
 .detail-comic + .detail-comic {
 	margin-top: 40px;
+	padding-top: 40px;
+	border-top: 1px solid var(--grey);
 }
 
 .detail-description {
@@ -354,16 +357,62 @@ summary.detail-collections-heading:hover {
 	position: absolute;
 	top: -5px;
 	right: -5px;
-	width: 17px;
+	box-sizing: border-box;
+	min-width: 17px;
 	height: 17px;
-	border-radius: 50%;
+	padding: 0;
+	border-radius: 9px;
 	background: var(--golden);
 	color: #fff;
-	font-size: 11px;
-	font-weight: 700;
-	line-height: 17px;
-	text-align: center;
+	/* The asterisk is drawn rather than typed: a typed one sits high in its line, off the circle's centre. */
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	z-index: 1;
+	transition: padding 0.2s ease;
+}
+
+/*
+ * Hovered, the badge grows leftward from its corner into a pill that says what the asterisk means.
+ * A width of `auto` cannot be eased, so the contents are: the asterisk narrows away as the word
+ * opens out, and the badge, sized by them, follows.
+ */
+.collection-book__badge svg,
+.collection-book__badge-label {
+	flex: none;
+	overflow: hidden;
+	transition:
+		max-width 0.2s ease,
+		opacity 0.2s ease;
+}
+
+.collection-book__badge svg {
+	width: 8px;
+	height: 8px;
+	max-width: 8px;
+}
+
+.collection-book__badge-label {
+	max-width: 0;
+	opacity: 0;
+	font-size: 10px;
+	font-weight: 600;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+.collection-book__badge:hover {
+	padding: 0 6px;
+}
+
+.collection-book__badge:hover svg {
+	max-width: 0;
+	opacity: 0;
+}
+
+.collection-book__badge:hover .collection-book__badge-label {
+	max-width: 48px;
+	opacity: 1;
 }
 
 .detail-printings {
@@ -421,10 +470,23 @@ summary.detail-collections-heading:hover {
 .printing__badge {
 	top: -4px;
 	right: -4px;
-	width: 13px;
+	min-width: 13px;
 	height: 13px;
-	font-size: 9px;
-	line-height: 13px;
+	border-radius: 7px;
+}
+
+.printing__badge svg {
+	width: 6px;
+	height: 6px;
+	max-width: 6px;
+}
+
+.printing__badge:hover {
+	padding: 0 4px;
+}
+
+.printing__badge .collection-book__badge-label {
+	font-size: 8px;
 }
 
 .printing__cover--bw img {

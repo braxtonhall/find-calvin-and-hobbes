@@ -283,6 +283,11 @@ function buildBookArrowHtml(date: string | null, direction: -1 | 1): string {
 		: `<span class="nav-btn nav-btn--disabled printing__arrow" title="${direction === -1 ? "First" : "Last"} strip in this book">${arrow}</span>`;
 }
 
+/** The badge on a cover whose printing of the strip was altered: an asterisk, which says what it means when hovered. */
+function buildAlterationBadgeHtml(extraClass: string = ""): string {
+	return `<span class="collection-book__badge${extraClass}"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1v8M1.54 3l6.92 4M1.54 7l6.92-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="collection-book__badge-label">Altered</span></span>`;
+}
+
 /** A book's row in the list. `neighbours` is `null` where there is no one strip to step from, as on an arc's page. */
 function buildPrintingRowHtml(
 	printing: Printing,
@@ -302,7 +307,7 @@ function buildPrintingRowHtml(
 
 	return `<li class="printing">
 		<a class="printing__book" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}">
-			<span class="printing__cover${isBlackAndWhite ? " printing__cover--bw" : ""}"><span class="printing__cover-image"><img src="${escHtml(printing.image)}" alt="" loading="lazy" />${alteration ? `<span class="collection-book__badge printing__badge">*</span>` : ""}</span></span>
+			<span class="printing__cover${isBlackAndWhite ? " printing__cover--bw" : ""}"><span class="printing__cover-image"><img src="${escHtml(printing.image)}" alt="" loading="lazy" />${alteration ? buildAlterationBadgeHtml(" printing__badge") : ""}</span></span>
 			<span class="printing__text">
 				<span class="printing__name">${escHtml(printing.name)} <span class="printing__year">${printing.year}</span></span>
 				<span class="printing__detail">${detail}</span>
@@ -317,7 +322,7 @@ function buildCoverHtml(printing: Printing, alterationKey: string, isSunday: boo
 	const { collection } = printing;
 	const isBlackAndWhite = isSunday && !collection.colour;
 	const alteration = collection.alterations && collection.alterations[alterationKey];
-	const badge = alteration ? `<span class="collection-book__badge">*</span>` : "";
+	const badge = alteration ? buildAlterationBadgeHtml() : "";
 	// The collection's ratio holds the space until the cover loads; an edition's own cover may differ.
 	const ratio =
 		printing.image === collection.image && collection.aspectRatio
