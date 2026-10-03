@@ -12,9 +12,9 @@
  * beside the templates themselves — see the note in `filter-spec.ts`.
  *
  * It knows the archive's bounds as well, because a menu that offers a value has to offer one that
- * is there: `RANGE_START`, `RANGE_END` and `SABBATICALS` are static constants, so nothing about
- * reading them costs this module its purity. The comic index — which individual days are missing —
- * is data, and stays out.
+ * is there: `RANGE_START`, `RANGE_END` and `SABBATICALS` are constants the build takes from
+ * `comics.yaml`, so nothing about reading them costs this module its purity. The comic index
+ * itself is data, and stays out.
  *
  * The books are data too, and they do not stay out — but they arrive through `filter-vocabulary.ts`
  * rather than being imported, so the purity survives: with nothing registered every list is empty,
@@ -317,8 +317,8 @@ interface Day {
  * would offer a date from before Calvin existed and then commit it, and the empty page of results
  * would make the menu look like it had lied.
  *
- * Individual missing days are not accounted for: the full comic index is data this module cannot
- * see, while the bounds and the two sabbaticals are static constants it can.
+ * A missing day is accounted for too, without the comic index: every day `comics.yaml` has no daily
+ * for is one of the gaps the build writes into `SABBATICALS`.
  */
 function archiveValues(depth: number, fields: string[]): Day[] {
 	const [yearDigits = "", monthDigits = "", dayDigits = ""] = fields;
@@ -358,10 +358,13 @@ function archiveValues(depth: number, fields: string[]): Day[] {
 function namesArchiveDay(value: string): boolean {
 	const expression = parseDateExpression(value, "filter");
 	if (expression === null || expression.candidates.length !== 1) return false;
-	const { year, month, day } = expression.candidates[0];
+	const { year, ending, month, day } = expression.candidates[0];
 	if (year === undefined) return false;
-	const exact = [String(year), month === undefined ? "" : padded(month), day === undefined ? "" : padded(day)];
-	return archiveValues(1, exact).length > 0;
+	// An ending names whichever archive years end in it — `@date:19` none of them, though eleven
+	// begin with it.
+	const years = YEARS.filter((archived) => (ending ? archived % 100 : archived) === year);
+	const rest = [month === undefined ? "" : padded(month), day === undefined ? "" : padded(day)];
+	return years.some((archived) => archiveValues(1, [String(archived), ...rest]).length > 0);
 }
 
 /**
@@ -369,20 +372,24 @@ function namesArchiveDay(value: string): boolean {
  * accepting a row never rewrites a character that was right — `@date:1988/09/03` is finished off
  * rather than restyled into `1988/9/3`.
  */
-function fieldText(typed: string, value: number, width: number, compact: boolean): string {
+function fieldText(typed: string, value: number, width: number, compact: boolean, ending: boolean): string {
 	const plain = String(value);
 	const wide = plain.padStart(width, "0");
 	if (typed === plain || typed === wide) return typed;
-	// A two-digit year is a spelling of its own, and one the parser reads: `@date:88` stays 88.
-	if (width === 4 && typed === wide.slice(2)) return typed;
+	// A two-digit year is a spelling of its own where the filter reads one: `@date:88` stays 88,
+	// every year ending in it. A bound needs the whole year, so `@before:88` is written out.
+	if (ending && width === 4 && typed === wide.slice(2)) return typed;
 	return compact ? wide : plain;
 }
 
-/** One of the archive's days written out to the depth of one shape, in the reader's own spelling. */
-function writeDate(typed: Typed, day: Day, depth: number): string {
+/**
+ * One of the archive's days written out to the depth of one shape, in the reader's own spelling —
+ * as far as the filter can read it. `ending` is whether it reads a year by its last two digits.
+ */
+function writeDate(typed: Typed, day: Day, depth: number, ending: boolean): string {
 	const values = [day.year, day.month, day.day];
 	const written = DATE_FIELDS.slice(0, depth).map((field, index) =>
-		fieldText(typed.fields[index] ?? "", values[index], field.width, typed.compact),
+		fieldText(typed.fields[index] ?? "", values[index], field.width, typed.compact, ending),
 	);
 	return written.join(typed.compact ? "" : typed.separator);
 }
@@ -472,7 +479,7 @@ function builtOffers(spec: FilterSpec, value: string, parses: boolean): Offer[] 
 	const days = depth === given ? here : archiveValues(depth, typed.fields);
 
 	function offerFor(day: Day, at: number): Offer {
-		const written = writeDate(typed, day, at);
+		const written = writeDate(typed, day, at, spec.name === "date");
 		return { value: written, shape: shapeAt(spec, at), commits: written === value || at === DATE_FIELDS.length };
 	}
 
@@ -485,6 +492,13 @@ function builtOffers(spec: FilterSpec, value: string, parses: boolean): Offer[] 
 	if (days.length > 0) {
 		const deeper = DATE_FIELDS.slice(depth).map((_, index) => offerFor(days[0], depth + index + 1));
 		offers.splice(1, 0, ...deeper);
+	}
+
+	// Two digits a filter cannot read, since a bound needs the whole year, are still a year the
+	// reader has named. Where they end just one archive year, that year is the row on top, so Tab
+	// writes `@before:88` out as `1988` and reopens on its months, as `@date:198` does.
+	if (!parses && given === 1 && typed.fields[0].length === 2 && here.length === 1) {
+		offers.unshift(offerFor(here[0], 1));
 	}
 
 	const shape = shapeAt(spec, given);

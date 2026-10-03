@@ -349,10 +349,29 @@ test("filters", async (suite) => {
 		assert.notEqual(read("@date:2001-09-11"), null);
 		assert.notEqual(read("@before:2024"), null);
 		assert.ok(passes("1988-08-03", "@before:2024"));
+	});
 
-		// A two-digit year still reads as the 1900s, which is the only century the strip ran in.
-		assert.deepEqual(read("@year:88"), { kind: "year", year: 1988 });
-		assert.deepEqual(read("@year:84"), { kind: "year", year: 1984 });
+	// The century is never guessed, so nothing about the archive's own span is built into the
+	// filter: `@year:88` is 1988 here, and would be 1888 as well in an archive that reached it.
+	await suite.test("two digits are every year that ends in them", () => {
+		assert.deepEqual(read("@year:88"), {
+			kind: "year",
+			expression: { candidates: [{ year: 88, ending: true }], precision: "broad" },
+		});
+		assert.ok(passes("1888-08-03", "@date:88"), "@date reads two digits the same way");
+		assert.ok(passes("1888-08-03", "@date:88/8"));
+		assert.ok(!passes("1888-09-03", "@date:88/8"));
+		for (const date of ["1988-08-03", "1888-08-03", "2088-08-03"]) assert.ok(passes(date, "@year:88"), date);
+		assert.ok(!passes("1989-08-03", "@year:88"));
+		assert.ok(passes("1908-08-03", "@year:08"), "a leading zero is a digit like any other");
+		assert.ok(!passes("1980-08-03", "@year:08"));
+		// A year, and nothing more specific: that is `@date:`.
+		for (const value of ["1988/8", "1988-08-03", "198808", "aug", "198", "8"]) {
+			assert.equal(read(`@year:${value}`), null, value);
+		}
+		// Four digits are the same rule, and pick out one year.
+		assert.ok(passes("1988-08-03", "@year:1988"));
+		assert.ok(!passes("1888-08-03", "@year:1988"));
 	});
 
 	// A reader's own query is still held to the archive, which is what keeps `1812` text.
@@ -368,6 +387,9 @@ test("filters", async (suite) => {
 			"@day:32",
 			"@day:funday",
 			"@before:august-3",
+			// A bound is one day, and every year ending in 88 has no single edge.
+			"@before:88",
+			"@after:95/6",
 			// A book that is not one of the archive's is a typo rather than a place to look — unlike
 			// `@year:2001`, which is a real coordinate that honestly holds nothing.
 			"@year",

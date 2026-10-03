@@ -148,3 +148,37 @@ test("what is not a date", async (suite) => {
 		});
 	}
 });
+
+/*
+ * Two digits are a year's ending, so nothing about the 1900s is built in. A query reads them
+ * against the archive's own years, which here end in 85 to 95 and so give one year each; a filter
+ * is not held to the archive, and reads them as every year that ends that way.
+ */
+test("two digits are every year ending in them", async (suite) => {
+	await suite.test("a query reads them as the archive years they end", () => {
+		assert.deepEqual(parsed("aug 3 '88").candidates, [{ year: 1988, month: 8, day: 3 }]);
+		assert.deepEqual(reach("8/3/88"), ["1988-03-08", "1988-08-03"]);
+		// No archive year ends in 12, so a small number stays a day rather than becoming a year.
+		assert.equal(parseDateExpression("aug 12"), null);
+		assert.equal(parseDateExpression("aug 3 '01"), null);
+	});
+
+	await suite.test("a filter reads them as every year ending in them", () => {
+		const expression = parseDateExpression("88/8/3", "filter")!;
+		for (const date of ["1888-08-03", "1988-08-03", "2088-08-03"]) {
+			assert.ok(matchesExpression(expression, date), date);
+		}
+		assert.ok(!matchesExpression(expression, "1989-08-03"));
+		assert.ok(matchesExpression(parseDateExpression("88", "filter")!, "1888-01-01"));
+		assert.ok(matchesExpression(parseDateExpression("01", "filter")!, "2001-01-01"), "any ending at all");
+	});
+
+	// Only February 29th depends on the year, and only some endings ever have one.
+	await suite.test("a day exists if some year with the ending has it", () => {
+		const leap = parseDateExpression("88/2/29", "filter")!;
+		assert.ok(matchesExpression(leap, "1988-02-29"));
+		assert.equal(parseDateExpression("89/2/29", "filter"), null);
+		assert.ok(parseDateExpression("00/2/29", "filter"), "2000 was a leap year");
+		assert.equal(parseDateExpression("88/2/30", "filter"), null);
+	});
+});

@@ -1,6 +1,6 @@
 import "./grid.css";
 
-import { Arc, Day } from "./types";
+import { Day } from "./types";
 import { computeDays } from "./days";
 import { scrollCellIntoViewIfNeeded } from "./utils";
 import { state } from "./state";
@@ -9,6 +9,7 @@ import { isPlainClick, parseRoute } from "./router";
 import { buildComicPath } from "./routes";
 import { addressOf } from "./base-path";
 import { formatLongDate } from "./date-utils";
+import { ARCS, COLLECTION_INDEX, RERUNS } from "./bundled-data";
 
 export function updateGridStatesFromData(): void {
 	const cells = document.querySelectorAll(".cell");
@@ -331,7 +332,22 @@ export function renderGrid(): void {
 	document.getElementById("grid-container")!.addEventListener("scroll", followScroll);
 }
 
+/**
+ * The parts of the archive that ship inside the script. Set before anything is fetched, so `@in:`
+ * knows the books from the first keystroke. See `bundled-data.ts`.
+ */
+function useBundledData(): void {
+	state.reruns = new Map(Object.entries(RERUNS));
+	state.collectionIndex = COLLECTION_INDEX;
+	state.collectionsById = new Map(COLLECTION_INDEX.collections.map((collection) => [collection.id, collection]));
+	state.arcs = ARCS;
+	state.arcsById = new Map(ARCS.map((arc) => [arc.id, arc]));
+}
+
 export async function loadComicData(): Promise<void> {
+	useBundledData();
+	// Both requests leave now, side by side: the descriptions are wanted by fewer pages and are
+	// waited on where they are, so nothing here holds the archive up for them.
 	void loadDescriptions();
 
 	try {
@@ -343,9 +359,6 @@ export async function loadComicData(): Promise<void> {
 			if (!state.comicsByDate.has(comic.date)) state.comicsByDate.set(comic.date, []);
 			state.comicsByDate.get(comic.date)!.push(comic);
 		}
-
-		const rerunsResponse = await fetch(addressOf("/reruns.json"));
-		state.reruns = new Map(Object.entries((await rerunsResponse.json()) as Record<string, string>));
 	} catch {
 		const loading = document.getElementById("loading")!;
 		loading.classList.remove("hidden");
@@ -361,41 +374,11 @@ export async function loadComicData(): Promise<void> {
 		return;
 	}
 
-	// Side by side: neither needs the other, so the arcs add no wait to a page that only wants the
-	// books, and either can fail without taking the other with it.
-	await Promise.all([loadCollectionIndex(), loadArcs()]);
-
 	state.dataLoaded = true;
 	updateGridStatesFromData();
 	document.getElementById("loading")!.classList.add("hidden");
 
 	resumeRoute();
-}
-
-async function loadCollectionIndex(): Promise<void> {
-	try {
-		const collectionsResponse = await fetch(addressOf("/collection-index.json"));
-		const collectionIndex = await collectionsResponse.json();
-		state.collectionIndex = collectionIndex;
-		state.collectionsById = new Map();
-		for (const collection of collectionIndex.collections) {
-			state.collectionsById.set(collection.id, collection);
-		}
-	} catch {
-		// collection data unavailable — "Appears in" section won't render
-	}
-}
-
-async function loadArcs(): Promise<void> {
-	try {
-		const arcsResponse = await fetch(addressOf("/arcs.json"));
-		if (!arcsResponse.ok) throw new Error(`HTTP ${arcsResponse.status}`);
-		const arcs: Arc[] = await arcsResponse.json();
-		state.arcs = arcs;
-		state.arcsById = new Map(arcs.map((arc) => [arc.id, arc]));
-	} catch {
-		// arc data unavailable — no arc lines on a strip's page, and the arc pages say so
-	}
 }
 
 // ─── Re-import from router (circular dependency resolved at runtime) ────────

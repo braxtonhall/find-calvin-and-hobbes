@@ -1,4 +1,3 @@
-import { RANGE_END, RANGE_START } from "./constants";
 import { MONTHS, WEEKDAYS } from "./date-query";
 
 /**
@@ -11,14 +10,9 @@ import { MONTHS, WEEKDAYS } from "./date-query";
  * this module is downstream of the parsers instead, and derives rather than restates.
  */
 
-const FIRST_YEAR = Number(RANGE_START.slice(0, 4));
-const LAST_YEAR = Number(RANGE_END.slice(0, 4));
-
-/** Every year the strip ran in, ascending. */
-export const YEARS: readonly number[] = Array.from(
-	{ length: LAST_YEAR - FIRST_YEAR + 1 },
-	(_, offset) => FIRST_YEAR + offset,
-);
+// Made in `constants.ts`, beside the span it comes from, where the parser can reach it too; listed
+// here with the other values a filter can take.
+export { YEARS } from "./constants";
 
 /**
  * The longest spelling of each name, taken off the parser's own tables rather than written out a

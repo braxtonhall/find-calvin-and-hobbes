@@ -299,6 +299,11 @@ test("typing the rest of the value in", async (suite) => {
 		assert.deepEqual(completions("@date:19880903|"), ["@date:19880903 "]);
 		assert.deepEqual(values("@date:1988-09|")[1], "1988-09-1");
 		assert.deepEqual(values("@date:88|").slice(0, 2), ["88", "88/1"]);
+		// A bound cannot take two digits, so the menu writes the year out rather than keep them.
+		assert.deepEqual(values("@before:88|").slice(0, 3), ["1988", "1988/1", "1988/1/1"]);
+		assert.deepEqual(completions("@after:88|")[0], "@after:1988");
+		// Nor is the value as typed offered where no archive year ends in it.
+		assert.ok(!values("@date:19|").includes("19"));
 	});
 
 	// A value the archive cannot honour is still a filter the parser takes — see `DateSource` — so

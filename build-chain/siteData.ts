@@ -2,12 +2,12 @@ import type { Compilation } from "webpack";
 import { Arc, Comic, CollectionIndex } from "../src/types";
 
 /**
- * The archive as the site reads it: the parsed forms of the five JSON files the app fetches.
+ * The archive as the site reads it: the parsed forms of the five JSON texts the app has — two it
+ * fetches, and three built into its script (see `bundledData.ts`).
  *
- * `YamlToJsonPlugin` records it here for the compilation that emitted those files, and
- * `PagesPlugin` reads it back to build the pages — from the same objects, round-tripped through
- * the same JSON, so a prerendered page and the page the app would draw from a fetch are built
- * from equal data.
+ * `YamlToJsonPlugin` records it here for the compilation that made those texts, and `PagesPlugin`
+ * reads it back to build the pages — from the same objects, round-tripped through the same JSON,
+ * so a prerendered page and the page the app would draw for itself are built from equal data.
  */
 export interface SiteData {
 	comics: Comic[];

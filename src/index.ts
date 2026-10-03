@@ -21,19 +21,20 @@ import { attachLifeEasterEgg } from "./life";
 
 function initialize(): void {
 	// The one filter whose values are loaded data. A thunk, so this can be registered before the
-	// collection index has been fetched and answer with the books the moment it has — nothing has to
-	// notice when that happens, and an index that never arrives leaves an empty list, which every
-	// reader of it already treats as "no opinion". See `filter-vocabulary.ts`.
+	// collection index is in `state` and answer with the books once it is. See `filter-vocabulary.ts`.
 	registerVocabulary("in", () =>
 		(state.collectionIndex?.collections ?? []).map((collection) => ({ value: collection.id, hint: collection.name })),
 	);
+
+	// First, so the requests are on the wire while the grid is drawn. Nothing it does after they
+	// answer can run before this function returns, so the grid and the route are in place by then.
+	loadComicData();
 
 	buildGridData();
 	renderGrid();
 	// The build may have written this very page into the document; if so, it is taken over as it
 	// stands rather than replaced with a spinner until the archive arrives. See `handleRoute`.
 	handleRoute(readPrerenderedPage());
-	loadComicData();
 
 	// After the first paint, not before it: opening IndexedDB can take longer than drawing a
 	// prerendered page, and what waits on the answer is the grid's bookmark highlights and the
