@@ -244,7 +244,7 @@
 	max-width: 600px;
 	display: flex;
 	flex-direction: column;
-	gap: 6px;
+	gap: 12px;
 	font-size: 13px;
 	color: var(--text-muted);
 }
@@ -260,10 +260,13 @@
 	min-width: 0;
 }
 
+/* Hangs into the space around its line rather than heightening it, so every line is as tall as its
+   text and they sit evenly apart, in whatever order. The arrows are 28px against a 16px line. */
 .detail-arc__nav {
 	flex: none;
 	display: flex;
 	gap: 6px;
+	margin-block: -6px;
 }
 
 .detail-arc__nav > .nav-btn {
@@ -281,7 +284,7 @@
 
 /* Under the reruns and arcs, as close as they are to each other. */
 .detail-runs + .detail-collections-slot .detail-collections-heading {
-	margin-top: 6px;
+	margin-top: 12px;
 }
 
 .detail-image-wrapper {

@@ -523,13 +523,13 @@ function buildRerunBannerHtml(originalDate: string): string {
 }
 
 /**
- * When else the paper ran the strip on an original day, and the arcs it is part of, together under
+ * The arcs the strip is part of, and when else the paper ran it on an original day, together under
  * the strip. A rerun day's reruns are empty; where its strip is from is said above it instead.
  */
 function buildRunsHtml(page: DetailPage, date: string): string {
 	const reruns = page.rerunOf ? [] : page.runs.slice(1);
 	const rerun = reruns.length > 0 ? `<li class="detail-run">Reran ${joinRerunLinks(reruns)}</li>` : "";
-	const lines = rerun + page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("");
+	const lines = page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("") + rerun;
 	return lines ? `<ul class="detail-runs">${lines}</ul>` : "";
 }
 
