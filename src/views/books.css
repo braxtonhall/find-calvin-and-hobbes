@@ -1,0 +1,218 @@
+/* In the same type as the lines above it on a strip's page, so the books read as one more of them. */
+.detail-collections-heading {
+	font-size: 13px;
+	color: var(--text-muted);
+	margin: 24px 0 8px 0;
+}
+
+.detail-collections {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-start;
+	gap: 10px;
+}
+
+.collection-entry {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+}
+
+.collection-pages {
+	max-width: 72px;
+	margin-top: 7px;
+	font-size: 11px;
+	line-height: 1.35;
+	color: var(--text-muted);
+	text-align: center;
+	hyphens: auto;
+	overflow-wrap: break-word;
+}
+
+.collection-pages__line {
+	display: block;
+}
+
+.collection-book {
+	display: block;
+	height: 64px;
+	position: relative;
+	background: var(--grey);
+	border-radius: 3px;
+}
+
+.collection-book img {
+	height: 64px;
+	width: auto;
+	display: block;
+	border-radius: 3px;
+}
+
+.collection-book--bw img {
+	filter: grayscale(100%);
+}
+
+.collection-book__badge {
+	position: absolute;
+	top: -5px;
+	right: -5px;
+	box-sizing: border-box;
+	min-width: 17px;
+	height: 17px;
+	padding: 0;
+	border-radius: 9px;
+	background: var(--golden);
+	color: #fff;
+	/* The asterisk is drawn rather than typed: a typed one sits high in its line, off the circle's centre. */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1;
+	transition: padding 0.2s ease;
+}
+
+/*
+ * Hovered, the badge grows leftward from its corner into a pill that says what the asterisk means.
+ * A width of `auto` cannot be eased, so the contents are: the asterisk narrows away as the word
+ * opens out, and the badge, sized by them, follows.
+ */
+.collection-book__badge svg,
+.collection-book__badge-label {
+	flex: none;
+	overflow: hidden;
+	transition:
+		max-width 0.2s ease,
+		opacity 0.2s ease;
+}
+
+.collection-book__badge svg {
+	width: 8px;
+	height: 8px;
+	max-width: 8px;
+}
+
+.collection-book__badge-label {
+	max-width: 0;
+	opacity: 0;
+	font-size: 10px;
+	font-weight: 600;
+	line-height: 1;
+	white-space: nowrap;
+}
+
+/* Only where there is a pointer to hover with: a tap on a phone would leave the pill stuck open. */
+@media (hover: hover) {
+	.collection-book__badge:hover {
+		padding: 0 6px;
+	}
+
+	.collection-book__badge:hover svg {
+		max-width: 0;
+		opacity: 0;
+	}
+
+	.collection-book__badge:hover .collection-book__badge-label {
+		max-width: 48px;
+		opacity: 1;
+	}
+}
+
+/* A cover is a button: nothing of one shows but the cover, and the ring when it is focused or selected. */
+.book__cover {
+	display: block;
+	padding: 0;
+	font: inherit;
+	color: inherit;
+	background: none;
+	border: none;
+	border-radius: 3px;
+	cursor: pointer;
+}
+
+.book__cover:focus-visible {
+	outline: none;
+}
+
+/* Selected, the cover is ringed in gold, and its caption reads as text rather than as a note. */
+.book__cover[aria-expanded="true"] .collection-book,
+.book__cover:focus-visible .collection-book {
+	outline: 2px solid var(--golden);
+	outline-offset: 2px;
+}
+
+.book__cover[aria-expanded="true"] .collection-pages {
+	color: var(--text);
+}
+
+/*
+ * The popup a selected cover opens: on the body and floated, like the filter bar's menus, and
+ * dressed as they are. The text on the left, the arrows at the end of the line as an arc's are.
+ */
+.book-popup {
+	position: fixed;
+	z-index: 10000;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	max-width: min(480px, calc(100vw - 16px));
+	padding: 8px 10px;
+	font-family: var(--font);
+	font-size: 13px;
+	line-height: 1.5;
+	background: var(--bg-sidebar);
+	border: 1px solid var(--grey);
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+	opacity: 0;
+	visibility: hidden;
+	transition: opacity 0.12s;
+}
+
+.book-popup--visible {
+	opacity: 1;
+	visibility: visible;
+}
+
+.book__text {
+	flex: 1;
+	min-width: 0;
+}
+
+.book__name {
+	color: var(--text);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.book__name:hover {
+	color: var(--golden);
+}
+
+.book__year,
+.book__line {
+	color: var(--text-muted);
+}
+
+.book__line {
+	display: block;
+}
+
+.book__note {
+	font-style: italic;
+}
+
+.book__nav {
+	flex: none;
+	display: flex;
+	gap: 6px;
+}
+
+.book__nav > .nav-btn {
+	margin-left: 0;
+}
+
+.printings__empty {
+	font-size: 13px;
+	font-style: italic;
+	color: var(--text-muted);
+}

@@ -14,7 +14,8 @@ import {
 } from "../pages/detail";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
-import { attachCellHighlightLink, clearCollectionSoon, datesOf, highlightCollection } from "./cell-highlight";
+import { attachCellHighlightLink, clearCollectionSoon, highlightCollection } from "./cell-highlight";
+import { attachBookHandlers } from "./books";
 
 function buildBookmarkButtonHandler(bookmarkButton: HTMLButtonElement, date: string): void {
 	isBookmarked(date).then((bookmarked) => {
@@ -58,53 +59,14 @@ function patchDetailBlocks(element: HTMLElement, page: DetailPage): void {
 
 /**
  * Hovering — or focusing — any link to another day's strip lights up its cell: the header's arrows,
- * a run in the paper, a step through an arc or a book.
+ * a run in the paper, a step through an arc. A book's arrows are in its popup, which does its own.
  */
 function attachStripLinkHandlers(element: HTMLElement): void {
 	element
-		.querySelectorAll<HTMLElement>(
-			"a#nav-prev, a#nav-next, a.detail-rerun-link[data-date], a.detail-arc-step, a.printing__arrow",
-		)
+		.querySelectorAll<HTMLElement>("a#nav-prev, a#nav-next, a.detail-rerun-link[data-date], a.detail-arc-step")
 		.forEach((link) => {
 			attachCellHighlightLink(link, link.dataset.date!);
 		});
-}
-
-/**
- * Hovering a book shows its strips in the grid, as the list of books does. The ranges come from the
- * collection index, so until it has loaded — a cold load — the hover does nothing. `back` is what the
- * grid goes back to when the pointer leaves: the plain grid on a strip's page, the arc on an arc's.
- */
-export function attachBookHighlightHandlers(element: HTMLElement, back: ReadonlySet<string> | null = null): void {
-	element.querySelectorAll<HTMLElement>("a[data-collection-id]").forEach((book) => {
-		// A book followed to its page is left focused, and hidden, which blurs it; by then the grid is
-		// the book page's to draw, so only this page while it is showing may touch it.
-		const show = () => {
-			const collection = state.collectionsById?.get(book.dataset.collectionId ?? "");
-			if (collection && element.classList.contains("active")) highlightCollection(datesOf(collection));
-		};
-		const clear = () => element.classList.contains("active") && clearCollectionSoon(back);
-		book.addEventListener("mouseenter", show);
-		book.addEventListener("focus", show);
-		book.addEventListener("mouseleave", clear);
-		book.addEventListener("blur", clear);
-	});
-}
-
-/**
- * Whether the books show as a list rather than a row of covers. Kept for as long as the page is
- * open, so a reader stepping through a book by its arrows stays in the list that has them.
- */
-let collectedExpanded = false;
-
-/** "Collected in" opens the list of books, on a strip's page or an arc's, and stays open from page to page. */
-export function attachCollectedToggleHandlers(element: HTMLElement): void {
-	element.querySelectorAll<HTMLDetailsElement>(".detail-collected").forEach((section) => {
-		section.open = collectedExpanded;
-		section.addEventListener("toggle", () => {
-			collectedExpanded = section.open;
-		});
-	});
 }
 
 /**
@@ -139,8 +101,7 @@ export function renderDetail(page: DetailPage, adopt: boolean = false): void {
 	attachBackAndHomeHandlers(element);
 	attachStripLinkHandlers(element);
 	attachArcLinkHandlers(element, page);
-	attachBookHighlightHandlers(element);
-	attachCollectedToggleHandlers(element);
+	attachBookHandlers(element);
 
 	attachCopyLinkHandler(element);
 

@@ -233,6 +233,7 @@ function shortenEditionLabel(label: string): string {
 interface Printing {
 	key: string;
 	collection: DetailCollection;
+	edition?: string;
 	name: string;
 	year: number;
 	image: string;
@@ -258,6 +259,7 @@ function buildPrintings(
 			printing = {
 				key,
 				collection,
+				edition: appearance.edition,
 				name: appearance.edition
 					? `${collection.name}, ${shortenEditionLabel(edition?.label ?? appearance.edition)}`
 					: collection.name,
@@ -275,21 +277,29 @@ function buildPrintings(
 	return [...printingsByKey.values()];
 }
 
+const BOOK_ICON = `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
 function buildBookArrowHtml(date: string | null, direction: -1 | 1): string {
 	const arrow = direction === -1 ? "&larr;" : "&rarr;";
 	const title = direction === -1 ? "Previous strip in this book" : "Next strip in this book";
 	return date
-		? `<a class="nav-btn printing__arrow" href="${addressOf(buildComicPath(date))}" data-date="${date}" title="${title}" aria-label="${title}">${arrow}</a>`
-		: `<span class="nav-btn nav-btn--disabled printing__arrow" title="${direction === -1 ? "First" : "Last"} strip in this book">${arrow}</span>`;
+		? `<a class="nav-btn book__arrow" href="${addressOf(buildComicPath(date))}" data-date="${date}" title="${title}" aria-label="${title}">${arrow}</a>`
+		: `<span class="nav-btn nav-btn--disabled book__arrow" title="${direction === -1 ? "First" : "Last"} strip in this book">${arrow}</span>`;
 }
 
 /** The badge on a cover whose printing of the strip was altered: an asterisk, which says what it means when hovered. */
-function buildAlterationBadgeHtml(extraClass: string = ""): string {
-	return `<span class="collection-book__badge${extraClass}"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1v8M1.54 3l6.92 4M1.54 7l6.92-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="collection-book__badge-label">Altered</span></span>`;
-}
+const ALTERATION_BADGE = `<span class="collection-book__badge"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1v8M1.54 3l6.92 4M1.54 7l6.92-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="collection-book__badge-label">Altered</span></span>`;
 
-/** A book's row in the list. `neighbours` is `null` where there is no one strip to step from, as on an arc's page. */
-function buildPrintingRowHtml(
+/**
+ * One book the strip is in, as a cover that can be selected. The cover over the volume and page the
+ * strip is on is all the row shows. Selected, it opens a popup above it with the book's name, the
+ * way to its page, and arrows through its strips: the `<template>` is what the view fills the popup
+ * with, inert until then.
+ *
+ * `neighbours` is `null` where there is no one strip to step from, as on an arc's page. `data-book`
+ * is the book and edition, which the view reads to keep a book selected from one strip to the next.
+ */
+function buildBookHtml(
 	printing: Printing,
 	neighbours: BookNeighbours | undefined | null,
 	alterationKey: string,
@@ -298,31 +308,6 @@ function buildPrintingRowHtml(
 	const { collection } = printing;
 	const isBlackAndWhite = isSunday && !collection.colour;
 	const alteration = collection.alterations && collection.alterations[alterationKey];
-	const notes = [
-		...(isBlackAndWhite ? ["black & white"] : []),
-		...(alteration ? [`<span class="printing__alteration">${escHtml(alteration)}</span>`] : []),
-	];
-	const places = printing.places.map((place) => (place.volume ? `${place.volume}, ${place.pages}` : place.pages));
-	const detail = [escHtml(places.join("; ")), ...notes].join(" &middot; ");
-
-	return `<li class="printing">
-		<a class="printing__book" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}">
-			<span class="printing__cover${isBlackAndWhite ? " printing__cover--bw" : ""}"><span class="printing__cover-image"><img src="${escHtml(printing.image)}" alt="" loading="lazy" />${alteration ? buildAlterationBadgeHtml(" printing__badge") : ""}</span></span>
-			<span class="printing__text">
-				<span class="printing__name">${escHtml(printing.name)} <span class="printing__year">${printing.year}</span></span>
-				<span class="printing__detail">${detail}</span>
-			</span>
-		</a>
-		${neighbours === null ? "" : `<span class="printing__nav">${buildBookArrowHtml(neighbours?.prev ?? null, -1)}${buildBookArrowHtml(neighbours?.next ?? null, 1)}</span>`}
-	</li>`;
-}
-
-/** A book's cover, as the collapsed row shows it: the cover over the volume and page the strip is on. */
-function buildCoverHtml(printing: Printing, alterationKey: string, isSunday: boolean): string {
-	const { collection } = printing;
-	const isBlackAndWhite = isSunday && !collection.colour;
-	const alteration = collection.alterations && collection.alterations[alterationKey];
-	const badge = alteration ? buildAlterationBadgeHtml() : "";
 	// The collection's ratio holds the space until the cover loads; an edition's own cover may differ.
 	const ratio =
 		printing.image === collection.image && collection.aspectRatio
@@ -333,17 +318,35 @@ function buildCoverHtml(printing: Printing, alterationKey: string, isSunday: boo
 		.flatMap((place) => (place.volume ? [place.volume, place.pages] : [place.pages]))
 		.map((line) => `<span class="collection-pages__line">${escHtml(line)}</span>`)
 		.join("");
+	const where = printing.places.map((place) => (place.volume ? `${place.volume}, ${place.pages}` : place.pages));
+	// Black and white is about the page the strip is on, so it goes on that line; an alteration gets its own.
+	const colour = isBlackAndWhite ? " · Black & white" : "";
+	const notes = alteration ? [`Altered · ${alteration}`] : [];
+	const book = `${collection.id} ${printing.edition ?? ""}`;
 
-	return `<div class="collection-entry"><a class="collection-book${isBlackAndWhite ? " collection-book--bw" : ""}" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}"${ratio}><img src="${escHtml(printing.image)}" alt="${escHtml(printing.name)}" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${badge}</a><div class="collection-pages">${caption}</div></div>`;
+	const cover = `<button type="button" class="book__cover" aria-haspopup="dialog" aria-expanded="false" data-collection-id="${escHtml(collection.id)}" aria-label="${escHtml(printing.name)}"><span class="collection-entry"><span class="collection-book${isBlackAndWhite ? " collection-book--bw" : ""}"${ratio}><img src="${escHtml(printing.image)}" alt="" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${alteration ? ALTERATION_BADGE : ""}</span><span class="collection-pages">${caption}</span></span></button>`;
+
+	// The way to the book's page sits between the arrows through it — alone, where there are none.
+	const goTo = `<a class="nav-btn book__go" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}" title="Go to this book" aria-label="Go to this book">${BOOK_ICON}</a>`;
+	const nav =
+		neighbours === null
+			? `<span class="book__nav">${goTo}</span>`
+			: `<span class="book__nav">${buildBookArrowHtml(neighbours?.prev ?? null, -1)}${goTo}${buildBookArrowHtml(neighbours?.next ?? null, 1)}</span>`;
+	const card = `<template class="book__card">
+		<div class="book__text">
+			<a class="book__name" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}">${escHtml(printing.name)}</a> <span class="book__year">${printing.year}</span>
+			<span class="book__line">${escHtml(where.join("; ") + colour)}</span>
+			${notes.map((note) => `<span class="book__line book__note">${escHtml(note)}</span>`).join("")}
+		</div>
+		${nav}
+	</template>`;
+
+	return `<div class="book" data-book="${escHtml(book)}">${cover}${card}</div>`;
 }
 
 /**
- * The books a strip is in: a row of covers, which is all most readers need, and folded under the
- * heading the same books as a list — named, dated, and each with arrows through its strips. The
- * heading folds as a book's page's sections do; open, the list stands in for the covers. Both are
- * drawn, so opening it needs no redraw.
- *
- * `neighbours` is by `printingKey`, or `null` where the list has no arrows, as on an arc's page.
+ * The books a strip is in: a row of covers, any one of which opens a popup with the rest.
+ * `neighbours` is by printing key, or `null` where there are no arrows, as on an arc's page.
  */
 function buildPrintingsSectionHtml(
 	printings: Printing[],
@@ -351,16 +354,15 @@ function buildPrintingsSectionHtml(
 	alterationKey: string,
 	isSunday: boolean,
 ): string {
+	const heading = `<p class="detail-collections-heading">Collected in</p>`;
 	if (printings.length === 0) {
-		return `<p class="detail-collections-heading">Collected in</p><p class="printings__empty">Not reprinted in any book</p>`;
+		return `${heading}<p class="printings__empty">Not reprinted in any book</p>`;
 	}
 
-	const covers = printings.map((printing) => buildCoverHtml(printing, alterationKey, isSunday)).join("");
-	const rows = printings
-		.map((printing) => buildPrintingRowHtml(printing, neighbours && neighbours[printing.key], alterationKey, isSunday))
+	const books = printings
+		.map((printing) => buildBookHtml(printing, neighbours && neighbours[printing.key], alterationKey, isSunday))
 		.join("");
-
-	return `<details class="detail-collected"><summary class="detail-collections-heading">Collected in</summary><ul class="detail-printings">${rows}</ul></details><div class="detail-collections">${covers}</div>`;
+	return `${heading}<div class="detail-collections">${books}</div>`;
 }
 
 /** The books an arc is in, from the appearances its page gathers: one row per book and edition. */
