@@ -218,11 +218,14 @@ export function detailPageFrom(source: PageSource, date: string, alternates: str
 	};
 }
 
-function formatPages(pages: number[]): string {
+/**
+ * `p. 22` or `pp. 22–24` — or, `spelled`, `page 22` and `pages 22–24`, where there is room for words.
+ */
+function formatPages(pages: number[], spelled: boolean = false): string {
 	if (pages.length === 0) return "";
-	if (pages.length === 1) return `p. ${pages[0]}`;
+	if (pages.length === 1) return `${spelled ? "page" : "p."} ${pages[0]}`;
 	const isContiguous = pages.every((page, index) => index === 0 || page === pages[index - 1] + 1);
-	return `pp. ${isContiguous ? `${pages[0]}–${pages[pages.length - 1]}` : pages.join(", ")}`;
+	return `${spelled ? "pages" : "pp."} ${isContiguous ? `${pages[0]}–${pages[pages.length - 1]}` : pages.join(", ")}`;
 }
 
 function shortenEditionLabel(label: string): string {
@@ -237,8 +240,8 @@ interface Printing {
 	name: string;
 	year: number;
 	image: string;
-	/** Where the strip is, one per volume it is in: `Book 1` (when the book has volumes) and `p. 22`. */
-	places: { volume?: string; pages: string }[];
+	/** Where the strip is, one per volume it is in: the volume, when the book has them, and the pages. */
+	places: { volume?: number; pages: number[] }[];
 }
 
 function buildPrintings(
@@ -270,8 +273,8 @@ function buildPrintings(
 			printingsByKey.set(key, printing);
 		}
 
-		const pages = formatPages(appearance.pages);
-		printing.places.push(appearance.volume ? { volume: `Book ${appearance.volume}`, pages } : { pages });
+		const { volume, pages } = appearance;
+		printing.places.push(volume ? { volume, pages } : { pages });
 	}
 
 	return [...printingsByKey.values()];
@@ -313,12 +316,14 @@ function buildBookHtml(
 		printing.image === collection.image && collection.aspectRatio
 			? ` style="aspect-ratio: ${collection.aspectRatio}"`
 			: "";
-	// The volume and the page on lines of their own, since the two together are wider than a cover.
+	// One short line for the label under the cover: `Bk 1 · p. 357`, the volume shortened to fit.
 	const caption = printing.places
-		.flatMap((place) => (place.volume ? [place.volume, place.pages] : [place.pages]))
-		.map((line) => `<span class="collection-pages__line">${escHtml(line)}</span>`)
-		.join("");
-	const where = printing.places.map((place) => (place.volume ? `${place.volume}, ${place.pages}` : place.pages));
+		.map((place) => (place.volume ? `Bk ${place.volume} · ${formatPages(place.pages)}` : formatPages(place.pages)))
+		.join(", ");
+	// The popup has room for the words: `Book 1, page 357`.
+	const where = printing.places.map((place) =>
+		place.volume ? `Book ${place.volume}, ${formatPages(place.pages, true)}` : formatPages(place.pages, true),
+	);
 	// Black and white is about the page the strip is on, so it goes on that line; an alteration gets its own.
 	const colour = isBlackAndWhite ? " · Black & white" : "";
 	const notes = alteration ? [`Altered · ${alteration}`] : [];

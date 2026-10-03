@@ -9,28 +9,53 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: flex-start;
-	gap: 10px;
+	gap: 10px 14px;
 }
 
+/* Room below the cover for its label, which is placed rather than laid out: see `.collection-pages`. */
 .collection-entry {
+	position: relative;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	padding-bottom: 24px;
 }
 
+/*
+ * Where the strip is, as a label under the cover. Centred on the cover and out of the flow, so a
+ * label wider than its cover never moves the covers beside it.
+ */
 .collection-pages {
-	max-width: 72px;
-	margin-top: 7px;
-	font-size: 11px;
-	line-height: 1.35;
+	position: absolute;
+	bottom: 0;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 1;
+	padding: 0 6px;
+	font-size: 10px;
+	font-variant-numeric: tabular-nums;
+	line-height: 16px;
+	white-space: nowrap;
 	color: var(--text-muted);
-	text-align: center;
-	hyphens: auto;
-	overflow-wrap: break-word;
+	background: var(--bg);
+	border: 1px solid var(--grey);
+	border-radius: 9px;
+	transition:
+		color 0.12s,
+		border-color 0.12s;
 }
 
-.collection-pages__line {
-	display: block;
+/*
+ * Two labels wider than their covers can meet, and left alone the later book's would always be the
+ * one on top. The one being pointed at wins, then the selected one, then page order.
+ */
+.book__cover[aria-expanded="true"] .collection-pages {
+	z-index: 2;
+}
+
+.book__cover:hover .collection-pages,
+.book__cover:focus-visible .collection-pages {
+	z-index: 3;
 }
 
 .collection-book {
@@ -133,7 +158,7 @@
 	outline: none;
 }
 
-/* Selected, the cover is ringed in gold, and its caption reads as text rather than as a note. */
+/* Selected, the cover is ringed in gold, and so is its label. */
 .book__cover[aria-expanded="true"] .collection-book,
 .book__cover:focus-visible .collection-book {
 	outline: 2px solid var(--golden);
@@ -142,6 +167,7 @@
 
 .book__cover[aria-expanded="true"] .collection-pages {
 	color: var(--text);
+	border-color: var(--golden);
 }
 
 /*
