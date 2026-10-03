@@ -50,6 +50,7 @@ const TAGS: readonly Term[] = [
 	{ value: "rerun", hint: "A strip on the date it ran again" },
 	{ value: "altered", hint: "A strip a book printed with changes" },
 	{ value: "empty", hint: "A strip with an empty transcript" },
+	{ value: "standalone", hint: "A strip that belongs to no story arc" },
 ];
 
 const REGISTRY = new Map<string, Vocabulary>([["is", () => TAGS]]);

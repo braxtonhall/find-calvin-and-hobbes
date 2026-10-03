@@ -327,6 +327,7 @@ rosalynmovie:
   dates: ["19871005", "19871006", "19871007", "19871008", "19871009", "19871010"]
 
 #TODO review loose gags?
+# TODO review
 susieclass:
   description: Calvin bothers Susie in class.
   dates: ["19871013", "19871014"]
@@ -726,6 +727,7 @@ cleanroom:
   description: Calvin and Hobbes rush cleaning his room by stuffing everything in the closet.
   dates: ["19890619", "19890620", "19890621", "19890622", "19890623"]
 
+# TODO review
 itchyisland:
   description: The family endures another miserable camping trip on Itchy Island.
   dates:
@@ -795,6 +797,7 @@ palomarlens:
   description: Stupendous Man fries Calvin's school with a giant telescope lens.
   dates: ["19891009", "19891010", "19891011", "19891012", "19891013", "19891014"]
 
+# TODO review
 reportcardtalk:
   description: Dad talks to Calvin about his report card and homework.
   dates: ["19891018", "19891019"]
@@ -1019,6 +1022,7 @@ diorama:
   description: Calvin scrambles to build a desert diorama for school.
   dates: ["19901113", "19901114", "19901115", "19901116", "19901117"]
 
+# TODO review
 santalawyer:
   description: Calvin hires Hobbes as his lawyer to prove to Santa he was good.
   dates:
@@ -1191,6 +1195,7 @@ underbed:
   description: Calvin tries to cope with the monsters under his bed.
   dates: ["19920817", "19920818", "19920819", "19920820", "19920821", "19920822"]
 
+# TODO review
 journal:
   description: Calvin starts a journal of his brilliant thoughts.
   dates: ["19920825", "19920826"]
@@ -1208,6 +1213,7 @@ denial:
   description: Calvin uses denial to dodge homework and baths.
   dates: ["19920928", "19920929", "19920930"]
 
+# TODO review
 football:
   description: Calvin and Hobbes squabble over a football.
   dates: ["19921023", "19921024", "19921025"]
@@ -1244,6 +1250,7 @@ santaletters:
   description: Calvin writes manipulative letters to Santa.
   dates: ["19921208", "19921209", "19921210", "19921211"]
 
+# TODO review
 goodforsanta:
   description: Calvin tries to be good to impress Santa.
   dates: ["19921217", "19921218", "19921219", "19921220", "19921221", "19921222", "19921223", "19921224"]
@@ -1349,6 +1356,7 @@ fatherbook:
   description: Dad claims fathers get a book that explains everything.
   dates: ["19931030", "19931101"]
 
+# TODO review
 enhanceotron:
   description: Calvin enlarges his brain with a thinking cap to write a tyrannosaur report.
   dates:
@@ -1384,6 +1392,7 @@ santascheme:
 #   dates: ["19931217", "19931218", "19931219"]
 
 #TODO review (merge of slushballtemptation + snowballhoard)
+# TODO review
 snowballrestraint:
   description: Calvin struggles not to throw snowballs before Christmas.
   dates: ["19931217", "19931218", "19931219", "19931220", "19931221", "19931222", "19931223", "19931224", "19931225"]
@@ -1462,6 +1471,7 @@ chewingfitness:
   dates: ["19950424", "19950425", "19950426", "19950427"]
 
 #TODO review loose gags?
+# TODO review
 bubbles:
   description: Calvin blows soap bubbles that behave oddly.
   dates: ["19950515", "19950520"]

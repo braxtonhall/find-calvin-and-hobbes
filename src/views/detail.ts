@@ -15,7 +15,7 @@ import {
 } from "../pages/detail";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
-import { attachCellHighlightLink, clearCollectionSoon, highlightCollection } from "./cell-highlight";
+import { attachCellHighlightLink, clearCollectionSoon, datesOf, highlightCollection } from "./cell-highlight";
 
 function buildBookmarkButtonHandler(bookmarkButton: HTMLButtonElement, date: string): void {
 	isBookmarked(date).then((bookmarked) => {
@@ -155,17 +155,18 @@ function attachCollectionTooltipFollowers(): void {
 
 /**
  * Hovering a book shows its strips in the grid, as the list of books does. The ranges come from the
- * collection index, so until it has loaded — a cold load — the hover does nothing.
+ * collection index, so until it has loaded — a cold load — the hover does nothing. `back` is what the
+ * grid goes back to when the pointer leaves: the plain grid on a strip's page, the arc on an arc's.
  */
-function attachBookHighlightHandlers(element: HTMLElement): void {
+export function attachBookHighlightHandlers(element: HTMLElement, back: ReadonlySet<string> | null = null): void {
 	element.querySelectorAll<HTMLElement>(".collection-book").forEach((book) => {
 		// A book followed to its page is left focused, and hidden, which blurs it; by then the grid is
 		// the book page's to draw, so only this page while it is showing may touch it.
 		const show = () => {
 			const collection = state.collectionsById?.get(book.dataset.collectionId ?? "");
-			if (collection && element.classList.contains("active")) highlightCollection(collection);
+			if (collection && element.classList.contains("active")) highlightCollection(datesOf(collection));
 		};
-		const clear = () => element.classList.contains("active") && clearCollectionSoon();
+		const clear = () => element.classList.contains("active") && clearCollectionSoon(back);
 		book.addEventListener("mouseenter", show);
 		book.addEventListener("focus", show);
 		book.addEventListener("mouseleave", clear);
@@ -173,8 +174,9 @@ function attachBookHighlightHandlers(element: HTMLElement): void {
 	});
 }
 
-function attachCollectionBookHandlers(element: HTMLElement, page: DetailPage): void {
-	tooltipCollections = new Map(page.collections.map((collection) => [collection.id, collection]));
+/** The covers' tooltips, on a strip's page or an arc's: the books named are the ones the page carries. */
+export function attachCollectionBookHandlers(element: HTMLElement, collections: DetailCollection[]): void {
+	tooltipCollections = new Map(collections.map((collection) => [collection.id, collection]));
 
 	// The cover's href does the navigating. This only clears the tooltip out of the way of whatever
 	// the click turns out to be — including a cmd-click, which leaves this page standing.
@@ -195,8 +197,28 @@ function attachCollectionBookHandlers(element: HTMLElement, page: DetailPage): v
 }
 
 function attachRerunLinkHandlers(element: HTMLElement): void {
-	element.querySelectorAll<HTMLElement>(".detail-rerun-link").forEach((link) => {
-		attachCellHighlightLink(link, link.dataset.date!);
+	element
+		.querySelectorAll<HTMLElement>(".detail-rerun-link[data-date], .detail-arc-step[data-date]")
+		.forEach((link) => {
+			attachCellHighlightLink(link, link.dataset.date!);
+		});
+}
+
+/**
+ * Hovering an arc's range lights up the whole arc in the grid, as a book's cover lights up the book.
+ * The arc's dates are on the page, so this works on a cold load too.
+ */
+function attachArcLinkHandlers(element: HTMLElement, page: DetailPage): void {
+	const arcs = new Map(page.arcs.map((arc) => [arc.id, arc]));
+	element.querySelectorAll<HTMLElement>(".detail-arc-link").forEach((link) => {
+		const arc = arcs.get(link.dataset.arcId ?? "");
+		if (!arc) return;
+		const show = () => element.classList.contains("active") && highlightCollection(new Set(arc.dates));
+		const clear = () => element.classList.contains("active") && clearCollectionSoon();
+		link.addEventListener("mouseenter", show);
+		link.addEventListener("focus", show);
+		link.addEventListener("mouseleave", clear);
+		link.addEventListener("blur", clear);
 	});
 }
 
@@ -213,13 +235,14 @@ export function renderDetail(page: DetailPage, adopt: boolean = false): void {
 
 	attachBackAndHomeHandlers(element);
 	attachRerunLinkHandlers(element);
+	attachArcLinkHandlers(element, page);
 
 	attachCopyLinkHandler(element);
 
 	const bookmarkButton = element.querySelector<HTMLButtonElement>("#bookmark-btn");
 	if (bookmarkButton) buildBookmarkButtonHandler(bookmarkButton, page.date);
 
-	attachCollectionBookHandlers(element, page);
+	attachCollectionBookHandlers(element, page.collections);
 	attachBookHighlightHandlers(element);
 
 	if (page.descriptions === null) {

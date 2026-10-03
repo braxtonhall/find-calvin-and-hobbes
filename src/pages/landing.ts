@@ -1,4 +1,4 @@
-import { COLLECTIONS_PATH, CREDITS_PATH, LIBRARY_PATH } from "../routes";
+import { BOOKS_PATH, CREDITS_PATH, LIBRARY_PATH } from "../routes";
 import { addressOf } from "../base-path";
 
 // Drawn in the same idiom as the results-bar icons: 16px, stroked in `currentColor`, no fill.
@@ -27,7 +27,7 @@ export function buildLandingHtml(): string {
 		<nav class="landing-links">
 			<a href="${addressOf(LIBRARY_PATH)}">Library</a>
 			<span aria-hidden="true">·</span>
-			<a href="${addressOf(COLLECTIONS_PATH)}">Collections</a>
+			<a href="${addressOf(BOOKS_PATH)}">Collections</a>
 			<span aria-hidden="true">·</span>
 			<a href="${addressOf(CREDITS_PATH)}">Credits</a>
 		</nav>

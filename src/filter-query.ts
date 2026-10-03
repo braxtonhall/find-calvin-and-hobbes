@@ -194,6 +194,8 @@ function printedIn(subject: string | Comic, collection: string): boolean {
  *   printed in Book 1 that some book — not necessarily Book 1 — altered.
  * - `empty` is about the transcript field itself: a strip may carry an `alternate` beside an empty
  *   transcript, and it is still empty.
+ * - `standalone` is a strip in no arc. A rerun row is a copy of the strip it shows, arcs and all, so
+ *   it answers as that strip does; a special is never in an arc, so it always is one.
  * - `reused` and `rerun` are about the row rather than the strip — the same strip is one on the
  *   day it first ran and the other on the day it ran again — so only the caller's `run` answers them.
  */
@@ -204,6 +206,7 @@ function hasTag(subject: string | Comic, date: string, tag: string, run: Run | u
 	if (typeof subject === "string") return false;
 	if (tag === "altered") return (subject.appearances ?? []).some((appearance) => appearance.altered === true);
 	if (tag === "empty") return subject.transcript === "";
+	if (tag === "standalone") return (subject.arcs ?? []).length === 0;
 	return false;
 }
 

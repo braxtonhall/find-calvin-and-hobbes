@@ -63,7 +63,7 @@ yarn build
 yarn serve   # http://localhost:3000
 ```
 
-The build writes one HTML file per address — `1986-07-07.html`, `collection/yukonho.html`,
+The build writes one HTML file per address — `1986-07-07.html`, `book/yukonho.html`,
 `credits.html`, and so on — each holding that page as the app would draw it, plus the data it was
 drawn from in a `<script type="application/json">` in the head. A cold load paints before the
 script runs and unfurls with its own title and description when shared; once the script runs it

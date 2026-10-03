@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
+import { exportArcsJson, loadArcs } from "./arcs";
 import { loadCollectionData } from "./collectionPages";
 import { loadComicSource } from "./comicSource";
 import { exportComicsJson } from "./exportComicsJson";
@@ -21,6 +22,7 @@ function watchDataFiles(compilation: Compilation, projectDir: string): void {
 	const collectionsDir = path.join(projectDir, "collections");
 	compilation.fileDependencies.add(path.join(projectDir, "comics.yaml"));
 	compilation.fileDependencies.add(path.join(projectDir, "reruns.yaml"));
+	compilation.fileDependencies.add(path.join(projectDir, "arcs.yaml"));
 	compilation.contextDependencies.add(collectionsDir);
 	for (const file of fs.readdirSync(collectionsDir)) {
 		if (file.endsWith(".yaml")) {
@@ -44,10 +46,14 @@ class YamlToJsonPlugin {
 					// The images are named from the mount, so the app can show them from any page as they are.
 					const basePath = loadSiteConfig()?.basePath ?? "/";
 
-					const comicsJson = exportComicsJson(projectDir, collectionData, basePath);
+					const source = loadComicSource(path.join(projectDir, "comics.yaml"));
+					const arcs = loadArcs(projectDir, source, collectionData);
+					const arcsJson = exportArcsJson(arcs);
+					compilation.emitAsset("arcs.json", new sources.RawSource(arcsJson));
+
+					const comicsJson = exportComicsJson(projectDir, collectionData, basePath, arcs);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 
-					const source = loadComicSource(path.join(projectDir, "comics.yaml"));
 					const rerunsJson = exportRerunsJson(projectDir, source);
 					compilation.emitAsset("reruns.json", new sources.RawSource(rerunsJson));
 
@@ -62,6 +68,7 @@ class YamlToJsonPlugin {
 						reruns: JSON.parse(rerunsJson),
 						collectionIndex: JSON.parse(collectionIndexJson),
 						descriptions: JSON.parse(descriptionsJson),
+						arcs: JSON.parse(arcsJson),
 					});
 				},
 			);
