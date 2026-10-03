@@ -26,6 +26,8 @@ export function showsCorrection(view: Page["view"]): boolean {
  * The boxes the form opens with checked, which is what the page is about. A rerun day's page is
  * about the strip and the rerun both, since either could be what is wrong. Credits is about the
  * site rather than the archive, so it checks nothing and the reader says what they mean.
+ *
+ * The words are the form's own options, which a prefill has to match exactly.
  */
 export function correctionKinds(view: Page["view"], rerun: boolean): string[] {
 	switch (view) {
@@ -33,8 +35,10 @@ export function correctionKinds(view: Page["view"], rerun: boolean): string[] {
 			return rerun ? ["Comic", "Rerun"] : ["Comic"];
 		case "collection":
 		case "collections":
-			return ["Collection"];
-		// The form has no box for an arc, so the reader says what is wrong in their own words.
+			return ["Book"];
+		case "arc":
+		case "arcs":
+			return ["Arc"];
 		default:
 			return [];
 	}

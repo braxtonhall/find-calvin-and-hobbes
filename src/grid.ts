@@ -361,6 +361,18 @@ export async function loadComicData(): Promise<void> {
 		return;
 	}
 
+	// Side by side: neither needs the other, so the arcs add no wait to a page that only wants the
+	// books, and either can fail without taking the other with it.
+	await Promise.all([loadCollectionIndex(), loadArcs()]);
+
+	state.dataLoaded = true;
+	updateGridStatesFromData();
+	document.getElementById("loading")!.classList.add("hidden");
+
+	resumeRoute();
+}
+
+async function loadCollectionIndex(): Promise<void> {
 	try {
 		const collectionsResponse = await fetch(addressOf("/collection-index.json"));
 		const collectionIndex = await collectionsResponse.json();
@@ -372,7 +384,9 @@ export async function loadComicData(): Promise<void> {
 	} catch {
 		// collection data unavailable — "Appears in" section won't render
 	}
+}
 
+async function loadArcs(): Promise<void> {
 	try {
 		const arcsResponse = await fetch(addressOf("/arcs.json"));
 		if (!arcsResponse.ok) throw new Error(`HTTP ${arcsResponse.status}`);
@@ -382,12 +396,6 @@ export async function loadComicData(): Promise<void> {
 	} catch {
 		// arc data unavailable — no arc lines on a strip's page, and the arc pages say so
 	}
-
-	state.dataLoaded = true;
-	updateGridStatesFromData();
-	document.getElementById("loading")!.classList.add("hidden");
-
-	resumeRoute();
 }
 
 // ─── Re-import from router (circular dependency resolved at runtime) ────────

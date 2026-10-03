@@ -59,8 +59,10 @@ function link(html: string): string {
 test("the corrections form's address", async (suite) => {
 	await suite.test("checks the box for the kind of page it was sent from", () => {
 		assert.match(buildCorrectionUrl({ view: "detail", url: "", commit: "" }), /entry.762468410=Comic/);
-		assert.match(buildCorrectionUrl({ view: "collection", url: "", commit: "" }), /entry.762468410=Collection/);
-		assert.match(buildCorrectionUrl({ view: "collections", url: "", commit: "" }), /entry.762468410=Collection/);
+		assert.match(buildCorrectionUrl({ view: "collection", url: "", commit: "" }), /entry.762468410=Book/);
+		assert.match(buildCorrectionUrl({ view: "collections", url: "", commit: "" }), /entry.762468410=Book/);
+		assert.match(buildCorrectionUrl({ view: "arc", url: "", commit: "" }), /entry.762468410=Arc/);
+		assert.match(buildCorrectionUrl({ view: "arcs", url: "", commit: "" }), /entry.762468410=Arc/);
 	});
 
 	await suite.test("checks the rerun box alongside the strip's on a rerun day", () => {
@@ -112,7 +114,7 @@ test("a document's corrections link", async (suite) => {
 		assert.match(link(document(detail, "/1986-07-07")), /entry.1138251038=https%3A%2F%2Fexample.test%2F1986-07-07/);
 		assert.doesNotMatch(link(document(detail, "/1986-07-07")), /entry.762468410=Rerun/);
 		assert.match(link(document(rerun, "/1995-12-31")), /entry.762468410=Comic&amp;entry.762468410=Rerun/);
-		assert.match(link(document(collection, "/book/yukonho")), /entry.762468410=Collection/);
+		assert.match(link(document(collection, "/book/yukonho")), /entry.762468410=Book/);
 		assert.doesNotMatch(link(document({ view: "credits" }, "/credits")), /entry.762468410/);
 	});
 
