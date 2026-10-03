@@ -219,13 +219,20 @@ export function detailPageFrom(source: PageSource, date: string, alternates: str
 }
 
 /**
- * `p. 22` or `pp. 22–24` — or, `spelled`, `page 22` and `pages 22–24`, where there is room for words.
+ * `p. 22` or `pp. 22–24, 26` — or, `spelled`, `page 22` and `pages 22–24, 26`, where there is room for words.
+ * Each run of consecutive pages is collapsed into a range.
  */
 function formatPages(pages: number[], spelled: boolean = false): string {
 	if (pages.length === 0) return "";
 	if (pages.length === 1) return `${spelled ? "page" : "p."} ${pages[0]}`;
-	const isContiguous = pages.every((page, index) => index === 0 || page === pages[index - 1] + 1);
-	return `${spelled ? "pages" : "pp."} ${isContiguous ? `${pages[0]}–${pages[pages.length - 1]}` : pages.join(", ")}`;
+	const runs: [number, number][] = [];
+	for (const page of [...pages].sort((a, b) => a - b)) {
+		const last = runs[runs.length - 1];
+		if (last && page === last[1] + 1) last[1] = page;
+		else runs.push([page, page]);
+	}
+	const ranges = runs.map(([first, last]) => (first === last ? `${first}` : `${first}–${last}`));
+	return `${spelled ? "pages" : "pp."} ${ranges.join(", ")}`;
 }
 
 function shortenEditionLabel(label: string): string {
@@ -316,8 +323,13 @@ function buildBookHtml(
 		printing.image === collection.image && collection.aspectRatio
 			? ` style="aspect-ratio: ${collection.aspectRatio}"`
 			: "";
-	// One short line for the label under the cover: `Bk 1 · p. 357`, the volume shortened to fit.
-	const caption = printing.places
+	// One short line for the label under the cover: `Bk 1 · p. 357`, the volume shortened to fit. An
+	// arc's label names only the page its first strip is on; the popup has the rest.
+	const places =
+		neighbours === null
+			? printing.places.slice(0, 1).map((place) => ({ ...place, pages: place.pages.slice(0, 1) }))
+			: printing.places;
+	const caption = places
 		.map((place) => (place.volume ? `Bk ${place.volume} · ${formatPages(place.pages)}` : formatPages(place.pages)))
 		.join(", ");
 	// The popup has room for the words: `Book 1, page 357`.
