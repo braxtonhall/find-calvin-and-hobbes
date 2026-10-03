@@ -1,8 +1,8 @@
 import type { Compilation } from "webpack";
-import { Comic, CollectionIndex } from "../src/types";
+import { Arc, Comic, CollectionIndex } from "../src/types";
 
 /**
- * The archive as the site reads it: the parsed forms of the four JSON files the app fetches.
+ * The archive as the site reads it: the parsed forms of the five JSON files the app fetches.
  *
  * `YamlToJsonPlugin` records it here for the compilation that emitted those files, and
  * `PagesPlugin` reads it back to build the pages — from the same objects, round-tripped through
@@ -14,6 +14,7 @@ export interface SiteData {
 	reruns: Record<string, string>;
 	collectionIndex: CollectionIndex;
 	descriptions: Record<string, string>;
+	arcs: Arc[];
 }
 
 const dataByCompilation = new WeakMap<Compilation, SiteData>();

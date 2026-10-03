@@ -2,18 +2,22 @@ import { Route } from "./types";
 import { state } from "./state";
 import { scrollCellIntoViewIfNeeded } from "./utils";
 import { stopLife } from "./life";
-import { HOME_PATH, legacyHashPath, normalizePathname, parseRoutePath } from "./routes";
+import { HOME_PATH, legacyHashPath, normalizePathname, parseRoutePath, redirectedPath } from "./routes";
 import { addressOf, pathOf } from "./base-path";
 import { Page, pageTitle } from "./pages/page";
 import { PAGE_DATA_ID } from "./pages/shell";
 import { detailPageFrom } from "./pages/detail";
 import { collectionPageFrom } from "./pages/collection";
 import { collectionsPageFrom } from "./pages/collections";
+import { arcPageFrom } from "./pages/arc";
+import { arcsPageFrom } from "./pages/arcs";
 import { renderLanding } from "./views/landing";
 import { renderResults } from "./views/results";
 import { renderDetail } from "./views/detail";
 import { renderCollection } from "./views/collection";
 import { renderCollections } from "./views/collections";
+import { renderArc, renderArcs } from "./views/arcs";
+import { loadDescriptions } from "./details";
 import { renderLibrary } from "./views/library";
 import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
@@ -21,7 +25,13 @@ import { updateCorrectionLink } from "./views/correction";
 import { cancelCollectionClear } from "./views/cell-highlight";
 
 export function parseRoute(): Route {
-	const path = pathOf(location.pathname);
+	let path = pathOf(location.pathname);
+	// An address that has moved is shown as where it lives now, wherever the reader came to it from.
+	const moved = path === null ? null : redirectedPath(normalizePathname(path));
+	if (moved !== null) {
+		replaceRoute(moved);
+		path = moved;
+	}
 	const route = path === null ? null : parseRoutePath(path, location.search);
 	if (route) return route;
 	replaceRoute(HOME_PATH);
@@ -141,6 +151,17 @@ function pageFor(route: Route): Page | null {
 			return state.dataLoaded ? collectionPageFrom(state, route.id ?? "") : null;
 		case "collections":
 			return state.dataLoaded ? collectionsPageFrom(state) : null;
+		case "arcs":
+			return state.dataLoaded ? arcsPageFrom(state) : null;
+		case "arc":
+			if (!state.dataLoaded) return null;
+			// The rows are the strips' descriptions, which arrive on their own; the spinner waits for
+			// them rather than drawing rows that change under the reader.
+			if (!state.descriptions) {
+				void loadDescriptions().then(resumeRoute);
+				return null;
+			}
+			return arcPageFrom(state, route.id ?? "");
 		case "library":
 			// Both, because a page drawn before IndexedDB answers would say there are no bookmarks.
 			return state.dataLoaded && state.bookmarksLoaded
@@ -186,6 +207,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		case "landing":
 		case "credits":
 		case "collections":
+		case "arcs":
 			return { page: prerendered, adopt: true };
 		case "results":
 		case "library":
@@ -199,6 +221,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 			return same ? { page: prerendered, adopt: true } : { page: { ...prerendered, alternates }, adopt: false };
 		}
 		case "collection":
+		case "arc":
 			return prerendered.id === route.id ? { page: prerendered, adopt: true } : null;
 	}
 }
@@ -271,6 +294,16 @@ export function handleRoute(prerendered: Page | null = null): void {
 		}
 		case "collections": {
 			renderCollections(page, adopt);
+			document.getElementById("main")!.scrollTop = 0;
+			break;
+		}
+		case "arc": {
+			renderArc(page, adopt);
+			document.getElementById("main")!.scrollTop = 0;
+			break;
+		}
+		case "arcs": {
+			renderArcs(page, adopt);
 			document.getElementById("main")!.scrollTop = 0;
 			break;
 		}
@@ -372,7 +405,8 @@ export function updateGridState(route: Route): void {
 		return;
 	}
 
-	if (route.view === "collection" && state.collectionDateSet) {
+	// A book's strips, or an arc's: whichever the page showing set out to light.
+	if ((route.view === "collection" || route.view === "arc") && state.collectionDateSet) {
 		for (const cell of allCells) {
 			const date = (cell as HTMLElement).dataset.date;
 			if (date && state.collectionDateSet.has(date)) {

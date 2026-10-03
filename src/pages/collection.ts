@@ -8,9 +8,10 @@ import {
 } from "../date-utils";
 import { buildCollectionPath, buildComicPath, buildSearchPath } from "../routes";
 import { addressOf } from "../base-path";
-import { Collection } from "../types";
+import { Arc, Collection } from "../types";
 import { CollectionNeighbour, CollectionPage, PageSource } from "./page";
 import { buildBackAndHomeButtons, buildCollectionsButton } from "./nav-buttons";
+import { arcListFrom, buildArcListHtml } from "./arc-list";
 
 export function getTypeLabel(type: string): string {
 	const typeLabels: Record<string, string> = {
@@ -21,6 +22,39 @@ export function getTypeLabel(type: string): string {
 		special: "Special Book",
 	};
 	return typeLabels[type] || type;
+}
+
+/**
+ * The arcs a book prints in full, in the order it prints them: by volume, then page, of each arc's
+ * first strip in the book. That is mostly date order, and where it is not, the list shows it — a
+ * check by eye on the data as much as a list. One edition answers for the book, since its editions
+ * hold the same strips; ties keep date order.
+ */
+function arcsInPrintOrder(source: PageSource, collectionId: string): Arc[] {
+	const held = (source.arcs ?? []).filter((arc) => arc.collections.includes(collectionId));
+	const position = (arc: Arc): [number, number] => {
+		const appearances = arc.dates.flatMap(
+			(date) =>
+				source.comicsByDate
+					.get(date)
+					?.find((comic) => !comic.id)
+					?.appearances?.filter((appearance) => appearance.collection === collectionId) ?? [],
+		);
+		const edition = appearances[0]?.edition;
+		const places = appearances
+			.filter((appearance) => appearance.edition === edition)
+			.map((appearance): [number, number] => [appearance.volume ?? 0, appearance.pages[0] ?? 0]);
+		return places.reduce((first, place) =>
+			place[0] < first[0] || (place[0] === first[0] && place[1] < first[1]) ? place : first,
+		);
+	};
+	const positions = new Map(held.map((arc) => [arc.id, position(arc)]));
+	// `held` is in date order already, and the sort is stable.
+	return held.sort((a, b) => {
+		const [volumeA, pageA] = positions.get(a.id)!;
+		const [volumeB, pageB] = positions.get(b.id)!;
+		return volumeA - volumeB || pageA - pageB;
+	});
 }
 
 export function collectionPageFrom(source: PageSource, collectionId: string): CollectionPage {
@@ -48,6 +82,7 @@ export function collectionPageFrom(source: PageSource, collectionId: string): Co
 		dates,
 		prev: neighbour(index - 1),
 		next: neighbour(index + 1),
+		arcs: arcListFrom(source, collection ? arcsInPrintOrder(source, collection.id) : []),
 	};
 }
 
@@ -155,6 +190,16 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 		extrasHtml = `<p class="collection-section-heading">Extras</p><ul class="collection-extras">${page.extras.map((extra) => `<li>${escHtml(extra)}</li>`).join("")}</ul>`;
 	}
 
+	// Closed until asked for: a compendium holds most of the arcs there are, and the list would bury
+	// the rest of the page.
+	const arcsHtml =
+		page.arcs.arcs.length > 0
+			? `<details class="collection-section collection-arcs">
+			<summary class="collection-section-heading">Arcs</summary>
+			${buildArcListHtml(page.arcs)}
+		</details>`
+			: "";
+
 	const numComicsInCollection = page.dates.length;
 	let comicsSummary = "";
 	if (numComicsInCollection > 0) {
@@ -181,8 +226,11 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 				</div>
 			</div>
 		</div>
-		<p class="collection-section-heading">Date Ranges</p>
-		<div class="collection-ranges">${rangesHtml}</div>
+		<details class="collection-section" open>
+			<summary class="collection-section-heading">Date Ranges</summary>
+			<div class="collection-ranges">${rangesHtml}</div>
+		</details>
+		${arcsHtml}
 		${extrasHtml}
 		${collection.links && collection.links.length > 0 ? `<p class="collection-section-heading">Links</p><div class="collection-links">${collection.links.map((link) => `<a class="collection-link" href="${escHtml(link.href)}" target="_blank" rel="noopener">${escHtml(link.title)}</a>`).join("")}</div>` : ``}
 	</div>`;

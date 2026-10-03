@@ -43,13 +43,24 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "detail", date: comicMatch[1], alternates: params.getAll("alternate") };
 	}
 
-	const collectionMatch = path.match(/^\/collection\/([a-z0-9]+)$/);
+	// A book is still a "collection" to the code; only its address says book. The old
+	// `/collection/…` addresses are not ours any more, and go home like any other.
+	const collectionMatch = path.match(/^\/book\/([a-z0-9]+)$/);
 	if (collectionMatch) {
 		return { view: "collection", id: collectionMatch[1] };
 	}
 
-	if (path === COLLECTIONS_PATH) {
+	if (path === BOOKS_PATH || path === COLLECTIONS_PATH) {
 		return { view: "collections" };
+	}
+
+	const arcMatch = path.match(/^\/arc\/([a-z0-9]+)$/);
+	if (arcMatch) {
+		return { view: "arc", id: arcMatch[1] };
+	}
+
+	if (path === ARCS_PATH) {
+		return { view: "arcs" };
 	}
 
 	// The same query a search takes, over the bookmarks only. Unlike `/search`, no query is a page
@@ -86,13 +97,31 @@ export function buildComicPath(date: string, alternates: string[] = []): string 
 }
 
 export function buildCollectionPath(collectionId: string): string {
-	return "/collection/" + collectionId;
+	return "/book/" + collectionId;
 }
 
+export function buildArcPath(arcId: string): string {
+	return "/arc/" + arcId;
+}
+
+/** The two tabs of Collections: the books, and the arcs. */
+export const BOOKS_PATH = "/books";
+export const ARCS_PATH = "/arcs";
+
+/**
+ * Where Collections used to be a list of books alone. It is the books tab now, and the address is
+ * kept for the links that still name it: it parses to the books, and `redirectedPath` puts the
+ * books' own address in the bar.
+ */
 export const COLLECTIONS_PATH = "/collections";
 export const LIBRARY_PATH = "/library";
 export const CREDITS_PATH = "/credits";
 export const HOME_PATH = "/";
+
+/** The address an old one now lives at, or `null` for one that has not moved. */
+export function redirectedPath(path: string): string | null {
+	return path === COLLECTIONS_PATH ? BOOKS_PATH : null;
+}
 
 /**
  * The site used to live behind `#/`, and those addresses are in bookmarks and old messages. A cold

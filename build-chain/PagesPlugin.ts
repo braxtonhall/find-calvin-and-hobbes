@@ -2,10 +2,13 @@ import fs from "fs";
 import path from "path";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
-import { Collection, Comic } from "../src/types";
+import { Arc, Collection, Comic } from "../src/types";
 import { computeDays } from "../src/days";
 import {
+	ARCS_PATH,
+	BOOKS_PATH,
 	LIBRARY_PATH,
+	buildArcPath,
 	buildCollectionPath,
 	buildComicPath,
 	COLLECTIONS_PATH,
@@ -16,6 +19,8 @@ import { Page, PageSource } from "../src/pages/page";
 import { detailPageFrom } from "../src/pages/detail";
 import { collectionPageFrom } from "../src/pages/collection";
 import { collectionsPageFrom } from "../src/pages/collections";
+import { arcPageFrom } from "../src/pages/arc";
+import { arcsPageFrom } from "../src/pages/arcs";
 import { buildDocumentHtml } from "../src/pages/shell";
 import { getSiteData, SiteData } from "./siteData";
 import { loadCommitSha, loadCorrectionsEnabled, loadPageLayout, loadSiteConfig, pageAssetPath } from "./siteConfig";
@@ -47,6 +52,8 @@ function buildPageSource(data: SiteData): PageSource {
 		collectionIndex: data.collectionIndex,
 		collectionsById,
 		descriptions: new Map(Object.entries(data.descriptions)),
+		arcs: data.arcs,
+		arcsById: new Map(data.arcs.map((arc): [string, Arc] => [arc.id, arc])),
 	};
 }
 
@@ -107,13 +114,26 @@ class PagesPlugin {
 					emitPage(SEARCH_PATH, { view: "results", q: "", sort: "rank" });
 					emitPage(LIBRARY_PATH, { view: "library", q: "", sort: "rank" });
 
-					emitPage(COLLECTIONS_PATH, collectionsPageFrom(source));
+					const books = collectionsPageFrom(source);
+					emitPage(BOOKS_PATH, books);
+					// The old address of the list of books, which a static host can only redirect by serving
+					// a file there. This one is the books page, naming `/books` as where it lives; the app
+					// puts that in the bar. See `redirectedPath`.
+					emit(pageAssetPath(COLLECTIONS_PATH, layout), BOOKS_PATH, books);
+					emitPage(ARCS_PATH, arcsPageFrom(source));
 
 					const collectionPaths: string[] = [];
 					for (const collection of data.collectionIndex.collections) {
 						const routePath = buildCollectionPath(collection.id);
 						collectionPaths.push(routePath);
 						emitPage(routePath, collectionPageFrom(source, collection.id));
+					}
+
+					const arcPaths: string[] = [];
+					for (const arc of data.arcs) {
+						const routePath = buildArcPath(arc.id);
+						arcPaths.push(routePath);
+						emitPage(routePath, arcPageFrom(source, arc.id));
 					}
 
 					// A rerun day has a page too, pointing at the strip that ran again on it.
@@ -125,9 +145,11 @@ class PagesPlugin {
 						const sitemap = buildSitemapXml(siteUrl, [
 							HOME_PATH,
 							CREDITS_PATH,
-							COLLECTIONS_PATH,
+							BOOKS_PATH,
+							ARCS_PATH,
 							LIBRARY_PATH,
 							...collectionPaths,
+							...arcPaths,
 						]);
 						compilation.emitAsset("sitemap.xml", new sources.RawSource(sitemap));
 					}

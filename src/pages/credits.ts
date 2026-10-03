@@ -43,6 +43,12 @@ export function buildCreditsHtml(canGoBack: boolean): string {
 		</p>
 
 		<p class="credits-section">
+			<strong>Story arc data</strong> from the
+			<a href="https://calvinandhobbes.fandom.com/wiki/Story_arcs" target="_blank" rel="noopener">Calvin and Hobbes Fandom Wiki</a> and
+			<a href="https://tvtropes.org/pmwiki/pmwiki.php/Recap/CalvinAndHobbes" target="_blank" rel="noopener">TV Tropes</a>.
+		</p>
+
+		<p class="credits-section">
 			<strong>Favicon</strong> from the
 			<a href="https://calvinandhobbes.miraheze.org/wiki/Main_Page" target="_blank" rel="noopener">Calvin and Hobbes Miraheze Wiki</a>.
 		</p>

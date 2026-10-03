@@ -20,11 +20,6 @@
 	flex: 1;
 	overflow-y: auto;
 	background: var(--bg);
-	scrollbar-width: none;
-}
-
-#main::-webkit-scrollbar {
-	display: none;
 }
 
 .grid-header-row {

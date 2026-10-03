@@ -433,3 +433,9 @@ test("round trip", async (suite) => {
 		}
 	}
 });
+
+test("insert: an open quotation is closed before a token is appended", () => {
+	assert.equal(insertToken('"snow goons', "@year:1990"), '"snow goons" @year:1990');
+	assert.equal(insertToken('"snow goons"', "@year:1990"), '"snow goons" @year:1990');
+	assert.equal(insertToken('"snow goons @year:1988', "@year:1990"), '"snow goons @year:1988" @year:1990');
+});

@@ -50,8 +50,51 @@ export type Run = "reused" | "rerun";
 // menu cannot disagree about which names exist.
 const FILTERS = new Set(FILTER_SPECS.map((spec) => spec.name));
 // A value stops at a parenthesis, so `(@in:book1 @or @in:book3)` closes its group rather than
-// asking for a book called `book3)`. No value of any filter can contain one.
-const FILTER_PATTERN = /@([a-zA-Z]+)(?::([^\s()]+))?/g;
+// asking for a book called `book3)`, and at a quotation mark, so `@year:1988"snow"` leaves the
+// phrase where it was written. No value of any filter can contain either.
+const FILTER_PATTERN = /@([a-zA-Z]+)(?::([^\s()"“”]+))?/g;
+
+/**
+ * A straight quotation mark or either curly one. A phone's keyboard curls them as it sees fit, and
+ * not reliably in the right direction — after a parenthesis it can open with `”` — so all three are
+ * one mark, and which way one faces says nothing about whether it opens or closes.
+ */
+const QUOTE_PATTERN = /["“”]/g;
+
+/** One quoted stretch of a query, from its opening mark to just past its closing one. */
+export interface QuotedSpan {
+	start: number;
+	end: number;
+	/** The text between the marks. */
+	inner: string;
+	/** False for a quotation left open, which runs to the end of the text. */
+	closed: boolean;
+}
+
+/**
+ * Every quoted stretch of the text, in order.
+ *
+ * Marks pair off left to right, and a mark left over at the end closes at the end of the text the
+ * way an unclosed parenthesis does, so `"baby sitter` is `"baby sitter"`. Everything inside is
+ * text: a filter, an operator or a parenthesis between the marks is none of those things, and each
+ * scanner that would otherwise find one there asks `quoted` first.
+ */
+export function quotedSpans(text: string): QuotedSpan[] {
+	const marks = [...text.matchAll(QUOTE_PATTERN)].map((match) => match.index);
+	const spans: QuotedSpan[] = [];
+	for (let index = 0; index < marks.length; index += 2) {
+		const start = marks[index];
+		const close = marks[index + 1];
+		const end = close === undefined ? text.length : close + 1;
+		spans.push({ start, end, inner: text.slice(start + 1, close ?? text.length), closed: close !== undefined });
+	}
+	return spans;
+}
+
+/** Whether the character at `index` stands inside one of the spans, marks included. */
+export function quoted(spans: QuotedSpan[], index: number): boolean {
+	return spans.some((span) => index >= span.start && index < span.end);
+}
 
 /**
  * The span a filter value names, as inclusive ISO bounds. Needs a year — `@before:august-3` has
@@ -148,12 +191,16 @@ export interface FilterMatch {
  * this existed. A *recognised* name with an unusable value is a different case: it is consumed
  * and reported as invalid, because `@month:13` is a statement of intent that should return
  * nothing rather than quietly become a search for the word "month".
+ *
+ * Nothing between quotation marks is a filter — see `quotedSpans`.
  */
 export function scanFilters(text: string): FilterMatch[] {
 	const matches: FilterMatch[] = [];
+	const quotes = quotedSpans(text);
 
 	FILTER_PATTERN.lastIndex = 0;
 	for (let match = FILTER_PATTERN.exec(text); match !== null; match = FILTER_PATTERN.exec(text)) {
+		if (quoted(quotes, match.index)) continue;
 		const name = match[1].toLowerCase();
 		if (!FILTERS.has(name)) continue;
 		const value = match[2]?.toLowerCase();
@@ -194,6 +241,8 @@ function printedIn(subject: string | Comic, collection: string): boolean {
  *   printed in Book 1 that some book — not necessarily Book 1 — altered.
  * - `empty` is about the transcript field itself: a strip may carry an `alternate` beside an empty
  *   transcript, and it is still empty.
+ * - `standalone` is a strip in no arc. A rerun row is a copy of the strip it shows, arcs and all, so
+ *   it answers as that strip does; a special is never in an arc, so it always is one.
  * - `reused` and `rerun` are about the row rather than the strip — the same strip is one on the
  *   day it first ran and the other on the day it ran again — so only the caller's `run` answers them.
  */
@@ -204,6 +253,7 @@ function hasTag(subject: string | Comic, date: string, tag: string, run: Run | u
 	if (typeof subject === "string") return false;
 	if (tag === "altered") return (subject.appearances ?? []).some((appearance) => appearance.altered === true);
 	if (tag === "empty") return subject.transcript === "";
+	if (tag === "standalone") return (subject.arcs ?? []).length === 0;
 	return false;
 }
 

@@ -1,9 +1,9 @@
 import { Appearance, Comic } from "../types";
 import { escHtml } from "../utils";
 import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
-import { buildCollectionPath, buildComicPath } from "../routes";
+import { buildArcPath, buildCollectionPath, buildComicPath } from "../routes";
 import { addressOf } from "../base-path";
-import { BookNeighbours, DetailCollection, DetailPage, PageSource } from "./page";
+import { BookNeighbours, DetailArc, DetailCollection, DetailPage, PageSource, arcRange } from "./page";
 import { buildBackAndHomeButtons } from "./nav-buttons";
 
 export function getAdjacentComicDate(
@@ -64,7 +64,7 @@ export function descriptionsFor(descriptions: Map<string, string>, comics: Comic
 	return subset;
 }
 
-function summarizeCollections(source: PageSource, comics: Comic[]): DetailCollection[] {
+export function summarizeCollections(source: PageSource, comics: Comic[]): DetailCollection[] {
 	if (!source.collectionsById) return [];
 	const keys = comics.map(comicKey);
 	const summaries = new Map<string, DetailCollection>();
@@ -185,6 +185,18 @@ function findRuns(source: PageSource, originalDate: string): string[] {
 	return [originalDate, ...(byOriginal.get(originalDate) ?? []).sort()];
 }
 
+/**
+ * The arcs of the day's own strip — not a special's, which is never in one. On a rerun day that is
+ * the strip shown, so the widget follows it back to the dates it first ran on.
+ */
+function arcsOf(source: PageSource, comics: Comic[]): DetailArc[] {
+	const daily = comics.find((comic) => !comic.id);
+	return (daily?.arcs ?? []).flatMap((id) => {
+		const arc = source.arcsById?.get(id);
+		return arc ? [{ id: arc.id, description: arc.description, dates: arc.dates }] : [];
+	});
+}
+
 /** The page for a date, from whatever holds the archive — the app's state or the build's data. */
 export function detailPageFrom(source: PageSource, date: string, alternates: string[] = []): DetailPage {
 	const rerunOf = source.reruns.get(date) ?? null;
@@ -202,6 +214,7 @@ export function detailPageFrom(source: PageSource, date: string, alternates: str
 		bookNeighbours: findBookNeighbours(source, comics),
 		collections: summarizeCollections(source, comics),
 		descriptions: source.descriptions ? descriptionsFor(source.descriptions, comics) : null,
+		arcs: arcsOf(source, comics),
 	};
 }
 
@@ -228,9 +241,9 @@ interface Printing {
 }
 
 function buildPrintings(
-	comic: Comic,
 	appearances: Appearance[],
 	collectionsById: Map<string, DetailCollection>,
+	keyOf: (appearance: Appearance) => string,
 ): Printing[] {
 	const printingsByKey = new Map<string, Printing>();
 
@@ -238,7 +251,7 @@ function buildPrintings(
 		const collection = collectionsById.get(appearance.collection);
 		if (!collection) continue;
 
-		const key = printingKey(comic, appearance);
+		const key = keyOf(appearance);
 		let printing = printingsByKey.get(key);
 		if (!printing) {
 			const edition = appearance.edition ? collection.editions?.[appearance.edition] : undefined;
@@ -270,9 +283,10 @@ function buildBookArrowHtml(date: string | null, direction: -1 | 1): string {
 		: `<span class="nav-btn nav-btn--disabled printing__arrow" title="${direction === -1 ? "First" : "Last"} strip in this book">${arrow}</span>`;
 }
 
+/** A book's row in the list. `neighbours` is `null` where there is no one strip to step from, as on an arc's page. */
 function buildPrintingRowHtml(
 	printing: Printing,
-	neighbours: BookNeighbours | undefined,
+	neighbours: BookNeighbours | undefined | null,
 	alterationKey: string,
 	isSunday: boolean,
 ): string {
@@ -294,25 +308,8 @@ function buildPrintingRowHtml(
 				<span class="printing__detail">${detail}</span>
 			</span>
 		</a>
-		<span class="printing__nav">${buildBookArrowHtml(neighbours?.prev ?? null, -1)}${buildBookArrowHtml(neighbours?.next ?? null, 1)}</span>
+		${neighbours === null ? "" : `<span class="printing__nav">${buildBookArrowHtml(neighbours?.prev ?? null, -1)}${buildBookArrowHtml(neighbours?.next ?? null, 1)}</span>`}
 	</li>`;
-}
-
-/**
- * Every other day the paper ran this strip: the day it first ran, then its reruns. The day on
- * screen is left out — the header already says it. `data-date` is what the view reads to
- * light up that strip's cell in the grid while the link is hovered.
- */
-function buildRerunSectionHtml(runs: string[], currentDate: string): string {
-	const lines = runs
-		.map((run, index) => {
-			if (run === currentDate) return "";
-			const link = `<a class="detail-rerun-link" href="${addressOf(buildComicPath(run))}" data-date="${run}">${formatLongDate(run)}</a>`;
-			return `<li>${index === 0 ? "Originally ran" : "Reran"} ${link}</li>`;
-		})
-		.join("");
-	if (!lines) return "";
-	return `<p class="detail-collections-heading">Rerun:</p><ul class="detail-reruns">${lines}</ul>`;
 }
 
 /** A book's cover, as the collapsed row shows it: the cover over the volume and page the strip is on. */
@@ -335,32 +332,45 @@ function buildCoverHtml(printing: Printing, alterationKey: string, isSunday: boo
 	return `<div class="collection-entry"><a class="collection-book${isBlackAndWhite ? " collection-book--bw" : ""}" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}"${ratio}><img src="${escHtml(printing.image)}" alt="${escHtml(printing.name)}" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${badge}</a><div class="collection-pages">${caption}</div></div>`;
 }
 
-const EXPAND_ICON = `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-
 /**
- * The books a strip is in: a row of covers, which is all most readers need, and behind the toggle
- * the same books as a list — named, dated, and each with arrows through its strips. The view
- * decides which shows; both are drawn, so the toggle needs no redraw.
+ * The books a strip is in: a row of covers, which is all most readers need, and folded under the
+ * heading the same books as a list — named, dated, and each with arrows through its strips. The
+ * heading folds as a book's page's sections do; open, the list stands in for the covers. Both are
+ * drawn, so opening it needs no redraw.
+ *
+ * `neighbours` is by `printingKey`, or `null` where the list has no arrows, as on an arc's page.
  */
 function buildPrintingsSectionHtml(
-	page: DetailPage,
-	comic: Comic,
-	collectionsById: Map<string, DetailCollection>,
+	printings: Printing[],
+	neighbours: Record<string, BookNeighbours> | null,
+	alterationKey: string,
 	isSunday: boolean,
 ): string {
-	const heading = `<p class="detail-collections-heading">Collected in:</p>`;
-	const printings = buildPrintings(comic, comic.appearances || [], collectionsById);
 	if (printings.length === 0) {
-		return `${heading}<p class="printings__empty">Not reprinted in any book</p>`;
+		return `<p class="detail-collections-heading">Collected in</p><p class="printings__empty">Not reprinted in any book</p>`;
 	}
 
-	const covers = printings.map((printing) => buildCoverHtml(printing, comicKey(comic), isSunday)).join("");
+	const covers = printings.map((printing) => buildCoverHtml(printing, alterationKey, isSunday)).join("");
 	const rows = printings
-		.map((printing) => buildPrintingRowHtml(printing, page.bookNeighbours[printing.key], comicKey(comic), isSunday))
+		.map((printing) => buildPrintingRowHtml(printing, neighbours && neighbours[printing.key], alterationKey, isSunday))
 		.join("");
-	const toggle = `<button type="button" class="detail-collected__toggle" aria-expanded="false" aria-label="Show book details" title="Show book details">${EXPAND_ICON}</button>`;
 
-	return `${heading}<div class="detail-collected">${toggle}<div class="detail-collections">${covers}</div><ul class="detail-printings">${rows}</ul></div>`;
+	return `<details class="detail-collected"><summary class="detail-collections-heading">Collected in</summary><ul class="detail-printings">${rows}</ul></details><div class="detail-collections">${covers}</div>`;
+}
+
+/** The books an arc is in, from the appearances its page gathers: one row per book and edition. */
+export function buildAppearancesSectionHtml(
+	appearances: Appearance[],
+	collectionsById: Map<string, DetailCollection>,
+	alterationKey: string,
+	isSunday: boolean,
+): string {
+	const printings = buildPrintings(
+		appearances,
+		collectionsById,
+		(appearance) => `${appearance.collection} ${appearance.edition ?? ""}`,
+	);
+	return buildPrintingsSectionHtml(printings, null, alterationKey, isSunday);
 }
 
 function getAspectRatio(comic: Comic, isSunday: boolean): number {
@@ -427,21 +437,76 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 
 		const aspectRatio = getAspectRatio(comic, isSunday);
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
-		const collectionsHtml = buildPrintingsSectionHtml(page, comic, collectionsById, isSunday);
-		// A special — an alternate version of a day's strip — never ran in the paper itself.
-		const rerunHtml = comic.id ? "" : buildRerunSectionHtml(page.runs, page.date);
+		// Only the day's own strip ran in the paper; a special never did, so never reran, and is in no arc.
+		const runsHtml = !comic.id ? buildRunsHtml(page, date) : "";
+		const collectionsHtml = buildPrintingsSectionHtml(
+			buildPrintings(comic.appearances || [], collectionsById, (appearance) => printingKey(comic, appearance)),
+			page.bookNeighbours,
+			comicKey(comic),
+			isSunday,
+		);
 
 		bodies += `<div class="detail-comic${illustratedClass}" data-comic-key="${escHtml(comic.id || date)}">
 				${comic.image ? `<div class="detail-image-wrapper" style="aspect-ratio: ${aspectRatio}"><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}" alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
 			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
 			${transcriptHtml}
 			${readLinkHtml}
-			${rerunHtml}
+			${runsHtml}
 			<div class="detail-collections-slot">${collectionsHtml}</div>
 		</div>`;
 	}
 
 	return bodies;
+}
+
+/** A link to another day's strip. `data-date` is what the view reads to light up its cell in the grid while hovered. */
+function buildRerunLinkHtml(date: string): string {
+	return `<a class="detail-rerun-link" href="${addressOf(buildComicPath(date))}" data-date="${date}">${formatLongDate(date)}</a>`;
+}
+
+function joinRerunLinks(dates: string[]): string {
+	return dates.map(buildRerunLinkHtml).join(" and ");
+}
+
+/**
+ * One step along an arc, boxed like the header's arrows but at the end of the arc's own line, which
+ * says what they step through. An end of the arc keeps its arrow, disabled, so neither one moves.
+ */
+function buildArcStepHtml(date: string | undefined, direction: "prev" | "next"): string {
+	const arrow = direction === "prev" ? "&larr;" : "&rarr;";
+	if (!date) {
+		return `<span class="nav-btn nav-btn--disabled" title="${direction === "prev" ? "First" : "Last"} strip in this arc">${arrow}</span>`;
+	}
+	const label = direction === "prev" ? "Previous strip in this arc" : "Next strip in this arc";
+	return `<a class="nav-btn detail-arc-step" href="${addressOf(buildComicPath(date))}" data-date="${date}" title="${label}" aria-label="${label}">${arrow}</a>`;
+}
+
+/**
+ * `Part 2 of 4 in the Nov 18–19, 1985 arc`, with its arrows at the end of the line. The range is the
+ * way to the arc's page; `data-arc-id` is what the view reads to light up the whole arc while it is
+ * hovered, and its title is the arc's description.
+ */
+function buildArcLineHtml(arc: DetailArc, date: string): string {
+	const index = arc.dates.indexOf(date);
+	const link = `<a class="detail-rerun-link detail-arc-link" href="${escHtml(addressOf(buildArcPath(arc.id)))}" data-arc-id="${escHtml(arc.id)}" title="${escHtml(arc.description)}">${escHtml(arcRange(arc))}</a>`;
+	const steps = buildArcStepHtml(arc.dates[index - 1], "prev") + buildArcStepHtml(arc.dates[index + 1], "next");
+	return `<li class="detail-run detail-arc"><span class="detail-arc__text">Part ${index + 1} of ${arc.dates.length} in the ${link} arc</span><span class="detail-arc__nav">${steps}</span></li>`;
+}
+
+/** A rerun day shows the strip it reran, so this sits above it as a note of where it's from. */
+function buildRerunBannerHtml(originalDate: string): string {
+	return `<p class="detail-rerun-banner">Originally ran ${buildRerunLinkHtml(originalDate)}</p>`;
+}
+
+/**
+ * When else the paper ran the strip on an original day, and the arcs it is part of, together under
+ * the strip. A rerun day's reruns are empty; where its strip is from is said above it instead.
+ */
+function buildRunsHtml(page: DetailPage, date: string): string {
+	const reruns = page.rerunOf ? [] : page.runs.slice(1);
+	const rerun = reruns.length > 0 ? `<li class="detail-run">Reran ${joinRerunLinks(reruns)}</li>` : "";
+	const lines = rerun + page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("");
+	return lines ? `<ul class="detail-runs">${lines}</ul>` : "";
 }
 
 export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
@@ -467,12 +532,14 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark"><svg class="bookmark-icon" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button> ${prevButtonHtml} ${nextButtonHtml}
 		</div>`;
 
+	const rerunBannerHtml = rerunOf ? buildRerunBannerHtml(rerunOf) : "";
 	const bodyHtml =
 		comics.length === 0
 			? `<p class="detail-missing">No comics found</p>`
 			: buildComicBodiesHtml(page, contentDate, contentDateFormatted, contentIsSunday);
 
 	return `${headerHtml}
+		${rerunBannerHtml}
 		${bodyHtml}
 	</div>`;
 }

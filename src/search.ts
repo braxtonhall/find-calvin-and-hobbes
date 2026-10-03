@@ -3,7 +3,7 @@ import { state } from "./state";
 import { COMPOUND_RELATIONS } from "./compounds";
 import { stem } from "./stem";
 import { DateExpression, DatePrecision, matchesExpression, parseDateExpression } from "./date-query";
-import { Run } from "./filter-query";
+import { Run, quotedSpans } from "./filter-query";
 import { Branch, admits, asksForReruns, constrains, parseQuery } from "./boolean-query";
 
 export type HighlightRange = [number, number, boolean];
@@ -265,6 +265,8 @@ interface Expansion {
 	ceiling: number;
 	rarity: number;
 	present: boolean;
+	/** Reaches the term as written and nothing else, because the reader quoted it. */
+	verbatim: boolean;
 }
 
 interface FieldHits {
@@ -275,9 +277,17 @@ interface FieldHits {
 	literal: boolean[];
 }
 
+/**
+ * A run of query terms that a field must say in order, side by side: a closed compound the index
+ * splits, or a phrase the reader quoted. The two are one mechanism because they are one question —
+ * whether these parts stand together — and a quoted phrase is only the case where the reader asked
+ * it of their own words.
+ */
 interface CompoundQuery {
 	parts: string[];
 	start: number;
+	/** The reader quoted it, so every word of every occurrence is highlighted — see `matchRanges`. */
+	quoted?: true;
 }
 
 interface Summary {
@@ -509,13 +519,15 @@ function expandTerm(
 	tuning: Tuning,
 	suppressBelow: number,
 	inflectionWeight: number,
+	verbatim = false,
 ): Expansion {
-	const key = `${corpus.name}\0${term}`;
+	const key = `${corpus.name}\0${verbatim ? "verbatim" : "loose"}\0${term}`;
 	const cached = expansionCache.get(key);
 	if (cached) return cached;
 
-	const maxDistance = maxDistanceFor(term);
-	const inflections = inflectionWeight > 0 ? corpus.inflections.get(stem(term)) : undefined;
+	// A quoted word is the word: not extended, not inflected, and never a guess at a spelling.
+	const maxDistance = verbatim ? 0 : maxDistanceFor(term);
+	const inflections = inflectionWeight > 0 && !verbatim ? corpus.inflections.get(stem(term)) : undefined;
 	const matchWeights = new Map<string, number>();
 	const contributions = new Map<string, number>();
 	const literalWords = new Set<string>();
@@ -532,7 +544,7 @@ function expandTerm(
 		if (word === term) {
 			weight = tuning.exactWeight;
 			literal = true;
-		} else if (tuning.prefixWeight && word.length > term.length && word.startsWith(term)) {
+		} else if (!verbatim && tuning.prefixWeight && word.length > term.length && word.startsWith(term)) {
 			weight = tuning.prefixWeight;
 			literal = true;
 		} else if (maxDistance > 0) {
@@ -565,8 +577,16 @@ function expandTerm(
 
 	const expansion: Expansion =
 		rarity < suppressBelow
-			? { matchWeights: new Map(), contributions: new Map(), literalWords: new Set(), ceiling: 0, rarity, present }
-			: { matchWeights, contributions, literalWords, ceiling, rarity, present };
+			? {
+					matchWeights: new Map(),
+					contributions: new Map(),
+					literalWords: new Set(),
+					ceiling: 0,
+					rarity,
+					present,
+					verbatim,
+				}
+			: { matchWeights, contributions, literalWords, ceiling, rarity, present, verbatim };
 
 	if (expansionCache.size >= MAX_CACHED_EXPANSIONS) expansionCache.clear();
 	expansionCache.set(key, expansion);
@@ -822,10 +842,31 @@ function orderedSubsequence(order: number[], hits: FieldHits, breaks: Set<number
 	return { lcs: previous[columns], run };
 }
 
-function matchRanges(field: IndexedField, hits: FieldHits, expansions: Expansion[], floor: number): HighlightRange[] {
+/**
+ * `phrases` are the quoted runs, highlighted whole wherever the field says them. Their words cannot
+ * be left to the hits: a description expansion drops a common word before it can be one, and the
+ * floor here would drop it from a transcript, so `"in the yard"` would light up as `yard` alone —
+ * when the phrase, not its rarest word, is what the reader needs to see matched.
+ */
+function matchRanges(
+	field: IndexedField,
+	hits: FieldHits,
+	expansions: Expansion[],
+	floor: number,
+	phrases: CompoundQuery[],
+): HighlightRange[] {
 	const anyAboveFloor = expansions.some((expansion) => expansion.rarity >= floor);
 	const ranges: HighlightRange[] = [];
 	const byStart = new Map<number, number>();
+
+	for (const phrase of phrases) {
+		for (const position of compoundSequencePositions(field, phrase.parts)) {
+			const start = field.starts[position];
+			if (byStart.has(start)) continue;
+			byStart.set(start, ranges.length);
+			ranges.push([start, field.ends[position], true]);
+		}
+	}
 
 	for (let index = 0; index < hits.positions.length; index++) {
 		if (anyAboveFloor && expansions[hits.terms[index]].rarity < floor) continue;
@@ -843,7 +884,7 @@ function matchRanges(field: IndexedField, hits: FieldHits, expansions: Expansion
 		ranges.push([start, field.ends[position], hits.literal[index]]);
 	}
 
-	return ranges;
+	return ranges.sort((one, other) => one[0] - other[0]);
 }
 
 function scoreTranscript(
@@ -873,7 +914,13 @@ function scoreTranscript(
 	return {
 		strength: summary.base / summary.ceiling / lengthPivot(field, corpus, tuning.transcriptLengthNormalization),
 		multiplier: 1 + tuning.sequenceWeight * (lcs / order.length) + tuning.runWeight * proportionalRun ** 2,
-		ranges: matchRanges(field, hits, expansions, tuning.transcriptIdfFloor),
+		ranges: matchRanges(
+			field,
+			hits,
+			expansions,
+			tuning.transcriptIdfFloor,
+			compoundQueries.filter((query) => query.quoted),
+		),
 	};
 }
 
@@ -903,7 +950,13 @@ function scoreDescription(
 
 	return {
 		score: summary.base / summary.ceiling / lengthPivot(field, corpus, tuning.descriptionLengthNormalization),
-		ranges: matchRanges(field, hits, expansions, tuning.descriptionIdfFloor),
+		ranges: matchRanges(
+			field,
+			hits,
+			expansions,
+			tuning.descriptionIdfFloor,
+			compoundQueries.filter((query) => query.quoted),
+		),
 	};
 }
 
@@ -1009,8 +1062,9 @@ function searchBranch(branch: Branch, tuning: Tuning, within: Set<string> | null
 	let results = searchText(branch.segments, residual, tuning);
 	// Implicit date search is all or nothing: `parseDateExpression` returns null unless the whole
 	// residual is a date, so the text query is never rewritten and the coverage arithmetic in
-	// `rankedSearch` never sees a stray year or day number.
-	const expression = parseDateExpression(residual);
+	// `rankedSearch` never sees a stray year or day number. A quotation is never a date: `"1988"`
+	// asks for the strips that say it, which is the one thing a date match cannot answer.
+	const expression = quotedSpans(residual).length > 0 ? null : parseDateExpression(residual);
 	if (expression !== null) results = withDateMatches(results, expression, tuning);
 	// Before the filters, so that they judge a rerun by the date it ran again on, as its row shows.
 	if (rerunDays !== null) results = withReruns(results, rerunDays);
@@ -1062,8 +1116,13 @@ function indexedFor(comic: Comic): IndexedComic | undefined {
  * Whether the row's strip says every word of the text, in any field and in any inflection — the
  * literal question a word under `@not` asks, as `Constraint` explains. Text with no words in it says
  * nothing that could be absent, so no row contains it.
+ *
+ * A quoted phrase asks something stricter: whether some one field says exactly those words, in
+ * that order, side by side — and a phrase of nothing but punctuation, whether some field has it.
  */
 function containsText(indexed: IndexedComic | undefined, text: string): boolean {
+	const [quote] = quotedSpans(text);
+	if (quote !== undefined) return containsPhrase(indexed, quote.inner);
 	const words = [...text.matchAll(WORD_PATTERN)].map((match) => stem(match[0].toLowerCase()));
 	if (indexed === undefined || words.length === 0) return false;
 	if (indexed.stems === undefined) {
@@ -1073,6 +1132,17 @@ function containsText(indexed: IndexedComic | undefined, text: string): boolean 
 		}
 	}
 	return words.every((word) => indexed.stems!.has(word));
+}
+
+function containsPhrase(indexed: IndexedComic | undefined, phrase: string): boolean {
+	if (indexed === undefined) return false;
+	const fields = [...indexed.transcripts, ...(indexed.description ? [indexed.description] : [])];
+	const parts = [...phrase.matchAll(WORD_PATTERN)].flatMap((match) => decompose(match[0].toLowerCase()));
+	if (parts.length === 0) {
+		const lowered = phrase.trim().toLowerCase();
+		return lowered !== "" && fields.some((field) => field.lowered.includes(lowered));
+	}
+	return fields.some((field) => hasCompoundSequence(field, parts));
 }
 
 function admitsRow(branch: Branch, comic: Comic, run: Run | undefined): boolean {
@@ -1087,17 +1157,45 @@ function admitsRow(branch: Branch, comic: Comic, run: Run | undefined): boolean 
  */
 function searchText(segments: string[], residual: string, tuning: Tuning): SearchResult[] {
 	const compoundQueries: CompoundQuery[] = [];
+	// A term can be written both ways — `"snow ball" snow` — and is only exact where every
+	// occurrence of it was quoted. The phrase is still held to its exact words either way, by
+	// `compoundQueries`; this decides only how far the term reaches outside it.
+	const quotedTerms = new Set<string>();
+	const looseTerms = new Set<string>();
 	let sequenceOffset = 0;
-	const sequences = segments.map((segment) =>
-		[...segment.matchAll(WORD_PATTERN)].flatMap((match) => {
+	const wordsOf = (text: string, phrase: boolean): string[] => {
+		const start = sequenceOffset;
+		const words = [...text.matchAll(WORD_PATTERN)].flatMap((match) => {
 			const parts = decompose(match[0].toLowerCase());
-			if (parts.length > 1) compoundQueries.push({ parts, start: sequenceOffset });
+			if (parts.length > 1 && !phrase) compoundQueries.push({ parts, start: sequenceOffset });
 			sequenceOffset += parts.length;
 			return parts;
-		}),
-	);
-	if (sequences.every((sequence) => sequence.length === 0)) return literalSearch(residual);
-	return rankedSearch(sequences, compoundQueries, tuning);
+		});
+		if (phrase && words.length > 0) compoundQueries.push({ parts: words, start, quoted: true });
+		for (const word of words) (phrase ? quotedTerms : looseTerms).add(word);
+		return words;
+	};
+	const sequences = segments.map((segment) => {
+		const words: string[] = [];
+		let cursor = 0;
+		for (const quote of quotedSpans(segment)) {
+			words.push(...wordsOf(segment.slice(cursor, quote.start), false), ...wordsOf(quote.inner, true));
+			cursor = quote.end;
+		}
+		words.push(...wordsOf(segment.slice(cursor), false));
+		return words;
+	});
+	if (sequences.every((sequence) => sequence.length === 0)) return literalSearch(unquoted(residual));
+	const exactTerms = new Set([...quotedTerms].filter((term) => !looseTerms.has(term)));
+	return rankedSearch(sequences, compoundQueries, exactTerms, tuning);
+}
+
+/**
+ * The text with its quotation marks taken out, for the substring scan: a quoted `"?!"` is asking
+ * for `?!`, and a quoted phrase is never loosened there anyway.
+ */
+function unquoted(text: string): string {
+	return text.replace(/["“”]/g, " ").trim().replace(/\s+/g, " ");
 }
 
 /** The transcript a date match shows. A wordless strip has none, so it shows its description. */
@@ -1286,7 +1384,12 @@ function compareChronologically(a: SearchResult, b: SearchResult): number {
 	return a.comic.date.localeCompare(b.comic.date) || (a.comic.id || "").localeCompare(b.comic.id || "");
 }
 
-function rankedSearch(sequences: string[][], compoundQueries: CompoundQuery[], tuning: Tuning): SearchResult[] {
+function rankedSearch(
+	sequences: string[][],
+	compoundQueries: CompoundQuery[],
+	exactTerms: Set<string>,
+	tuning: Tuning,
+): SearchResult[] {
 	const sequence = sequences.flat();
 	const terms = [...new Set(sequence)];
 	const termIndices = new Map(terms.map((term, index) => [term, index]));
@@ -1303,10 +1406,17 @@ function rankedSearch(sequences: string[][], compoundQueries: CompoundQuery[], t
 	}
 
 	const transcriptExpansions = terms.map((term) =>
-		expandTerm(transcriptCorpus, term, tuning, 0, tuning.transcriptInflectionWeight),
+		expandTerm(transcriptCorpus, term, tuning, 0, tuning.transcriptInflectionWeight, exactTerms.has(term)),
 	);
 	const descriptionExpansions = terms.map((term) =>
-		expandTerm(descriptionCorpus, term, tuning, tuning.descriptionIdfFloor, tuning.descriptionInflectionWeight),
+		expandTerm(
+			descriptionCorpus,
+			term,
+			tuning,
+			tuning.descriptionIdfFloor,
+			tuning.descriptionInflectionWeight,
+			exactTerms.has(term),
+		),
 	);
 	const transcriptCeilings = denominators(transcriptExpansions, descriptionExpansions, transcriptCorpus, tuning);
 	const descriptionCeilings = denominators(descriptionExpansions, transcriptExpansions, descriptionCorpus, tuning);

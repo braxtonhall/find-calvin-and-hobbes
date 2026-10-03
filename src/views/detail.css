@@ -227,13 +227,45 @@
 	padding: 40px 0;
 }
 
-.detail-reruns {
-	list-style: none;
-	margin: 0;
-	padding: 0;
+.detail-rerun-banner {
 	font-size: 13px;
-	line-height: 1.6;
 	color: var(--text-muted);
+	margin-bottom: 24px;
+}
+
+/* Below the strip, before the books: when else it ran, and the arcs it is part of, as one group. */
+.detail-runs {
+	list-style: none;
+	margin: 24px 0 0 0;
+	padding: 0;
+	max-width: 600px;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	font-size: 13px;
+	color: var(--text-muted);
+}
+
+/* The text runs the width of the group and the arrows sit at its end, as a book's row in a list does. */
+.detail-arc {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.detail-arc__text {
+	flex: 1;
+	min-width: 0;
+}
+
+.detail-arc__nav {
+	flex: none;
+	display: flex;
+	gap: 6px;
+}
+
+.detail-arc__nav > .nav-btn {
+	margin-left: 0;
 }
 
 .detail-rerun-link {
@@ -245,54 +277,30 @@
 	text-decoration: underline;
 }
 
+/* In the same type as the lines above it, so the books read as one more of them. */
 .detail-collections-heading {
-	font-size: 12px;
+	font-size: 13px;
 	color: var(--text-muted);
 	margin: 24px 0 8px 0;
 }
 
-.detail-collected {
-	display: flex;
-	align-items: flex-start;
-	gap: 6px;
-}
-
-.detail-collected__toggle {
-	flex: none;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 20px;
-	/* As tall as the covers beside it, so the chevron sits at their middle. */
-	height: 64px;
-	margin-left: -4px;
-	padding: 0;
-	background: none;
-	border: none;
-	color: var(--text-muted);
+/* "Collected in" folds as a book's page's sections do, by its marker; open, the list replaces the covers. */
+summary.detail-collections-heading {
 	cursor: pointer;
+	width: fit-content;
 }
 
-.detail-collected__toggle:hover {
+summary.detail-collections-heading:hover {
 	color: var(--golden);
 }
 
-.detail-collected__toggle svg {
-	transition: transform 0.15s;
-}
-
-.detail-collected--expanded .detail-collected__toggle {
-	/* Now beside the list's first row. */
-	height: 36px;
-}
-
-.detail-collected--expanded .detail-collected__toggle svg {
-	transform: rotate(90deg);
-}
-
-.detail-collected--expanded .detail-collections,
-.detail-collected:not(.detail-collected--expanded) .detail-printings {
+.detail-collected[open] + .detail-collections {
 	display: none;
+}
+
+/* Under the reruns and arcs, as close as they are to each other. */
+.detail-runs + .detail-collections-slot .detail-collections-heading {
+	margin-top: 6px;
 }
 
 .detail-collections {

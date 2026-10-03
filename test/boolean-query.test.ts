@@ -136,3 +136,44 @@ test("operators", async (suite) => {
 		assert.deepEqual(starts("@not @not @year:1988"), []);
 	});
 });
+
+test("quotation marks", async (suite) => {
+	await suite.test("a quotation is one atom, held with straight marks", () => {
+		assert.deepEqual(shape('"baby sitter"'), [['"baby sitter"']]);
+		assert.deepEqual(shape('calvin "baby  sitter" pizza'), [['calvin "baby sitter" pizza']]);
+		assert.deepEqual(shape("“baby sitter”"), [['"baby sitter"']]);
+		// A phone curls the marks as it pleases, and not always the right way round.
+		assert.deepEqual(shape("”baby sitter“"), [['"baby sitter"']]);
+	});
+
+	await suite.test("an unmatched quotation closes at the end", () => {
+		assert.deepEqual(shape('"baby sitter'), shape('"baby sitter"'));
+		assert.deepEqual(shape('calvin "baby sitter" "pizza'), [['calvin "baby sitter" "pizza"']]);
+	});
+
+	await suite.test("an empty quotation is dropped", () => {
+		assert.deepEqual(shape('calvin "" hobbes'), [["calvin hobbes"]]);
+		assert.deepEqual(shape('"  "'), []);
+	});
+
+	await suite.test("operators, filters and parentheses inside a quotation are text", () => {
+		assert.deepEqual(shape('"rosalyn @or baby"'), [['"rosalyn @or baby"']]);
+		assert.deepEqual(shape('"snow @year:1988"'), [['"snow @year:1988"']]);
+		assert.deepEqual(shape('"(baby) sitter"'), [['"(baby) sitter"']]);
+		assert.ok(keeps('"@year:1988"', "1989-08-03"), "a quoted filter restricts nothing");
+		assert.deepEqual(negatedFilters('@not "@year:1988"'), new Set());
+	});
+
+	await suite.test("a quotation combines like any other atom", () => {
+		assert.deepEqual(shape('rosalyn @or "baby sitter"'), [["rosalyn"], ['"baby sitter"']]);
+		assert.deepEqual(shape('@year:1988 "baby sitter"'), [['"baby sitter"']]);
+		assert.deepEqual(shape('"baby"@year:1988"sitter"'), [['"baby"', '"sitter"']]);
+	});
+
+	await suite.test("@not takes the whole quotation", () => {
+		assert.deepEqual(shape('calvin @not "baby sitter"'), [["calvin"]]);
+		const phrase = (text: string) => text === '"baby sitter"';
+		assert.ok(!keeps('calvin @not "baby sitter"', "1988-01-01", phrase));
+		assert.ok(keeps('calvin @not "baby sitter"', "1988-01-01", () => false));
+	});
+});

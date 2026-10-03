@@ -40,6 +40,14 @@ Three operators combine words and filters, tightest first:
 | `@or`    | `@day:saturday @or @day:sunday` | either the word, filter or `(group)` each side |
 | `@and`   | `@year:1988 @and @month:8`      | both — a space, without the widening above     |
 
+Quotation marks ask for exact words: `"snow goons"` is those two words, in that order, side by
+side, with no other spelling, inflection or near miss of either — though punctuation between them
+and a compound written the other way (`"snow man"` for `snowman`) still count. Everything inside is
+text, so `"rosalyn @or baby"` is a phrase rather than a choice; it is never read as a date either,
+so `"1988"` finds the strips that say it. A quotation left open closes at the end, and curly quotes
+work too. A quotation is one atom to the operators above, so `@not "baby sitter"` is anything that
+does not say baby sitter.
+
 So `rosalyn @or baby sitter` is `(rosalyn @or baby) sitter`; the phrase needs parentheses,
 `rosalyn @or (baby sitter)`. `@not baby sitter` is sitter without baby, and `@not (baby sitter)` is
 anything without both. A word under `@not` is matched literally, in any inflection, rather than
@@ -63,7 +71,7 @@ yarn build
 yarn serve   # http://localhost:3000
 ```
 
-The build writes one HTML file per address — `1986-07-07.html`, `collection/yukonho.html`,
+The build writes one HTML file per address — `1986-07-07.html`, `book/yukonho.html`,
 `credits.html`, and so on — each holding that page as the app would draw it, plus the data it was
 drawn from in a `<script type="application/json">` in the head. A cold load paints before the
 script runs and unfurls with its own title and description when shared; once the script runs it
