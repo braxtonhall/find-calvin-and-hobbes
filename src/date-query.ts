@@ -1,4 +1,4 @@
-import { RANGE_END, RANGE_START } from "./constants";
+import { YEARS } from "./constants";
 import { dateToString, weekdayOf } from "./date-utils";
 
 /**
@@ -24,9 +24,9 @@ import { dateToString, weekdayOf } from "./date-utils";
  *   day with no year is a thing to filter by rather than a date — `@month:august @day:3` is how
  *   they ask for the third of August in every year, and it says so where a bare `august 3` would
  *   have to be guessed at.
- * - **A year a reader typed must be one the archive could have.** The range comes from
- *   `RANGE_START` and `RANGE_END`, so `2001-09-11` and `1812` stay text queries rather than
- *   becoming dates with nothing behind them. A filter value is exempt — see `DateSource`.
+ * - **A year a reader typed must be one the archive could have.** The range comes from `YEARS`,
+ *   which spans `RANGE_START` to `RANGE_END`, so `2001-09-11` and `1812` stay text queries rather
+ *   than becoming dates with nothing behind them. A filter value is exempt — see `DateSource`.
  * - **Two digits are a year's ending, never a guess at its century.** `aug 3 '88` is August 3rd in
  *   every year ending in 88 — in this archive 1988, and in one that reached back far enough, 1888
  *   as well. It is the same kind of answer an ambiguous numeric date gets: every reading, kept.
@@ -45,9 +45,8 @@ import { dateToString, weekdayOf } from "./date-utils";
  * today, but a range feature would have to keep the separators.
  */
 
-const MIN_YEAR = Number(RANGE_START.slice(0, 4));
-const MAX_YEAR = Number(RANGE_END.slice(0, 4));
-const ARCHIVE_YEARS = Array.from({ length: MAX_YEAR - MIN_YEAR + 1 }, (_, offset) => MIN_YEAR + offset);
+const MIN_YEAR = YEARS[0];
+const MAX_YEAR = YEARS[YEARS.length - 1];
 
 export const MONTHS = new Map<string, number>([
 	["january", 1],
@@ -177,7 +176,7 @@ function resolveYear(numeric: Numeric, source: DateSource): YearReading | null {
 	// Exactly two, not "at most two": a single digit is never a year, and letting one through
 	// would read `aug 3` as August 1903 the moment the range stopped saying otherwise.
 	if (numeric.digits !== 2) return null;
-	if (source === "query" && !ARCHIVE_YEARS.some((year) => year % 100 === numeric.value)) return null;
+	if (source === "query" && !YEARS.some((year) => year % 100 === numeric.value)) return null;
 	return { year: numeric.value, ending: true };
 }
 
@@ -189,7 +188,7 @@ function resolveYear(numeric: Numeric, source: DateSource): YearReading | null {
 function inArchive(candidate: DateCandidate): DateCandidate[] {
 	if (candidate.ending === undefined) return [candidate];
 	const { ending: _ending, ...rest } = candidate;
-	return ARCHIVE_YEARS.filter((year) => year % 100 === candidate.year).map((year) => ({ ...rest, year }));
+	return YEARS.filter((year) => year % 100 === candidate.year).map((year) => ({ ...rest, year }));
 }
 
 /** Every date that gets this far names its year, so February 29th is decided rather than guessed. */

@@ -49,16 +49,13 @@ class YamlToJsonPlugin {
 					const source = loadComicSource(path.join(projectDir, "comics.yaml"));
 					const arcs = loadArcs(projectDir, source, collectionData);
 					const arcsJson = exportArcsJson(arcs);
-					compilation.emitAsset("arcs.json", new sources.RawSource(arcsJson));
 
 					const comicsJson = exportComicsJson(projectDir, collectionData, basePath, arcs);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 
+					// Not emitted: the app has these three inside its script. See `bundledData.ts`.
 					const rerunsJson = exportRerunsJson(projectDir, source);
-					compilation.emitAsset("reruns.json", new sources.RawSource(rerunsJson));
-
 					const collectionIndexJson = generateCollectionIndex(collectionData, basePath);
-					compilation.emitAsset("collection-index.json", new sources.RawSource(collectionIndexJson));
 
 					const descriptionsJson = exportDescriptions(projectDir);
 					compilation.emitAsset("descriptions.json", new sources.RawSource(descriptionsJson));

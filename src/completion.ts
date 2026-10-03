@@ -12,9 +12,9 @@
  * beside the templates themselves — see the note in `filter-spec.ts`.
  *
  * It knows the archive's bounds as well, because a menu that offers a value has to offer one that
- * is there: `RANGE_START`, `RANGE_END` and `SABBATICALS` are static constants, so nothing about
- * reading them costs this module its purity. The comic index — which individual days are missing —
- * is data, and stays out.
+ * is there: `RANGE_START`, `RANGE_END` and `SABBATICALS` are constants the build takes from
+ * `comics.yaml`, so nothing about reading them costs this module its purity. The comic index
+ * itself is data, and stays out.
  *
  * The books are data too, and they do not stay out — but they arrive through `filter-vocabulary.ts`
  * rather than being imported, so the purity survives: with nothing registered every list is empty,
@@ -317,8 +317,8 @@ interface Day {
  * would offer a date from before Calvin existed and then commit it, and the empty page of results
  * would make the menu look like it had lied.
  *
- * Individual missing days are not accounted for: the full comic index is data this module cannot
- * see, while the bounds and the two sabbaticals are static constants it can.
+ * A missing day is accounted for too, without the comic index: every day `comics.yaml` has no daily
+ * for is one of the gaps the build writes into `SABBATICALS`.
  */
 function archiveValues(depth: number, fields: string[]): Day[] {
 	const [yearDigits = "", monthDigits = "", dayDigits = ""] = fields;

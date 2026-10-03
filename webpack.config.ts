@@ -28,7 +28,8 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 		publicPath: basePath,
 		path: path.join(outputDir),
 		// Unhashed on purpose: a hashed name would put a new script tag in all three thousand pages
-		// on every change to the script, and the hosts this deploys to set no cache headers anyway.
+		// on every change to the script, and would buy nothing — GitHub Pages serves every file with
+		// `max-age=600`, which no name can lengthen.
 		filename: "[name].js",
 	},
 	module: {
@@ -39,6 +40,19 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 				use: {
 					loader: "ts-loader",
 				},
+			},
+			{
+				// Runs on ts-loader's output and replaces it: the archive's span, as a literal. See
+				// `src/archive.ts`.
+				test: path.join(srcDir, "archive.ts"),
+				enforce: "post",
+				use: path.join(__dirname, "build-chain", "archiveSpan.ts"),
+			},
+			{
+				// The same, for the reruns, the books and the arcs. See `src/bundled-data.ts`.
+				test: path.join(srcDir, "bundled-data.ts"),
+				enforce: "post",
+				use: path.join(__dirname, "build-chain", "bundledData.ts"),
 			},
 			{
 				test: /\.css$/,

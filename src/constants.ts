@@ -1,11 +1,20 @@
+import { ARCHIVE_SPAN } from "./archive";
+
 export const DATABASE_NAME = "bookmarks-db";
 export const DATABASE_VERSION = 1;
 export const STORE_NAME = "bookmarks";
 
-export const SABBATICALS: [string, string][] = [
-	["1991-05-05", "1992-02-01"],
-	["1994-04-03", "1994-12-31"],
-];
+// All three come from `comics.yaml`, by way of `archive.ts`.
+export const SABBATICALS: [string, string][] = ARCHIVE_SPAN.gaps;
 
-export const RANGE_START = "1985-11-18";
-export const RANGE_END = "1995-12-31";
+export const RANGE_START = ARCHIVE_SPAN.start;
+export const RANGE_END = ARCHIVE_SPAN.end;
+
+const FIRST_YEAR = Number(RANGE_START.slice(0, 4));
+const LAST_YEAR = Number(RANGE_END.slice(0, 4));
+
+/** Every year the strip ran in, ascending. */
+export const YEARS: readonly number[] = Array.from(
+	{ length: LAST_YEAR - FIRST_YEAR + 1 },
+	(_, offset) => FIRST_YEAR + offset,
+);

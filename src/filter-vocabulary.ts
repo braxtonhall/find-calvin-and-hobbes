@@ -16,12 +16,12 @@
  *
  * > **An empty vocabulary knows everything.**
  *
- * `collection-index.json` arrives over the network, after the search box is already typeable, and
- * its fetch can fail silently. A parser that judged ids against a list which had not arrived would
- * paint a reader's own `@in:book3` red and then green a moment later — and red forever on a failed
- * fetch, while the filter went on working, since membership is read off `comics.json` instead. A
- * list that has not arrived is not evidence that a value is wrong. So emptiness means
- * "unconstrained", which is also what lets the parser be tested with nothing registered at all.
+ * The books ship inside the script now (see `bundled-data.ts`), so in the app the list is there
+ * from the first keystroke. But a list that is not there — nothing registered, as in the tests — is
+ * not evidence that a value is wrong: a parser that judged ids against it would paint a reader's
+ * own `@in:book3` red while the filter went on working, since membership is read off
+ * `comics.json`. So emptiness means "unconstrained", which is what lets the parser be tested with
+ * nothing registered at all.
  */
 
 /** One value a data-driven filter takes: what a reader types, and what it names. */
