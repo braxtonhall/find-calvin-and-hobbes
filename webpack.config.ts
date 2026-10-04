@@ -55,6 +55,12 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 				use: path.join(__dirname, "build-chain", "bundledData.ts"),
 			},
 			{
+				// The same, for the credits page's text. See `src/credits-content.ts`.
+				test: path.join(srcDir, "credits-content.ts"),
+				enforce: "post",
+				use: path.join(__dirname, "build-chain", "credits.ts"),
+			},
+			{
 				test: /\.css$/,
 				use: [MiniCssExtractPlugin.loader, "css-loader"],
 			},

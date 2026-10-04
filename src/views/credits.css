@@ -46,38 +46,37 @@
 	margin-bottom: 20px;
 }
 
-.credits-section {
+/* The body is `credits.md`, so it is styled by element: a paragraph or list is a section, and what
+   sits in its <footer> is the sign-off. */
+.credits-content > p,
+.credits-content > ul {
 	margin-bottom: 20px;
 	font-size: 14px;
 	line-height: 1.6;
 	color: var(--text);
 }
 
-.credits-section a {
-	color: var(--golden);
-	text-decoration: none;
+/* A list belongs to the line that introduces it ("Prior Art"), and sits just under it. */
+.credits-content > p:has(+ ul) {
+	margin-bottom: 0;
 }
 
-.credits-section a:hover {
-	text-decoration: underline;
-}
-
-.credits-section ul {
-	margin: 6px 0 0 0;
+.credits-content > ul {
+	margin-top: 6px;
 	padding-left: 1.2em;
 }
 
-.credits-footer {
-	margin-top: 32px;
-	font-size: 12px;
-	color: var(--text-muted);
-}
-
-.credits-footer a {
+.credits-content a {
 	color: var(--golden);
 	text-decoration: none;
 }
 
-.credits-footer a:hover {
+.credits-content a:hover {
 	text-decoration: underline;
+}
+
+.credits-content footer p {
+	margin-top: 32px;
+	font-size: 12px;
+	color: var(--text-muted);
 }
