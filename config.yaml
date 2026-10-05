@@ -30,6 +30,32 @@ landing:
   width: 722
   height: 103
 
+# The site's colours, by what each is for. Each is quoted: unquoted, a `#` starts a comment.
+#
+# The grid colours each day by what happened on it, and a search fades each day by how well it
+# matched. A day it did not match at all takes its colour at 40% over the background, and the four
+# shades of a weaker match are drawn between the two.
+theme:
+  background: "#fbf6f0"
+  text: "#333333"
+  # Secondary text: dates, counts, captions.
+  textMuted: "#888888"
+  # The site's own colour: a day with a new strip, and the links, buttons and outlines. Darkened
+  # by a fifth where it is text.
+  main: "#f6b213"
+  # A bookmarked day.
+  bookmark: "#fe7900"
+  # A day with no new strip — a rerun, or none at all — and the lines and panels around the page.
+  neutral: "#e0e0e0"
+  # The ring around the day that is open, and the outline of a book's links out.
+  selected: "#e6052f"
+  # The glow around a day while its search result is pointed at, and that result's row.
+  hover: "#ffd700"
+  hoverRow: "#fff8e1"
+  # The words a search found in a strip's text, and the ones it found only approximately.
+  match: "#fff176"
+  matchApproximate: "#fff8c4"
+
 # Where and how the site is deployed.
 
 # Optional, from SITE_URL. The full https URL this site is served from.

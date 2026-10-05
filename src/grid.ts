@@ -365,7 +365,7 @@ export async function loadComicData(): Promise<void> {
 		loading.innerHTML = `
 			<div style="text-align:center;font-family:var(--font);color:var(--text);">
 				<p style="font-size:16px;margin-bottom:12px;">Could not load comic data.</p>
-				<button id="retry-btn" style="padding:8px 16px;font-family:var(--font);font-size:14px;background:var(--golden);color:#fff;border:none;border-radius:4px;cursor:pointer;">Retry</button>
+				<button id="retry-btn" style="padding:8px 16px;font-family:var(--font);font-size:14px;background:var(--main);color:#fff;border:none;border-radius:4px;cursor:pointer;">Retry</button>
 			</div>`;
 		document.getElementById("retry-btn")!.addEventListener("click", () => {
 			document.getElementById("loading")!.innerHTML = '<div class="spinner"></div>';

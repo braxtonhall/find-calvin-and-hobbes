@@ -94,9 +94,13 @@ pages are written by `build-chain/PagesPlugin.ts`.
 
 ### Configuration
 
-`config.yaml` is where the site is configured: its name, the home page's banner, and where the Read
-and License links under a strip lead, each a template filled in from the strip — see the file for
-the fields. A link with no template is not drawn.
+`config.yaml` is where the site is configured: its name, the home page's banner, its colours, and
+where the Read and License links under a strip lead, each a template filled in from the strip — see
+the file for the fields. A link with no template is not drawn.
+
+`compounds.yaml`, which is optional, tunes how the search treats compound words: the ones to keep
+whole, and the ones to split that the archive never writes open. `yarn candidates` lists likely
+compounds the file doesn't mention yet.
 
 Any value in it can read the environment as `$NAME`, `${NAME}` or `${NAME:-fallback}`, from the
 process or from `.env`. The deployment settings — `SITE_URL`, `PAGE_LAYOUT` and `CORRECTIONS`, below

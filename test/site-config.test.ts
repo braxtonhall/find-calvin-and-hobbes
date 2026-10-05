@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { loadPageConfig } from "../build-chain/siteConfig";
+import { withConfig } from "./helpers/config";
 import { loadArcs } from "../build-chain/arcs";
 import { loadReruns } from "../build-chain/reruns";
 import type { CollectionData } from "../build-chain/collectionPages";
@@ -16,17 +16,6 @@ import { buildDocumentHtml } from "../src/pages/shell";
  * `config.yaml`: that it reads the environment into its values, and that the links under a strip
  * are written from its templates — and left out where it has none.
  */
-
-/** A project holding just this `config.yaml`, for `loadPageConfig` to read. */
-function withConfig<T>(contents: string, run: (projectDir: string) => T): T {
-	const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "config-"));
-	try {
-		fs.writeFileSync(path.join(projectDir, "config.yaml"), contents);
-		return run(projectDir);
-	} finally {
-		fs.rmSync(projectDir, { recursive: true, force: true });
-	}
-}
 
 function withEnvironment<T>(values: Record<string, string | undefined>, run: () => T): T {
 	const saved = Object.fromEntries(Object.keys(values).map((name) => [name, process.env[name]]));

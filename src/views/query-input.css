@@ -82,12 +82,12 @@
  * means no amount of typing will save this one — see `filterSpans`.
  */
 .query-pill {
-	background: var(--golden-dim);
+	background: var(--main-faded);
 	border-radius: 3px;
 }
 
 .query-pill--pending {
-	background: var(--grey);
+	background: var(--neutral);
 	border-radius: 0 3px 3px 0;
 }
 
@@ -146,7 +146,7 @@
 	font-family: var(--font);
 	font-size: 13px;
 	background: var(--bg-sidebar);
-	border: 1px solid var(--grey);
+	border: 1px solid var(--neutral);
 	border-radius: 8px;
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 	opacity: 0;
@@ -173,11 +173,11 @@
 }
 
 .query-menu-row--active {
-	background: var(--golden-dim);
+	background: var(--main-faded);
 }
 
 .query-menu-row:not(.query-menu-row--active):hover {
-	background: var(--grey-dim);
+	background: var(--neutral-faded);
 }
 
 /* What the row would insert, and so the half that keeps its full width when the two compete. */
@@ -201,7 +201,7 @@
 	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	font-style: italic;
 	font-weight: 400;
-	color: var(--golden-half);
+	color: var(--main-text);
 }
 
 /* The half that gives way: `min-width: 0` is what lets a flex item shrink past its text at all. */

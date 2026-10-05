@@ -89,7 +89,7 @@ summary.collection-section-heading {
 }
 
 summary.collection-section-heading:hover {
-	color: var(--golden);
+	color: var(--main);
 }
 
 .collection-extras {
@@ -117,13 +117,13 @@ summary.collection-section-heading:hover {
 	color: var(--text);
 	text-decoration: none;
 	padding: 4px 12px;
-	border: 1px solid var(--border);
+	border: 1px solid var(--selected);
 	border-radius: 4px;
 }
 
 .collection-link:hover {
-	border-color: var(--golden);
-	color: var(--golden);
+	border-color: var(--main);
+	color: var(--main);
 }
 
 .collection-ranges {
@@ -138,7 +138,7 @@ summary.collection-section-heading:hover {
 
 /* Each end of a range is its strip, styled like a strip page's rerun links to the strip it reran. */
 .collection-range-date {
-	color: var(--golden);
+	color: var(--main);
 	text-decoration: none;
 }
 
@@ -153,7 +153,7 @@ summary.collection-section-heading:hover {
 }
 
 .collection-range-dash:hover {
-	color: var(--golden);
+	color: var(--main);
 }
 
 .collection-no-ranges {

@@ -1,0 +1,361 @@
+# Compound words: `goodnight` and `good night` are one phrase to a reader and two unrelated words to
+# the search, which is how `say goodnight to hobbes` misses a strip that writes it open. A compound
+# listed here is indexed and searched as its parts, so either spelling finds both.
+#
+# Optional. Without this file the search still splits a closed word wherever the archive itself
+# writes it open at least as often (`goodnight` -> `good night` above), and nothing else.
+
+# Real words that rule would split wrongly, kept whole. A character's name matters most: splitting
+# `wormwood` into `worm` + `wood` would scatter every strip that mentions him.
+keepWhole:
+  - washer # was her
+  - theirs # the irs
+  - programmed # pro grammed
+  - wormwood
+  - herewith
+  - outback
+  # The open bigram is a clause — "the sun set behind the hill" — not another spelling of the noun.
+  - sunset
+  - aaaaaa
+  - yowwow
+  - zzzzzzzz
+
+# Compounds split by hand, as `whole: its parts`: mostly ones the archive writes closed, which the
+# rule leaves whole. Grouped by the spelling the archive prefers, which is recorded but does not
+# change how either spelling is matched:
+#
+#   closed    written closed more often than open (`snowball`)
+#   balanced  written each way as often
+#   open      written open more often
+#
+# `yarn candidates` lists the archive's likely compounds that are in neither list, to add here or
+# to `keepWhole`.
+compounds:
+  closed:
+    afterlife: after life
+    afternoon: after noon
+    aircraft: air craft
+    airline: air line
+    airplane: air plane
+    airport: air port
+    airtight: air tight
+    alleyway: alley way
+    anteater: ant eater
+    anybody: any body
+    anyone: any one
+    anything: any thing
+    anywhere: any where
+    applesauce: apple sauce
+    armpit: arm pit
+    artwork: art work
+    ashtray: ash tray
+    background: back ground
+    backpack: back pack
+    badlands: bad lands
+    baseball: base ball
+    baseman: base man
+    basepath: base path
+    basketball: basket ball
+    bathroom: bath room
+    bathtub: bath tub
+    batman: bat man
+    battleship: battle ship
+    beachball: beach ball
+    bedbug: bed bug
+    bedroom: bed room
+    bedsheet: bed sheet
+    bedspread: bed spread
+    bedtime: bed time
+    billboard: bill board
+    birthday: birth day
+    blackboard: black board
+    blackmail: black mail
+    blindfold: blind fold
+    blowhard: blow hard
+    boardwalk: board walk
+    bonehead: bone head
+    bookcase: book case
+    boyfriend: boy friend
+    brainwash: brain wash
+    breakfast: break fast
+    breakneck: break neck
+    briefcase: brief case
+    broadcast: broad cast
+    broomstick: broom stick
+    buckeye: buck eye
+    busload: bus load
+    busywork: busy work
+    butterfly: butter fly
+    calvinball: calvin ball
+    cannonball: cannon ball
+    cardboard: card board
+    campfire: camp fire
+    campground: camp ground
+    campsite: camp site
+    chainsaw: chain saw
+    chalkboard: chalk board
+    championship: champion ship
+    cheapskate: cheap skate
+    copyright: copy right
+    countdown: count down
+    cowboy: cow boy
+    crackpot: crack pot
+    crossbones: cross bones
+    crossword: cross word
+    cutthroat: cut throat
+    daylight: day light
+    deadline: dead line
+    deathbed: death bed
+    doggone: dog gone
+    doorbell: door bell
+    doormat: door mat
+    doorway: door way
+    downhill: down hill
+    downpour: down pour
+    downstairs: down stairs
+    downtown: down town
+    dragonflies: dragon flies
+    driveway: drive way
+    drumsticks: drum sticks
+    dumbfounded: dumb founded
+    eggplant: egg plant
+    eyeball: eye ball
+    eyelids: eye lids
+    eyewitness: eye witness
+    featherbrained: feather brained
+    figurehead: figure head
+    fingernails: finger nails
+    firearms: fire arms
+    fireball: fire ball
+    fireflies: fire flies
+    firefly: fire fly
+    fireman: fire man
+    fireplace: fire place
+    firepower: fire power
+    fireworks: fire works
+    flagstaff: flag staff
+    flashlight: flash light
+    flatfoot: flat foot
+    fleabag: flea bag
+    floodlights: flood lights
+    floorboards: floor boards
+    football: foot ball
+    footnote: foot note
+    footprints: foot prints
+    footstep: foot step
+    forearm: fore arm
+    forehead: fore head
+    foresight: fore sight
+    forklift: fork lift
+    friendship: friend ship
+    frostbite: frost bite
+    furball: fur ball
+    fuzzhead: fuzz head
+    gangway: gang way
+    gentleman: gentle man
+    girlfriend: girl friend
+    goodbye: good bye
+    goosebumps: goose bumps
+    grandfather: grand father
+    grandmother: grand mother
+    greenbacks: green backs
+    greenhouse: green house
+    handwriting: hand writing
+    hardback: hard back
+    hardcover: hard cover
+    headlights: head lights
+    headlines: head lines
+    heartache: heart ache
+    heartfelt: heart felt
+    heartstrings: heart strings
+    highway: high way
+    hillside: hill side
+    homemade: home made
+    homework: home work
+    honeymoon: honey moon
+    horsefly: horse fly
+    horseman: horse man
+    hotwire: hot wire
+    housefly: house fly
+    household: house hold
+    hummingbird: humming bird
+    icebox: ice box
+    inchworm: inch worm
+    jackpot: jack pot
+    jawbone: jaw bone
+    kickstand: kick stand
+    kneepads: knee pads
+    lakeside: lake side
+    landscape: lands cape
+    landslide: land slide
+    layman: lay man
+    leadership: leader ship
+    leftover: left over
+    leglock: leg lock
+    letterhead: letter head
+    lifeguard: life guard
+    lifetime: life time
+    lightweight: light weight
+    lipstick: lip stick
+    livestock: live stock
+    lockjaw: lock jaw
+    loophole: loop hole
+    lowbrow: low brow
+    lunchroom: lunch room
+    lunchtime: lunch time
+    mailbox: mail box
+    mailman: mail man
+    mainstream: main stream
+    mankind: man kind
+    mastercard: master card
+    mastermind: master mind
+    masterpiece: master piece
+    matchmaker: match maker
+    mayday: may day
+    meantime: mean time
+    meanwhile: mean while
+    meatloaf: meat loaf
+    midnight: mid night
+    moonlight: moon light
+    mouthpiece: mouth piece
+    nationwide: nation wide
+    necktie: neck tie
+    network: net work
+    newspaper: news paper
+    newsworthy: news worthy
+    nighttime: night time
+    northeast: north east
+    notebook: note book
+    notepad: note pad
+    numbskull: numb skull
+    outdoor: out door
+    outfield: out field
+    outfit: out fit
+    outline: out line
+    overnight: over night
+    overcoat: over coat
+    overhaul: over haul
+    overhead: over head
+    overload: over load
+    overview: over view
+    pancake: pan cake
+    paperwork: paper work
+    password: pass word
+    paycheck: pay check
+    payload: pay load
+    peanut: pea nut
+    photograph: photo graph
+    pigskin: pig skin
+    pineapple: pine apple
+    pinpoint: pin point
+    playboy: play boy
+    playground: play ground
+    popcorn: pop corn
+    postmark: post mark
+    quarterback: quarter back
+    quicksand: quick sand
+    railroad: rail road
+    raincoat: rain coat
+    redheads: red heads
+    roadkill: road kill
+    roadrunner: road runner
+    roommate: room mate
+    runway: run way
+    sailboat: sail boat
+    sandbox: sand box
+    sandman: sand man
+    sapsucker: sap sucker
+    schoolwork: school work
+    scoutmaster: scout master
+    screwdriver: screw driver
+    seafood: sea food
+    seamstress: seam stress
+    seaweed: sea weed
+    setbacks: set backs
+    sidewalk: side walk
+    skateboard: skate board
+    sleepyhead: sleepy head
+    slushball: slush ball
+    smartypants: smarty pants
+    snowball: snow ball
+    snowman: snow man
+    sodbuster: sod buster
+    softball: soft ball
+    sorehead: sore head
+    southeast: south east
+    spacecraft: space craft
+    spaceman: space man
+    spaceship: space ship
+    spitball: spit ball
+    sportsman: sports man
+    springboard: spring board
+    staircase: stair case
+    stairway: stair way
+    starboard: star board
+    stinkhead: stink head
+    stopwatch: stop watch
+    suitcase: suit case
+    sunglasses: sun glasses
+    sunlight: sun light
+    sunrise: sun rise
+    sunshine: sun shine
+    superhero: super hero
+    supermarket: super market
+    supertoad: super toad
+    swimsuit: swim suit
+    tailhook: tail hook
+    tapeworm: tape worm
+    teamwork: team work
+    textbooks: text books
+    thunderstorm: thunder storm
+    tiptoe: tip toe
+    toothbrush: tooth brush
+    toothpaste: tooth paste
+    topsoil: top soil
+    touchdown: touch down
+    trademark: trade mark
+    treehouse: tree house
+    truckload: truck load
+    turnabout: turn about
+    typewriter: type writer
+    underfoot: under foot
+    underground: under ground
+    underhand: under hand
+    underpants: under pants
+    undersea: under sea
+    underside: under side
+    underwear: under wear
+    underworld: under world
+    walkway: walk way
+    warpath: war path
+    waterfall: water fall
+    waterfront: water front
+    weekdays: week days
+    weekend: week end
+    werewolf: were wolf
+    whenever: when ever
+    wildlife: wild life
+    windshield: wind shield
+    workshop: work shop
+    yearbook: year book
+  balanced:
+    anyplace: any place
+    bigmouth: big mouth
+    boogerbrain: booger brain
+    drugstore: drug store
+    fuzzbrain: fuzz brain
+    laughingstock: laughing stock
+    lifesaver: life saver
+    needlelike: needle like
+    postmaster: post master
+    rocketship: rocket ship
+    smallmouth: small mouth
+    streetlights: street lights
+    superhighway: super highway
+    underwater: under water
+  open:
+    lunchbox: lunch box
+    stepladder: step ladder
+    superpowers: super powers
+    takeoff: take off
+    teenager: teen ager

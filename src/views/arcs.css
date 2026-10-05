@@ -50,13 +50,13 @@
 	height: 3px;
 	margin-top: 6px;
 	border-radius: 2px;
-	background: var(--grey);
+	background: var(--neutral);
 	transition: background 0.1s;
 }
 
 .arc-row:hover .arc-length,
 .arc-row:focus-visible .arc-length {
-	background: var(--golden);
+	background: var(--main);
 }
 
 /*

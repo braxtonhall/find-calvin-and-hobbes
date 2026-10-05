@@ -7,41 +7,7 @@
 }
 
 :root {
-	--golden: #f6b213;
-	--golden-half: #c58e0f;
-	--orange: #fe7900;
-	--grey: #e0e0e0;
-	--grey-dark: #b0b0b0;
-	--bg: #fbf6f0;
-	--bg-sidebar: #fbf6f0;
-	--text: #333333;
-	--text-muted: #888888;
-	--border: #e6052f;
-	--highlight: #ffd700;
-	--mark: #fff176;
-	--mark-fuzzy: #fff8c4;
 	--font: system-ui, -apple-system, sans-serif;
-	--golden-dim: #f9db98;
-	--orange-dim: #fcc490;
-	--grey-dim: #f0edea;
-
-	/* Search-confidence ramp, spaced evenly in OKLab rather than in sRGB so the steps look as
-	   even as they measure. It reads as three bands, not one gradient:
-	     1. a high-confidence match, --golden/--orange alone;
-	     2. every other match, tiers 4..1 packed one unit apart;
-	     3. no match at all, the *-dim colour.
-	   Each ramp is nine units wide and the two band boundaries take three units apiece, so both
-	   are about three times a step inside the cluster. That contrast is what makes them read as
-	   boundaries rather than as further notches; the four clustered tiers only need to be told
-	   apart end to end, not neighbour by neighbour. */
-	--golden-t4: #f7c053;
-	--golden-t3: #f8c560;
-	--golden-t2: #f8c96c;
-	--golden-t1: #f8ce78;
-	--orange-t4: #ff9448;
-	--orange-t3: #ff9c56;
-	--orange-t2: #ffa462;
-	--orange-t1: #feac6e;
 }
 
 html,
@@ -75,8 +41,8 @@ body {
 .spinner {
 	width: 40px;
 	height: 40px;
-	border: 4px solid var(--grey);
-	border-top-color: var(--golden);
+	border: 4px solid var(--neutral);
+	border-top-color: var(--main);
 	border-radius: 50%;
 	animation: spin 0.8s linear infinite;
 }
@@ -88,17 +54,17 @@ body {
 }
 
 mark {
-	background: var(--mark);
+	background: var(--match);
 	padding: 0 1px;
 	border-radius: 1px;
 }
 
 mark.mark--fuzzy {
-	background: var(--mark-fuzzy);
+	background: var(--match-approximate);
 }
 
 :focus-visible:not(input):not(textarea):not(select) {
-	outline: 2px solid var(--golden);
+	outline: 2px solid var(--main);
 	outline-offset: 2px;
 }
 

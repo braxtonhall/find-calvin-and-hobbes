@@ -99,6 +99,7 @@ interface RawConfig {
 	arcs?: unknown;
 	reruns?: unknown;
 	details?: Partial<Record<string, unknown>> | null;
+	theme?: Partial<Record<string, unknown>> | null;
 }
 
 export function configPath(projectDir = path.join(__dirname, "..")): string {
@@ -233,6 +234,65 @@ function loadLandingSize(landing: RawConfig["landing"]): PageConfig["landingSize
 	return width !== null && height !== null ? { width, height } : null;
 }
 
+/** The colours `config.yaml` names, by their role on the page. See `theme.ts`, which draws the rest from them. */
+export interface Theme {
+	background: string;
+	text: string;
+	textMuted: string;
+	main: string;
+	bookmark: string;
+	neutral: string;
+	selected: string;
+	hover: string;
+	hoverRow: string;
+	match: string;
+	matchApproximate: string;
+}
+
+const THEME_KEYS: readonly (keyof Theme)[] = [
+	"background",
+	"text",
+	"textMuted",
+	"main",
+	"bookmark",
+	"neutral",
+	"selected",
+	"hover",
+	"hoverRow",
+	"match",
+	"matchApproximate",
+];
+
+const HEX_COLOUR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+/** Every colour of the theme, as `#rrggbb` in lowercase. There are no defaults: an archive picks its own. */
+function loadThemeSettings(theme: RawConfig["theme"]): Theme {
+	if (theme === undefined || theme === null) throw new Error("config.yaml must give the site a theme");
+	if (typeof theme !== "object" || Array.isArray(theme)) throw new Error("theme in config.yaml must be a mapping");
+	for (const key of Object.keys(theme)) {
+		if (!(THEME_KEYS as readonly string[]).includes(key)) {
+			throw new Error(`theme.${key} in config.yaml is not one of ${THEME_KEYS.join(", ")}`);
+		}
+	}
+
+	const result = {} as Theme;
+	for (const key of THEME_KEYS) {
+		const value = stringSetting(theme[key], `theme.${key}`);
+		// An unquoted `#f6b213` is a YAML comment, which leaves the setting empty.
+		if (!value) throw new Error(`config.yaml must give theme.${key}, as a quoted colour like "#f6b213"`);
+		if (!HEX_COLOUR.test(value)) {
+			throw new Error(`theme.${key} in config.yaml must be a colour like "#f6b213" (got "${value}")`);
+		}
+		const digits = value.slice(1).toLowerCase();
+		result[key] = `#${digits.length === 3 ? [...digits].map((digit) => digit + digit).join("") : digits}`;
+	}
+	return result;
+}
+
+export function loadTheme(projectDir?: string): Theme {
+	return loadThemeSettings(readConfig(projectDir).theme);
+}
+
 /** The parts of the configuration the pages are drawn with. See `src/site-config.ts`. */
 export function loadPageConfig(projectDir?: string): PageConfig {
 	const raw = readConfig(projectDir);
@@ -248,6 +308,7 @@ export function loadPageConfig(projectDir?: string): PageConfig {
 		landingImage: stringSetting(raw.landing?.image, "landing.image") || null,
 		landingAlt: stringSetting(raw.landing?.alt, "landing.alt") || name,
 		landingSize: loadLandingSize(raw.landing),
+		themeColor: loadThemeSettings(raw.theme).main,
 		details: loadLinkTemplates(raw.details),
 		corrections: loadCorrectionTemplates(raw.corrections),
 		...loadFeatures(projectDir),

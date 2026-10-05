@@ -65,7 +65,7 @@
 .filter-drop:hover,
 .filter-drop[aria-expanded="true"] {
 	color: var(--text);
-	background: var(--grey-dim);
+	background: var(--neutral-faded);
 }
 
 .filter-drop-chevron {
@@ -92,7 +92,7 @@
 	font-family: var(--font);
 	font-size: 13px;
 	background: var(--bg-sidebar);
-	border: 1px solid var(--grey);
+	border: 1px solid var(--neutral);
 	border-radius: 8px;
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 	opacity: 0;
@@ -151,7 +151,7 @@
 }
 
 .filter-option:hover {
-	background: var(--grey-dim);
+	background: var(--neutral-faded);
 }
 
 /*
@@ -163,7 +163,7 @@
 	width: 14px;
 	height: 14px;
 	flex-shrink: 0;
-	color: var(--golden-half);
+	color: var(--main-text);
 	visibility: hidden;
 }
 
@@ -172,7 +172,7 @@
 }
 
 .filter-option--checked {
-	background: var(--golden-dim);
+	background: var(--main-faded);
 }
 
 /*
@@ -186,7 +186,7 @@
 }
 
 .filter-option--checked:hover {
-	background: var(--golden-dim);
+	background: var(--main-faded);
 }
 
 /*
@@ -214,14 +214,14 @@
 	color: var(--text-muted);
 	background: none;
 	border: none;
-	border-top: 1px solid var(--grey);
+	border-top: 1px solid var(--neutral);
 	border-radius: 0 0 4px 4px;
 	cursor: pointer;
 }
 
 .filter-menu-clear:hover {
 	color: var(--text);
-	background: var(--grey-dim);
+	background: var(--neutral-faded);
 }
 
 /*
@@ -238,7 +238,7 @@
 	font-size: 12px;
 	white-space: nowrap;
 	color: var(--text-muted);
-	border-top: 1px solid var(--grey);
+	border-top: 1px solid var(--neutral);
 }
 
 .filter-menu-join > span:first-child {
@@ -262,10 +262,10 @@
 
 .filter-menu-join-option:hover {
 	color: var(--text);
-	background: var(--grey-dim);
+	background: var(--neutral-faded);
 }
 
 .filter-menu-join-option[aria-checked="true"] {
 	color: var(--text);
-	background: var(--golden-dim);
+	background: var(--main-faded);
 }

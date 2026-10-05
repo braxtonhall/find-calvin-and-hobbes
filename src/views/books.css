@@ -38,7 +38,7 @@
 	white-space: nowrap;
 	color: var(--text-muted);
 	background: var(--bg);
-	border: 1px solid var(--grey);
+	border: 1px solid var(--neutral);
 	border-radius: 9px;
 	transition:
 		color 0.12s,
@@ -62,7 +62,7 @@
 	display: block;
 	height: 64px;
 	position: relative;
-	background: var(--grey);
+	background: var(--neutral);
 	border-radius: 3px;
 }
 
@@ -86,7 +86,7 @@
 	height: 17px;
 	padding: 0;
 	border-radius: 9px;
-	background: var(--golden);
+	background: var(--main);
 	color: #fff;
 	/* The asterisk is drawn rather than typed: a typed one sits high in its line, off the circle's centre. */
 	display: flex;
@@ -161,13 +161,13 @@
 /* Selected, the cover is ringed in gold, and so is its label. */
 .book__cover[aria-expanded="true"] .collection-book,
 .book__cover:focus-visible .collection-book {
-	outline: 2px solid var(--golden);
+	outline: 2px solid var(--main);
 	outline-offset: 2px;
 }
 
 .book__cover[aria-expanded="true"] .collection-pages {
 	color: var(--text);
-	border-color: var(--golden);
+	border-color: var(--main);
 }
 
 /*
@@ -186,7 +186,7 @@
 	font-size: 13px;
 	line-height: 1.5;
 	background: var(--bg-sidebar);
-	border: 1px solid var(--grey);
+	border: 1px solid var(--neutral);
 	border-radius: 8px;
 	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 	opacity: 0;
@@ -211,7 +211,7 @@
 }
 
 .book__name:hover {
-	color: var(--golden);
+	color: var(--main);
 }
 
 .book__year,

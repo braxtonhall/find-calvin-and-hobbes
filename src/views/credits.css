@@ -23,7 +23,7 @@
 	color: var(--text);
 	text-decoration: none;
 	background: none;
-	border: 1px solid var(--grey);
+	border: 1px solid var(--neutral);
 	border-radius: 6px;
 	padding: 6px 14px;
 	cursor: pointer;
@@ -37,7 +37,7 @@
 
 .credits-back:not(.credits-back--disabled):hover,
 .credits-home:hover {
-	background: var(--grey);
+	background: var(--neutral);
 }
 
 .credits-heading {
@@ -67,7 +67,7 @@
 }
 
 .credits-content a {
-	color: var(--golden);
+	color: var(--main);
 	text-decoration: none;
 }
 

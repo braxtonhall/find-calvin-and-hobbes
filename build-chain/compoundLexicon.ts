@@ -1,5 +1,5 @@
 /**
- * Generates `src/compounds.ts`, the compound relationship lexicon used by the search index.
+ * The compound lexicon of `src/compounds.ts`, read from `compounds.yaml` and the archive.
  *
  * `goodnight` and `good night` are the same phrase to a reader and two unrelated tokens to
  * the engine, which is how `aren't you going to say goodnight to hobbes` reaches a strip
@@ -16,60 +16,131 @@
  * and the frequent ones (`all the`, `in to`, `may be`, `a way`) would wreck any joining
  * rule. A splitting rule never sees them.
  *
- * Run with `yarn compounds` after correcting a transcript. The corpus is finished, so
- * nothing else changes the output.
+ * `compounds.yaml` adjusts the rule from both sides: the words it must keep whole, and the
+ * compounds it cannot find, split by hand. Both are optional, and so is the file. The lexicon
+ * is derived on every build rather than checked in, so a corrected transcript is reflected the
+ * next time the site is built.
  */
 import fs from "fs";
 import path from "path";
+import yaml from "js-yaml";
+import type { LoaderContext } from "webpack";
+import type { CompoundRelation } from "../src/compounds";
 import { loadComicSource } from "./comicSource";
-
-interface Candidate {
-	whole: string;
-	parts: string[];
-	preference: "closed" | "balanced";
-}
 
 const WORD_PATTERN = /[\p{L}\p{N}']+/gu;
 
 // Both halves must be real words of their own, and long enough not to be an artefact:
 // a two-letter fragment matches far too much to be worth the split.
-const MINIMUM_PART = 3;
+export const MINIMUM_PART = 3;
 
 // The open form must be at least this common before a split is considered at all, so a
 // single stray occurrence cannot decompose a word across the whole archive.
 const MINIMUM_OPEN = 2;
 
-/**
- * Real words the rule mis-splits, kept whole by hand. `wormwood` matters most: splitting a
- * character's name into `worm` + `wood` would scatter the 153 strips that mention him.
- */
-const DENY = new Set([
-	"washer", // was her
-	"theirs", // the irs
-	"programmed", // pro grammed
-	"wormwood",
-	"herewith",
-	"outback",
-	// The open bigram here is a clause — "the sun set behind the hill" — not an alternate
-	// spelling of the noun. Splitting spends the rarity of a word that appears in one strip.
-	"sunset",
-	"aaaaaa",
-	"yowwow",
-	"zzzzzzzz",
-]);
+const PREFERENCES: readonly CompoundRelation["preference"][] = ["closed", "balanced", "open"];
 
-interface Counts {
+/** What `compounds.yaml` says: the words to keep whole, and the compounds split by hand. */
+export interface CompoundsFile {
+	keepWhole: Set<string>;
+	compounds: CompoundRelation[];
+}
+
+export interface Counts {
 	words: Map<string, number>;
 	bigrams: Map<string, number>;
 }
 
-// Document frequency, not term frequency: one strip counts once however often it repeats a
-// word, matching how `countDocument` builds the corpus the scorer reads.
-function count(documents: string[][]): Counts {
+function defaultProjectDir(): string {
+	return path.join(__dirname, "..");
+}
+
+export function compoundsPath(projectDir = defaultProjectDir()): string {
+	return path.join(projectDir, "compounds.yaml");
+}
+
+/** A single lowercase word, as the tokeniser would produce it. */
+function isWord(value: string): boolean {
+	return (
+		value === value.toLowerCase() && [...value.matchAll(WORD_PATTERN)].map((match) => match[0]).join(" ") === value
+	);
+}
+
+/** `compounds.yaml`, checked; an empty one where the archive has none. */
+export function readCompoundsFile(projectDir = defaultProjectDir()): CompoundsFile {
+	const file = compoundsPath(projectDir);
+	if (!fs.existsSync(file)) return { keepWhole: new Set(), compounds: [] };
+
+	// `loadAll`, because `load` throws on a file with nothing but comments in it.
+	const [raw = {}] = yaml.loadAll(fs.readFileSync(file, "utf8")) as Record<string, unknown>[];
+	if (typeof raw !== "object" || Array.isArray(raw)) throw new Error("compounds.yaml must be a mapping");
+	for (const key of Object.keys(raw)) {
+		if (key !== "keepWhole" && key !== "compounds") throw new Error(`compounds.yaml has an unknown setting, ${key}`);
+	}
+
+	const keepWhole = new Set<string>();
+	const rawKeep = raw.keepWhole ?? [];
+	if (!Array.isArray(rawKeep)) throw new Error("keepWhole in compounds.yaml must be a list of words");
+	for (const word of rawKeep) {
+		if (typeof word !== "string" || !isWord(word) || word.includes(" ")) {
+			throw new Error(`keepWhole in compounds.yaml lists ${JSON.stringify(word)}, which is not one lowercase word`);
+		}
+		keepWhole.add(word);
+	}
+
+	const compounds: CompoundRelation[] = [];
+	const seen = new Set<string>();
+	const rawGroups = (raw.compounds ?? {}) as Record<string, unknown>;
+	if (typeof rawGroups !== "object" || Array.isArray(rawGroups)) {
+		throw new Error("compounds in compounds.yaml must be a mapping of closed, balanced and open");
+	}
+	for (const [group, entries] of Object.entries(rawGroups)) {
+		const preference = PREFERENCES.find((candidate) => candidate === group);
+		if (!preference) throw new Error(`compounds in compounds.yaml has an unknown group, ${group}`);
+		if (entries === null) continue;
+		if (typeof entries !== "object" || Array.isArray(entries)) {
+			throw new Error(`compounds.${group} in compounds.yaml must map each compound to its parts`);
+		}
+		for (const [whole, written] of Object.entries(entries as Record<string, unknown>)) {
+			const parts = typeof written === "string" ? written.split(" ") : [];
+			if (
+				!isWord(whole) ||
+				whole.includes(" ") ||
+				typeof written !== "string" ||
+				!isWord(written) ||
+				parts.length < 2
+			) {
+				throw new Error(
+					`compounds.${group}.${whole} in compounds.yaml must be one lowercase word split into two or more`,
+				);
+			}
+			if (seen.has(whole)) throw new Error(`compounds.yaml lists ${whole} more than once`);
+			if (keepWhole.has(whole)) throw new Error(`compounds.yaml both splits ${whole} and keeps it whole`);
+			seen.add(whole);
+			compounds.push({ whole, parts, preference });
+		}
+	}
+
+	return { keepWhole, compounds };
+}
+
+function tokenise(text: string): string[] {
+	return [...text.matchAll(WORD_PATTERN)].map((match) => match[0].toLowerCase());
+}
+
+/**
+ * How many strips use each word, and each pair of words side by side.
+ *
+ * Document frequency, not term frequency: one strip counts once however often it repeats a
+ * word, matching how `countDocument` builds the corpus the scorer reads.
+ */
+export function countCorpus(projectDir = defaultProjectDir()): Counts {
+	const source = loadComicSource(path.join(projectDir, "comics.yaml"));
 	const words = new Map<string, number>();
 	const bigrams = new Map<string, number>();
 
-	for (const tokens of documents) {
+	for (const entry of [...Object.values(source.dailies), ...Object.values(source.specials)]) {
+		const tokens = tokenise([entry.transcript, entry.alternate || "", entry.description || ""].join(" "));
 		const seenWords = new Set<string>();
 		const seenBigrams = new Set<string>();
 		for (let index = 0; index < tokens.length; index++) {
@@ -83,34 +154,14 @@ function count(documents: string[][]): Counts {
 	return { words, bigrams };
 }
 
-function tokenise(text: string): string[] {
-	return [...text.matchAll(WORD_PATTERN)].map((match) => match[0].toLowerCase());
-}
-
-export interface CompoundRelation {
-	whole: string;
-	parts: string[];
-	preference?: "open" | "closed" | "balanced";
-}
-
-export function buildLexicon(projectDir: string): Map<string, CompoundRelation> {
-	const source = loadComicSource(path.join(projectDir, "comics.yaml"));
-
-	// A strip is one document across all of its text. Descriptions share `indexField` with
-	// transcripts, so they have to inform the lexicon that will be applied to them.
-	const documents: string[][] = [];
-	for (const entry of [...Object.values(source.dailies), ...Object.values(source.specials)]) {
-		documents.push(tokenise([entry.transcript, entry.alternate || "", entry.description || ""].join(" ")));
-	}
-
-	const { words, bigrams } = count(documents);
+/** Every compound the search splits, by its closed form, in alphabetical order. */
+export function loadCompoundRelations(projectDir = defaultProjectDir()): [string, CompoundRelation][] {
+	const { keepWhole, compounds } = readCompoundsFile(projectDir);
+	const { words, bigrams } = countCorpus(projectDir);
 	const lexicon = new Map<string, CompoundRelation>();
-	const candidates = JSON.parse(
-		fs.readFileSync(path.join(projectDir, "build-chain", "compound-candidates.json"), "utf8"),
-	) as Candidate[];
 
 	for (const [closed, closedDf] of words) {
-		if (DENY.has(closed)) continue;
+		if (keepWhole.has(closed)) continue;
 		if (closed.length < MINIMUM_PART * 2) continue;
 
 		for (let cut = MINIMUM_PART; cut <= closed.length - MINIMUM_PART; cut++) {
@@ -119,57 +170,32 @@ export function buildLexicon(projectDir: string): Map<string, CompoundRelation> 
 			if (!words.has(left) || !words.has(right)) continue;
 
 			const openDf = bigrams.get(`${left} ${right}`) || 0;
-			// The corpus must actually prefer the open spelling. Ties go to splitting, since
-			// a compound written both ways is exactly the case this exists to unify.
 			if (openDf < MINIMUM_OPEN || openDf < closedDf) continue;
 
 			lexicon.set(closed, { whole: closed, parts: [left, right], preference: "open" });
 			break;
 		}
 	}
-	for (const candidate of candidates) {
-		lexicon.set(candidate.whole, candidate);
+	for (const compound of compounds) {
+		lexicon.set(compound.whole, compound);
 	}
 
-	return new Map([...lexicon].sort(([a], [b]) => a.localeCompare(b)));
+	return [...lexicon].sort(([a], [b]) => a.localeCompare(b));
 }
 
-function render(lexicon: Map<string, CompoundRelation>): string {
-	const entries = [...lexicon]
-		.map(
-			([closed, relation]) =>
-				`\t["${closed}", { whole: "${relation.whole}", parts: [${relation.parts.map((part) => `"${part}"`).join(", ")}], preference: "${relation.preference}" }],`,
-		)
-		.join("\n");
-
-	// Emitted tab-indented and double-quoted to match the prettier config, so the generated
-	// file is already formatted. Running prettier repo-wide dirties the data files, so the
-	// generator must not depend on it.
-	return `// Generated by build-chain/compoundLexicon.ts — run \`yarn compounds\`. Do not edit by hand.
-//
-// Relations preserve whole-form identity; canonical forms are a derived matching/indexing view.
-// Curated candidates cover relationships that the corpus does not expose often enough for discovery.
-
-export interface CompoundRelation {
-\twhole: string;
-\tparts: string[];
-\tpreference: "open" | "closed" | "balanced";
+/**
+ * Stands in for `src/compounds.ts` in the bundle, as `archiveSpan.ts` does for `src/archive.ts`:
+ * the lexicon as a literal, rebuilt under `--watch` when the archive or `compounds.yaml` changes.
+ */
+export default function compoundLexiconLoader(this: LoaderContext<unknown>): string {
+	const projectDir = this.rootContext;
+	this.addDependency(path.join(projectDir, "comics.yaml"));
+	this.addDependency(compoundsPath(projectDir));
+	const entries = JSON.stringify(loadCompoundRelations(projectDir));
+	return [
+		`const entries = ${entries};`,
+		`export const COMPOUND_RELATIONS = new Map(entries);`,
+		`export const COMPOUND_CANONICAL_FORMS = new Map(entries.map(([whole, relation]) => [whole, relation.parts]));`,
+		"",
+	].join("\n");
 }
-
-export const COMPOUND_RELATIONS: Map<string, CompoundRelation> = new Map([
-${entries}
-]);
-
-export const COMPOUND_CANONICAL_FORMS: Map<string, string[]> = new Map(
-\t[...COMPOUND_RELATIONS].map(([whole, relation]) => [whole, relation.parts]),
-);
-`;
-}
-
-const projectDir = process.cwd();
-const lexicon = buildLexicon(projectDir);
-const target = path.join(projectDir, "src", "compounds.ts");
-fs.writeFileSync(target, render(lexicon));
-console.log(`wrote ${lexicon.size} entries to ${path.relative(projectDir, target)}`);
-for (const [closed, relation] of lexicon)
-	console.log(`  ${closed} -> ${relation.parts.join(" ")} (${relation.preference})`);

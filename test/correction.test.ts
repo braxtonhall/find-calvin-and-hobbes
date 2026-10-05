@@ -1,23 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "fs";
-import os from "os";
 import path from "path";
 import { Page } from "../src/pages/page";
 import { buildCorrectionLinkHtml, buildCorrectionUrl } from "../src/pages/correction";
 import { buildDocumentHtml } from "../src/pages/shell";
 import { loadPageConfig } from "../build-chain/siteConfig";
-
-/** A project holding just this `config.yaml`, for `loadPageConfig` to read. */
-function withConfig<T>(contents: string, run: (projectDir: string) => T): T {
-	const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "config-"));
-	try {
-		fs.writeFileSync(path.join(projectDir, "config.yaml"), contents);
-		return run(projectDir);
-	} finally {
-		fs.rmSync(projectDir, { recursive: true, force: true });
-	}
-}
+import { withConfig } from "./helpers/config";
 
 /**
  * What the corrections link promises: that the form opens knowing which page it was sent from, and

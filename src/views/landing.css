@@ -39,7 +39,7 @@
 	font-family: var(--font);
 	color: var(--text);
 	background: var(--bg-sidebar);
-	border: 2px solid var(--grey);
+	border: 2px solid var(--neutral);
 	border-radius: 8px;
 	outline: none;
 	transition: border-color 0.2s;
@@ -52,7 +52,7 @@
 
 .landing-input:focus,
 .landing-form .query-box:focus-within {
-	border-color: var(--golden);
+	border-color: var(--main);
 }
 
 .landing-input::placeholder {
@@ -82,8 +82,8 @@
 }
 
 .landing-submit:hover {
-	color: var(--golden-half);
-	background: var(--grey-dim);
+	color: var(--main-text);
+	background: var(--neutral-faded);
 }
 
 .landing-submit > svg {
@@ -107,5 +107,5 @@
 }
 
 .landing-links > a:hover {
-	color: var(--golden);
+	color: var(--main);
 }

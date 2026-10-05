@@ -166,6 +166,7 @@ export function buildDocumentHtml(template: string, page: Page, options: Documen
 		views: buildViewsHtml(page),
 		base: escHtml(basePath()),
 		series: escHtml(PAGE_CONFIG.series),
+		themeColor: escHtml(PAGE_CONFIG.themeColor),
 		favicon: PAGE_CONFIG.favicon ? `<link rel="icon" href="${escHtml(PAGE_CONFIG.favicon)}" />` : "",
 		correction: buildCorrectionLinkHtml({
 			view: page.view,

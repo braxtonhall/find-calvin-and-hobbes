@@ -5,7 +5,7 @@
 	z-index: 10000;
 	padding: 8px 16px;
 	background: var(--bg-sidebar);
-	border: 2px solid var(--golden);
+	border: 2px solid var(--main);
 	border-radius: 4px;
 	font-family: var(--font);
 	font-size: 14px;
@@ -34,7 +34,7 @@
 	font-size: 12px;
 	color: var(--text-muted);
 	background: none;
-	border: 1px solid var(--grey);
+	border: 1px solid var(--neutral);
 	border-radius: 4px;
 	padding: 4px 8px;
 	cursor: pointer;
@@ -43,13 +43,13 @@
 }
 
 .copy-link-btn:hover {
-	background: var(--grey);
+	background: var(--neutral);
 	color: var(--text);
 }
 
 .copy-link-btn--copied {
-	color: var(--golden);
-	border-color: var(--golden);
+	color: var(--main);
+	border-color: var(--main);
 }
 
 .bookmark-btn {
@@ -61,7 +61,7 @@
 	font-family: var(--font);
 	color: var(--text-muted);
 	background: none;
-	border: 1px solid var(--grey);
+	border: 1px solid var(--neutral);
 	border-radius: 4px;
 	cursor: pointer;
 	margin-left: 8px;
@@ -70,12 +70,12 @@
 }
 
 .bookmark-btn:hover {
-	background: var(--grey);
+	background: var(--neutral);
 }
 
 .bookmark-btn--active {
-	color: var(--orange);
-	border-color: var(--orange);
+	color: var(--bookmark);
+	border-color: var(--bookmark);
 }
 
 .bookmark-btn--active .bookmark-icon path {
@@ -95,7 +95,7 @@
 	right: 16px;
 	width: 44px;
 	height: 44px;
-	background: var(--golden);
+	background: var(--main);
 	color: #fff;
 	border: none;
 	border-radius: 50%;
@@ -146,14 +146,14 @@
 	color: var(--text-muted);
 	/* Opaque, so that it stays legible where the page has scrolled something underneath it. */
 	background: var(--bg);
-	border: 1px solid var(--grey);
+	border: 1px solid var(--neutral);
 	border-radius: 4px;
 	text-decoration: none;
 	animation: viewFadeIn 0.5s ease;
 }
 
 .correction-link:hover {
-	background: var(--grey);
+	background: var(--neutral);
 	color: var(--text);
 }
 
@@ -282,7 +282,7 @@
 	color: var(--text-muted);
 	text-decoration: none;
 	background: none;
-	border: 1px solid var(--grey);
+	border: 1px solid var(--neutral);
 	border-radius: 4px;
 	cursor: pointer;
 	margin-left: 4px;
@@ -291,7 +291,7 @@
 }
 
 .nav-btn:hover {
-	background: var(--grey);
+	background: var(--neutral);
 }
 
 .nav-btn--disabled {
