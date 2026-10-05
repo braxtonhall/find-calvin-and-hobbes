@@ -1,18 +1,25 @@
 import { BOOKS_PATH, CREDITS_PATH, LIBRARY_PATH } from "../routes";
 import { addressOf } from "../base-path";
+import { PAGE_CONFIG } from "../site-config";
+import { escHtml } from "../utils";
 
 // Drawn in the same idiom as the results-bar icons: 16px, stroked in `currentColor`, no fill.
 const SEARCH_ICON = `<svg class="landing-submit-search" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
 	<circle cx="6.8" cy="6.8" r="4.3" /><path d="M10 10l3.5 3.5" />
 </svg>`;
 
+/** The banner `config.yaml` names, or the site's name where it names none. */
+function buildLogoHtml(): string {
+	if (!PAGE_CONFIG.landingImage) return `<h1 class="landing-title">${escHtml(PAGE_CONFIG.name)}</h1>`;
+	// A browser takes the shape to hold for an image from its width and height before it has loaded.
+	const size = PAGE_CONFIG.landingSize;
+	const sizeAttributes = size ? ` width="${size.width}" height="${size.height}"` : "";
+	return `<img class="landing-logo" src="${escHtml(PAGE_CONFIG.landingImage)}" alt="${escHtml(PAGE_CONFIG.landingAlt)}"${sizeAttributes} />`;
+}
+
 export function buildLandingHtml(): string {
 	return `
-		<img
-			class="landing-logo"
-			src="https://upload.wikimedia.org/wikipedia/commons/9/96/Calvin_and_Hobbes_title.png"
-			alt="Calvin and Hobbes"
-		/>
+		${buildLogoHtml()}
 		<form class="landing-form" id="landing-form">
 			<input
 				type="text"

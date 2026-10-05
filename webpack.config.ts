@@ -61,6 +61,12 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 				use: path.join(__dirname, "build-chain", "credits.ts"),
 			},
 			{
+				// The same, for the parts of `config.yaml` the pages are drawn with. See `src/site-config.ts`.
+				test: path.join(srcDir, "site-config.ts"),
+				enforce: "post",
+				use: path.join(__dirname, "build-chain", "siteConfig.ts"),
+			},
+			{
 				test: /\.css$/,
 				use: [MiniCssExtractPlugin.loader, "css-loader"],
 			},

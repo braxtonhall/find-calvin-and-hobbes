@@ -1,6 +1,10 @@
 import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
+import yaml from "js-yaml";
+import type { LoaderContext } from "webpack";
+import type { PageConfig, StripLinkTemplates } from "../src/site-config";
+import { StripKind, StripLinkSubject, stripLinks } from "../src/strip-links";
 
 export interface SiteConfig {
 	/** The site's address with no trailing slash — `https://example.com`, or `https://example.com/prefix` — which every page's path is appended to. */
@@ -12,7 +16,7 @@ export interface SiteConfig {
 
 /**
  * Reads the `.env` file without mutating `process.env`, so the value can be re-read fresh on every
- * compilation (which lets `--watch` pick up edits to `.env`). A non-empty `SITE_URL` already in the
+ * compilation (which lets `--watch` pick up edits to `.env`). A non-empty value already in the
  * process environment — as CI supplies it — takes precedence over the file.
  */
 function readDotenvFile(): Record<string, string> {
@@ -43,11 +47,167 @@ function readDotenvFile(): Record<string, string> {
 	return values;
 }
 
-/** A build setting: the process environment when it has one, else the `.env` file, else "". */
-function readSetting(name: string): string {
+/** An environment variable: the process environment when it has one, else the `.env` file, else "". */
+function readSetting(name: string, dotenv: Record<string, string>): string {
 	const fromEnvironment = (process.env[name] ?? "").trim();
-	const fromFile = (readDotenvFile()[name] ?? "").trim();
+	const fromFile = (dotenv[name] ?? "").trim();
 	return fromEnvironment || fromFile;
+}
+
+/**
+ * A string from `config.yaml` with the environment read into it: `$NAME`, `${NAME}`, and
+ * `${NAME:-fallback}` for when it is unset or empty. `$$` is a `$`. Done after the YAML is parsed,
+ * so a value from the environment is never read as YAML itself.
+ */
+function substituteEnvironment(text: string, dotenv: Record<string, string>): string {
+	return text.replace(
+		/\$(?:(\$)|\{([A-Za-z_]\w*)(?::-([^}]*))?\}|([A-Za-z_]\w*))/g,
+		(
+			_match,
+			dollar: string | undefined,
+			braced: string | undefined,
+			fallback: string | undefined,
+			bare: string | undefined,
+		) => {
+			if (dollar) return "$";
+			const value = readSetting((braced ?? bare)!, dotenv);
+			return value || (fallback ?? "");
+		},
+	);
+}
+
+function substituteAll(value: unknown, dotenv: Record<string, string>): unknown {
+	if (typeof value === "string") return substituteEnvironment(value, dotenv).trim();
+	if (Array.isArray(value)) return value.map((item) => substituteAll(item, dotenv));
+	if (value && typeof value === "object") {
+		return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, substituteAll(item, dotenv)]));
+	}
+	return value;
+}
+
+/** `config.yaml`, with the environment read into it but nothing else made of it yet. */
+interface RawConfig {
+	name?: unknown;
+	series?: unknown;
+	description?: unknown;
+	favicon?: unknown;
+	landing?: { image?: unknown; alt?: unknown; width?: unknown; height?: unknown } | null;
+	url?: unknown;
+	pageLayout?: unknown;
+	corrections?: unknown;
+	details?: Partial<Record<string, unknown>> | null;
+}
+
+export function configPath(projectDir = path.join(__dirname, "..")): string {
+	return path.join(projectDir, "config.yaml");
+}
+
+/**
+ * Read fresh on every call, as `.env` is, so `--watch` picks up an edit to either. Both are small.
+ */
+function readConfig(projectDir?: string): RawConfig {
+	const file = configPath(projectDir);
+	const parsed = yaml.load(fs.readFileSync(file, "utf8")) ?? {};
+	if (typeof parsed !== "object" || Array.isArray(parsed)) throw new Error(`${file} must be a mapping`);
+	return substituteAll(parsed, readDotenvFile()) as RawConfig;
+}
+
+/** A setting as a string, with empty — or absent — as "". */
+function stringSetting(value: unknown, name: string): string {
+	if (value === undefined || value === null) return "";
+	if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+		throw new Error(`${name} in config.yaml must be a single value`);
+	}
+	return String(value).trim();
+}
+
+const STRIP_KINDS: readonly StripKind[] = ["daily", "rerun", "special"];
+const LINK_KEYS: readonly (keyof StripLinkTemplates)[] = ["readUrl", "licenseUrl"];
+
+/** Something of each kind to fill the templates in for, so a template asking for a field its kind lacks fails the build. */
+const SAMPLE_SUBJECTS: Record<StripKind, StripLinkSubject> = {
+	daily: { kind: "daily", date: "1986-07-07" },
+	rerun: { kind: "rerun", original: "1986-07-07", rerun: "1991-07-08" },
+	special: { kind: "special", id: "sample", date: "1986-07-07" },
+};
+
+function loadLinkTemplates(details: RawConfig["details"]): PageConfig["details"] {
+	if (details !== undefined && details !== null && (typeof details !== "object" || Array.isArray(details))) {
+		throw new Error("details in config.yaml must be a mapping");
+	}
+	for (const kind of Object.keys(details ?? {})) {
+		if (!(STRIP_KINDS as readonly string[]).includes(kind)) {
+			throw new Error(`details.${kind} in config.yaml is not one of ${STRIP_KINDS.join(", ")}`);
+		}
+	}
+
+	const result = {} as PageConfig["details"];
+	for (const kind of STRIP_KINDS) {
+		const raw = (details?.[kind] ?? {}) as Record<string, unknown>;
+		const templates: StripLinkTemplates = {};
+		for (const [key, value] of Object.entries(raw)) {
+			if (!(LINK_KEYS as readonly string[]).includes(key)) {
+				throw new Error(`details.${kind}.${key} in config.yaml is not one of ${LINK_KEYS.join(", ")}`);
+			}
+			const template = stringSetting(value, `details.${kind}.${key}`);
+			if (template) templates[key as keyof StripLinkTemplates] = template;
+		}
+		try {
+			stripLinks(templates, SAMPLE_SUBJECTS[kind]);
+		} catch (error) {
+			throw new Error(`details.${kind} in config.yaml: ${(error as Error).message}`);
+		}
+		result[kind] = templates;
+	}
+	return result;
+}
+
+/** A size in whole pixels, or `null` when it is not given. */
+function pixelSetting(value: unknown, name: string): number | null {
+	const raw = stringSetting(value, name);
+	if (!raw) return null;
+	if (!/^[1-9]\d*$/.test(raw))
+		throw new Error(`${name} in config.yaml must be a whole number of pixels (got "${raw}")`);
+	return Number(raw);
+}
+
+function loadLandingSize(landing: RawConfig["landing"]): PageConfig["landingSize"] {
+	const width = pixelSetting(landing?.width, "landing.width");
+	const height = pixelSetting(landing?.height, "landing.height");
+	if ((width === null) !== (height === null)) {
+		throw new Error("landing.width and landing.height in config.yaml go together: give both or neither");
+	}
+	return width !== null && height !== null ? { width, height } : null;
+}
+
+/** The parts of the configuration the pages are drawn with. See `src/site-config.ts`. */
+export function loadPageConfig(projectDir?: string): PageConfig {
+	const raw = readConfig(projectDir);
+	const name = stringSetting(raw.name, "name");
+	if (!name) throw new Error("config.yaml must give the site a name");
+	const series = stringSetting(raw.series, "series");
+	if (!series) throw new Error("config.yaml must say what the archive is of, as series");
+	return {
+		name,
+		series,
+		description: stringSetting(raw.description, "description") || null,
+		favicon: stringSetting(raw.favicon, "favicon") || null,
+		landingImage: stringSetting(raw.landing?.image, "landing.image") || null,
+		landingAlt: stringSetting(raw.landing?.alt, "landing.alt") || name,
+		landingSize: loadLandingSize(raw.landing),
+		details: loadLinkTemplates(raw.details),
+	};
+}
+
+/**
+ * Stands in for `src/site-config.ts` in the bundle, as `archiveSpan.ts` does for `src/archive.ts`.
+ * Watches `.env` too, since any value in the configuration can read it.
+ */
+export default function siteConfigLoader(this: LoaderContext<unknown>): string {
+	const projectDir = this.rootContext;
+	this.addDependency(configPath(projectDir));
+	this.addDependency(path.join(projectDir, ".env"));
+	return `export const PAGE_CONFIG = ${JSON.stringify(loadPageConfig(projectDir))};\n`;
 }
 
 /**
@@ -66,10 +226,10 @@ export type PageLayout = "html" | "directory";
 const PAGE_LAYOUTS: readonly PageLayout[] = ["html", "directory"];
 
 export function loadPageLayout(): PageLayout {
-	const raw = readSetting("PAGE_LAYOUT");
+	const raw = stringSetting(readConfig().pageLayout, "pageLayout");
 	if (!raw) return "html";
 	if (!(PAGE_LAYOUTS as readonly string[]).includes(raw)) {
-		throw new Error(`PAGE_LAYOUT must be one of ${PAGE_LAYOUTS.join(", ")} (got "${raw}").`);
+		throw new Error(`pageLayout (PAGE_LAYOUT) must be one of ${PAGE_LAYOUTS.join(", ")} (got "${raw}").`);
 	}
 	return raw as PageLayout;
 }
@@ -97,11 +257,11 @@ export function loadCommitSha(): string {
  * trace of it. See `src/pages/correction.ts` for why the form itself is not configurable.
  */
 export function loadCorrectionsEnabled(): boolean {
-	return readSetting("CORRECTIONS").toLowerCase() !== "false";
+	return stringSetting(readConfig().corrections, "corrections").toLowerCase() !== "false";
 }
 
 /**
- * Returns the configured site, or `null` when no `SITE_URL` is set (so a local build can succeed
+ * Returns the configured site, or `null` when no `url` (`SITE_URL`) is set (so a local build can succeed
  * without one). Throws when a value is set but malformed, so a bad URL fails loudly rather than
  * silently producing wrong output.
  *
@@ -109,7 +269,7 @@ export function loadCorrectionsEnabled(): boolean {
  * what a GitHub project page is served at — and the build writes every address from there.
  */
 export function loadSiteConfig(): SiteConfig | null {
-	const raw = readSetting("SITE_URL");
+	const raw = stringSetting(readConfig().url, "url");
 	if (!raw) {
 		return null;
 	}

@@ -1,0 +1,186 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "fs";
+import os from "os";
+import path from "path";
+import { loadPageConfig } from "../build-chain/siteConfig";
+import { stripLinks } from "../src/strip-links";
+import { PAGE_CONFIG } from "../src/site-config";
+import { buildDocumentHtml } from "../src/pages/shell";
+
+/**
+ * `config.yaml`: that it reads the environment into its values, and that the links under a strip
+ * are written from its templates — and left out where it has none.
+ */
+
+/** A project holding just this `config.yaml`, for `loadPageConfig` to read. */
+function withConfig<T>(contents: string, run: (projectDir: string) => T): T {
+	const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "config-"));
+	try {
+		fs.writeFileSync(path.join(projectDir, "config.yaml"), contents);
+		return run(projectDir);
+	} finally {
+		fs.rmSync(projectDir, { recursive: true, force: true });
+	}
+}
+
+function withEnvironment<T>(values: Record<string, string | undefined>, run: () => T): T {
+	const saved = Object.fromEntries(Object.keys(values).map((name) => [name, process.env[name]]));
+	const assign = (entries: Record<string, string | undefined>) => {
+		for (const [name, value] of Object.entries(entries)) {
+			if (value === undefined) delete process.env[name];
+			else process.env[name] = value;
+		}
+	};
+	assign(values);
+	try {
+		return run();
+	} finally {
+		assign(saved);
+	}
+}
+
+test("config.yaml", async (suite) => {
+	await suite.test("names the site, gives its icon, and says what its banner says", () => {
+		assert.equal(PAGE_CONFIG.name, "Find Calvin and Hobbes");
+		assert.equal(PAGE_CONFIG.landingAlt, "Calvin and Hobbes");
+		assert.equal(PAGE_CONFIG.favicon, "https://static.wikitide.net/calvinandhobbeswiki/f/f3/CalvinAndHobbes.png");
+		assert.deepEqual(PAGE_CONFIG.landingSize, { width: 722, height: 103 });
+	});
+
+	await suite.test("reads the environment into its values", () => {
+		const yaml = [
+			"name: ${TEST_SITE_NAME}",
+			"series: Peanuts",
+			"landing:",
+			"  image: $TEST_SITE_HOST/banner.png",
+			"details:",
+			"  daily:",
+			"    readUrl: ${TEST_SITE_READ:-https://read.test}/{{strip.year}}/$$",
+		].join("\n");
+		const config = withEnvironment(
+			{ TEST_SITE_NAME: "Find Peanuts", TEST_SITE_HOST: "https://peanuts.test", TEST_SITE_READ: "" },
+			() => withConfig(yaml, loadPageConfig),
+		);
+		assert.equal(config.name, "Find Peanuts");
+		assert.equal(config.landingImage, "https://peanuts.test/banner.png");
+		// No alt given, so the banner is read out as the site's name.
+		assert.equal(config.landingAlt, "Find Peanuts");
+		assert.equal(config.landingSize, null);
+		assert.equal(config.details.daily.readUrl, "https://read.test/{{strip.year}}/$");
+	});
+
+	await suite.test("leaves a landing image that comes out empty unset", () => {
+		const config = withEnvironment({ TEST_SITE_BANNER: undefined }, () =>
+			withConfig("name: Find Peanuts\nseries: Peanuts\nlanding:\n  image: $TEST_SITE_BANNER\n", loadPageConfig),
+		);
+		assert.equal(config.landingImage, null);
+		assert.equal(config.favicon, null);
+		assert.deepEqual(config.details, { daily: {}, rerun: {}, special: {} });
+	});
+
+	await suite.test("refuses a template asking for a field its kind of strip lacks", () => {
+		const yaml = "name: x\nseries: x\ndetails:\n  daily:\n    readUrl: https://read.test/{{strip.original.year}}\n";
+		assert.throws(() => withConfig(yaml, loadPageConfig), /details\.daily.*strip\.original\.year/);
+	});
+
+	await suite.test("refuses a kind or a link it does not know", () => {
+		assert.throws(() => withConfig("name: x\nseries: x\ndetails:\n  sunday: {}\n", loadPageConfig), /details\.sunday/);
+		assert.throws(
+			() => withConfig("name: x\nseries: x\ndetails:\n  daily:\n    buyUrl: https://x.test\n", loadPageConfig),
+			/details\.daily\.buyUrl/,
+		);
+	});
+
+	await suite.test("takes the banner's size as both its width and height or neither", () => {
+		const size = withConfig(
+			"name: x\nseries: x\nlanding:\n  width: 722\n  height: '103'\n",
+			loadPageConfig,
+		).landingSize;
+		assert.deepEqual(size, { width: 722, height: 103 });
+		assert.throws(() => withConfig("name: x\nseries: x\nlanding:\n  width: 722\n", loadPageConfig), /both or neither/);
+		assert.throws(
+			() => withConfig("name: x\nseries: x\nlanding:\n  width: 72.5\n  height: 10\n", loadPageConfig),
+			/landing\.width.*whole number/,
+		);
+	});
+
+	await suite.test("refuses a site with no name, or no series", () => {
+		assert.throws(() => withConfig("landing: {}\n", loadPageConfig), /name/);
+		assert.throws(() => withConfig("name: x\n", loadPageConfig), /series/);
+	});
+});
+
+test("strip links", async (suite) => {
+	const templates = { readUrl: "https://read.test/{{ strip.year }}/{{strip.month}}/{{strip.day}}" };
+
+	await suite.test("fill a daily's date in", () => {
+		assert.deepEqual(stripLinks(templates, { kind: "daily", date: "1986-07-07" }), [
+			{ label: "Read", href: "https://read.test/1986/07/07" },
+		]);
+	});
+
+	await suite.test("fill in both days of a rerun", () => {
+		const links = stripLinks(
+			{
+				readUrl: "https://read.test/{{strip.original.date}}",
+				licenseUrl: "https://license.test/{{strip.rerun.year}}",
+			},
+			{ kind: "rerun", original: "1986-07-07", rerun: "1991-07-08" },
+		);
+		assert.deepEqual(links, [
+			{ label: "Read", href: "https://read.test/1986-07-07" },
+			{ label: "License", href: "https://license.test/1991" },
+		]);
+	});
+
+	await suite.test("escape what they fill in", () => {
+		const links = stripLinks(
+			{ readUrl: "https://read.test/?id={{strip.id}}" },
+			{ kind: "special", id: "a b&c", date: "1986-07-07" },
+		);
+		assert.equal(links[0].href, "https://read.test/?id=a%20b%26c");
+	});
+
+	await suite.test("are left out where there is no template", () => {
+		assert.deepEqual(stripLinks({}, { kind: "special", id: "x", date: "1986-07-07" }), []);
+		assert.deepEqual(stripLinks({ readUrl: "", licenseUrl: "" }, { kind: "daily", date: "1986-07-07" }), []);
+	});
+});
+
+test("link previews", async (suite) => {
+	const template = fs.readFileSync(path.join(process.cwd(), "src", "index.html"), "utf8");
+	const landing = () => buildDocumentHtml(template, { view: "landing" }, { siteUrl: "", path: "/" });
+
+	/** The page as a site configured with these instead would write it. */
+	function configured<T>(overrides: Partial<typeof PAGE_CONFIG>, run: () => T): T {
+		const saved = { ...PAGE_CONFIG };
+		Object.assign(PAGE_CONFIG, overrides);
+		try {
+			return run();
+		} finally {
+			Object.assign(PAGE_CONFIG, saved);
+		}
+	}
+
+	await suite.test("fall back on the configured description and the banner", () => {
+		const html = landing();
+		assert.match(html, /<meta name="description" content="Search the complete Calvin and Hobbes archive\./);
+		assert.match(html, /<meta property="og:description" content="Search the complete/);
+		assert.match(
+			html,
+			/<meta property="og:image" content="https:\/\/upload\.wikimedia\.org\/[^"]*Calvin_and_Hobbes_title\.png"/,
+		);
+	});
+
+	await suite.test("leave out a description and an image there is none of", () => {
+		const html = configured({ description: null, landingImage: null }, landing);
+		assert.doesNotMatch(html, /name="description"|og:description|og:image/);
+		assert.match(html, /<meta property="og:title" content="Find Calvin and Hobbes" \/>/);
+	});
+
+	await suite.test("write the series into the page", () => {
+		const html = configured({ series: "Peanuts" }, landing);
+		assert.match(html, /Searching and browsing the Peanuts archive requires JavaScript\./);
+	});
+});

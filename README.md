@@ -85,12 +85,23 @@ the app reads and draws from the archive.
 
 Addresses need a host that serves `credits.html` for `/credits`, which GitHub Pages and Neocities
 do. For a host that does not, set `PAGE_LAYOUT=directory` to write `credits/index.html` instead
-(see `.env.sample`). `yarn serve` handles either, and it is what to use locally, since the app
+(see `config.yaml`). `yarn serve` handles either, and it is what to use locally, since the app
 routes on the path and does not work from `file://`.
 
 Every page is built by the same code the app uses to draw it: the view builders in `src/pages/`
 have no DOM and take a `Page` of plain data, and `src/views/` wraps them with the handlers. The
 pages are written by `build-chain/PagesPlugin.ts`.
+
+### Configuration
+
+`config.yaml` is where the site is configured: its name, the home page's banner, and where the Read
+and License links under a strip lead, each a template filled in from the strip — see the file for
+the fields. A link with no template is not drawn.
+
+Any value in it can read the environment as `$NAME`, `${NAME}` or `${NAME:-fallback}`, from the
+process or from `.env`. The deployment settings — `SITE_URL`, `PAGE_LAYOUT` and `CORRECTIONS`, below
+— are read that way already, so a fork that only moves the site can leave `config.yaml` alone and
+set them in `.env`, or as Actions variables of the same names for the GitHub Pages workflow.
 
 ### Domain
 

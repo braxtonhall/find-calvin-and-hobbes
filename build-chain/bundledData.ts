@@ -48,7 +48,7 @@ export function loadBundledData(): { RERUNS: unknown; COLLECTION_INDEX: unknown;
 export default function bundledDataLoader(this: LoaderContext<unknown>): string {
 	const projectDir = this.rootContext;
 	const collectionsDir = path.join(projectDir, "collections");
-	for (const file of ["comics.yaml", "reruns.yaml", "arcs.yaml", ".env"])
+	for (const file of ["comics.yaml", "reruns.yaml", "arcs.yaml", "config.yaml", ".env"])
 		this.addDependency(path.join(projectDir, file));
 	this.addContextDependency(collectionsDir);
 	for (const file of fs.readdirSync(collectionsDir)) {

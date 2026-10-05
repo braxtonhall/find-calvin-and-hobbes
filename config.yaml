@@ -1,0 +1,82 @@
+# The site's configuration: what this archive is called, how it looks, and where it links out to.
+#
+# Any value can read the build's environment — the process's, else `.env` — as `$NAME` or
+# `${NAME}`, with `${NAME:-fallback}` for a value to use when it is unset or empty. `$$` is a
+# literal `$`. A setting that comes out empty is left unset.
+#
+# The deployment settings below read the environment by default, so a fork that only moves the site
+# somewhere else can do it from `.env` (copy `.env.sample`), or the repository's Actions variables
+# of the same names, without touching this file.
+
+name: Find Calvin and Hobbes
+
+# What the archive is of, as the link previews write it: "Calvin and Hobbes for July 7, 1986."
+series: Calvin and Hobbes
+
+# The link preview's description for a page with none of its own, like the home page. Without one,
+# such a page has no description.
+description: Search the complete Calvin and Hobbes archive. Browse every comic strip from 1985 to 1995.
+
+# The icon in the browser's tab. Without one, the browser shows its own.
+favicon: https://static.wikitide.net/calvinandhobbeswiki/f/f3/CalvinAndHobbes.png
+
+landing:
+  # The banner over the home page's search box, and the link preview's image for a page with none of
+  # its own. Without one, the home page shows the name instead, and such a page previews no image.
+  image: https://upload.wikimedia.org/wikipedia/commons/9/96/Calvin_and_Hobbes_title.png
+  # What the banner says, for a reader who can't see it. The name, if left out.
+  alt: Calvin and Hobbes
+  # Its size in pixels, so the page holds the right space for it while it loads. Both or neither.
+  width: 722
+  height: 103
+
+# Where and how the site is deployed.
+
+# Optional, from SITE_URL. The full https URL this site is served from.
+#
+# When set, the build emits og:url and canonical tags on every page, a robots.txt sitemap pointer,
+# sitemap.xml, and a CNAME file for a GitHub Pages custom domain. When unset, all of those are
+# omitted and the site deploys to the default *.github.io URL.
+#
+# A path mounts the site below the origin's root, as a GitHub project page is:
+# https://user.github.io/repo. Every link, fetch and image is then written from there, and no
+# CNAME is emitted, since a custom domain would serve the site from the root.
+url: ${SITE_URL}
+
+# From PAGE_LAYOUT. Where each page's file is written, which is up to the host.
+#
+#   html       (default) `credits.html`, served for `/credits` by a host with clean URLs:
+#              GitHub Pages, Neocities, Netlify, Cloudflare. No redirect on a cold load.
+#   directory  `credits/index.html`, which any static host serves for `/credits/`. For a host
+#              without clean URLs; most redirect `/credits` to `/credits/` and the app tidies
+#              the address back up.
+pageLayout: ${PAGE_LAYOUT:-html}
+
+# From CORRECTIONS. Whether pages carry a link to the corrections form. On unless set to false.
+#
+# The form is the same one for every deployment, so a correction sent from a fork arrives with the
+# rest rather than nowhere. The form tells them apart by the site and page it was sent from, and by
+# the commit the build was made at.
+#
+# Set this to false to leave the link out of every page. It is left out rather than hidden, so a
+# build that wants no part of the form carries no trace of it.
+corrections: ${CORRECTIONS:-true}
+
+# The links under a strip on its page. A link left out, or empty, is not drawn.
+#
+# Each is a template, filled in from the strip it is under:
+#
+#   daily    the day's own strip: {{strip.date}} (1986-07-07), {{strip.year}}, {{strip.month}},
+#            {{strip.day}}, the last two with leading zeros
+#   rerun    a day that reran an earlier strip: the same four fields for each of {{strip.original}},
+#            the day it first ran, and {{strip.rerun}}, this one — {{strip.original.year}} and so on
+#   special  a strip that never ran in the paper: {{strip.id}}, and the date fields of the day it is
+#            filed under
+details:
+  daily:
+    readUrl: https://www.gocomics.com/calvinandhobbes/{{strip.year}}/{{strip.month}}/{{strip.day}}
+    licenseUrl: https://licensing.andrewsmcmeel.com/features/ch?date={{strip.date}}
+  rerun:
+    readUrl: https://www.gocomics.com/calvinandhobbes/{{strip.rerun.year}}/{{strip.rerun.month}}/{{strip.rerun.day}}
+    licenseUrl: https://licensing.andrewsmcmeel.com/features/ch?date={{strip.original.date}}
+  special: {}

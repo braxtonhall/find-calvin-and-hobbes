@@ -5,6 +5,8 @@ import { buildArcPath, buildCollectionPath, buildComicPath } from "../routes";
 import { addressOf } from "../base-path";
 import { BookNeighbours, DetailArc, DetailCollection, DetailPage, PageSource, arcRange } from "./page";
 import { buildBackAndHomeButtons } from "./nav-buttons";
+import { PAGE_CONFIG } from "../site-config";
+import { StripLinkSubject, stripLinks } from "../strip-links";
 
 export function getAdjacentComicDate(
 	source: PageSource,
@@ -439,6 +441,29 @@ export function describeImageFor(page: DetailPage, comic: Comic): string {
 	return describeImage(getPageDescription(page, comic), formatLongDate(page.date));
 }
 
+const LINK_ICON_SVG = `<svg class="detail-read-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+/** Which of `config.yaml`'s link templates a strip on this page takes, and what fills them in. */
+function linkSubject(page: DetailPage, comic: Comic): StripLinkSubject {
+	if (comic.id) return { kind: "special", id: comic.id, date: comic.date };
+	if (page.rerunOf) return { kind: "rerun", original: page.rerunOf, rerun: page.date };
+	return { kind: "daily", date: page.date };
+}
+
+/** The strip's Read and License links, as `config.yaml` writes them; nothing when it writes neither. */
+function buildStripLinksHtml(page: DetailPage, comic: Comic): string {
+	const subject = linkSubject(page, comic);
+	const links = stripLinks(PAGE_CONFIG.details[subject.kind], subject);
+	if (links.length === 0) return "";
+	const anchors = links
+		.map(
+			({ label, href }) =>
+				`<a class="detail-read-link" href="${escHtml(href)}" target="_blank" rel="noopener">${label} ${LINK_ICON_SVG}</a>`,
+		)
+		.join("");
+	return `<div class="detail-links">${anchors}</div>`;
+}
+
 function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: string, isSunday: boolean): string {
 	const { comics, alternates } = page;
 	const collectionsById = new Map(page.collections.map((collection) => [collection.id, collection]));
@@ -450,14 +475,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 
 		const transcriptHtml = buildTranscriptHtml(comic, date, alternates);
 
-		let readLinkHtml = "";
-		if (!comic.id) {
-			const [year, month, dayOfMonth] = date.split("-");
-			const gocomicsUrl = `https://www.gocomics.com/calvinandhobbes/${year}/${month}/${dayOfMonth}`;
-			const licensingUrl = `https://licensing.andrewsmcmeel.com/features/ch?date=${date}`;
-			const linkIconSvg = `<svg class="detail-read-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-			readLinkHtml = `<div class="detail-links"><a class="detail-read-link" href="${escHtml(gocomicsUrl)}" target="_blank" rel="noopener">Read ${linkIconSvg}</a><a class="detail-read-link" href="${escHtml(licensingUrl)}" target="_blank" rel="noopener">License ${linkIconSvg}</a></div>`;
-		}
+		const readLinkHtml = buildStripLinksHtml(page, comic);
 
 		const aspectRatio = getAspectRatio(comic, isSunday);
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
@@ -537,7 +555,7 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 	const { date, comics, prevDate, nextDate, rerunOf } = page;
 	const dateFormatted = formatLongDate(date);
 	const isSunday = weekdayOf(date) === 0;
-	// A rerun's strip is drawn as of the day it originally ran — its own weekday, its own read links.
+	// A rerun's strip is drawn as of the day it originally ran — its own weekday, its own description.
 	const contentDate = rerunOf ?? date;
 	const contentDateFormatted = rerunOf ? formatLongDate(contentDate) : dateFormatted;
 	const contentIsSunday = rerunOf ? weekdayOf(contentDate) === 0 : isSunday;

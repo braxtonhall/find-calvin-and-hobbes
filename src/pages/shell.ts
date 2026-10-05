@@ -1,6 +1,6 @@
 import { escHtml } from "../utils";
 import { formatLongDate } from "../date-utils";
-import { SITE_NAME } from "../routes";
+import { PAGE_CONFIG } from "../site-config";
 import { basePath } from "../base-path";
 import { Page, pageTitle } from "./page";
 import { buildLandingHtml } from "./landing";
@@ -37,10 +37,6 @@ export const VIEWS = [
 
 export const PAGE_DATA_ID = "page-data";
 
-const DEFAULT_DESCRIPTION =
-	"Search the complete Calvin and Hobbes archive. Browse every comic strip from 1985 to 1995.";
-const DEFAULT_IMAGE = "https://upload.wikimedia.org/wikipedia/commons/9/96/Calvin_and_Hobbes_title.png";
-
 const DESCRIPTION_LENGTH = 200;
 
 export interface DocumentOptions {
@@ -63,44 +59,47 @@ function summarize(text: string): string {
 	return (lastSpace > DESCRIPTION_LENGTH / 2 ? cut.slice(0, lastSpace) : cut) + "…";
 }
 
-function pageDescription(page: Page): string {
+/** The page's own description, or `config.yaml`'s for a page with none — and, without that, `null`. */
+function pageDescription(page: Page): string | null {
+	const { series, description } = PAGE_CONFIG;
 	switch (page.view) {
 		case "detail": {
 			const comic = page.comics[0];
-			const lead = `Calvin and Hobbes for ${formatLongDate(page.date)}.`;
+			const lead = `${series} for ${formatLongDate(page.date)}.`;
 			if (page.rerunOf) return `${lead} A rerun of the strip from ${formatLongDate(page.rerunOf)}.`;
 			return comic?.transcript ? `${lead} ${summarize(comic.transcript)}` : lead;
 		}
 		case "collection": {
 			const { collection } = page;
-			if (!collection) return DEFAULT_DESCRIPTION;
+			if (!collection) return description;
 			const note = collection.notes && collection.notes.length > 0 ? ` ${collection.notes[0]}` : "";
-			return `${collection.name}, published ${collection.pub_year}. Every Calvin and Hobbes strip it holds, and where to find each one.${note}`;
+			return `${collection.name}, published ${collection.pub_year}. Every ${series} strip it holds, and where to find each one.${note}`;
 		}
 		case "collections":
-			return "Every Calvin and Hobbes book, in the order they were published, and which strips each one holds.";
+			return `Every ${series} book, in the order they were published, and which strips each one holds.`;
 		case "arc": {
 			const { arc } = page;
-			if (!arc) return DEFAULT_DESCRIPTION;
-			return `A Calvin and Hobbes story arc, ${arcRange(arc)}: ${arc.description}`;
+			if (!arc) return description;
+			return `A ${series} story arc, ${arcRange(arc)}: ${arc.description}`;
 		}
 		case "arcs":
-			return "Every Calvin and Hobbes story arc, in the order they ran, and the strips each one is told in.";
+			return `Every ${series} story arc, in the order they ran, and the strips each one is told in.`;
 		default:
-			return DEFAULT_DESCRIPTION;
+			return description;
 	}
 }
 
 /**
- * The strip itself where there is one on disk, so that a shared link previews the comic rather
- * than the logo. An image path is already written from the mount, so it goes on the origin alone.
+ * The page's own picture — the strip where there is one on disk, a book's cover — so that a shared
+ * link previews that rather than the banner. An image path is already written from the mount, so it
+ * goes on the origin alone.
  */
-function pageImage(page: Page, siteUrl: string): string {
+function ownImage(page: Page, siteUrl: string): string | null {
 	const origin = siteUrl ? new URL(siteUrl).origin : "";
 	const own = page.view === "detail" ? page.comics.find((comic) => comic.image)?.image : undefined;
 	if (own) return origin + own;
 	if (page.view === "collection" && page.collection) return origin + page.collection.image;
-	return DEFAULT_IMAGE;
+	return null;
 }
 
 /** JSON inside a `<script>` ends at the first `</script`, wherever a transcript puts one. */
@@ -111,19 +110,20 @@ function embedJson(value: unknown): string {
 function buildHeadHtml(page: Page, options: DocumentOptions): string {
 	const title = pageTitle(page);
 	const description = pageDescription(page);
-	const image = pageImage(page, options.siteUrl);
+	const own = ownImage(page, options.siteUrl);
+	// The banner stands in for a page with no picture of its own; with no banner either, there is no image.
+	const image = own ?? PAGE_CONFIG.landingImage;
 	const url = options.siteUrl ? options.siteUrl + options.path : "";
-	const hasOwnImage = image !== DEFAULT_IMAGE;
 
 	const tags = [
-		`<meta name="description" content="${escHtml(description)}" />`,
+		...(description ? [`<meta name="description" content="${escHtml(description)}" />`] : []),
 		`<meta property="og:title" content="${escHtml(title)}" />`,
-		`<meta property="og:description" content="${escHtml(description)}" />`,
-		`<meta property="og:image" content="${escHtml(image)}" />`,
+		...(description ? [`<meta property="og:description" content="${escHtml(description)}" />`] : []),
+		...(image ? [`<meta property="og:image" content="${escHtml(image)}" />`] : []),
 		...(url
 			? [`<meta property="og:url" content="${escHtml(url)}" />`, `<link rel="canonical" href="${escHtml(url)}" />`]
 			: []),
-		`<meta name="twitter:card" content="${hasOwnImage ? "summary_large_image" : "summary"}" />`,
+		`<meta name="twitter:card" content="${own ? "summary_large_image" : "summary"}" />`,
 		`<script type="application/json" id="${PAGE_DATA_ID}">${embedJson(page)}</script>`,
 	];
 	return tags.join("\n\t\t");
@@ -167,6 +167,8 @@ export function buildDocumentHtml(template: string, page: Page, options: Documen
 		head: buildHeadHtml(page, options),
 		views: buildViewsHtml(page),
 		base: escHtml(basePath()),
+		series: escHtml(PAGE_CONFIG.series),
+		favicon: PAGE_CONFIG.favicon ? `<link rel="icon" href="${escHtml(PAGE_CONFIG.favicon)}" />` : "",
 		correction:
 			options.corrections === false
 				? ""
@@ -179,7 +181,7 @@ export function buildDocumentHtml(template: string, page: Page, options: Documen
 					}),
 	};
 	return template.replace(/\{\{(\w+)\}\}/g, (token, name: string) => {
-		if (!(name in fields)) throw new Error(`Unknown template token ${token} in ${SITE_NAME} page template`);
+		if (!(name in fields)) throw new Error(`Unknown template token ${token} in ${PAGE_CONFIG.name} page template`);
 		return fields[name];
 	});
 }

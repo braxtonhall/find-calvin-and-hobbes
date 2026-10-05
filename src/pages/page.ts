@@ -1,5 +1,5 @@
 import { Appearance, Arc, Collection, Comic, CollectionIndex, Day, SortMode } from "../types";
-import { SITE_NAME } from "../routes";
+import { PAGE_CONFIG } from "../site-config";
 import { formatDateRange } from "../date-utils";
 
 /**
@@ -196,22 +196,22 @@ export function arcRange(arc: Pick<Arc, "dates">, withYear: boolean = true): str
 export function pageTitle(page: Page): string {
 	switch (page.view) {
 		case "landing":
-			return SITE_NAME;
+			return PAGE_CONFIG.name;
 		case "results":
-			return `${page.q || "Search"} — ${SITE_NAME}`;
+			return `${page.q || "Search"} — ${PAGE_CONFIG.name}`;
 		case "detail":
-			return `${page.date} — ${SITE_NAME}`;
+			return `${page.date} — ${PAGE_CONFIG.name}`;
 		case "collection":
-			return `${page.collection?.name ?? "Collection not found"} — ${SITE_NAME}`;
+			return `${page.collection?.name ?? "Collection not found"} — ${PAGE_CONFIG.name}`;
 		case "collections":
-			return `Books — ${SITE_NAME}`;
+			return `Books — ${PAGE_CONFIG.name}`;
 		case "arc":
-			return `${page.arc ? arcRange(page.arc) : "Arc not found"} — ${SITE_NAME}`;
+			return `${page.arc ? arcRange(page.arc) : "Arc not found"} — ${PAGE_CONFIG.name}`;
 		case "arcs":
-			return `Arcs — ${SITE_NAME}`;
+			return `Arcs — ${PAGE_CONFIG.name}`;
 		case "library":
-			return page.q ? `${page.q} — Library — ${SITE_NAME}` : `Library — ${SITE_NAME}`;
+			return page.q ? `${page.q} — Library — ${PAGE_CONFIG.name}` : `Library — ${PAGE_CONFIG.name}`;
 		case "credits":
-			return `Credits — ${SITE_NAME}`;
+			return `Credits — ${PAGE_CONFIG.name}`;
 	}
 }

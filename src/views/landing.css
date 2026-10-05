@@ -9,8 +9,18 @@
 	display: block;
 	max-width: 480px;
 	width: 100%;
-	aspect-ratio: 722 / 103;
+	/* Scaled to the width, in the shape its `width` and `height` attributes give it while it loads. */
+	height: auto;
 	margin: 0 auto 32px auto;
+}
+
+.landing-title {
+	margin: 0 24px 32px 24px;
+	font-family: var(--font);
+	font-size: 32px;
+	font-weight: 700;
+	text-align: center;
+	color: var(--text);
 }
 
 .landing-form {

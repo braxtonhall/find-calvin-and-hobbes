@@ -23,7 +23,14 @@ import { arcPageFrom } from "../src/pages/arc";
 import { arcsPageFrom } from "../src/pages/arcs";
 import { buildDocumentHtml } from "../src/pages/shell";
 import { getSiteData, SiteData } from "./siteData";
-import { loadCommitSha, loadCorrectionsEnabled, loadPageLayout, loadSiteConfig, pageAssetPath } from "./siteConfig";
+import {
+	configPath,
+	loadCommitSha,
+	loadCorrectionsEnabled,
+	loadPageLayout,
+	loadSiteConfig,
+	pageAssetPath,
+} from "./siteConfig";
 import { buildSitemapXml } from "./sitemap";
 
 const PLUGIN_NAME = "PagesPlugin";
@@ -79,6 +86,7 @@ class PagesPlugin {
 		compiler.hooks.thisCompilation.tap(PLUGIN_NAME, (compilation: Compilation) => {
 			compilation.fileDependencies.add(templatePath);
 			compilation.fileDependencies.add(path.join(process.cwd(), ".env"));
+			compilation.fileDependencies.add(configPath());
 
 			compilation.hooks.processAssets.tap(
 				{

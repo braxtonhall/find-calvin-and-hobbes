@@ -11,8 +11,6 @@ import { Route, SortMode } from "./types";
  * the one the links use.
  */
 
-export const SITE_NAME = "Find Calvin and Hobbes";
-
 export function normalizePathname(pathname: string): string {
 	const trimmed = pathname
 		.replace(/\/index\.html$/, "/")
