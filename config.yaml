@@ -56,6 +56,56 @@ theme:
   match: "#fff176"
   matchApproximate: "#fff8c4"
 
+search:
+  # What the search box types into itself, one character at a time, when the reader presses the
+  # button with nothing in it: a shuffled walk through these, so none repeats until all have had a
+  # turn. With none, the button does nothing on an empty box.
+  #
+  # Mix things to search for with the filter language: watching `@is:sunday snowman` type itself
+  # out is how a reader who has never typed an `@` learns there is one. Quote a suggestion that
+  # starts with `@`, which YAML keeps for itself.
+  #
+  # Each must find at least one strip, which the tests check. A bound just past the end of the run,
+  # like `@after:1995`, is a valid filter that can never match. One whose filter the site has
+  # turned off, like `@is:rerun` without reruns, is left out.
+  #
+  # A suggestion can be about today, filled in when it is typed:
+  #
+  #   {{today.month}}, {{today.day}}   today, as `oct` and `5`
+  #   {{featured.month}}, {{featured.day}}, {{featured.year}}
+  #                                    today in the strip's run: its full years end to end, so
+  #                                    2026 is 1986, and 2036 is 1986 again. A day with no strip —
+  #                                    neither a new one nor, where the site has reruns, a rerun —
+  #                                    moves to the next year that has one.
+  suggestions:
+    - revenge of the baby-sat
+    - snow goons
+    - weirdos from another planet
+    - "@year:1995 there's treasure everywhere"
+    - homicidal psycho jungle cat!
+    - transmogrifier
+    - spaceman spiff
+    - stupendous man
+    - susie
+    - miss wormwood
+    - duplicator
+    - time machine
+    - yukon
+    - water balloon
+    - calvinball
+    - waiting for the school bus
+    - 'rosalyn @or "baby sitter"'
+    - "@month:december @day:24 @is:sunday"
+    - november 18 1985
+    - "@is:sunday snowman"
+    - "@is:sunday @year:1985"
+    - "@in:sundaypages"
+    - "@in:lazysunday"
+    - "@in:tenthanniversary"
+    - "@is:rerun"
+    - "{{featured.month}} {{featured.day}} {{featured.year}}"
+    - "@month:{{today.month}} @day:{{today.day}}"
+
 # Where and how the site is deployed.
 
 # Optional, from SITE_URL. The full https URL this site is served from.

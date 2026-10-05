@@ -49,6 +49,8 @@ export interface PageConfig {
 		special: StripLinkTemplates;
 	};
 	corrections: CorrectionTemplates;
+	/** What an empty search box types into itself, as templates. See `suggestion-templates.ts`. */
+	suggestions: string[];
 }
 
 declare function require(id: string): unknown;

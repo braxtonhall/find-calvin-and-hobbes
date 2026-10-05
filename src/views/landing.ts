@@ -70,6 +70,7 @@ function typeStep(input: HTMLInputElement, query: string, landed: number): void 
  */
 function startTypeOut(input: HTMLInputElement): void {
 	const query = randomQuery();
+	if (query === null) return;
 	if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
 		editQueryInput(input, query);
 		return;

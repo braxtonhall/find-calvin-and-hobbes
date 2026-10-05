@@ -6,6 +6,7 @@ import type { LoaderContext } from "webpack";
 import type { CorrectionTemplates, PageConfig, StripLinkTemplates } from "../src/site-config";
 import { StripKind, StripLinkSubject, stripLinks } from "../src/strip-links";
 import { CORRECTION_PAGES, correctionUrl } from "../src/correction-links";
+import { SUGGESTION_FIELDS, SuggestionFields, fillSuggestion } from "../src/suggestion-templates";
 
 export interface SiteConfig {
 	/** The site's address with no trailing slash — `https://example.com`, or `https://example.com/prefix` — which every page's path is appended to. */
@@ -100,6 +101,7 @@ interface RawConfig {
 	reruns?: unknown;
 	details?: Partial<Record<string, unknown>> | null;
 	theme?: Partial<Record<string, unknown>> | null;
+	search?: { suggestions?: unknown } | null;
 }
 
 export function configPath(projectDir = path.join(__dirname, "..")): string {
@@ -184,6 +186,34 @@ function loadLinkTemplates(details: RawConfig["details"]): PageConfig["details"]
  * The corrections link's templates, by kind of page, or none when `enabled` (`CORRECTIONS`) is
  * false — which leaves the link out of every page, and the form's address out of the build.
  */
+/** Every field filled, so a template asking for one that does not exist fails the build. */
+const SAMPLE_SUGGESTION_FIELDS = Object.fromEntries(SUGGESTION_FIELDS.map((field) => [field, "1"])) as SuggestionFields;
+
+/** What an empty search box types into itself, as templates, in order. None, and the box does nothing. */
+function loadSuggestions(search: RawConfig["search"]): string[] {
+	if (search === undefined || search === null) return [];
+	if (typeof search !== "object" || Array.isArray(search)) throw new Error("search in config.yaml must be a mapping");
+	for (const key of Object.keys(search)) {
+		if (key !== "suggestions") throw new Error(`search.${key} in config.yaml is not one of suggestions`);
+	}
+	const suggestions = search.suggestions ?? [];
+	if (!Array.isArray(suggestions)) throw new Error("search.suggestions in config.yaml must be a list");
+
+	const seen = new Set<string>();
+	return suggestions.map((value, index) => {
+		const suggestion = stringSetting(value, `search.suggestions[${index}]`);
+		if (!suggestion) throw new Error(`search.suggestions[${index}] in config.yaml is empty`);
+		if (seen.has(suggestion)) throw new Error(`search.suggestions in config.yaml lists "${suggestion}" twice`);
+		seen.add(suggestion);
+		try {
+			fillSuggestion(suggestion, SAMPLE_SUGGESTION_FIELDS);
+		} catch (error) {
+			throw new Error(`search.suggestions in config.yaml: ${(error as Error).message}`);
+		}
+		return suggestion;
+	});
+}
+
 function loadCorrectionTemplates(corrections: RawConfig["corrections"]): CorrectionTemplates {
 	if (
 		corrections !== undefined &&
@@ -311,6 +341,7 @@ export function loadPageConfig(projectDir?: string): PageConfig {
 		themeColor: loadThemeSettings(raw.theme).main,
 		details: loadLinkTemplates(raw.details),
 		corrections: loadCorrectionTemplates(raw.corrections),
+		suggestions: loadSuggestions(raw.search),
 		...loadFeatures(projectDir),
 	};
 }
