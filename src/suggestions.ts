@@ -1,3 +1,5 @@
+import { PAGE_CONFIG } from "./site-config";
+
 /** The years the archive covers in full, from January to December. */
 const FIRST_FULL_YEAR = 1986;
 const LAST_FULL_YEAR = 1995;
@@ -66,7 +68,7 @@ export const SUGGESTED_QUERIES: readonly string[] = [
 	"@in:sundaypages",
 	"@in:lazysunday",
 	"@in:tenthanniversary",
-	"@is:rerun",
+	...(PAGE_CONFIG.reruns ? ["@is:rerun"] : []),
 	`${shortMonth(featuredDate)} ${featuredDate.getDate()} ${featuredDate.getFullYear()}`,
 	`@month:${shortMonth(today)} @day:${today.getDate()}`,
 ];

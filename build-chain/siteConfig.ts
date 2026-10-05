@@ -95,6 +95,8 @@ interface RawConfig {
 	url?: unknown;
 	pageLayout?: unknown;
 	corrections?: unknown;
+	arcs?: unknown;
+	reruns?: unknown;
 	details?: Partial<Record<string, unknown>> | null;
 }
 
@@ -119,6 +121,20 @@ function stringSetting(value: unknown, name: string): string {
 		throw new Error(`${name} in config.yaml must be a single value`);
 	}
 	return String(value).trim();
+}
+
+/** A setting that is on or off: `true` or `false`, and `fallback` when it is not given. */
+function flagSetting(value: unknown, name: string, fallback: boolean): boolean {
+	const raw = stringSetting(value, name).toLowerCase();
+	if (!raw) return fallback;
+	if (raw !== "true" && raw !== "false") throw new Error(`${name} in config.yaml must be true or false (got "${raw}")`);
+	return raw === "true";
+}
+
+/** Which of the archive's optional parts this site has. See `PageConfig`. */
+export function loadFeatures(projectDir?: string): Pick<PageConfig, "arcs" | "reruns"> {
+	const raw = readConfig(projectDir);
+	return { arcs: flagSetting(raw.arcs, "arcs", true), reruns: flagSetting(raw.reruns, "reruns", true) };
 }
 
 const STRIP_KINDS: readonly StripKind[] = ["daily", "rerun", "special"];
@@ -196,6 +212,7 @@ export function loadPageConfig(projectDir?: string): PageConfig {
 		landingAlt: stringSetting(raw.landing?.alt, "landing.alt") || name,
 		landingSize: loadLandingSize(raw.landing),
 		details: loadLinkTemplates(raw.details),
+		...loadFeatures(projectDir),
 	};
 }
 

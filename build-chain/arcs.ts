@@ -4,6 +4,7 @@ import yaml from "js-yaml";
 import { Arc } from "../src/types";
 import { CollectionData } from "./collectionPages";
 import { ComicSource } from "./comicSource";
+import { loadFeatures } from "./siteConfig";
 
 const ARC_ID = /^[a-z0-9]+$/;
 
@@ -34,8 +35,11 @@ function collectionsHolding(compactDates: string[], collectionData: CollectionDa
  * a date must also name a daily or Sunday strip, since that is what an arc is made of. Beyond that
  * the content is trusted: whether the dates make a story is a question the data was checked for
  * once, by hand, rather than one the build asks every time.
+ *
+ * None, and `arcs.yaml` not read, where `config.yaml` turns arcs off.
  */
 export function loadArcs(projectDir: string, source: ComicSource, collectionData: CollectionData): Arc[] {
+	if (!loadFeatures(projectDir).arcs) return [];
 	const filename = path.join(projectDir, "arcs.yaml");
 	const raw = yaml.load(fs.readFileSync(filename, "utf8"));
 	if (!raw || typeof raw !== "object" || Array.isArray(raw)) {

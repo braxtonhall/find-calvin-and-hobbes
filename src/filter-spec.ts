@@ -6,11 +6,19 @@
  * on, so adding a filter is an edit here plus a branch in `applyFilter` — never a third copy of
  * the name list.
  *
- * Deliberately dependency-free. `filter-query.ts` imports it to derive its own name sets, so
- * anything here that reached back into the parser would be a cycle. The predicates that decide
+ * Deliberately free of the parser — it imports only the tags, from `filter-vocabulary.ts`, which is
+ * as free. `filter-query.ts` imports it to derive its own name sets, so anything here that reached
+ * back into the parser would be a cycle. The predicates that decide
  * whether a half-typed value fits a template therefore live in `completion.ts`, which is allowed
  * to know about both.
  */
+
+import { TAGS } from "./filter-vocabulary";
+
+/** `a, b or c`. */
+function orList(words: readonly string[]): string {
+	return words.length > 1 ? `${words.slice(0, -1).join(", ")} or ${words[words.length - 1]}` : words.join("");
+}
 
 /** One shape a filter's value can take, and one row in the menu once the colon is typed. */
 export interface ValueTemplate {
@@ -67,7 +75,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		name: "is",
 		hint: "Strips with a tag",
 		vocabulary: true,
-		templates: [{ label: "tag", hint: "sunday, daily, reused, rerun, altered, empty or standalone" }],
+		templates: [{ label: "tag", hint: orList(TAGS.map((tag) => tag.value)) }],
 	},
 	{
 		name: "year",

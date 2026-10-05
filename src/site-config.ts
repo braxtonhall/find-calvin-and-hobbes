@@ -28,6 +28,10 @@ export interface PageConfig {
 	landingAlt: string;
 	/** The banner's size in pixels, when `config.yaml` gives it, for the page to hold its shape while it loads. */
 	landingSize: { width: number; height: number } | null;
+	/** Whether the site has story arcs, from `arcs.yaml`: their pages, a strip's place in one, and `@is:standalone`. */
+	arcs: boolean;
+	/** Whether the site has reruns, from `reruns.yaml`: the days' pages, and `@is:reused` and `@is:rerun`. */
+	reruns: boolean;
 	details: {
 		daily: StripLinkTemplates;
 		rerun: StripLinkTemplates;

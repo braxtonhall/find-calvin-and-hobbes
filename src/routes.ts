@@ -1,4 +1,5 @@
 import { Route, SortMode } from "./types";
+import { PAGE_CONFIG } from "./site-config";
 
 /**
  * The site's addresses, as strings. Nothing in here touches the DOM or `location`, so the build
@@ -52,12 +53,13 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "collections" };
 	}
 
+	// A site without arcs has none of their addresses, so they go home like any other.
 	const arcMatch = path.match(/^\/arc\/([a-z0-9]+)$/);
-	if (arcMatch) {
+	if (arcMatch && PAGE_CONFIG.arcs) {
 		return { view: "arc", id: arcMatch[1] };
 	}
 
-	if (path === ARCS_PATH) {
+	if (path === ARCS_PATH && PAGE_CONFIG.arcs) {
 		return { view: "arcs" };
 	}
 

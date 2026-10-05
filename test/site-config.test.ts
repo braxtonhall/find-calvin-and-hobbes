@@ -4,6 +4,10 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { loadPageConfig } from "../build-chain/siteConfig";
+import { loadArcs } from "../build-chain/arcs";
+import { loadReruns } from "../build-chain/reruns";
+import type { CollectionData } from "../build-chain/collectionPages";
+import type { ComicSource } from "../build-chain/comicSource";
 import { stripLinks } from "../src/strip-links";
 import { PAGE_CONFIG } from "../src/site-config";
 import { buildDocumentHtml } from "../src/pages/shell";
@@ -103,6 +107,25 @@ test("config.yaml", async (suite) => {
 			() => withConfig("name: x\nseries: x\nlanding:\n  width: 72.5\n  height: 10\n", loadPageConfig),
 			/landing\.width.*whole number/,
 		);
+	});
+
+	await suite.test("has arcs and reruns unless they are turned off", () => {
+		const both = withConfig("name: x\nseries: x\n", loadPageConfig);
+		assert.equal(both.arcs, true);
+		assert.equal(both.reruns, true);
+		const neither = withConfig("name: x\nseries: x\narcs: false\nreruns: 'False'\n", loadPageConfig);
+		assert.equal(neither.arcs, false);
+		assert.equal(neither.reruns, false);
+		assert.throws(() => withConfig("name: x\nseries: x\narcs: no\n", loadPageConfig), /arcs.*true or false/);
+	});
+
+	await suite.test("reads no arcs.yaml or reruns.yaml for a site without them", () => {
+		// The project holds only `config.yaml`, so reading either file would throw.
+		withConfig("name: x\nseries: x\narcs: false\nreruns: false\n", (projectDir) => {
+			const source = {} as ComicSource;
+			assert.deepEqual(loadArcs(projectDir, source, {} as CollectionData), []);
+			assert.deepEqual(loadReruns(projectDir, source), {});
+		});
 	});
 
 	await suite.test("refuses a site with no name, or no series", () => {

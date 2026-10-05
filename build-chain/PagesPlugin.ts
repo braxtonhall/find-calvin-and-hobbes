@@ -27,6 +27,7 @@ import {
 	configPath,
 	loadCommitSha,
 	loadCorrectionsEnabled,
+	loadFeatures,
 	loadPageLayout,
 	loadSiteConfig,
 	pageAssetPath,
@@ -128,7 +129,8 @@ class PagesPlugin {
 					// a file there. This one is the books page, naming `/books` as where it lives; the app
 					// puts that in the bar. See `redirectedPath`.
 					emit(pageAssetPath(COLLECTIONS_PATH, layout), BOOKS_PATH, books);
-					emitPage(ARCS_PATH, arcsPageFrom(source));
+					const arcs = loadFeatures().arcs;
+					if (arcs) emitPage(ARCS_PATH, arcsPageFrom(source));
 
 					const collectionPaths: string[] = [];
 					for (const collection of data.collectionIndex.collections) {
@@ -154,7 +156,7 @@ class PagesPlugin {
 							HOME_PATH,
 							CREDITS_PATH,
 							BOOKS_PATH,
-							ARCS_PATH,
+							...(arcs ? [ARCS_PATH] : []),
 							LIBRARY_PATH,
 							...collectionPaths,
 							...arcPaths,

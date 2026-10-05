@@ -62,6 +62,16 @@ pageLayout: ${PAGE_LAYOUT:-html}
 # build that wants no part of the form carries no trace of it.
 corrections: ${CORRECTIONS:-true}
 
+# The archive's optional parts, each from a file of its own beside comics.yaml. On unless set to
+# false, and a part that is off has its file left unread, so a site without it needs no such file.
+#
+#   arcs     story arcs, from arcs.yaml: the Arcs tab of Collections and each arc's page, a strip's
+#            place in its arc, a book's list of the arcs it prints, and @is:standalone
+#   reruns   days the paper ran an earlier strip again, from reruns.yaml: each such day's page and
+#            cell in the grid, a strip's list of the days it reran, and @is:reused and @is:rerun
+arcs: true
+reruns: true
+
 # The links under a strip on its page. A link left out, or empty, is not drawn.
 #
 # Each is a template, filled in from the strip it is under:

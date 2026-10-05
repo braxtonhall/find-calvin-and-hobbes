@@ -9,8 +9,9 @@
  * anything, so the list is injected here once at boot and read from this one place — the same
  * reasoning `filter-spec.ts` gives for being the single table of filter names.
  *
- * Dependency-free, and for the same reason that file is: `filter-query.ts` imports it, so anything
- * here that reached back into the parser would be a cycle.
+ * Free of the parser, and for the same reason that file is: `filter-query.ts` imports it, so
+ * anything here that reached back into the parser would be a cycle. It reads `config.yaml`, for
+ * which tags the site has, and nothing else.
  *
  * One rule runs through it:
  *
@@ -23,6 +24,8 @@
  * `comics.json`. So emptiness means "unconstrained", which is what lets the parser be tested with
  * nothing registered at all.
  */
+
+import { PAGE_CONFIG } from "./site-config";
 
 /** One value a data-driven filter takes: what a reader types, and what it names. */
 export interface Term {
@@ -42,15 +45,21 @@ export type Vocabulary = () => readonly Term[];
  * `@is:`'s tags, which belong to the language rather than to the archive, so they are known from the
  * start and never empty. Each is independent of the others — a strip can be a Sunday and altered —
  * which is why repeating `@is:` asks for all of them rather than any.
+ *
+ * The ones about reruns and arcs are left out of a site that has none, which `config.yaml` says.
  */
-const TAGS: readonly Term[] = [
+export const TAGS: readonly Term[] = [
 	{ value: "sunday", hint: "A colour Sunday strip" },
 	{ value: "daily", hint: "A black-and-white daily" },
-	{ value: "reused", hint: "A strip on the day it first ran, later rerun" },
-	{ value: "rerun", hint: "A strip on the date it ran again" },
+	...(PAGE_CONFIG.reruns
+		? [
+				{ value: "reused", hint: "A strip on the day it first ran, later rerun" },
+				{ value: "rerun", hint: "A strip on the date it ran again" },
+			]
+		: []),
 	{ value: "altered", hint: "A strip a book printed with changes" },
 	{ value: "empty", hint: "A strip with an empty transcript" },
-	{ value: "standalone", hint: "A strip that belongs to no story arc" },
+	...(PAGE_CONFIG.arcs ? [{ value: "standalone", hint: "A strip that belongs to no story arc" }] : []),
 ];
 
 const REGISTRY = new Map<string, Vocabulary>([["is", () => TAGS]]);

@@ -1,4 +1,5 @@
 import { escHtml } from "../utils";
+import { PAGE_CONFIG } from "../site-config";
 import { ARCS_PATH, BOOKS_PATH, buildCollectionPath } from "../routes";
 import { addressOf } from "../base-path";
 import { CollectionsPage, CollectionSummary, PageSource } from "./page";
@@ -42,14 +43,17 @@ export type CollectionsTab = "books" | "arcs";
 /**
  * Collections is books and arcs, each a collection of strips, and each tab has an address of its
  * own. The tab showing is plain bold text; the other is a link, quiet the way the home page's are.
+ * A site without arcs has only the books, and no tabs.
  */
 export function buildCollectionsHeaderHtml(current: CollectionsTab, canGoBack: boolean): string {
 	const tab = (name: CollectionsTab, label: string, path: string) =>
 		name === current
 			? `<span class="collections-tab collections-tab--current" aria-current="page">${label}</span>`
 			: `<a class="collections-tab" href="${addressOf(path)}">${label}</a>`;
-	return `${buildBackAndHomeButtons(canGoBack)}
-		<h2 class="collections-heading">Collections</h2>
+	const heading = `${buildBackAndHomeButtons(canGoBack)}
+		<h2 class="collections-heading">Collections</h2>`;
+	if (!PAGE_CONFIG.arcs) return heading;
+	return `${heading}
 		<nav class="collections-tabs" aria-label="Collections">
 			${tab("books", "Books", BOOKS_PATH)}
 			<span aria-hidden="true">·</span>
