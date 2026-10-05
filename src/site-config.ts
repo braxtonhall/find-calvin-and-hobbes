@@ -1,6 +1,6 @@
 /**
  * The parts of `config.yaml` the pages are drawn with: the site's name, the home page's banner, and
- * the templates for the links under a strip. The deployment settings stay in the build, which is
+ * the templates for the links under a strip and the corrections link. The deployment settings stay in the build, which is
  * the only thing that reads them.
  *
  * Like `archive.ts`, this is the Node version, which reads the file from disk; the bundle never
@@ -8,11 +8,20 @@
  * literal. See `webpack.config.ts`, and `archive.ts` for why this is a `require`.
  */
 
+import type { CorrectionPage } from "./correction-links";
+
 /** The templates for one kind of strip's links. A link with no template is not drawn. See `strip-links.ts`. */
 export interface StripLinkTemplates {
 	readUrl?: string;
 	licenseUrl?: string;
 }
+
+/**
+ * The corrections form's address for each kind of page, as a template. A kind with none carries no
+ * link, and a build with none at all — or made with `CORRECTIONS=false` — writes no link anywhere.
+ * See `correction-links.ts`.
+ */
+export type CorrectionTemplates = Partial<Record<CorrectionPage, string>>;
 
 export interface PageConfig {
 	name: string;
@@ -37,6 +46,7 @@ export interface PageConfig {
 		rerun: StripLinkTemplates;
 		special: StripLinkTemplates;
 	};
+	corrections: CorrectionTemplates;
 }
 
 declare function require(id: string): unknown;

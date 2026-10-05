@@ -23,15 +23,7 @@ import { arcPageFrom } from "../src/pages/arc";
 import { arcsPageFrom } from "../src/pages/arcs";
 import { buildDocumentHtml } from "../src/pages/shell";
 import { getSiteData, SiteData } from "./siteData";
-import {
-	configPath,
-	loadCommitSha,
-	loadCorrectionsEnabled,
-	loadFeatures,
-	loadPageLayout,
-	loadSiteConfig,
-	pageAssetPath,
-} from "./siteConfig";
+import { configPath, loadCommitSha, loadFeatures, loadPageLayout, loadSiteConfig, pageAssetPath } from "./siteConfig";
 import { buildSitemapXml } from "./sitemap";
 
 const PLUGIN_NAME = "PagesPlugin";
@@ -103,13 +95,12 @@ class PagesPlugin {
 					const siteUrl = config?.siteUrl ?? "";
 					const layout = loadPageLayout();
 					const commit = loadCommitSha();
-					const corrections = loadCorrectionsEnabled();
 					// The page builders write links from the mount they find in `__BASE_PATH__` — the same
 					// name `DefinePlugin` fills in for the app. See `src/base-path.ts`.
 					(globalThis as { __BASE_PATH__?: string }).__BASE_PATH__ = config?.basePath ?? "/";
 
 					const emit = (assetPath: string, routePath: string, page: Page) => {
-						const html = buildDocumentHtml(template, page, { siteUrl, path: routePath, commit, corrections });
+						const html = buildDocumentHtml(template, page, { siteUrl, path: routePath, commit });
 						compilation.emitAsset(assetPath, new sources.RawSource(html));
 					};
 					const emitPage = (routePath: string, page: Page) => emit(pageAssetPath(routePath, layout), routePath, page);

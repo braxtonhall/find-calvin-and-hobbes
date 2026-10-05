@@ -48,7 +48,7 @@ export function stripLinkFields(subject: StripLinkSubject): Record<string, strin
 /** A template with its `{{fields}}` filled in, each escaped for a URL. Throws at a field the strip does not have. */
 export function fillLinkTemplate(template: string, fields: Record<string, string>): string {
 	return template.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (token, name: string) => {
-		if (!(name in fields)) throw new Error(`Unknown field ${token} in link template "${template}"`);
+		if (!Object.hasOwn(fields, name)) throw new Error(`Unknown field ${token} in link template "${template}"`);
 		return encodeURIComponent(fields[name]);
 	});
 }

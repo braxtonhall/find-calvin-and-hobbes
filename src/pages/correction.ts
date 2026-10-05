@@ -1,76 +1,43 @@
 import { escHtml } from "../utils";
+import { PAGE_CONFIG, CorrectionTemplates } from "../site-config";
+import { CorrectionPage, CorrectionSubject, correctionUrl } from "../correction-links";
 import { Page } from "./page";
 
 /**
- * The corrections form, and the link every page that holds something correctable carries to it.
- *
- * One form serves every deployment — a fork's corrections arrive in the same place as this site's —
- * which is why its address is written here rather than configured. A fork that wants no part of it
- * sets `CORRECTIONS=false` and the link is never written. See `build-chain/siteConfig.ts`.
+ * The link every page whose kind has a corrections template carries to the form. Which form that
+ * is, and what it opens with, is `config.yaml`'s — see `src/correction-links.ts`. A build made with
+ * `CORRECTIONS=false` has no templates, and the link is never written.
  */
 
-const FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform";
-
-/** The form prefills by field id, and these are that form's own. */
-const KIND_FIELD = "entry.762468410";
-const URL_FIELD = "entry.1138251038";
-const SITE_FIELD = "entry.2127852102";
-const COMMIT_FIELD = "entry.46703544";
-
-/** Landing and search hold nothing of the archive to be wrong; every other page is about something. */
-export function showsCorrection(view: Page["view"]): boolean {
-	return view !== "landing" && view !== "results";
-}
-
-/**
- * The boxes the form opens with checked, which is what the page is about. A rerun day's page is
- * about the strip and the rerun both, since either could be what is wrong. Credits is about the
- * site rather than the archive, so it checks nothing and the reader says what they mean.
- *
- * The words are the form's own options, which a prefill has to match exactly.
- */
-export function correctionKinds(view: Page["view"], rerun: boolean): string[] {
+/** A page's kind, as `config.yaml` names it. A strip's page is a rerun's when its day reran an earlier strip. */
+export function correctionPage(view: Page["view"], rerun: boolean): CorrectionPage {
 	switch (view) {
+		case "landing":
+			return "home";
+		case "results":
+			return "search";
 		case "detail":
-			return rerun ? ["Comic", "Rerun"] : ["Comic"];
+			return rerun ? "rerun" : "strip";
 		case "collection":
+			return "book";
 		case "collections":
-			return ["Book"];
-		case "arc":
-		case "arcs":
-			return ["Arc"];
+			return "books";
 		default:
-			return [];
+			return view;
 	}
 }
 
-/** The origin on its own, which the form keeps in its own column. "" when the address has none. */
-function originOf(url: string): string {
-	try {
-		return new URL(url).origin;
-	} catch {
-		return "";
-	}
-}
-
-export interface CorrectionContext {
+export interface CorrectionContext extends CorrectionSubject {
 	view: Page["view"];
-	/** The whole address of the page this is about — its path alone, when the build has no origin to write. */
-	url: string;
-	/** The build this was reported from, so a correction can be read against the archive it was made from. */
-	commit: string;
-	/** Whether the page is a rerun day's, which the form has its own box for. */
+	/** Whether the page is a rerun day's, which has a template of its own. */
 	rerun?: boolean;
 }
 
-export function buildCorrectionUrl({ view, url, commit, rerun = false }: CorrectionContext): string {
-	const parameters = new URLSearchParams({ usp: "pp_url" });
-	// The field is checkboxes, which the form prefills from the same field given once per box.
-	for (const kind of correctionKinds(view, rerun)) parameters.append(KIND_FIELD, kind);
-	parameters.set(URL_FIELD, url);
-	parameters.set(SITE_FIELD, originOf(url));
-	parameters.set(COMMIT_FIELD, commit);
-	return `${FORM_URL}?${parameters}`;
+export function buildCorrectionUrl(
+	{ view, rerun = false, ...subject }: CorrectionContext,
+	templates: CorrectionTemplates = PAGE_CONFIG.corrections,
+): string | null {
+	return correctionUrl(templates, correctionPage(view, rerun), subject);
 }
 
 const PENCIL = `<svg class="correction-icon" viewBox="0 0 24 24" width="10" height="10" aria-hidden="true"><path d="M4 20h4L19 9a2.83 2.83 0 0 0-4-4L4 16v4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
@@ -78,10 +45,16 @@ const PENCIL = `<svg class="correction-icon" viewBox="0 0 24 24" width="10" heig
 /**
  * Written once per document, outside the views, so it survives every navigation — which is why it
  * is written even where it does not show, and hidden there instead. `updateCorrectionLink` in
- * `src/views/correction.ts` is what moves it from page to page after that.
+ * `src/views/correction.ts` is what moves it from page to page after that. "" for a build with no
+ * templates, which leaves it out of every page rather than hiding it.
  */
-export function buildCorrectionLinkHtml(context: CorrectionContext): string {
-	const hidden = showsCorrection(context.view) ? "" : " hidden";
-	const href = escHtml(buildCorrectionUrl(context));
-	return `<a class="correction-link" id="correction-link" href="${href}" data-commit="${escHtml(context.commit)}" target="_blank" rel="noopener"${hidden}>${PENCIL}Submit a correction</a>`;
+export function buildCorrectionLinkHtml(
+	context: CorrectionContext,
+	templates: CorrectionTemplates = PAGE_CONFIG.corrections,
+): string {
+	if (Object.keys(templates).length === 0) return "";
+	const url = buildCorrectionUrl(context, templates);
+	const href = url === null ? "" : ` href="${escHtml(url)}"`;
+	const hidden = url === null ? " hidden" : "";
+	return `<a class="correction-link" id="correction-link"${href} data-commit="${escHtml(context.commit)}" target="_blank" rel="noopener"${hidden}>${PENCIL}Submit a correction</a>`;
 }

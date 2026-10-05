@@ -52,15 +52,39 @@ url: ${SITE_URL}
 #              the address back up.
 pageLayout: ${PAGE_LAYOUT:-html}
 
-# From CORRECTIONS. Whether pages carry a link to the corrections form. On unless set to false.
+# The link on each page to the corrections form.
 #
-# The form is the same one for every deployment, so a correction sent from a fork arrives with the
-# rest rather than nowhere. The form tells them apart by the site and page it was sent from, and by
-# the commit the build was made at.
+# Each page's link is a template, by the kind of page it is on. A kind left out, or empty, carries
+# no link. Every template has the same fields: {{page.url}}, the whole address of the page;
+# {{page.origin}}, the site it is on; and {{site.commit}}, the build the page was made by.
 #
-# Set this to false to leave the link out of every page. It is left out rather than hidden, so a
-# build that wants no part of the form carries no trace of it.
-corrections: ${CORRECTIONS:-true}
+#   home     the home page
+#   search   the search results
+#   strip    a strip's page
+#   rerun    the page of a day that reran an earlier strip
+#   book     a book's page
+#   books    the Books tab of Collections
+#   arc      an arc's page
+#   arcs     the Arcs tab of Collections
+#   library  the bookmarks
+#   credits  the credits
+#
+# The form is the same one for every deployment of this archive, so a correction sent from a fork
+# arrives with the rest rather than nowhere. It tells them apart by the page's address and the
+# commit. Each template checks the form's boxes for what that kind of page is about; a rerun day's
+# is about the strip and the rerun both, since either could be what is wrong.
+corrections:
+  # From CORRECTIONS. On unless set to false, which leaves the link out of every page rather than
+  # hiding it, so a build that wants no part of the form carries no trace of it.
+  enabled: ${CORRECTIONS:-true}
+  pages:
+    strip: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.762468410=Comic&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
+    rerun: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.762468410=Comic&entry.762468410=Rerun&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
+    book: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.762468410=Book&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
+    books: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.762468410=Book&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
+    arc: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.762468410=Arc&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
+    arcs: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.762468410=Arc&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
+    credits: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
 
 # The archive's optional parts, each from a file of its own beside comics.yaml. On unless set to
 # false, and a part that is off has its file left unread, so a site without it needs no such file.

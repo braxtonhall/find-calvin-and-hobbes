@@ -46,8 +46,6 @@ export interface DocumentOptions {
 	path: string;
 	/** The build this document was written by, which the corrections link reports. */
 	commit?: string;
-	/** Whether to write the corrections link at all. A fork that wants none sets `CORRECTIONS=false`. */
-	corrections?: boolean;
 }
 
 /** A transcript is a wall of dialogue; the first sentence or two of it is what a link preview has room for. */
@@ -169,19 +167,17 @@ export function buildDocumentHtml(template: string, page: Page, options: Documen
 		base: escHtml(basePath()),
 		series: escHtml(PAGE_CONFIG.series),
 		favicon: PAGE_CONFIG.favicon ? `<link rel="icon" href="${escHtml(PAGE_CONFIG.favicon)}" />` : "",
-		correction:
-			options.corrections === false
-				? ""
-				: buildCorrectionLinkHtml({
-						view: page.view,
-						// Without a `SITE_URL` the build has no origin to write; the app fills the real one in.
-						url: options.siteUrl + options.path,
-						commit: options.commit ?? "unknown",
-						rerun: page.view === "detail" && page.rerunOf !== null,
-					}),
+		correction: buildCorrectionLinkHtml({
+			view: page.view,
+			// Without a `SITE_URL` the build has no origin to write; the app fills the real one in.
+			url: options.siteUrl + options.path,
+			commit: options.commit ?? "unknown",
+			rerun: page.view === "detail" && page.rerunOf !== null,
+		}),
 	};
 	return template.replace(/\{\{(\w+)\}\}/g, (token, name: string) => {
-		if (!(name in fields)) throw new Error(`Unknown template token ${token} in ${PAGE_CONFIG.name} page template`);
+		if (!Object.hasOwn(fields, name))
+			throw new Error(`Unknown template token ${token} in ${PAGE_CONFIG.name} page template`);
 		return fields[name];
 	});
 }

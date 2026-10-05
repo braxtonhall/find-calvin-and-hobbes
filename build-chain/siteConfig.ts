@@ -3,8 +3,9 @@ import path from "path";
 import { execSync } from "child_process";
 import yaml from "js-yaml";
 import type { LoaderContext } from "webpack";
-import type { PageConfig, StripLinkTemplates } from "../src/site-config";
+import type { CorrectionTemplates, PageConfig, StripLinkTemplates } from "../src/site-config";
 import { StripKind, StripLinkSubject, stripLinks } from "../src/strip-links";
+import { CORRECTION_PAGES, correctionUrl } from "../src/correction-links";
 
 export interface SiteConfig {
 	/** The site's address with no trailing slash — `https://example.com`, or `https://example.com/prefix` — which every page's path is appended to. */
@@ -94,7 +95,7 @@ interface RawConfig {
 	landing?: { image?: unknown; alt?: unknown; width?: unknown; height?: unknown } | null;
 	url?: unknown;
 	pageLayout?: unknown;
-	corrections?: unknown;
+	corrections?: { enabled?: unknown; pages?: Partial<Record<string, unknown>> | null } | null;
 	arcs?: unknown;
 	reruns?: unknown;
 	details?: Partial<Record<string, unknown>> | null;
@@ -178,6 +179,42 @@ function loadLinkTemplates(details: RawConfig["details"]): PageConfig["details"]
 	return result;
 }
 
+/**
+ * The corrections link's templates, by kind of page, or none when `enabled` (`CORRECTIONS`) is
+ * false — which leaves the link out of every page, and the form's address out of the build.
+ */
+function loadCorrectionTemplates(corrections: RawConfig["corrections"]): CorrectionTemplates {
+	if (
+		corrections !== undefined &&
+		corrections !== null &&
+		(typeof corrections !== "object" || Array.isArray(corrections))
+	) {
+		throw new Error("corrections in config.yaml must be a mapping");
+	}
+	if (!flagSetting(corrections?.enabled, "corrections.enabled", true)) return {};
+
+	const pages = corrections?.pages ?? {};
+	if (typeof pages !== "object" || Array.isArray(pages)) {
+		throw new Error("corrections.pages in config.yaml must be a mapping");
+	}
+	const result: CorrectionTemplates = {};
+	for (const [page, value] of Object.entries(pages)) {
+		if (!(CORRECTION_PAGES as readonly string[]).includes(page)) {
+			throw new Error(`corrections.pages.${page} in config.yaml is not one of ${CORRECTION_PAGES.join(", ")}`);
+		}
+		const template = stringSetting(value, `corrections.pages.${page}`);
+		if (!template) continue;
+		const templates = { [page]: template } as CorrectionTemplates;
+		try {
+			correctionUrl(templates, page as keyof CorrectionTemplates, { url: "https://example.test/", commit: "sample" });
+		} catch (error) {
+			throw new Error(`corrections.pages.${page} in config.yaml: ${(error as Error).message}`);
+		}
+		Object.assign(result, templates);
+	}
+	return result;
+}
+
 /** A size in whole pixels, or `null` when it is not given. */
 function pixelSetting(value: unknown, name: string): number | null {
 	const raw = stringSetting(value, name);
@@ -212,6 +249,7 @@ export function loadPageConfig(projectDir?: string): PageConfig {
 		landingAlt: stringSetting(raw.landing?.alt, "landing.alt") || name,
 		landingSize: loadLandingSize(raw.landing),
 		details: loadLinkTemplates(raw.details),
+		corrections: loadCorrectionTemplates(raw.corrections),
 		...loadFeatures(projectDir),
 	};
 }
@@ -266,15 +304,6 @@ export function loadCommitSha(): string {
 	} catch {
 		return "unknown";
 	}
-}
-
-/**
- * Whether to write the corrections link. It is on unless a build turns it off, and the link is then
- * left out of every page rather than hidden, so a fork that wants no part of the form carries no
- * trace of it. See `src/pages/correction.ts` for why the form itself is not configurable.
- */
-export function loadCorrectionsEnabled(): boolean {
-	return stringSetting(readConfig().corrections, "corrections").toLowerCase() !== "false";
 }
 
 /**

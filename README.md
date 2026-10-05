@@ -127,10 +127,10 @@ Every page that holds something correctable — a strip, a book, the credits —
 form for reporting what is wrong with it. The form opens knowing which page it was sent from, which
 site it was sent from, and which commit that site was built at.
 
-It is one form for every deployment, so that a correction sent from a fork arrives with the rest
-rather than nowhere, and its address is written in `src/pages/correction.ts` rather than configured.
-A build that wants no part of it sets `CORRECTIONS=false`, which leaves the link out of every page
-rather than hiding it.
+Where the link leads is a template in `config.yaml`, one for each kind of page; a kind of page with
+no template carries no link. A fork leaves these alone, so that its corrections arrive with the rest
+rather than nowhere. A build that wants no part of the form sets `CORRECTIONS=false`, which leaves
+the link out of every page rather than hiding it.
 
 ### Images
 
