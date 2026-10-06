@@ -25,7 +25,7 @@ export interface LabelledQuery {
 // The shape as it appears in the file: everything above except the fields the loader derives.
 export type AuthoredQuery = Omit<LabelledQuery, "split">;
 
-export const GENERATED_PATH = path.join("test", "fixtures", "generated", "queries.jsonl");
+export const GENERATED_PATH = path.join("test", "tuning", "fixtures", "generated", "queries.jsonl");
 
 export const CLASS_NAMES: Record<QueryClass, string> = {
 	A: "recited",
@@ -44,7 +44,7 @@ const TEST_SPLIT_SHARE = 0.2;
  * This is computed, never authored. The 2026-08-10 generation run wrote 18 rows across 6 strips
  * onto the wrong side of the boundary, and that was not carelessness: the prompt asked an agent to
  * reproduce an FNV-1a hash by hand, which nobody can do. A field that is a function of another
- * field belongs to the loader, so `loadGenerated` fills it in and `test/fixtures.test.ts` fails any
+ * field belongs to the loader, so `loadGenerated` fills it in and `test/tuning/fixtures.test.ts` fails any
  * row that tries to carry its own.
  */
 export function splitFor(key: string): Split {

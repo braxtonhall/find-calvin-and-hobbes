@@ -98,6 +98,10 @@ pages are written by `build-chain/PagesPlugin.ts`.
 where the Read and License links under a strip lead, each a template filled in from the strip — see
 the file for the fields. A link with no template is not drawn.
 
+`tuning.yaml` holds how the search scores a match, fitted to this archive's text, with notes on how
+each value was measured. The measuring is in `test/tuning`: `yarn tune` sweeps the values against
+its queries, and `yarn probe "<query>"` shows what a query returns.
+
 `compounds.yaml`, which is optional, tunes how the search treats compound words: the ones to keep
 whole, and the ones to split that the archive never writes open. `yarn candidates` lists likely
 compounds the file doesn't mention yet.

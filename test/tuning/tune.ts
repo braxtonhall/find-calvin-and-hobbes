@@ -1,8 +1,9 @@
 import fs from "fs";
 import path from "path";
-import { search, TUNING, Tuning } from "../src/search";
-import { stem } from "../src/stem";
-import { COMPOUND_CANONICAL_FORMS } from "../src/compounds";
+import { search, Tuning } from "../../src/search";
+import { TUNING } from "../../src/tuning";
+import { stem } from "../../src/stem";
+import { COMPOUND_CANONICAL_FORMS } from "../../src/compounds";
 import {
 	describeMisses,
 	evaluate,
@@ -113,7 +114,7 @@ const OBJECTIVE: Record<string, "recited" | "described" | "combined"> = {
 
 const KNOBS = Object.keys(CANDIDATES) as (keyof Tuning)[];
 const MINIMUM_GAIN = 0.005;
-const LOG_PATH = path.join("test", "fixtures", "tuning-log.jsonl");
+const LOG_PATH = path.join("test", "tuning", "fixtures", "tuning-log.jsonl");
 
 // Ranking metrics cannot see this, so it has to be a constraint rather than part of the
 // objective. A saturated query set will happily trade the property away for a rounding error.
@@ -179,7 +180,7 @@ function literal(text: string, terms: string[], stems: Set<string>): boolean {
 function bare(probe: string, tuning: Tuning): string[] {
 	const terms = words(probe);
 	const stems = new Set(terms.map(stem));
-	return search(probe, "rank", tuning)
+	return search(probe, "rank", tuning, COMPOUND_CANONICAL_FORMS)
 		.filter((result) => !literal(result.text, terms, stems))
 		.map((result) => result.comic.date);
 }
@@ -197,12 +198,16 @@ function corrections(tuning: Tuning): string[] {
 const COLLAPSE_SHARE = 0.5;
 
 function descriptionResults(probe: string, tuning: Tuning): number {
-	return search(probe, "rank", tuning).filter((result) => result.source === "description").length;
+	return search(probe, "rank", tuning, COMPOUND_CANONICAL_FORMS).filter((result) => result.source === "description")
+		.length;
 }
 
 function violations(tuning: Tuning): string[] {
 	return MONOTONICITY_PROBES.filter(([shorter, longer]) => {
-		return search(longer, "rank", tuning).length > search(shorter, "rank", tuning).length;
+		return (
+			search(longer, "rank", tuning, COMPOUND_CANONICAL_FORMS).length >
+			search(shorter, "rank", tuning, COMPOUND_CANONICAL_FORMS).length
+		);
 	}).map(([shorter, longer]) => `"${longer}" widens "${shorter}"`);
 }
 
@@ -232,7 +237,10 @@ let baselineHollowResults = 0;
 function hollowResults(tuning: Tuning): number {
 	const rows = select(generated, { classes: ["D"] });
 	if (rows.length === 0) return 0;
-	return rows.reduce((total, row) => total + search(row.query, "rank", tuning).length, 0) / rows.length;
+	return (
+		rows.reduce((total, row) => total + search(row.query, "rank", tuning, COMPOUND_CANONICAL_FORMS).length, 0) /
+		rows.length
+	);
 }
 
 function bloats(tuning: Tuning): string[] {

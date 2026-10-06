@@ -1,18 +1,26 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { bookmarkResults, search, searchBookmarks, SearchResult, TUNING, Tuning } from "../src/search";
-import { COMPOUND_CANONICAL_FORMS, COMPOUND_RELATIONS } from "../src/compounds";
+import { bookmarkResults, Compounds, search, searchBookmarks, SearchResult, Tuning } from "../src/search";
+import { ENGINE_TUNING } from "./helpers/engine-tuning";
 import { registerVocabulary } from "../src/filter-vocabulary";
 import { highlightRanges } from "../src/utils";
 import { buildArchive, Entry, install } from "./helpers/archive";
 import { state } from "../src/state";
 
-function ranked(query: string, tuning?: Tuning): string[] {
-	return search(query, "rank", tuning).map((result) => result.comic.date);
+/** No compound words: the engine's tests split only the ones a test is about. */
+const NO_COMPOUNDS: Compounds = new Map();
+
+function ranked(query: string, tuning: Tuning = ENGINE_TUNING, compounds: Compounds = NO_COMPOUNDS): string[] {
+	return search(query, "rank", tuning, compounds).map((result) => result.comic.date);
 }
 
-function scoreOf(query: string, date: string, tuning?: Tuning): number {
-	const result = search(query, "rank", tuning).find((candidate) => candidate.comic.date === date);
+function scoreOf(
+	query: string,
+	date: string,
+	tuning: Tuning = ENGINE_TUNING,
+	compounds: Compounds = NO_COMPOUNDS,
+): number {
+	const result = search(query, "rank", tuning, compounds).find((candidate) => candidate.comic.date === date);
 	assert.ok(result, `expected ${date} to match "${query}"`);
 	return result.score;
 }
@@ -23,7 +31,7 @@ function kindOf(result: SearchResult): string {
 }
 
 function sourceOf(query: string, date: string): string {
-	const result = search(query, "rank").find((candidate) => candidate.comic.date === date);
+	const result = search(query, "rank", ENGINE_TUNING, NO_COMPOUNDS).find((candidate) => candidate.comic.date === date);
 	assert.ok(result, `expected ${date} to match "${query}"`);
 	return result.source;
 }
@@ -95,7 +103,7 @@ test("a word in every description carries no weight there but still counts in a 
 	install(buildArchive(UBIQUITOUS));
 	assert.equal(sourceOf("calvin", "2000-01-02"), "transcript");
 	assert.ok(
-		!search("calvin", "rank").some((result) => result.source === "description"),
+		!search("calvin", "rank", ENGINE_TUNING, NO_COMPOUNDS).some((result) => result.source === "description"),
 		"a word present in every description must not admit description-only results",
 	);
 });
@@ -150,7 +158,7 @@ test("a transcript inflection adds variety to an otherwise literal match", () =>
 	);
 	// The low inflection weight should add transcript variety without allowing a one-word
 	// inflection-only query to pass the full-coverage requirement.
-	const results = search("calvin play", "date");
+	const results = search("calvin play", "date", ENGINE_TUNING, NO_COMPOUNDS);
 	assert.deepEqual(
 		results.map((result) => result.comic.date),
 		["2000-01-01", "2000-01-02"],
@@ -186,7 +194,7 @@ test("description vocabulary absent from the transcript is still findable", () =
 			},
 		]),
 	);
-	const results = search("wagon predestined", "rank");
+	const results = search("wagon predestined", "rank", ENGINE_TUNING, NO_COMPOUNDS);
 	assert.equal(results.length, 1);
 	assert.equal(results[0].comic.date, "2000-01-01");
 	assert.equal(results[0].source, "description");
@@ -194,11 +202,11 @@ test("description vocabulary absent from the transcript is still findable", () =
 
 test("highlight ranges skip uninformative words unless nothing else matched", () => {
 	install(buildArchive([{ date: "2000-01-01", transcript: "You are the one in the transmogrifier." }]));
-	const mixed = search("the transmogrifier", "rank")[0];
+	const mixed = search("the transmogrifier", "rank", ENGINE_TUNING, NO_COMPOUNDS)[0];
 	assert.equal(mixed.ranges.length, 1, "only the informative term should highlight");
 	assert.equal(mixed.text.slice(mixed.ranges[0][0], mixed.ranges[0][1]).toLowerCase(), "transmogrifier");
 
-	const bare = search("the", "rank").find((result) => result.comic.date === "2000-01-01");
+	const bare = search("the", "rank", ENGINE_TUNING, NO_COMPOUNDS).find((result) => result.comic.date === "2000-01-01");
 	assert.ok(bare && bare.ranges.length > 0, "a query of only common words must still highlight");
 });
 
@@ -210,7 +218,7 @@ test("a typo still finds the strip", () => {
 test("non-literal matches are marked as fuzzy", () => {
 	install(buildArchive([{ date: "2000-01-01", transcript: "You know the answer." }]));
 
-	const [result] = search("snow", "rank");
+	const [result] = search("snow", "rank", ENGINE_TUNING, NO_COMPOUNDS);
 	assert.equal(result.ranges[0][2], false);
 	assert.equal(highlightRanges(result.text, result.ranges), 'You <mark class="mark--fuzzy">know</mark> the answer.');
 });
@@ -231,12 +239,12 @@ test("the exact and prefix weights decide how far a prefix match reaches", () =>
 	assert.deepEqual(ranked("snow"), ["2000-01-01"]);
 
 	// At 1 a prefix is worth the word itself, so both strips answer.
-	const fullPrefix: Tuning = { ...TUNING, prefixWeight: 1 };
+	const fullPrefix: Tuning = { ...ENGINE_TUNING, prefixWeight: 1 };
 	assert.deepEqual(ranked("snow", fullPrefix), ["2000-01-01", "2000-01-02"]);
 
 	// Dragging the anchor below the prefix weight inverts the comparison, so the extension is now
 	// the stronger claim and leads.
-	const inverted: Tuning = { ...TUNING, prefixWeight: 0.85, exactWeight: 0.7 };
+	const inverted: Tuning = { ...ENGINE_TUNING, prefixWeight: 0.85, exactWeight: 0.7 };
 	assert.deepEqual(ranked("snow", inverted), ["2000-01-02", "2000-01-01"]);
 });
 
@@ -250,16 +258,16 @@ test("an alternate transcript is searched and does not inflate document frequenc
 			},
 		]),
 	);
-	const results = search("transmogrifier", "rank");
+	const results = search("transmogrifier", "rank", ENGINE_TUNING, NO_COMPOUNDS);
 	assert.equal(results.length, 1);
 	assert.match(results[0].text, /second version/);
 });
 
 test("date sort orders chronologically and rank sort orders by score", () => {
 	install(buildArchive(CLEAN_ROOM));
-	const byDate = search("clean your room", "date").map((result) => result.comic.date);
+	const byDate = search("clean your room", "date", ENGINE_TUNING, NO_COMPOUNDS).map((result) => result.comic.date);
 	assert.deepEqual(byDate, [...byDate].sort());
-	const scores = search("clean your room", "rank").map((result) => result.score);
+	const scores = search("clean your room", "rank", ENGINE_TUNING, NO_COMPOUNDS).map((result) => result.score);
 	assert.deepEqual(
 		scores,
 		[...scores].sort((a, b) => b - a),
@@ -268,10 +276,17 @@ test("date sort orders chronologically and rank sort orders by score", () => {
 
 test("an empty query returns nothing and a punctuation query falls back to substring", () => {
 	install(buildArchive([{ date: "2000-01-01", transcript: "Ack! No no no!! ?!" }]));
-	assert.deepEqual(search("", "rank"), []);
-	assert.deepEqual(search("   ", "rank"), []);
+	assert.deepEqual(search("", "rank", ENGINE_TUNING, NO_COMPOUNDS), []);
+	assert.deepEqual(search("   ", "rank", ENGINE_TUNING, NO_COMPOUNDS), []);
 	assert.deepEqual(ranked("?!"), ["2000-01-01"]);
 });
+
+/** The compound words the tests below are about, as an archive would install them. */
+const COMPOUNDS: Compounds = new Map([
+	["goodnight", ["good", "night"]],
+	["snowball", ["snow", "ball"]],
+	["snowman", ["snow", "man"]],
+]);
 
 // A compound the corpus usually writes open is indexed and queried as its parts, so the two
 // spellings are one token to the scorer. The highlight still has to cover the word as written.
@@ -283,23 +298,14 @@ test("a closed compound and its open spelling find each other", () => {
 		]),
 	);
 
-	assert.deepEqual(ranked("goodnight"), ["2000-01-01", "2000-01-02"]);
-	assert.deepEqual(ranked("good night"), ["2000-01-01", "2000-01-02"]);
-});
-
-test("compound relations retain preference separately from canonical forms", () => {
-	assert.deepEqual(COMPOUND_RELATIONS.get("snowball"), {
-		whole: "snowball",
-		parts: ["snow", "ball"],
-		preference: "closed",
-	});
-	assert.deepEqual(COMPOUND_CANONICAL_FORMS.get("snowball"), ["snow", "ball"]);
+	assert.deepEqual(ranked("goodnight", ENGINE_TUNING, COMPOUNDS), ["2000-01-01", "2000-01-02"]);
+	assert.deepEqual(ranked("good night", ENGINE_TUNING, COMPOUNDS), ["2000-01-01", "2000-01-02"]);
 });
 
 test("a split compound is highlighted once, across the whole word", () => {
 	install(buildArchive([{ date: "2000-01-01", transcript: "She said goodnight and left." }]));
 
-	const [result] = search("goodnight", "rank");
+	const [result] = search("goodnight", "rank", ENGINE_TUNING, COMPOUNDS);
 	assert.equal(result.comic.date, "2000-01-01");
 	const [start, end] = result.ranges[0];
 	assert.equal(result.ranges.length, 1, `expected one range, got ${JSON.stringify(result.ranges)}`);
@@ -308,11 +314,11 @@ test("a split compound is highlighted once, across the whole word", () => {
 
 test("a compound query does not highlight an unrelated component occurrence", () => {
 	install(buildArchive([{ date: "2000-01-01", transcript: "A snowball rolled past." }]));
-	const compoundOnlyScore = scoreOf("snowball", "2000-01-01");
+	const compoundOnlyScore = scoreOf("snowball", "2000-01-01", ENGINE_TUNING, COMPOUNDS);
 
 	install(buildArchive([{ date: "2000-01-01", transcript: "A snowball rolled past the snow." }]));
 
-	const [result] = search("snowball", "rank");
+	const [result] = search("snowball", "rank", ENGINE_TUNING, COMPOUNDS);
 	assert.equal(result.comic.date, "2000-01-01");
 	assert.equal(result.score, compoundOnlyScore, "an unrelated component must not add score");
 	assert.deepEqual(
@@ -324,7 +330,7 @@ test("a compound query does not highlight an unrelated component occurrence", ()
 test("a separately queried compound component keeps its independent highlight", () => {
 	install(buildArchive([{ date: "2000-01-01", transcript: "A snowball rolled past the snow." }]));
 
-	const [result] = search("snowball snow", "rank");
+	const [result] = search("snowball snow", "rank", ENGINE_TUNING, COMPOUNDS);
 	assert.equal(result.comic.date, "2000-01-01");
 	assert.deepEqual(
 		result.ranges.map(([start, end]) => result.text.slice(start, end)),
@@ -348,11 +354,11 @@ test("compound matching follows issue 43's golden table", () => {
 		[false, true, true, false],
 		[false, true, false, true],
 	];
-	const permissive: Tuning = { ...TUNING, transcriptCoverageFloor: 0 };
+	const permissive: Tuning = { ...ENGINE_TUNING, transcriptCoverageFloor: 0 };
 	install(buildArchive(documents));
 	for (let document = 0; document < documents.length; document++) {
 		for (let query = 0; query < queries.length; query++) {
-			const result = search(queries[query], "rank", permissive).find(
+			const result = search(queries[query], "rank", permissive, COMPOUNDS).find(
 				(candidate) => candidate.comic.date === documents[document].date,
 			);
 			assert.equal(
@@ -364,11 +370,11 @@ test("compound matching follows issue 43's golden table", () => {
 	}
 
 	assert.ok(
-		scoreOf("snow ball", "2000-03-04", permissive) < scoreOf("snow", "2000-03-04", permissive),
+		scoreOf("snow ball", "2000-03-04", permissive, COMPOUNDS) < scoreOf("snow", "2000-03-04", permissive, COMPOUNDS),
 		"a partial compound match is weaker than its matching component",
 	);
 	assert.ok(
-		scoreOf("snow ball", "2000-03-05", permissive) < scoreOf("ball", "2000-03-05", permissive),
+		scoreOf("snow ball", "2000-03-05", permissive, COMPOUNDS) < scoreOf("ball", "2000-03-05", permissive, COMPOUNDS),
 		"a partial compound match is weaker than its matching component",
 	);
 });
@@ -430,17 +436,17 @@ const SNOW: Entry[] = [
 test("repeatVariety decides whether a second matched word counts as saying it again", () => {
 	install(buildArchive(SNOW));
 	// base on which this test was written had prefixWeight at 0.85
-	const legacy: Tuning = { ...TUNING, prefixWeight: 0.85 };
+	const legacy: Tuning = { ...ENGINE_TUNING, prefixWeight: 0.85 };
 	const emphasis: Tuning = { ...legacy, repeatVariety: 0 };
 
 	// At 1 the extra word is a repetition, so one `snow` and one `snowball` outrank one `snow`.
-	assert.deepEqual(ranked("snow outside", legacy).slice(0, 3), ["2000-01-02", "2000-01-01", "2000-01-03"]);
+	assert.deepEqual(ranked("snow outside", legacy, COMPOUNDS).slice(0, 3), ["2000-01-02", "2000-01-01", "2000-01-03"]);
 	// At 0 only the same word again counts, and the pair falls back behind the single mention.
-	assert.deepEqual(ranked("snow outside", emphasis).slice(0, 3), ["2000-01-02", "2000-01-01", "2000-01-03"]);
+	assert.deepEqual(ranked("snow outside", emphasis, COMPOUNDS).slice(0, 3), ["2000-01-02", "2000-01-01", "2000-01-03"]);
 
 	// Either way, five of one word beat one of it: a rarer relative must not displace the
 	// repetition of the word that was typed.
-	assert.equal(ranked("snow outside", emphasis)[0], "2000-01-02");
+	assert.equal(ranked("snow outside", emphasis, COMPOUNDS)[0], "2000-01-02");
 });
 
 // The allowance that lets a long recitation survive a wrong word also lets a long query be
@@ -454,7 +460,7 @@ test("length forgiveness decides how fast a long query relaxes", () => {
 			{ date: "2000-01-03", transcript: "Calvin and Hobbes discuss nothing at all today." },
 		]),
 	);
-	const strict: Tuning = { ...TUNING, transcriptLengthForgiveness: 0.25 };
+	const strict: Tuning = { ...ENGINE_TUNING, transcriptLengthForgiveness: 0.25 };
 	const query = "calvin and hobbes discuss the transmogrifier at length today";
 
 	assert.ok(
@@ -483,20 +489,20 @@ test("a literal share floor keeps out strips that only matched a misspelling", (
 
 	// `ping` and `pong` are each one edit from `ding` and `dong`, so with no floor the ball
 	// answers a question about a doorbell, and the doorbell answers a question about the ball.
-	const open: Tuning = { ...TUNING, transcriptLiteralShare: 0 };
+	const open: Tuning = { ...ENGINE_TUNING, transcriptLiteralShare: 0 };
 	assert.deepEqual(ranked("ding dong", open), ["2000-01-01", "2000-01-02"]);
 	assert.deepEqual(ranked("ping pong", open), ["2000-01-02", "2000-01-01"]);
 
 	// Requiring a third of the query to be matched outright leaves each of them with nothing to
 	// answer the other: neither holds a term of it as written, extended, or in another inflection.
-	const literal: Tuning = { ...TUNING, transcriptLiteralShare: 0.34 };
+	const literal: Tuning = { ...ENGINE_TUNING, transcriptLiteralShare: 0.34 };
 	assert.deepEqual(ranked("ding dong", literal), ["2000-01-01"]);
 	assert.deepEqual(ranked("ping pong", literal), ["2000-01-02"]);
 });
 
 test("a typo is still forgiven when the rest of the query is literal", () => {
 	install(buildArchive([{ date: "2000-01-01", transcript: "Isn't that your transmogrifier, Calvin?" }]));
-	const literal: Tuning = { ...TUNING, transcriptLiteralShare: 0.34 };
+	const literal: Tuning = { ...ENGINE_TUNING, transcriptLiteralShare: 0.34 };
 	// One word of three is misspelt, so two thirds are still matched outright and the floor is
 	// met. The floor bounds how much of a query a correction may carry, not whether it may.
 	assert.deepEqual(ranked("your transmogrifer calvin", literal), ["2000-01-01"]);
@@ -509,7 +515,7 @@ test("tuning is injectable and coverage is what admits partial matches", () => {
 			{ date: "2000-01-02", transcript: "I don't know what you mean by that." },
 		]),
 	);
-	const strict: Tuning = { ...TUNING, transcriptCoverageFloor: 1 };
+	const strict: Tuning = { ...ENGINE_TUNING, transcriptCoverageFloor: 1 };
 	assert.deepEqual(ranked("you know you'll hate something when they don't tell you", strict), []);
 	assert.deepEqual(ranked("you know you'll hate something when they don't tell you"), ["2000-01-01"]);
 });
@@ -532,7 +538,7 @@ test("document length normalization is off by default and prefers the shorter fi
 
 	// Off: the longer transcript is not penalised for its length, and wins on repetition alone or
 	// ties. This is the behaviour every other parameter was fitted against.
-	const off = search("transmogrifier", "rank");
+	const off = search("transmogrifier", "rank", ENGINE_TUNING, NO_COMPOUNDS);
 	assert.equal(off.length, 2);
 	assert.ok(
 		off[0].score === off[1].score || off[0].comic.date === "2000-01-02",
@@ -540,7 +546,7 @@ test("document length normalization is off by default and prefers the shorter fi
 	);
 
 	// On: the short transcript is mostly about the transmogrifier and the long one mostly is not.
-	const on: Tuning = { ...TUNING, transcriptLengthNormalization: 1 };
+	const on: Tuning = { ...ENGINE_TUNING, transcriptLengthNormalization: 1 };
 	assert.deepEqual(ranked("transmogrifier", on), ["2000-01-01", "2000-01-02"]);
 });
 
@@ -562,13 +568,13 @@ test("the description mass gate is a sum until normalized, and then a mean", () 
 	// total without making the query more specific. At normalization 0 a threshold therefore
 	// rejects the one precise word and admits the vague four — which is backwards, and is why the
 	// gate could never be raised far enough to stop a hollow query without deleting the rare term first.
-	const summed: Tuning = { ...TUNING, descriptionMinMass: 8, descriptionMassNormalization: 0 };
+	const summed: Tuning = { ...ENGINE_TUNING, descriptionMinMass: 8, descriptionMassNormalization: 0 };
 	assert.deepEqual(ranked("unicorn", summed), [], "one rare term cannot reach a threshold four terms sum to");
 	assert.deepEqual(ranked("unicorn sandbox porch driveway", summed), ["2000-01-01"]);
 
 	// At normalization 1 the threshold is mass per matched term, so it means the same thing to a
 	// query of one word as to a query of four, and the specific query is the one that survives.
-	const meaned: Tuning = { ...TUNING, descriptionMinMass: 4, descriptionMassNormalization: 1 };
+	const meaned: Tuning = { ...ENGINE_TUNING, descriptionMinMass: 4, descriptionMassNormalization: 1 };
 	assert.deepEqual(ranked("unicorn", meaned), ["2000-01-01"]);
 	assert.deepEqual(ranked("unicorn sandbox porch driveway", meaned), [], "diluted by its own vaguer words");
 });
@@ -595,7 +601,7 @@ function installShuffled(entries: Entry[]): void {
 
 test("date order is chronological and ignores the score", () => {
 	installShuffled(SHARED_DATE);
-	const byDate = search("wagon rolls down the hill", "date");
+	const byDate = search("wagon rolls down the hill", "date", ENGINE_TUNING, NO_COMPOUNDS);
 	assert.deepEqual(keys(byDate), ["2000-01-01/a", "2000-01-01/b", "2000-01-02/", "2000-01-03/"]);
 
 	// The weakest match sits in the middle by date, so this ordering cannot have come from scores.
@@ -606,7 +612,7 @@ test("date order is chronological and ignores the score", () => {
 
 test("rank order breaks score ties by date, then by id", () => {
 	installShuffled(SHARED_DATE);
-	const byRank = search("wagon rolls down the hill", "rank");
+	const byRank = search("wagon rolls down the hill", "rank", ENGINE_TUNING, NO_COMPOUNDS);
 
 	// The three identical transcripts tie exactly; the fourth is padded and scores lower.
 	const [first, second, third, last] = byRank;
@@ -623,22 +629,34 @@ test("a daily sorts ahead of a special sharing its date", () => {
 		{ date: "2000-01-01", transcript: "The wagon rolls down the hill." },
 	]);
 	for (const sort of ["date", "rank"] as const) {
-		assert.deepEqual(keys(search("wagon rolls down the hill", sort)), ["2000-01-01/", "2000-01-01/zzz"], sort);
+		assert.deepEqual(
+			keys(search("wagon rolls down the hill", sort, ENGINE_TUNING, NO_COMPOUNDS)),
+			["2000-01-01/", "2000-01-01/zzz"],
+			sort,
+		);
 	}
 });
 
 test("a literal query is ordered the same way as a ranked one", () => {
 	installShuffled(SHARED_DATE);
-	assert.deepEqual(keys(search("!!!", "date")), []);
+	assert.deepEqual(keys(search("!!!", "date", ENGINE_TUNING, NO_COMPOUNDS)), []);
 	installShuffled([
 		{ date: "2000-01-02", transcript: "Wow!!! Look at that." },
 		{ date: "2000-01-01", transcript: "Wow!!! Look!!! At that!!!", id: "s" },
 		{ date: "2000-01-01", transcript: "Wow!!! Look at that." },
 	]);
 	// Date order is chronological even though the 01-01 special has the most hits.
-	assert.deepEqual(keys(search("!!!", "date")), ["2000-01-01/", "2000-01-01/s", "2000-01-02/"]);
+	assert.deepEqual(keys(search("!!!", "date", ENGINE_TUNING, NO_COMPOUNDS)), [
+		"2000-01-01/",
+		"2000-01-01/s",
+		"2000-01-02/",
+	]);
 	// Rank order leads with the three-hit special, then falls back to chronology for the tie.
-	assert.deepEqual(keys(search("!!!", "rank")), ["2000-01-01/s", "2000-01-01/", "2000-01-02/"]);
+	assert.deepEqual(keys(search("!!!", "rank", ENGINE_TUNING, NO_COMPOUNDS)), [
+		"2000-01-01/s",
+		"2000-01-01/",
+		"2000-01-02/",
+	]);
 });
 
 // Date search. Note every fixture above uses dates in 2000 and `buildArchive`'s fillers sit in
@@ -657,7 +675,9 @@ const DATED: Entry[] = [
 
 test("a date finds a strip that nothing in the query matches", () => {
 	install(buildArchive(DATED));
-	const result = search("august 3 1988", "rank").find((candidate) => candidate.comic.date === "1988-08-03");
+	const result = search("august 3 1988", "rank", ENGINE_TUNING, NO_COMPOUNDS).find(
+		(candidate) => candidate.comic.date === "1988-08-03",
+	);
 	assert.ok(result, "expected the strip published that day");
 	assert.equal(result.source, "date");
 	assert.deepEqual(result.ranges, [], "nothing in the text is why it matched, so nothing is highlighted");
@@ -680,7 +700,7 @@ test("every spelling of one date finds the same strip", () => {
 		// The text search still runs, and one fixture strip says "1988" out loud, so the list is
 		// not always a single row — what every spelling must agree on is which strip the date names
 		// and that it leads.
-		const results = search(form, "rank");
+		const results = search(form, "rank", ENGINE_TUNING, NO_COMPOUNDS);
 		assert.equal(results[0].comic.date, "1988-08-03", form);
 		const byDate = results.filter((result) => result.source === "date").map((result) => result.comic.date);
 		assert.deepEqual(byDate, ["1988-08-03"], form);
@@ -706,7 +726,11 @@ test("a date carrying two strips returns both, the daily first", () => {
 		{ date: "1988-08-03", transcript: "A tiger appears." },
 	]);
 	for (const sort of ["date", "rank"] as const) {
-		assert.deepEqual(keys(search("1988-08-03", sort)), ["1988-08-03/", "1988-08-03/special"], sort);
+		assert.deepEqual(
+			keys(search("1988-08-03", sort, ENGINE_TUNING, NO_COMPOUNDS)),
+			["1988-08-03/", "1988-08-03/special"],
+			sort,
+		);
 	}
 });
 
@@ -727,7 +751,9 @@ test("how precisely the date was named decides its strength", () => {
 
 test("a strip matched by both the date and the text keeps its text row", () => {
 	install(buildArchive(DATED));
-	const result = search("1988", "rank").find((candidate) => candidate.comic.date === "1988-10-27");
+	const result = search("1988", "rank", ENGINE_TUNING, NO_COMPOUNDS).find(
+		(candidate) => candidate.comic.date === "1988-10-27",
+	);
 	assert.ok(result);
 	assert.equal(result.source, "transcript", "the highlight is the more useful thing to show");
 	assert.ok(result.ranges.length > 0);
@@ -740,15 +766,15 @@ test("reruns appear only for exact date queries and use the original transcript"
 	install(buildArchive(DATED));
 	state.reruns = new Map([["1991-05-05", "1988-08-03"]]);
 	try {
-		const exact = search("may 5 1991", "rank");
+		const exact = search("may 5 1991", "rank", ENGINE_TUNING, NO_COMPOUNDS);
 		assert.equal(exact.length, 1);
 		assert.equal(exact[0].comic.date, "1991-05-05");
 		assert.equal(exact[0].source, "date");
 		assert.equal(exact[0].rerun, true);
 		assert.equal(exact[0].text, DATED[0].transcript);
-		assert.deepEqual(search("may 1991", "rank"), []);
+		assert.deepEqual(search("may 1991", "rank", ENGINE_TUNING, NO_COMPOUNDS), []);
 		assert.deepEqual(
-			search("tiger", "rank").map((result) => result.comic.date),
+			search("tiger", "rank", ENGINE_TUNING, NO_COMPOUNDS).map((result) => result.comic.date),
 			["1988-08-03"],
 		);
 	} finally {
@@ -783,7 +809,10 @@ test("a search of the bookmarks finds only bookmarks, and finds a bookmarked rer
 	try {
 		const bookmarked = new Set(["1991-05-05", "1989-08-03"]);
 		const rows = (query: string) =>
-			searchBookmarks(query, "date", bookmarked).map((result) => [result.comic.date, kindOf(result)]);
+			searchBookmarks(query, "date", ENGINE_TUNING, NO_COMPOUNDS, bookmarked).map((result) => [
+				result.comic.date,
+				kindOf(result),
+			]);
 
 		assert.deepEqual(rows(""), [
 			["1989-08-03", "filter"],
@@ -791,7 +820,7 @@ test("a search of the bookmarks finds only bookmarks, and finds a bookmarked rer
 		]);
 		assert.deepEqual(rows("snow goons"), [["1989-08-03", "transcript"]]);
 
-		const tiger = searchBookmarks("tiger", "rank", bookmarked);
+		const tiger = searchBookmarks("tiger", "rank", ENGINE_TUNING, NO_COMPOUNDS, bookmarked);
 		assert.deepEqual(
 			tiger.map((result) => [result.comic.date, kindOf(result)]),
 			[["1991-05-05", "transcript rerun"]],
@@ -816,7 +845,8 @@ test("@is:reused finds the strips that ran again, and @is:rerun the days they di
 		["1991-05-06", "1989-08-03"],
 	]);
 	try {
-		const rows = (query: string) => search(query, "date").map((result) => [result.comic.date, kindOf(result)]);
+		const rows = (query: string) =>
+			search(query, "date", ENGINE_TUNING, NO_COMPOUNDS).map((result) => [result.comic.date, kindOf(result)]);
 
 		assert.deepEqual(rows("@is:reused"), [
 			["1988-08-03", "filter"],
@@ -852,7 +882,8 @@ test("@or unions branches, and the old rerun query comes back through it", () =>
 	install(buildArchive(DATED));
 	state.reruns = new Map([["1991-05-05", "1988-08-03"]]);
 	try {
-		const rows = (query: string) => search(query, "date").map((result) => [result.comic.date, kindOf(result)]);
+		const rows = (query: string) =>
+			search(query, "date", ENGINE_TUNING, NO_COMPOUNDS).map((result) => [result.comic.date, kindOf(result)]);
 
 		assert.deepEqual(rows("tiger @or wasteland"), [
 			["1988-08-03", "transcript"],
@@ -875,7 +906,9 @@ test("@or unions branches, and the old rerun query comes back through it", () =>
 
 test("a row two branches found is one row, scored above either alone", () => {
 	install(buildArchive(DATED));
-	const both = search("tiger @or pounces", "rank").filter((result) => result.comic.date === "1988-08-03");
+	const both = search("tiger @or pounces", "rank", ENGINE_TUNING, NO_COMPOUNDS).filter(
+		(result) => result.comic.date === "1988-08-03",
+	);
 	assert.equal(both.length, 1);
 	assert.ok(both[0].score > scoreOf("tiger", "1988-08-03"));
 	assert.ok(both[0].score > scoreOf("pounces", "1988-08-03"));
@@ -883,7 +916,8 @@ test("a row two branches found is one row, scored above either alone", () => {
 
 test("a word under @not is matched literally, in any inflection", () => {
 	install(buildArchive(DATED));
-	const dates = (query: string) => search(query, "date").map((result) => result.comic.date);
+	const dates = (query: string) =>
+		search(query, "date", ENGINE_TUNING, NO_COMPOUNDS).map((result) => result.comic.date);
 	assert.deepEqual(dates("goons"), ["1989-08-03"]);
 	// The description counts as much as the transcript.
 	assert.deepEqual(dates("goons @not snowman"), []);
@@ -900,7 +934,7 @@ test("a word under @not is matched literally, in any inflection", () => {
 test("only a whole query is read as a date", () => {
 	install(buildArchive(DATED));
 	for (const query of ["august", "sunday", "1812", "1988 august tiger", "tiger 1988"]) {
-		const dated = search(query, "rank").filter((result) => result.source === "date");
+		const dated = search(query, "rank", ENGINE_TUNING, NO_COMPOUNDS).filter((result) => result.source === "date");
 		assert.deepEqual(dated, [], `"${query}" is an ordinary text query`);
 	}
 });
@@ -1044,7 +1078,8 @@ test("a filter over the books a strip was printed in", () => {
 
 test("a quoted phrase must be said as written, in order and side by side", () => {
 	install(buildArchive(DATED));
-	const dates = (query: string) => search(query, "date").map((result) => result.comic.date);
+	const dates = (query: string) =>
+		search(query, "date", ENGINE_TUNING, NO_COMPOUNDS).map((result) => result.comic.date);
 	assert.deepEqual(dates('"snow goons"'), ["1989-08-03"]);
 	assert.deepEqual(dates("“Snow Goons”"), ["1989-08-03"]);
 	assert.deepEqual(dates('"goons snow"'), []);
@@ -1056,7 +1091,8 @@ test("a quoted phrase must be said as written, in order and side by side", () =>
 
 test("a quoted word is not extended, inflected, or corrected", () => {
 	install(buildArchive(DATED));
-	const dates = (query: string) => search(query, "date").map((result) => result.comic.date);
+	const dates = (query: string) =>
+		search(query, "date", ENGINE_TUNING, NO_COMPOUNDS).map((result) => result.comic.date);
 	assert.deepEqual(dates("goon"), ["1989-08-03"]);
 	assert.deepEqual(dates('"goon"'), []);
 	assert.deepEqual(dates("tigar"), ["1988-08-03"]);
@@ -1068,7 +1104,7 @@ test("a quoted word is not extended, inflected, or corrected", () => {
 
 test("a quoted phrase finds a compound spelled the other way", () => {
 	install(buildArchive(DATED));
-	const dates = (query: string) => search(query, "date").map((result) => result.comic.date);
+	const dates = (query: string) => search(query, "date", ENGINE_TUNING, COMPOUNDS).map((result) => result.comic.date);
 	assert.deepEqual(dates('"snow man"'), ["1989-08-03"]);
 	install(buildArchive([{ date: "2000-01-01", transcript: "Look at my snow man!" }]));
 	assert.deepEqual(dates('"snowman"'), ["2000-01-01"]);
@@ -1076,7 +1112,7 @@ test("a quoted phrase finds a compound spelled the other way", () => {
 
 test("only the phrase is highlighted, common words and all", () => {
 	install(buildArchive(DATED));
-	const [result] = search('"on the march"', "rank");
+	const [result] = search('"on the march"', "rank", ENGINE_TUNING, NO_COMPOUNDS);
 	assert.deepEqual(highlightRanges(result.text, result.ranges).match(/<mark[^>]*>[^<]*<\/mark>/g), [
 		"<mark>on</mark>",
 		"<mark>the</mark>",
@@ -1094,7 +1130,7 @@ test("a quoted phrase in a description is highlighted whole, common words and al
 			},
 		]),
 	);
-	const [result] = search('"in the yard"', "rank");
+	const [result] = search('"in the yard"', "rank", ENGINE_TUNING, NO_COMPOUNDS);
 	assert.equal(result.source, "description");
 	assert.deepEqual(highlightRanges(result.text, result.ranges).match(/<mark[^>]*>[^<]*<\/mark>/g), [
 		"<mark>in</mark>",
@@ -1107,20 +1143,20 @@ test("a quoted date is text, not a date", () => {
 	install(buildArchive(DATED));
 	for (const query of ['"august 3 1988"', '"1988-08-03"', "“1988/8/3”", '"1988', '"august" 1988']) {
 		assert.deepEqual(
-			search(query, "rank").filter((result) => result.source === "date"),
+			search(query, "rank", ENGINE_TUNING, NO_COMPOUNDS).filter((result) => result.source === "date"),
 			[],
 			query,
 		);
 	}
 	assert.deepEqual(
-		search('"1988"', "rank").map((result) => [result.comic.date, result.source]),
+		search('"1988"', "rank", ENGINE_TUNING, NO_COMPOUNDS).map((result) => [result.comic.date, result.source]),
 		[["1988-10-27", "transcript"]],
 	);
 });
 
 test("@not takes a quoted phrase whole", () => {
 	install(buildArchive(DATED));
-	const dates = (query: string) => search(query, "date").map((result) => result.comic.date);
+	const dates = (query: string) => search(query, "date", ENGINE_TUNING, COMPOUNDS).map((result) => result.comic.date);
 	const keeps = (query: string) => dates(query).includes("1989-08-03");
 	assert.ok(keeps("march"));
 	assert.ok(!keeps('march @not "snow goons"'));

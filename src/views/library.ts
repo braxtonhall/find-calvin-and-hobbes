@@ -3,6 +3,8 @@ import "./library.css";
 import { state } from "../state";
 import { SortMode } from "../types";
 import { searchBookmarks } from "../search";
+import { TUNING } from "../tuning";
+import { COMPOUND_CANONICAL_FORMS } from "../compounds";
 import { assignTiers } from "../tiers";
 import { canGoBack } from "../router";
 import { buildLibraryPath } from "../routes";
@@ -42,7 +44,7 @@ export function renderLibrary(query: string, sort: SortMode, arriving: boolean):
 		});
 	}
 
-	const results = searchBookmarks(query, sort, state.bookmarkedDates);
+	const results = searchBookmarks(query, sort, TUNING, COMPOUND_CANONICAL_FORMS, state.bookmarkedDates);
 	bar.update(query, sort, results.length);
 	bar.list.innerHTML = resultsHtml(results, EMPTY);
 	attachRowHandlers(bar.list);

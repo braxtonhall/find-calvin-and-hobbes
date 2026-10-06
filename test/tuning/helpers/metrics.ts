@@ -1,4 +1,6 @@
-import { search, Tuning } from "../../src/search";
+import { search, Tuning } from "../../../src/search";
+import { TUNING } from "../../../src/tuning";
+import { COMPOUND_CANONICAL_FORMS } from "../../../src/compounds";
 import { LabelledQuery, QueryClass } from "./queries";
 
 export interface Evaluation {
@@ -60,7 +62,7 @@ function median(values: number[]): number {
 	return sorted[Math.floor(sorted.length / 2)];
 }
 
-export function evaluate(queries: Rankable[], tuning?: Tuning): Evaluation {
+export function evaluate(queries: Rankable[], tuning: Tuning = TUNING): Evaluation {
 	const rows = queries.filter((query): query is Rankable & { date: string } => query.date !== null);
 
 	let reciprocalSum = 0;
@@ -71,7 +73,7 @@ export function evaluate(queries: Rankable[], tuning?: Tuning): Evaluation {
 	const misses: Evaluation["misses"] = [];
 
 	for (const row of rows) {
-		const results = search(row.query, "rank", tuning);
+		const results = search(row.query, "rank", tuning, COMPOUND_CANONICAL_FORMS);
 		const position = results.findIndex((result) => result.comic.date === row.date);
 		const rank = position === -1 ? NOT_FOUND : position + 1;
 
@@ -105,14 +107,14 @@ export function evaluate(queries: Rankable[], tuning?: Tuning): Evaluation {
 	};
 }
 
-export function evaluateHollow(queries: LabelledQuery[], tuning?: Tuning): HollowEvaluation {
+export function evaluateHollow(queries: LabelledQuery[], tuning: Tuning = TUNING): HollowEvaluation {
 	const rows = queries.filter((query) => query.class === "D");
 	let totalResults = 0;
 	let worstResults = 0;
 	let descriptionSourced = 0;
 
 	for (const row of rows) {
-		const results = search(row.query, "rank", tuning);
+		const results = search(row.query, "rank", tuning, COMPOUND_CANONICAL_FORMS);
 		totalResults += results.length;
 		worstResults = Math.max(worstResults, results.length);
 		descriptionSourced += results.filter((result) => result.source === "description").length;
@@ -126,7 +128,7 @@ export function evaluateHollow(queries: LabelledQuery[], tuning?: Tuning): Hollo
 	};
 }
 
-export function evaluateNearMiss(queries: LabelledQuery[], tuning?: Tuning): NearMissEvaluation {
+export function evaluateNearMiss(queries: LabelledQuery[], tuning: Tuning = TUNING): NearMissEvaluation {
 	const rows = queries.filter((query) => query.class === "E" && query.date && query.decoy);
 	const decoyWins: NearMissEvaluation["decoyWins"] = [];
 	const targetAbsent: NearMissEvaluation["targetAbsent"] = [];
@@ -134,7 +136,7 @@ export function evaluateNearMiss(queries: LabelledQuery[], tuning?: Tuning): Nea
 	let targetAboveDecoy = 0;
 
 	for (const row of rows) {
-		const results = search(row.query, "rank", tuning);
+		const results = search(row.query, "rank", tuning, COMPOUND_CANONICAL_FORMS);
 		const target = results.findIndex((result) => result.comic.date === row.date);
 		const decoy = results.findIndex((result) => result.comic.date === row.decoy);
 		const where = { query: row.query, date: row.date!, decoy: row.decoy! };
@@ -163,7 +165,7 @@ export function evaluateNearMiss(queries: LabelledQuery[], tuning?: Tuning): Nea
 	};
 }
 
-export function evaluateByClass(queries: LabelledQuery[], tuning?: Tuning): Map<QueryClass, Evaluation> {
+export function evaluateByClass(queries: LabelledQuery[], tuning: Tuning = TUNING): Map<QueryClass, Evaluation> {
 	const byClass = new Map<QueryClass, LabelledQuery[]>();
 	for (const query of queries) {
 		if (!byClass.has(query.class)) byClass.set(query.class, []);

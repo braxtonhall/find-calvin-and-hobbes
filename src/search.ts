@@ -1,6 +1,5 @@
 import { Comic, SortMode } from "./types";
 import { state } from "./state";
-import { COMPOUND_RELATIONS } from "./compounds";
 import { stem } from "./stem";
 import { DateExpression, DatePrecision, matchesExpression, parseDateExpression } from "./date-query";
 import { Run, quotedSpans } from "./filter-query";
@@ -28,9 +27,23 @@ export interface SearchResult {
 	matchedAlternate?: boolean;
 }
 
-// Transcripts and descriptions are searched with the same query but different scoring.
-// A transcript query is a recitation, so word order carries most of the signal; a
-// description query is a bag of keywords, so word rarity carries it instead.
+/**
+ * The compound words an archive reads as their parts — `goodnight` as `good night` — by their
+ * closed form. The archive's, like its tuning, handed to `search` by whatever searches.
+ */
+export type Compounds = ReadonlyMap<string, string[]>;
+
+const NO_COMPOUNDS: Compounds = new Map();
+
+/**
+ * How a match is scored. Transcripts and descriptions are searched with the same query but
+ * different scoring: a transcript query is a recitation, so word order carries most of the signal;
+ * a description query is a bag of keywords, so word rarity carries it instead.
+ *
+ * The engine has no values of its own. The right ones depend on the archive's text, so each
+ * archive fits its own and passes them to `search` — this one's are in `tuning.yaml`, with notes on
+ * what each setting does and how its value was measured.
+ */
 export interface Tuning {
 	sequenceWeight: number;
 	runWeight: number;
@@ -58,127 +71,14 @@ export interface Tuning {
 	agreementBonus: number;
 }
 
-export const TUNING: Tuning = {
-	sequenceWeight: 1,
-	runWeight: 2,
-	// Measured, not swept: the sweep judges this on the recited intent alone, where 0.25 gains
-	// 0.0022 against a 0.005 threshold, so it would keep 1 forever. Across the whole grid 0.25
-	// is the only value that is at least as good as every other on every measure at once —
-	// train recited 0.9189 -> 0.9211 and described unmoved at its own maximum, held-out
-	// identical, and both golden sets at 1.000, golden described having sat at 0.971. Above it
-	// golden described falls away again; below it the described intent does.
-	transcriptRepeatWeight: 0.25,
-	descriptionRepeatWeight: 0,
-	// How much of a term's variety counts as repetition. 1 is what the engine has always done
-	// and what every other parameter here was fitted against, so it is the default until
-	// something can tell the two apart. Nothing in the fixture can: across 394 generated and
-	// 50 golden queries, 0 and 1 produce identical ranks for every single one, and differ only
-	// in which text five `snow` results display. The queries that would resolve it are the ones
-	// nobody has written — a strip that says one word repeatedly against a strip that says
-	// several forms of it once.
-	repeatVariety: 1,
-	rarityExponent: 1.25,
-	// The match weight a term reaches before rarity is applied, by how the word was reached: as
-	// written (exact), as an extension of it (prefix), or within an edit or two. `exactWeight` is
-	// the anchor the other weights are measured against, at 1, and `prefixWeight` sits at 0.85 —
-	// below the word itself and above the 0.7 a one-edit correction earns, so a near word stays a
-	// better match than a guess at one. These are the values the engine has always used, and the
-	// rest of this block was fitted with them fixed.
-	exactWeight: 1,
-	prefixWeight: 0,
-	transcriptCoverageFloor: 0.4,
-	// Measured, not swept: 0.3 was the bottom of the sweep's own candidate grid, so the only
-	// direction that helped was never tried and eleven `keep` lines read as convergence. Down
-	// here the described intent goes 0.7524 -> 0.8674 MRR, hybrid queries returning nothing go
-	// from 25% to 1%, and the held-out zero rate reaches nought, with the golden set unmoved.
-	// Not lower: at 0 the requirement degenerates to a single term and hollow queries jump from
-	// 145 results to 239, and 0.02 buys 0.007 MRR that 62 distinct strips cannot resolve.
-	descriptionCoverageFloor: 0.05,
-	// How fast the coverage requirement decays as the query lengthens: the requirement is
-	// `floor + (1 - floor) / m ** forgiveness`, so 1 is the 1/m decay this has always used and
-	// lower values hold the bar up for long queries.
-	//
-	// Both ship at 1, which is exactly the previous engine, because the two corpora need
-	// different answers and neither has been measured yet. What is measured is that they need
-	// asking separately: `how do you play house` returns 471 where `play house` returns 28, and
-	// 434 of the 471 are description matches against 37 transcript ones. The transcript side
-	// barely moves, and it is the side that must not be tightened carelessly — a class A query
-	// is a long recitation with a misremembered word in it by definition.
-	transcriptLengthForgiveness: 1,
-	descriptionLengthForgiveness: 1,
-	// The share of the query's terms a field must match outright — as written, extended, or in
-	// another inflection — before a spelling correction is allowed to carry the rest. Coverage
-	// is rarity-weighted, so two rare words can answer a ten-word query; this is the plain
-	// count, which they cannot, and it is the only thing standing between a reader and a strip
-	// about a ping-pong ball when they asked for `ding dong rosalyn`.
-	//
-	// Measured, not swept: every gain here is under the sweep's 0.005 threshold, so it would
-	// keep 0 forever. At 0.2 nothing regresses — train recited 0.9211 -> 0.9218, described
-	// 0.8542 -> 0.8544, held-out 0.9308 -> 0.9318, both golden intents still 1.000, no
-	// zero-result query, and the monotonicity, collapse and hollow guards unmoved. What it
-	// removes from `ding dong rosalyn` is the four strips that had matched nothing but a
-	// correction: a ping-pong ball, a game of Calvinball, a leaf collection, and `dying`.
-	// Not higher: at 0.3 the zero-result rate leaves nought and recited starts falling.
-	transcriptLiteralShare: 0.2,
-	descriptionLiteralShare: 0.2,
-	// Raised from 1.5 together with the normalization below, which is the only way it could move:
-	// at normalization 0 this threshold is inert at every value up to 3.5 and destructive from 4,
-	// so neither knob does anything without the other. A sweep works one parameter at a time and
-	// therefore cannot find this pair — see question 5.
-	descriptionMinMass: 2.5,
-	// How much of the query's length is divided out of the mass gate: `achieved / matched ** b`,
-	// so 0 is the raw sum this has always compared and 1 is the mean mass per matched term.
-	//
-	// The gate asks whether a query has enough content to be worth answering from descriptions, but
-	// `achieved` sums over query terms, so it grows with query length and answers a different
-	// question. Measured 2026-08-12: `snow` scores 3.90 and the class D archetype `calvin tells
-	// hobbes about his mom` scores 5.42, so the flood outweighs the keyword and no threshold
-	// separates them — which is why the gate has been inert from 0 to 3.5 and, at 4, takes all 110
-	// of `snow`'s description results while the hollow mean falls only from 179 to 167.
-	//
-	// Measured, not swept, and it has to be set jointly with the threshold above. At 1 with a
-	// threshold of 2.5 the hollow queries of class D fall from 179 results to 103 while every other
-	// measure holds exactly: train recited 0.9261, described 0.8538, held out unchanged, 27 absent
-	// targets, both golden intents 1.000, all six description probes at full strength and every
-	// monotonicity probe intact. Not higher: at a threshold of 3 a real target starts to fail.
-	//
-	// Once shipped, the existing bloat guard defends it without anything new being written — the
-	// baseline hollow mean is 103, so its 1.5x ceiling is 154 and every route back to the old
-	// behaviour lands at 179 and is rejected.
-	descriptionMassNormalization: 1,
-	// Pivoted document-length normalization, `1 - b + b * (length / average length)`, dividing the
-	// field's strength. 0 leaves the score untouched, which is what the engine has always done; 1
-	// is full normalization, where a match in a field of twice the average is worth half as much.
-	//
-	// There is currently none, and the bias runs toward long fields rather than being merely
-	// absent: repetition is counted as `1 + repeatWeight * log2(repeated)`, and a longer field has
-	// more room to repeat a word. `transmogrifier` scores 1.3550 in a 117-word transcript against
-	// 1.1050 in a 25-word one. That is not evenly spread over the corpus — Sunday transcripts
-	// average 89.9 words against a weekday's 47.8 — so it is a systematic advantage for Sundays.
-	//
-	transcriptLengthNormalization: 0,
-	descriptionLengthNormalization: 0.1,
-	transcriptIdfFloor: 0.5,
-	descriptionIdfFloor: 1,
-	// How much another inflection of a query word is worth beside the word itself.
-	//
-	// A small transcript weight admits a little lexical variety without making inflections as strong
-	// as the words the reader actually typed. Descriptions remain more permissive because they are
-	// paraphrases rather than quoted dialogue.
-	transcriptInflectionWeight: 0.1,
-	descriptionInflectionWeight: 0.7,
-	descriptionPreference: 0.7,
-	agreementBonus: 0.15,
-};
-
 /**
  * What a date match is worth, by how precisely the reader named the date.
  *
- * Deliberately not part of `Tuning`. Every number in that block is measured against
- * `test/fixtures`, and no query in either fixture contains a date — `test/filter-query.test.ts`
- * asserts as much — so `test/tune.ts` would be sweeping these against noise. They are calibrated
- * against the range text scores actually reach instead, which is a different kind of evidence and
- * belongs somewhere else. Do not add them to `CANDIDATES`.
+ * Deliberately not part of `Tuning`. Every number in `tuning.yaml` is measured against
+ * `test/tuning/fixtures`, and no query in either fixture contains a date —
+ * `test/tuning/fixtures.test.ts` asserts as much — so `yarn tune` would be sweeping these against
+ * noise. They are calibrated against the range text scores actually reach instead, which is a
+ * different kind of evidence and belongs somewhere else. Do not add them to its `CANDIDATES`.
  *
  * The ceiling a text score can reach is knowable from the code rather than guessed at:
  * `transcriptScore` is `strength * multiplier / normalizer` with `normalizer` at least
@@ -325,6 +225,7 @@ let indexedByComic = new Map<Comic, IndexedComic>();
 let indexedDailies = new Map<string, IndexedComic>();
 let indexedSource: Comic[] | null = null;
 let indexedDescriptions: Map<string, string> | null = null;
+let indexedCompounds: Compounds | null = null;
 let transcriptCorpus = emptyCorpus("transcript");
 let descriptionCorpus = emptyCorpus("description");
 let cachedTuning: Tuning | null = null;
@@ -358,12 +259,14 @@ function indexInflections(corpus: Corpus): void {
  * A closed compound the corpus usually writes open becomes its parts, so that `goodnight`
  * and `good night` are the same thing to the scorer. The split replaces the compound rather
  * than sitting beside it: keeping both would count the token's mass twice in `summarise`.
+ *
+ * Which compounds those are is the archive's business, passed in with the search.
  */
-function decompose(word: string): string[] {
-	return COMPOUND_RELATIONS.get(word)?.parts ?? [word];
+function decompose(word: string, compounds: Compounds): string[] {
+	return compounds.get(word) ?? [word];
 }
 
-function indexField(text: string, interned: Map<string, string>): IndexedField {
+function indexField(text: string, interned: Map<string, string>, compounds: Compounds): IndexedField {
 	const words: string[] = [];
 	const sourceWords: string[] = [];
 	const starts: number[] = [];
@@ -376,7 +279,7 @@ function indexField(text: string, interned: Map<string, string>): IndexedField {
 		// Every part keeps the whole token's offsets, so a highlight still covers the word
 		// the reader can actually see rather than half of it.
 		const lowered = match[0].toLowerCase();
-		const parts = decompose(lowered);
+		const parts = decompose(lowered, compounds);
 		sourceWords.push(lowered);
 		const compoundId = parts.length > 1 ? nextCompound++ : -1;
 		for (const part of parts) {
@@ -423,11 +326,18 @@ function countDocument(corpus: Corpus, fields: IndexedField[]): void {
 	}
 }
 
-function ensureIndex(): void {
-	if (indexedSource === state.comics && indexedDescriptions === state.descriptions) return;
+/**
+ * The index of the archive in `state`, with these compounds split, built again when either changes.
+ * Without compounds, any index of the archive will do — for a caller that reads only the strips.
+ */
+function ensureIndex(compounds: Compounds = indexedCompounds ?? NO_COMPOUNDS): void {
+	if (indexedSource === state.comics && indexedDescriptions === state.descriptions && indexedCompounds === compounds) {
+		return;
+	}
 
 	indexedSource = state.comics;
 	indexedDescriptions = state.descriptions;
+	indexedCompounds = compounds;
 	indexedComics = [];
 	indexedByComic = new Map();
 	indexedDailies = new Map();
@@ -439,11 +349,11 @@ function ensureIndex(): void {
 	const transcriptFields: IndexedField[][] = [];
 	const descriptionFields: IndexedField[][] = [];
 	for (const comic of state.comics) {
-		const transcripts = [indexField(comic.transcript, interned)];
-		if (comic.alternate) transcripts.push(indexField(comic.alternate, interned));
+		const transcripts = [indexField(comic.transcript, interned, compounds)];
+		if (comic.alternate) transcripts.push(indexField(comic.alternate, interned, compounds));
 
 		const descriptionText = state.descriptions?.get(comic.id || comic.date);
-		const description = descriptionText ? indexField(descriptionText, interned) : null;
+		const description = descriptionText ? indexField(descriptionText, interned, compounds) : null;
 
 		countDocument(transcriptCorpus, transcripts);
 		transcriptFields.push(transcripts);
@@ -1007,13 +917,14 @@ function literalSearch(loweredQuery: string): SearchResult[] {
 export function search(
 	query: string,
 	sort: SortMode,
-	tuning: Tuning = TUNING,
+	tuning: Tuning,
+	compounds: Compounds,
 	within: Set<string> | null = null,
 ): SearchResult[] {
 	const trimmed = query.trim();
 	if (!trimmed) return [];
 
-	ensureIndex();
+	ensureIndex(compounds);
 	if (cachedTuning !== tuning) {
 		expansionCache.clear();
 		cachedTuning = tuning;
@@ -1021,7 +932,7 @@ export function search(
 
 	const branches = parseQuery(trimmed.toLowerCase());
 	let results = union(
-		branches.map((branch) => searchBranch(branch, tuning, within)),
+		branches.map((branch) => searchBranch(branch, tuning, compounds, within)),
 		tuning,
 	);
 
@@ -1041,7 +952,12 @@ export function search(
 /**
  * One plain query — see `Branch` — searched as every query was before `@or` existed.
  */
-function searchBranch(branch: Branch, tuning: Tuning, within: Set<string> | null): SearchResult[] {
+function searchBranch(
+	branch: Branch,
+	tuning: Tuning,
+	compounds: Compounds,
+	within: Set<string> | null,
+): SearchResult[] {
 	const residual = branch.segments.join(" ");
 	// The rerun days a search may show. The library's search is over rows it holds, rerun days
 	// among them; the archive's shows a rerun day only where the reader asked about reruns — or,
@@ -1054,12 +970,12 @@ function searchBranch(branch: Branch, tuning: Tuning, within: Set<string> | null
 		// is the only place a filter produces a row instead of removing one. A branch with neither
 		// words nor anything to judge by would be the whole archive, which nobody asked for.
 		if (!constrains(branch)) return [];
-		const results = filterOnlyResults(branch);
-		if (rerunDays !== null) results.push(...filteredReruns(branch, rerunDays));
+		const results = filterOnlyResults(branch, compounds);
+		if (rerunDays !== null) results.push(...filteredReruns(branch, rerunDays, compounds));
 		return results;
 	}
 
-	let results = searchText(branch.segments, residual, tuning);
+	let results = searchText(branch.segments, residual, tuning, compounds);
 	// Implicit date search is all or nothing: `parseDateExpression` returns null unless the whole
 	// residual is a date, so the text query is never rewritten and the coverage arithmetic in
 	// `rankedSearch` never sees a stray year or day number. A quotation is never a date: `"1988"`
@@ -1073,7 +989,7 @@ function searchBranch(branch: Branch, tuning: Tuning, within: Set<string> | null
 	if (constrains(branch)) {
 		const originals = rerunOriginals();
 		results = results.filter((result) =>
-			admitsRow(branch, result.comic, runOf(result.comic, result.rerun === true, originals)),
+			admitsRow(branch, result.comic, runOf(result.comic, result.rerun === true, originals), compounds),
 		);
 	}
 	return results;
@@ -1120,9 +1036,9 @@ function indexedFor(comic: Comic): IndexedComic | undefined {
  * A quoted phrase asks something stricter: whether some one field says exactly those words, in
  * that order, side by side — and a phrase of nothing but punctuation, whether some field has it.
  */
-function containsText(indexed: IndexedComic | undefined, text: string): boolean {
+function containsText(indexed: IndexedComic | undefined, text: string, compounds: Compounds): boolean {
 	const [quote] = quotedSpans(text);
-	if (quote !== undefined) return containsPhrase(indexed, quote.inner);
+	if (quote !== undefined) return containsPhrase(indexed, quote.inner, compounds);
 	const words = [...text.matchAll(WORD_PATTERN)].map((match) => stem(match[0].toLowerCase()));
 	if (indexed === undefined || words.length === 0) return false;
 	if (indexed.stems === undefined) {
@@ -1134,10 +1050,10 @@ function containsText(indexed: IndexedComic | undefined, text: string): boolean 
 	return words.every((word) => indexed.stems!.has(word));
 }
 
-function containsPhrase(indexed: IndexedComic | undefined, phrase: string): boolean {
+function containsPhrase(indexed: IndexedComic | undefined, phrase: string, compounds: Compounds): boolean {
 	if (indexed === undefined) return false;
 	const fields = [...indexed.transcripts, ...(indexed.description ? [indexed.description] : [])];
-	const parts = [...phrase.matchAll(WORD_PATTERN)].flatMap((match) => decompose(match[0].toLowerCase()));
+	const parts = [...phrase.matchAll(WORD_PATTERN)].flatMap((match) => decompose(match[0].toLowerCase(), compounds));
 	if (parts.length === 0) {
 		const lowered = phrase.trim().toLowerCase();
 		return lowered !== "" && fields.some((field) => field.lowered.includes(lowered));
@@ -1145,8 +1061,8 @@ function containsPhrase(indexed: IndexedComic | undefined, phrase: string): bool
 	return fields.some((field) => hasCompoundSequence(field, parts));
 }
 
-function admitsRow(branch: Branch, comic: Comic, run: Run | undefined): boolean {
-	return admits(branch, comic, run, (text) => containsText(indexedFor(comic), text));
+function admitsRow(branch: Branch, comic: Comic, run: Run | undefined, compounds: Compounds): boolean {
+	return admits(branch, comic, run, (text) => containsText(indexedFor(comic), text, compounds));
 }
 
 /**
@@ -1155,7 +1071,7 @@ function admitsRow(branch: Branch, comic: Comic, run: Run | undefined): boolean 
  * per stretch of the query between `@` filters, so the ranked path can tell where the reader's
  * own words were not continuous.
  */
-function searchText(segments: string[], residual: string, tuning: Tuning): SearchResult[] {
+function searchText(segments: string[], residual: string, tuning: Tuning, compounds: Compounds): SearchResult[] {
 	const compoundQueries: CompoundQuery[] = [];
 	// A term can be written both ways — `"snow ball" snow` — and is only exact where every
 	// occurrence of it was quoted. The phrase is still held to its exact words either way, by
@@ -1166,7 +1082,7 @@ function searchText(segments: string[], residual: string, tuning: Tuning): Searc
 	const wordsOf = (text: string, phrase: boolean): string[] => {
 		const start = sequenceOffset;
 		const words = [...text.matchAll(WORD_PATTERN)].flatMap((match) => {
-			const parts = decompose(match[0].toLowerCase());
+			const parts = decompose(match[0].toLowerCase(), compounds);
 			if (parts.length > 1 && !phrase) compoundQueries.push({ parts, start: sequenceOffset });
 			sequenceOffset += parts.length;
 			return parts;
@@ -1281,11 +1197,11 @@ function runOf(comic: Comic, rerun: boolean, originals: Set<string>): Run | unde
 	return undefined;
 }
 
-function filterOnlyResults(branch: Branch): SearchResult[] {
+function filterOnlyResults(branch: Branch, compounds: Compounds): SearchResult[] {
 	const results: SearchResult[] = [];
 	const originals = rerunOriginals();
 	for (const indexed of indexedComics) {
-		if (!admitsRow(branch, indexed.comic, runOf(indexed.comic, false, originals))) continue;
+		if (!admitsRow(branch, indexed.comic, runOf(indexed.comic, false, originals), compounds)) continue;
 		// Every row ties, and `assignTiers` normalises on the top score, so the number only has to
 		// be positive; `broad` is the honest one, because a filter restricts rather than ranks.
 		//
@@ -1333,8 +1249,14 @@ export function bookmarkResults(dates: Set<string>): SearchResult[] {
  * is, and then narrowed to the bookmarked dates — except that a bookmarked rerun day is found by its
  * strip's words too, which a search of the archive alone would only find under the original date.
  */
-export function searchBookmarks(query: string, sort: SortMode, dates: Set<string>): SearchResult[] {
-	return query.trim() ? search(query, sort, TUNING, dates) : bookmarkResults(dates);
+export function searchBookmarks(
+	query: string,
+	sort: SortMode,
+	tuning: Tuning,
+	compounds: Compounds,
+	dates: Set<string>,
+): SearchResult[] {
+	return query.trim() ? search(query, sort, tuning, compounds, dates) : bookmarkResults(dates);
 }
 
 /**
@@ -1364,12 +1286,12 @@ function withReruns(results: SearchResult[], within: Set<string>): SearchResult[
 }
 
 /** The rerun days in `within` that a filter-only query lets through, which `filterOnlyResults` never visits. */
-function filteredReruns(branch: Branch, within: Set<string>): SearchResult[] {
+function filteredReruns(branch: Branch, within: Set<string>, compounds: Compounds): SearchResult[] {
 	const results: SearchResult[] = [];
 	for (const [rerunDate, originalDate] of state.reruns) {
 		if (!within.has(rerunDate)) continue;
 		const rerun = rerunResult(rerunDate, originalDate, DATE_STRENGTH.broad, "filter");
-		if (rerun && admitsRow(branch, rerun.comic, "rerun")) results.push(rerun);
+		if (rerun && admitsRow(branch, rerun.comic, "rerun", compounds)) results.push(rerun);
 	}
 	return results;
 }

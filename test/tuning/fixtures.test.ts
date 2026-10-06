@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 import fs from "fs";
 import path from "path";
 import { loadRealArchive } from "./helpers/archive";
-import { RECITED } from "./fixtures/golden";
-import { stem } from "../src/stem";
+import { DESCRIBED, RECITED } from "./fixtures/golden";
+import { stem } from "../../src/stem";
+import { parseDateExpression } from "../../src/date-query";
+import { parseQuery } from "../../src/boolean-query";
 import { CLASS_NAMES, GENERATED_PATH, LabelledQuery, loadGenerated, parseQueryLine, splitFor } from "./helpers/queries";
 
 const CLASSES = Object.keys(CLASS_NAMES);
@@ -372,7 +374,7 @@ test("generated near-miss pairs are decidable", async (suite) => {
 	// decoy lacks turns out to be satisfiable by a decoy that shares nothing at all.
 	//
 	// Whether a strip is really admitted is a question for the ranker, and this file is deliberately
-	// blind to it; `test/eval.test.ts` asks that directly. What can be checked here is the condition
+	// blind to it; `test/tuning/eval.test.ts` asks that directly. What can be checked here is the condition
 	// underneath it: the decoy must share an informative word with the query, so that it has some
 	// reason to be in the result set at all.
 	await suite.test("a near-miss decoy shares informative vocabulary with the query", () => {
@@ -416,4 +418,32 @@ test("generated near-miss pairs are decidable", async (suite) => {
 				`${EMPHASIS_FORMS} other forms of it.`,
 		);
 	});
+});
+
+/**
+ * The guard that makes the evaluation thresholds in `eval.test.ts` safe. Date search is
+ * additive — it only ever fires when the whole query is a date, or when an `@` filter is
+ * present — so as long as no fixture query does either, the engine those thresholds measure is
+ * untouched. Two queries come close and are the reason this is worth asserting rather than
+ * assuming: "the 1812 overture has cannons in the percussion" and "The 35-ton behemoth...".
+ *
+ * It reaches across to `parseDateExpression` and `parseQuery` because it is one claim about both
+ * halves, and splitting it would load the whole fixture set twice to assert half as much each time.
+ */
+test("no query in the evaluation fixtures is a date or carries a filter", () => {
+	const queries = [...RECITED, ...DESCRIBED, ...loadGenerated()].map((row) => row.query.toLowerCase());
+	assert.ok(queries.length > 500, `expected the full fixture set, saw ${queries.length}`);
+
+	for (const query of queries) {
+		assert.equal(
+			parseDateExpression(query),
+			null,
+			`"${query}" now parses as a date; eval.test.ts measures a different engine`,
+		);
+		assert.deepEqual(
+			parseQuery(query),
+			[{ segments: [query.trim().split(/\s+/).join(" ")], clauses: [[]] }],
+			`"${query}" now carries a filter or an operator; eval.test.ts measures a different engine`,
+		);
+	}
 });

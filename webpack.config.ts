@@ -73,6 +73,12 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 				use: path.join(__dirname, "build-chain", "compoundLexicon.ts"),
 			},
 			{
+				// The same, for how the search scores a match. See `src/tuning.ts`.
+				test: path.join(srcDir, "tuning.ts"),
+				enforce: "post",
+				use: path.join(__dirname, "build-chain", "tuning.ts"),
+			},
+			{
 				// The theme's colours from `config.yaml`, in place of the stylesheet's own text — before
 				// `css-loader` reads it. See `build-chain/theme.ts`.
 				test: path.join(srcDir, "styles", "theme.css"),

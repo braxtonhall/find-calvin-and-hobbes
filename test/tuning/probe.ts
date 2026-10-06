@@ -8,7 +8,9 @@
  * queries: an agent that can see the rankings will write queries the current configuration
  * already answers, and the loop then measures its own tail instead of the product.
  */
-import { search } from "../src/search";
+import { search } from "../../src/search";
+import { TUNING } from "../../src/tuning";
+import { COMPOUND_CANONICAL_FORMS } from "../../src/compounds";
 import { install, loadRealArchive } from "./helpers/archive";
 
 const argv = process.argv.slice(2);
@@ -24,7 +26,7 @@ if (!query) {
 const archive = loadRealArchive();
 install(archive);
 
-const results = search(query, "rank");
+const results = search(query, "rank", TUNING, COMPOUND_CANONICAL_FORMS);
 console.log(`"${query}" -> ${results.length} results\n`);
 
 for (const [position, result] of results.slice(0, limit).entries()) {

@@ -4,6 +4,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { loadCompoundRelations, readCompoundsFile } from "../build-chain/compoundLexicon";
+import { COMPOUND_CANONICAL_FORMS, COMPOUND_RELATIONS } from "../src/compounds";
 
 /**
  * `compounds.yaml`: that the corpus rule runs without it, and that it keeps words whole and splits
@@ -84,4 +85,13 @@ test("a malformed compounds.yaml stops the build", () => {
 	rejects("compounds:\n  closed:\n    snowman: Snow Man\n", /split into two or more/);
 	rejects("compounds:\n  closed:\n    snowman: snow man\n  open:\n    snowman: snow man\n", /more than once/);
 	rejects("keepWhole:\n  - snowman\ncompounds:\n  closed:\n    snowman: snow man\n", /keeps it whole/);
+});
+
+test("this archive's relations keep their preference beside the parts the search reads", () => {
+	assert.deepEqual(COMPOUND_RELATIONS.get("snowball"), {
+		whole: "snowball",
+		parts: ["snow", "ball"],
+		preference: "closed",
+	});
+	assert.deepEqual(COMPOUND_CANONICAL_FORMS.get("snowball"), ["snow", "ball"]);
 });

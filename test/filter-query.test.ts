@@ -5,8 +5,6 @@ import { admits, parseQuery } from "../src/boolean-query";
 import { Filter, Run, scanFilters } from "../src/filter-query";
 import { registerVocabulary } from "../src/filter-vocabulary";
 import { Comic } from "../src/types";
-import { DESCRIBED, RECITED } from "./fixtures/golden";
-import { loadGenerated } from "./helpers/queries";
 
 /**
  * The books `@in:` is allowed to name, for the whole file.
@@ -410,35 +408,6 @@ test("filters", async (suite) => {
 		assert.deepEqual(parseQuery("@year:1988 clean your room")[0].segments, ["clean your room"]);
 		assert.deepEqual(parseQuery("clean your room")[0].segments, ["clean your room"]);
 	});
-});
-
-/**
- * The guard that makes the evaluation thresholds in `test/eval.test.ts` safe. Date search is
- * additive — it only ever fires when the whole query is a date, or when an `@` filter is
- * present — so as long as no fixture query does either, the engine those thresholds measure is
- * untouched. Two queries come close and are the reason this is worth asserting rather than
- * assuming: "the 1812 overture has cannons in the percussion" and "The 35-ton behemoth...".
- *
- * It reaches across to `parseDateExpression` because it is one claim about both halves, and
- * splitting it would load the whole fixture set twice to assert half as much each time. It sits on
- * this side for the same reason the parsers do: filters are downstream of dates.
- */
-test("no query in the evaluation fixtures is a date or carries a filter", () => {
-	const queries = [...RECITED, ...DESCRIBED, ...loadGenerated()].map((row) => row.query.toLowerCase());
-	assert.ok(queries.length > 500, `expected the full fixture set, saw ${queries.length}`);
-
-	for (const query of queries) {
-		assert.equal(
-			parseDateExpression(query),
-			null,
-			`"${query}" now parses as a date; eval.test.ts measures a different engine`,
-		);
-		assert.deepEqual(
-			parseQuery(query),
-			[{ segments: [query.trim().split(/\s+/).join(" ")], clauses: [[]] }],
-			`"${query}" now carries a filter or an operator; eval.test.ts measures a different engine`,
-		);
-	}
 });
 
 // `scanFilters` is what `parseQuery` is built on, and it is also what paints the query box.
