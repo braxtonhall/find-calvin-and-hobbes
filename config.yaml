@@ -192,8 +192,9 @@ aspectRatio:
 # periods  named stretches of the run, each with the year (or date) it starts on. Each ends
 #          the day before the next begins; the first takes in everything before it, and the last
 #          everything after, so a short last year can be folded into the stretch before it by
-#          leaving it out. In order. Optional: only a level of periods, or one paged by them, needs
-#          any, and without them every level shows the whole run on one page.
+#          leaving it out. In order. Named all with whole numbers, like 1990, or none, like 1990s:
+#          the two together cannot be kept in order. Optional: only a level of periods, or one
+#          paged by them, needs any, and without them every level shows the whole run on one page.
 # levels   the grid's levels of detail, most detailed first, from:
 #
 #            day     a box a day, seven to a row, Monday to Sunday. Always the first level.

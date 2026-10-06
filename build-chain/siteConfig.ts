@@ -368,6 +368,17 @@ function loadGridPeriods(periods: unknown): GridConfig["periods"] {
 	if (typeof periods !== "object" || Array.isArray(periods)) {
 		throw new Error("grid.periods in config.yaml must be a mapping of each period's name to its start");
 	}
+	// A name that is a whole number, like 1990, is listed before all the others, in numeric order,
+	// whatever order the file gives it in — quoted or not. All of them numbers, they come out in
+	// numeric order, which is the order of their starts anyway; some of each cannot be put back.
+	const names = Object.keys(periods);
+	const numeric = names.filter((name) => /^(0|[1-9]\d*)$/.test(name) && Number(name) < 2 ** 32 - 1);
+	if (numeric.length > 0 && numeric.length < names.length) {
+		throw new Error(
+			`grid.periods in config.yaml names some periods with whole numbers, like ${numeric[0]}, and some ` +
+				"not, and cannot keep them in order: name all of them with numbers, or none, like 1990s",
+		);
+	}
 	const result = Object.entries(periods).map(([label, value]) => ({
 		label,
 		start: periodStart(value, `grid.periods.${label}`),

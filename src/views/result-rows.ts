@@ -2,7 +2,7 @@ import "./results.css";
 
 import { state } from "../state";
 import { SearchResult } from "../search";
-import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
+import { clearRowHighlights, escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
 import { buildComicPath } from "../routes";
 import { addressOf } from "../base-path";
 import { dateToCompact, formatLongDate } from "../date-utils";
@@ -106,12 +106,10 @@ export function attachRowHandlers(list: HTMLElement): void {
 
 		row.addEventListener("mouseenter", () => {
 			if (state.keyboardNavActive) return;
-			if (state.hoveredCell) {
-				state.hoveredCell.classList.remove("cell--hover-highlight");
-				document
-					.querySelectorAll(`.result-row[data-date="${state.hoveredCell.dataset.date}"]`)
-					.forEach((highlightedRow) => highlightedRow.classList.remove("result-row--highlight"));
-			}
+			// By the light rather than by the hovered cell's day: zoomed out, the cell is a box, which
+			// has none.
+			state.hoveredCell?.classList.remove("cell--hover-highlight");
+			clearRowHighlights();
 			const cell = cellForDate(row.dataset.date!);
 			if (cell) {
 				cell.classList.add("cell--hover-highlight");

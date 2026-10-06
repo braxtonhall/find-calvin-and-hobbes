@@ -146,6 +146,20 @@ test("layoutPage", async (suite) => {
 		assert.equal(nineties.boxes[0].row, 0);
 	});
 
+	await suite.test("gives a row two labels would start in to the later one", () => {
+		// Six weeks to a row: some rows begin two months, and only the later is labelled.
+		const page = layoutPage(run("1990-01-01", "1990-12-31"), { unit: "week", columns: 6, paged: false }, [], 0);
+		const rows = page.narrowLabels.map((span) => span.startRow);
+		assert.deepEqual(
+			rows,
+			[...new Set(rows)].sort((one, other) => one - other),
+		);
+		assert.ok(page.narrowLabels.length < 12);
+		for (const span of page.narrowLabels) assert.ok(span.endRow > span.startRow);
+		// The last label still runs to the end of the page.
+		assert.equal(page.narrowLabels[page.narrowLabels.length - 1].endRow, page.rows);
+	});
+
 	await suite.test("gives decades to the years and nothing to the periods", () => {
 		const days = run("1985-11-18", "1995-12-31");
 		const years = layoutPage(days, { unit: "year", columns: 2, paged: false }, [], 0);

@@ -261,6 +261,16 @@ test("the grid's configuration", async (suite) => {
 		assert.equal(config.zoom, 1);
 	});
 
+	await suite.test("keeps periods named by year in order", () => {
+		const config = grid(
+			'grid:\n  periods:\n    "1985": 1985\n    1986: 1986\n    1990: 1990\n  levels:\n    - unit: day\n',
+		);
+		assert.deepEqual(
+			config.periods.map((period) => period.label),
+			["1985", "1986", "1990"],
+		);
+	});
+
 	await suite.test("needs no periods for levels that neither draw nor page by them", () => {
 		const config = grid("grid:\n  levels:\n    - unit: day\n    - unit: month\n      columns: 6\n  zoom: month\n");
 		assert.deepEqual(config, {
@@ -284,6 +294,7 @@ test("the grid's configuration", async (suite) => {
 			["grid:\n  levels:\n    - unit: day\n      page: period\n", /grid\.periods names none/],
 			[`grid:\n${day}    - unit: period\n      columns: 1\n`, /grid\.periods names none/],
 			["grid:\n  periods:\n    b: 1990\n    a: 1980\n" + day, /must start after b/],
+			['grid:\n  periods:\n    Early: 1985\n    "1990": 1990\n    Late: 1993\n' + day, /like 1990, and some not/],
 			["grid:\n  periods:\n    a: 1990-13-01\n" + day, /a year like 1990 or a date/],
 			[`grid:\n${day}  zoom: year\n`, /grid\.zoom.*"year"/],
 		];

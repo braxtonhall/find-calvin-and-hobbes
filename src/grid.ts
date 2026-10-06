@@ -2,7 +2,7 @@ import "./grid.css";
 
 import { Day, Route } from "./types";
 import { computeDays } from "./days";
-import { scrollCellIntoViewIfNeeded } from "./utils";
+import { clearRowHighlights, scrollCellIntoViewIfNeeded, visibleBand } from "./utils";
 import { state } from "./state";
 import { loadDescriptions } from "./details";
 import { isPlainClick, parseRoute } from "./router";
@@ -63,17 +63,15 @@ export function updateGridStatesFromData(): void {
 		paintGrid(parseRoute());
 		return;
 	}
-	for (const element of drawn.cells) {
-		const date = element.dataset.date;
-		if (!date) continue;
-		if (state.reruns.has(date)) element.classList.add("cell--rerun");
-		if (!element.classList.contains("cell--has-comic")) continue;
-		const comicsForDate = state.comicsByDate.get(date);
-		if (!comicsForDate || comicsForDate.length === 0) {
+	const { cells, page } = drawn;
+	cells.forEach((element, index) => {
+		const day = state.allDays[page.boxes[index].first];
+		if (state.reruns.has(day.date)) element.classList.add("cell--rerun");
+		if (day.state === "none" && element.classList.contains("cell--has-comic")) {
 			element.classList.remove("cell--has-comic");
 			element.classList.add("cell--none");
 		}
-	}
+	});
 }
 
 export function buildGridData(): void {
@@ -332,9 +330,10 @@ function boxLabel(box: GridBox): string {
 
 /** Draws the page the grid is on, at the level it is at, unlit: `paintGrid` lights it. */
 function drawGrid(): void {
-	// Both hold cells that are about to go.
+	// Both hold cells that are about to go, and the hovered one's rows are lit with it.
 	stopLife();
 	state.hoveredCell = null;
+	clearRowHighlights();
 	tooltip.classList.remove("grid-tooltip--visible");
 
 	const level = GRID.levels[view.level];
@@ -391,7 +390,7 @@ export function dayCell(date: string): HTMLElement | null {
 }
 
 /** Turns to the page holding `date`, when the grid is showing another. Undrawn: `paintGrid` lights it. */
-export function showDate(date: string): void {
+function showDate(date: string): void {
 	if (!drawn || drawn.byDate.has(date)) return;
 	const page = pageOf(date, GRID.levels[view.level], periods);
 	if (page === view.page) return;
@@ -402,29 +401,61 @@ export function showDate(date: string): void {
 	arrive(slide(direction));
 }
 
-/** The search the grid last turned to the best matches of, so that it does so once and the reader can page away. */
-let searchShown: string | null = null;
-
-/**
- * On a search's page, turns to the page holding its best matches, the first time the search is
- * shown; anywhere else, forgets it, so that coming back to it turns there again.
- */
-export function showBestMatches(route: Route): void {
-	const tiers = state.searchResultTiers;
-	if (route.view !== "results" || !tiers) {
-		searchShown = null;
-		return;
-	}
-	const query = route.q ?? "";
-	if (query === searchShown) return;
-	searchShown = query;
+/** A search's best matches: the days of its highest tier. */
+function bestMatches(tiers: ReadonlyMap<string, number>): Set<string> {
 	let best = 0;
 	for (const tier of tiers.values()) best = Math.max(best, tier);
-	showAnyOf(new Set([...tiers].filter(([, tier]) => tier === best).map(([date]) => date)));
+	return new Set([...tiers].filter(([, tier]) => tier === best).map(([date]) => date));
+}
+
+/**
+ * What the page showing is about, and the days the grid should turn to for it: a search's best
+ * matches, a book's or an arc's strips, the bookmarks. `null` where the page is about no days, or
+ * they are not known yet.
+ */
+function subjectOf(route: Route): { key: string; dates: ReadonlySet<string> } | null {
+	const tiers = state.searchResultTiers;
+	if (route.view === "results" && tiers) return { key: `results:${route.q ?? ""}`, dates: bestMatches(tiers) };
+	if (route.view === "library" && state.bookmarksLoaded) {
+		const key = `library:${route.q ?? ""}`;
+		return { key, dates: tiers ? bestMatches(tiers) : state.bookmarkedDates };
+	}
+	if ((route.view === "collection" || route.view === "arc") && state.collectionDateSet) {
+		return { key: `${route.view}:${route.id ?? ""}`, dates: state.collectionDateSet };
+	}
+	return null;
+}
+
+/** The subject the grid last turned to, so that it turns once a visit and the reader can page away. */
+let subjectShown: string | null = null;
+
+/**
+ * Turns the grid to the page the page showing is about. A strip's page always shows its strip. Any
+ * other turns to its subject's days the first time they are known, and then leaves the grid to the
+ * reader — the page drawing again, as it does when the archive or the bookmarks arrive, does not
+ * turn it back. Leaving forgets the subject, so coming back to it turns there again.
+ */
+export function followRoute(route: Route): void {
+	if (route.view === "detail" && route.date) {
+		subjectShown = null;
+		// A turn still fading out was asked for before the strip was: the strip has the say.
+		abandonMove();
+		showDate(route.date);
+		return;
+	}
+	const subject = subjectOf(route);
+	if (!subject) {
+		if (!["results", "library", "collection", "arc"].includes(route.view)) subjectShown = null;
+		return;
+	}
+	if (subject.key === subjectShown) return;
+	subjectShown = subject.key;
+	abandonMove();
+	showAnyOf(subject.dates);
 }
 
 /** Turns to the page holding the first of `dates`, unless the grid is already showing one of them. */
-export function showAnyOf(dates: ReadonlySet<string>): void {
+function showAnyOf(dates: ReadonlySet<string>): void {
 	if (!drawn) return;
 	let first: string | null = null;
 	for (const date of dates) {
@@ -582,17 +613,6 @@ function goTo(level: number, page: number, anchor: string | null): void {
 		document.getElementById("grid-scroller")!.scrollTop = 0;
 		document.getElementById("grid-container")!.scrollTop = 0;
 	}
-}
-
-/** The part of the grid on screen, below its sticky header: the desktop's scroller clips it, or the mobile container. */
-function visibleBand(): { top: number; bottom: number } {
-	const scroller = document.getElementById("grid-scroller")!.getBoundingClientRect();
-	const container = document.getElementById("grid-container")!.getBoundingClientRect();
-	const header = document.querySelector<HTMLElement>(".grid-header-row")!.getBoundingClientRect();
-	return {
-		top: Math.max(scroller.top, container.top) + header.height,
-		bottom: Math.min(scroller.bottom, container.bottom),
-	};
 }
 
 // ─── Moving between pages and levels ────────────────────────────────────────
@@ -812,12 +832,10 @@ export function renderGrid(): void {
 		if (cell.classList.contains("cell--none") && !cell.classList.contains("cell--rerun")) return;
 		if (cell.classList.contains("cell--search-nonmatch")) return;
 
-		if (state.hoveredCell) {
-			state.hoveredCell.classList.remove("cell--hover-highlight");
-			document
-				.querySelectorAll(`.result-row[data-date="${state.hoveredCell.dataset.date}"]`)
-				.forEach((row) => row.classList.remove("result-row--highlight"));
-		}
+		// By the light rather than by the hovered cell's day: zoomed out, a row may have lit a box,
+		// which has none.
+		state.hoveredCell?.classList.remove("cell--hover-highlight");
+		clearRowHighlights();
 
 		cell.classList.add("cell--hover-highlight");
 		state.hoveredCell = cell;
@@ -845,9 +863,7 @@ export function renderGrid(): void {
 		if (cell.contains(event.relatedTarget as Node | null)) return;
 
 		cell.classList.remove("cell--hover-highlight");
-		document
-			.querySelectorAll(`.result-row[data-date="${cell.dataset.date}"]`)
-			.forEach((row) => row.classList.remove("result-row--highlight"));
+		clearRowHighlights();
 		state.hoveredCell = null;
 	});
 

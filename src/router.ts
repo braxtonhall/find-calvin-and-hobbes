@@ -24,7 +24,7 @@ import { closeFilterMenu } from "./views/filter-bar";
 import { closeBookPopup } from "./views/books";
 import { updateCorrectionLink } from "./views/correction";
 import { cancelCollectionClear } from "./views/cell-highlight";
-import { cellForDate, paintGrid, showAnyOf, showBestMatches, showDate } from "./grid";
+import { cellForDate, followRoute, paintGrid } from "./grid";
 
 export function parseRoute(): Route {
 	let path = pathOf(location.pathname);
@@ -354,11 +354,7 @@ export function updateGridState(route: Route): void {
 	if (route.view === "landing") state.searchResultTiers = null;
 
 	// The grid turns to the page holding what this one is about, if it is showing another.
-	if (route.view === "detail" && route.date) showDate(route.date);
-	showBestMatches(route);
-	if ((route.view === "collection" || route.view === "arc") && state.collectionDateSet) {
-		showAnyOf(state.collectionDateSet);
-	}
+	followRoute(route);
 
 	paintGrid(route);
 

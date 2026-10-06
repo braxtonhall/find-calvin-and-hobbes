@@ -172,7 +172,12 @@ function labelSpans(boxes: readonly GridBox[], rows: number, kind: LabelKind | n
 			current.lastBox = index;
 			return;
 		}
-		if (current) current.endRow = Math.max(box.row, current.startRow + 1);
+		if (current) {
+			// Two labels starting in one row would be drawn over each other, as a row of six weeks
+			// can begin two months: the later one has the row.
+			if (current.startRow === box.row) spans.pop();
+			else current.endRow = box.row;
+		}
 		spans.push({
 			text: kind.text(key),
 			name: kind.name(key),
