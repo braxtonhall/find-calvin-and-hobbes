@@ -33,17 +33,23 @@
 		<div class="mobile-overlay" id="mobile-overlay"></div>
 
 		<aside id="sidebar">
-			<div id="grid-container">
-				<div class="grid-header-row" aria-hidden="true">
-					<div class="grid-header">M</div>
-					<div class="grid-header">T</div>
-					<div class="grid-header">W</div>
-					<div class="grid-header">T</div>
-					<div class="grid-header">F</div>
-					<div class="grid-header">S</div>
-					<div class="grid-header">S</div>
+			<!-- The grid and, by the year rail on mobile, the buttons under it. The scroller scrolls on
+			desktop, the container on mobile, and the buttons stay outside both. -->
+			<div id="grid-column">
+				<div id="grid-scroller">
+					<div id="grid-container">
+						<div class="grid-header-row" aria-hidden="true">
+							<div class="grid-header">M</div>
+							<div class="grid-header">T</div>
+							<div class="grid-header">W</div>
+							<div class="grid-header">T</div>
+							<div class="grid-header">F</div>
+							<div class="grid-header">S</div>
+							<div class="grid-header">S</div>
+						</div>
+						<div class="grid-layout" id="grid-layout"></div>
+					</div>
 				</div>
-				<div class="grid-layout" id="grid-layout"></div>
 			</div>
 			<nav id="year-rail" aria-label="Jump to year"></nav>
 		</aside>

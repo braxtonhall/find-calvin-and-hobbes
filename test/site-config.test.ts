@@ -220,3 +220,73 @@ test("link previews", async (suite) => {
 		assert.match(html, /Searching and browsing the Peanuts archive requires JavaScript\./);
 	});
 });
+
+test("the grid's configuration", async (suite) => {
+	const grid = (yaml: string) => withConfig(`name: x\nseries: x\n${yaml}`, loadPageConfig).grid;
+
+	await suite.test("is a single page of days without one", () => {
+		assert.deepEqual(grid(""), {
+			periods: [],
+			levels: [{ unit: "day", columns: 7, paged: false }],
+			zoom: 0,
+		});
+	});
+
+	await suite.test("reads periods in order, a year as its first of January", () => {
+		const config = grid(
+			[
+				"grid:",
+				"  periods:",
+				"    1950s: 1950",
+				"    1960s: 1960-06-01",
+				"  levels:",
+				"    - unit: day",
+				"      page: period",
+				"    - unit: month",
+				"      columns: 6",
+				"    - unit: period",
+				"      columns: 1",
+				"  zoom: month",
+			].join("\n"),
+		);
+		assert.deepEqual(config.periods, [
+			{ label: "1950s", start: "1950-01-01" },
+			{ label: "1960s", start: "1960-06-01" },
+		]);
+		assert.deepEqual(config.levels, [
+			{ unit: "day", columns: 7, paged: true },
+			{ unit: "month", columns: 6, paged: false },
+			{ unit: "period", columns: 1, paged: false },
+		]);
+		assert.equal(config.zoom, 1);
+	});
+
+	await suite.test("needs no periods for levels that neither draw nor page by them", () => {
+		const config = grid("grid:\n  levels:\n    - unit: day\n    - unit: month\n      columns: 6\n  zoom: month\n");
+		assert.deepEqual(config, {
+			periods: [],
+			levels: [
+				{ unit: "day", columns: 7, paged: false },
+				{ unit: "month", columns: 6, paged: false },
+			],
+			zoom: 1,
+		});
+	});
+
+	await suite.test("refuses what it cannot draw", () => {
+		const day = "  levels:\n    - unit: day\n";
+		const cases: [string, RegExp][] = [
+			["grid:\n  levels: []\n", /at least one level/],
+			["grid:\n  levels:\n    - unit: month\n      columns: 6\n", /must start with the days/],
+			[`grid:\n${day}    - unit: year\n      columns: 2\n    - unit: month\n      columns: 6\n`, /must go from day/],
+			[`grid:\n${day}    - unit: month\n`, /must give its columns/],
+			["grid:\n  levels:\n    - unit: day\n      columns: 6\n", /must be 7/],
+			["grid:\n  levels:\n    - unit: day\n      page: period\n", /grid\.periods names none/],
+			[`grid:\n${day}    - unit: period\n      columns: 1\n`, /grid\.periods names none/],
+			["grid:\n  periods:\n    b: 1990\n    a: 1980\n" + day, /must start after b/],
+			["grid:\n  periods:\n    a: 1990-13-01\n" + day, /a year like 1990 or a date/],
+			[`grid:\n${day}  zoom: year\n`, /grid\.zoom.*"year"/],
+		];
+		for (const [yaml, error] of cases) assert.throws(() => grid(yaml), error, yaml);
+	});
+});

@@ -35,11 +35,11 @@ export function isTouchDevice(): boolean {
 
 /** Whether any of `cells` is wholly inside the part of the grid on screen, below its sticky header. */
 export function anyCellInView(cells: Iterable<HTMLElement>): boolean {
-	const sidebar = document.getElementById("sidebar")!;
+	const scroller = document.getElementById("grid-scroller")!;
 	const container = document.getElementById("grid-container")!;
 	const header = document.querySelector<HTMLElement>(".grid-header-row")!;
 	const top = header.getBoundingClientRect().bottom;
-	const bottom = Math.min(sidebar.getBoundingClientRect().bottom, container.getBoundingClientRect().bottom);
+	const bottom = Math.min(scroller.getBoundingClientRect().bottom, container.getBoundingClientRect().bottom);
 
 	// Each cell's chunk is asked first. An off-screen chunk is skipped by the browser, and measuring a
 	// cell inside one would have it styled and laid out only to learn that it is off screen.

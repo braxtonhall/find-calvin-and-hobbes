@@ -1,5 +1,6 @@
 import { state } from "../state";
 import { anyCellInView, scrollCellIntoViewIfNeeded } from "../utils";
+import { cellForDate, lightDates } from "../grid";
 import { isDateInCollection } from "../date-utils";
 import { Collection } from "../types";
 
@@ -11,7 +12,7 @@ import { Collection } from "../types";
 export function attachCellHighlightLink(link: HTMLElement, date: string): void {
 	const show = () => {
 		if (state.hoveredCell) state.hoveredCell.classList.remove("cell--hover-highlight");
-		const cell = document.querySelector<HTMLElement>(`.cell[data-date="${date}"]`);
+		const cell = cellForDate(date);
 		if (!cell) return;
 		cell.classList.add("cell--hover-highlight");
 		state.hoveredCell = cell;
@@ -58,14 +59,7 @@ export function datesOf(collection: BookRanges): Set<string> {
  */
 export function highlightCollection(dates: ReadonlySet<string> | null): void {
 	cancelCollectionClear();
-	const matched: HTMLElement[] = [];
-	for (const cell of document.querySelectorAll<HTMLElement>(".cell")) {
-		const date = cell.dataset.date;
-		const matches = dates !== null && date !== undefined && dates.has(date);
-		cell.classList.toggle("cell--search-match", matches);
-		cell.classList.toggle("cell--search-nonmatch", dates !== null && !matches);
-		if (matches) matched.push(cell);
-	}
+	const matched = lightDates(dates);
 	if (matched.length > 0 && !anyCellInView(matched)) {
 		matched[0].scrollIntoView({ block: "center", behavior: "smooth" });
 	}

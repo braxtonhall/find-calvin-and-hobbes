@@ -6,6 +6,7 @@ import { escHtml, highlightRanges, scrollCellIntoViewIfNeeded } from "../utils";
 import { buildComicPath } from "../routes";
 import { addressOf } from "../base-path";
 import { dateToCompact, formatLongDate } from "../date-utils";
+import { cellForDate } from "../grid";
 
 /**
  * The rows of strips a page lists — the search results, and the bookmarks — and what they do to the
@@ -80,11 +81,11 @@ export function attachRowFocusHandler(element: HTMLElement): void {
 			.forEach((highlightedRow) => highlightedRow.classList.remove("result-row--highlight"));
 
 		row.classList.add("result-row--highlight");
-		const cell = document.querySelector(`.cell[data-date="${row.dataset.date}"]`);
+		const cell = cellForDate(row.dataset.date!);
 		if (cell) {
 			cell.classList.add("cell--hover-highlight");
-			scrollCellIntoViewIfNeeded(cell as HTMLElement);
-			state.hoveredCell = cell as HTMLElement;
+			scrollCellIntoViewIfNeeded(cell);
+			state.hoveredCell = cell;
 		}
 		state.keyboardNavActive = true;
 	});
@@ -111,11 +112,11 @@ export function attachRowHandlers(list: HTMLElement): void {
 					.querySelectorAll(`.result-row[data-date="${state.hoveredCell.dataset.date}"]`)
 					.forEach((highlightedRow) => highlightedRow.classList.remove("result-row--highlight"));
 			}
-			const cell = document.querySelector(`.cell[data-date="${row.dataset.date}"]`);
+			const cell = cellForDate(row.dataset.date!);
 			if (cell) {
 				cell.classList.add("cell--hover-highlight");
-				scrollCellIntoViewIfNeeded(cell as HTMLElement);
-				state.hoveredCell = cell as HTMLElement;
+				scrollCellIntoViewIfNeeded(cell);
+				state.hoveredCell = cell;
 			}
 			document
 				.querySelectorAll(`.result-row[data-date="${row.dataset.date}"]`)
@@ -152,11 +153,11 @@ export function attachRowHandlers(list: HTMLElement): void {
 					newRow.focus();
 					newRow.classList.add("result-row--highlight");
 
-					const cell = document.querySelector(`.cell[data-date="${newRow.dataset.date}"]`);
+					const cell = cellForDate(newRow.dataset.date!);
 					if (cell) {
 						cell.classList.add("cell--hover-highlight");
-						scrollCellIntoViewIfNeeded(cell as HTMLElement);
-						state.hoveredCell = cell as HTMLElement;
+						scrollCellIntoViewIfNeeded(cell);
+						state.hoveredCell = cell;
 					}
 
 					state.keyboardNavActive = true;

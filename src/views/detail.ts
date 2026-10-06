@@ -16,6 +16,7 @@ import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
 import { attachCellHighlightLink, clearCollectionSoon, highlightCollection } from "./cell-highlight";
 import { attachBookHandlers } from "./books";
+import { dayCell } from "../grid";
 
 function buildBookmarkButtonHandler(bookmarkButton: HTMLButtonElement, date: string): void {
 	isBookmarked(date).then((bookmarked) => {
@@ -30,7 +31,8 @@ function buildBookmarkButtonHandler(bookmarkButton: HTMLButtonElement, date: str
 			bookmarkButton.classList.remove("bookmark-btn--active");
 			state.bookmarkedDates.delete(date);
 		}
-		const cell = document.querySelector(`.cell[data-date="${date}"]`);
+		// A box of many days, zoomed out, shows no bookmarks.
+		const cell = dayCell(date);
 		if (cell) {
 			if (isNowBookmarked) {
 				cell.classList.add("cell--bookmarked");
