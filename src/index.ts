@@ -131,6 +131,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	const finishClosing = (event: TransitionEvent) => {
 		if (event.target !== sidebar || event.propertyName !== "transform") return;
+		// Turning the sidebar back mid-slide cancels the slide it was making and starts another the
+		// other way. That is no end to the slide out — hiding it then would snap it shut — so a cancel
+		// counts only where nothing has taken its place, as when the page widens past mobile.
+		if (event.type === "transitioncancel" && sidebar.getAnimations().length > 0) return;
 		if (!sidebar.classList.contains("mobile-visible")) sidebar.classList.remove("mobile-closing");
 	};
 	sidebar.addEventListener("transitionend", finishClosing);

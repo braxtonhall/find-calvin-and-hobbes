@@ -3,7 +3,14 @@ import path from "path";
 import { execSync } from "child_process";
 import yaml from "js-yaml";
 import type { LoaderContext } from "webpack";
-import type { CorrectionTemplates, PageConfig, StripLinkTemplates } from "../src/site-config";
+import type {
+	CorrectionTemplates,
+	GridConfig,
+	GridLevel,
+	GridUnit,
+	PageConfig,
+	StripLinkTemplates,
+} from "../src/site-config";
 import { StripKind, StripLinkSubject, stripLinks } from "../src/strip-links";
 import { CORRECTION_PAGES, correctionUrl } from "../src/correction-links";
 import { SUGGESTION_FIELDS, SuggestionFields, fillSuggestion } from "../src/suggestion-templates";
@@ -104,6 +111,7 @@ interface RawConfig {
 	details?: Partial<Record<string, unknown>> | null;
 	theme?: Partial<Record<string, unknown>> | null;
 	search?: { suggestions?: unknown } | null;
+	grid?: { periods?: unknown; levels?: unknown; zoom?: unknown } | null;
 }
 
 export function configPath(projectDir = path.join(__dirname, "..")): string {
@@ -340,6 +348,113 @@ export function loadTheme(projectDir?: string): Theme {
 	return loadThemeSettings(readConfig(projectDir).theme);
 }
 
+/** Coarsest last, which is the order the levels must be listed in. */
+const GRID_UNITS: readonly GridUnit[] = ["day", "week", "month", "year", "period"];
+
+/** One level of days, all on one page: the grid as it is with no `grid` at all. */
+const DEFAULT_GRID: GridConfig = { periods: [], levels: [{ unit: "day", columns: 7, paged: false }], zoom: 0 };
+
+/** A period's start: a year, which is its first of January, or a date. */
+function periodStart(value: unknown, name: string): string {
+	const raw = value !== null && typeof value === "object" ? "" : stringSetting(value, name);
+	if (/^\d{4}$/.test(raw)) return `${raw}-01-01`;
+	const date = new Date(`${raw}T00:00:00Z`);
+	if (/^\d{4}-\d{2}-\d{2}$/.test(raw) && !isNaN(date.getTime()) && date.toISOString().startsWith(raw)) return raw;
+	throw new Error(`${name} in config.yaml must be a year like 1990 or a date like 1990-06-01`);
+}
+
+function loadGridPeriods(periods: unknown): GridConfig["periods"] {
+	if (periods === undefined || periods === null) return [];
+	if (typeof periods !== "object" || Array.isArray(periods)) {
+		throw new Error("grid.periods in config.yaml must be a mapping of each period's name to its start");
+	}
+	// A name that is a whole number, like 1990, is listed before all the others, in numeric order,
+	// whatever order the file gives it in — quoted or not. All of them numbers, they come out in
+	// numeric order, which is the order of their starts anyway; some of each cannot be put back.
+	const names = Object.keys(periods);
+	const numeric = names.filter((name) => /^(0|[1-9]\d*)$/.test(name) && Number(name) < 2 ** 32 - 1);
+	if (numeric.length > 0 && numeric.length < names.length) {
+		throw new Error(
+			`grid.periods in config.yaml names some periods with whole numbers, like ${numeric[0]}, and some ` +
+				"not, and cannot keep them in order: name all of them with numbers, or none, like 1990s",
+		);
+	}
+	const result = Object.entries(periods).map(([label, value]) => ({
+		label,
+		start: periodStart(value, `grid.periods.${label}`),
+	}));
+	result.forEach((period, index) => {
+		const previous = result[index - 1];
+		if (previous && period.start <= previous.start) {
+			throw new Error(`grid.periods.${period.label} in config.yaml must start after ${previous.label} does`);
+		}
+	});
+	return result;
+}
+
+function loadGridLevel(value: unknown, index: number, hasPeriods: boolean): GridLevel {
+	const name = `grid.levels[${index}]`;
+	if (!value || typeof value !== "object" || Array.isArray(value))
+		throw new Error(`${name} in config.yaml must be a mapping`);
+	const raw = value as Record<string, unknown>;
+	for (const key of Object.keys(raw)) {
+		if (!["unit", "columns", "page"].includes(key)) {
+			throw new Error(`${name}.${key} in config.yaml is not one of unit, columns, page`);
+		}
+	}
+
+	const unit = stringSetting(raw.unit, `${name}.unit`) as GridUnit;
+	if (!GRID_UNITS.includes(unit))
+		throw new Error(`${name}.unit in config.yaml must be one of ${GRID_UNITS.join(", ")}`);
+	if (unit === "period" && !hasPeriods)
+		throw new Error(`${name} in config.yaml is of periods, but grid.periods names none`);
+
+	const columnsRaw = stringSetting(raw.columns, `${name}.columns`);
+	if (columnsRaw && !/^[1-9]\d*$/.test(columnsRaw)) {
+		throw new Error(`${name}.columns in config.yaml must be a whole number (got "${columnsRaw}")`);
+	}
+	if (unit === "day" && columnsRaw && columnsRaw !== "7") {
+		throw new Error(`${name}.columns in config.yaml must be 7, or left out: days are drawn a week to a row`);
+	}
+	if (unit !== "day" && !columnsRaw) throw new Error(`${name} in config.yaml must give its columns`);
+
+	const page = stringSetting(raw.page, `${name}.page`);
+	if (page && page !== "period") throw new Error(`${name}.page in config.yaml must be period, or left out`);
+	if (page && unit === "period") throw new Error(`${name} in config.yaml cannot be paged by the periods it draws`);
+	if (page && !hasPeriods) throw new Error(`${name} in config.yaml is paged by period, but grid.periods names none`);
+
+	return { unit, columns: unit === "day" ? 7 : Number(columnsRaw), paged: page === "period" };
+}
+
+function loadGrid(grid: RawConfig["grid"]): GridConfig {
+	if (grid === undefined || grid === null) return DEFAULT_GRID;
+	if (typeof grid !== "object" || Array.isArray(grid)) throw new Error("grid in config.yaml must be a mapping");
+	for (const key of Object.keys(grid)) {
+		if (!["periods", "levels", "zoom"].includes(key)) {
+			throw new Error(`grid.${key} in config.yaml is not one of periods, levels, zoom`);
+		}
+	}
+
+	const periods = loadGridPeriods(grid.periods);
+	if (!Array.isArray(grid.levels) || grid.levels.length === 0) {
+		throw new Error("grid.levels in config.yaml must list at least one level");
+	}
+	const levels = grid.levels.map((level, index) => loadGridLevel(level, index, periods.length > 0));
+	if (levels[0].unit !== "day") throw new Error("grid.levels in config.yaml must start with the days");
+	levels.forEach((level, index) => {
+		const previous = levels[index - 1];
+		if (previous && GRID_UNITS.indexOf(level.unit) <= GRID_UNITS.indexOf(previous.unit)) {
+			throw new Error(`grid.levels in config.yaml must go from ${GRID_UNITS.join(" to ")}, each at most once`);
+		}
+	});
+
+	const zoomRaw = stringSetting(grid.zoom, "grid.zoom");
+	const zoom = zoomRaw ? levels.findIndex((level) => level.unit === zoomRaw) : 0;
+	if (zoom === -1) throw new Error(`grid.zoom in config.yaml must be one of the levels' units (got "${zoomRaw}")`);
+
+	return { periods, levels, zoom };
+}
+
 /** The parts of the configuration the pages are drawn with. See `src/site-config.ts`. */
 export function loadPageConfig(projectDir?: string): PageConfig {
 	const raw = readConfig(projectDir);
@@ -361,6 +476,7 @@ export function loadPageConfig(projectDir?: string): PageConfig {
 		suggestions: loadSuggestions(raw.search),
 		colourSundays: flagSetting(raw.colourSundays, "colourSundays", false),
 		aspectRatio: loadAspectRatio(raw.aspectRatio),
+		grid: loadGrid(raw.grid),
 		...loadFeatures(projectDir),
 	};
 }

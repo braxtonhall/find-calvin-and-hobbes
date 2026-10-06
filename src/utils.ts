@@ -33,13 +33,35 @@ export function isTouchDevice(): boolean {
 	return window.matchMedia("(hover: none) and (pointer: coarse)").matches;
 }
 
+/**
+ * The part of the grid on screen, below its sticky header: the desktop's scroller clips it, or the
+ * mobile container. Zoomed out, where the header is not drawn, it starts at the top of the scroller.
+ */
+export function visibleBand(): { top: number; bottom: number } {
+	const scroller = document.getElementById("grid-scroller")!.getBoundingClientRect();
+	const container = document.getElementById("grid-container")!.getBoundingClientRect();
+	const header = document.querySelector<HTMLElement>(".grid-header-row")!.getBoundingClientRect();
+	return {
+		top: Math.max(scroller.top, container.top) + header.height,
+		bottom: Math.min(scroller.bottom, container.bottom),
+	};
+}
+
+/** Takes the light off every result row lit for a cell. Only one day's rows are ever lit at once. */
+export function clearRowHighlights(): void {
+	document
+		.querySelectorAll(".result-row--highlight")
+		.forEach((highlightedRow) => highlightedRow.classList.remove("result-row--highlight"));
+}
+
 /** Whether any of `cells` is wholly inside the part of the grid on screen, below its sticky header. */
 export function anyCellInView(cells: Iterable<HTMLElement>): boolean {
-	const sidebar = document.getElementById("sidebar")!;
-	const container = document.getElementById("grid-container")!;
-	const header = document.querySelector<HTMLElement>(".grid-header-row")!;
-	const top = header.getBoundingClientRect().bottom;
-	const bottom = Math.min(sidebar.getBoundingClientRect().bottom, container.getBoundingClientRect().bottom);
+	const band = visibleBand();
+	const header = document.querySelector<HTMLElement>(".grid-header-row")!.getBoundingClientRect();
+	// Below the header itself where it is drawn, which sits inside the container's padding;
+	// zoomed out, where it is not, the band's own top is the edge.
+	const top = header.height > 0 ? header.bottom : band.top;
+	const bottom = band.bottom;
 
 	// Each cell's chunk is asked first. An off-screen chunk is skipped by the browser, and measuring a
 	// cell inside one would have it styled and laid out only to learn that it is off screen.

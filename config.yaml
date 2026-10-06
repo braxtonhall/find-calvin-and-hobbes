@@ -185,6 +185,34 @@ aspectRatio:
   daily: 3.098
   sunday: 1.427
 
+# How the grid down the side of every page is drawn: how much each box stands for, and how much of
+# the run it shows at once, under `grid`. Without one, as here, every day of the run is a box, all
+# on one page, and there are no buttons under it.
+#
+# periods  named stretches of the run, each with the year (or date) it starts on. Each ends
+#          the day before the next begins; the first takes in everything before it, and the last
+#          everything after, so a short last year can be folded into the stretch before it by
+#          leaving it out. In order. Named all with whole numbers, like 1990, or none, like 1990s:
+#          the two together cannot be kept in order. Optional: only a level of periods, or one
+#          paged by them, needs any, and without them every level shows the whole run on one page.
+# levels   the grid's levels of detail, most detailed first, from:
+#
+#            day     a box a day, seven to a row, Monday to Sunday. Always the first level.
+#            week    a box a week
+#            month   a box a month
+#            year    a box a year
+#            period  a box a period
+#
+#          Each gives its `columns`, but for the days, which are always seven; the grid is always a
+#          week of days wide, so fewer columns make bigger boxes. Each column is counted from a
+#          fixed point, so six months to a row start every other row in January, and ten years to
+#          a row start each row on a decade. A level with `page: period` shows one period at a time,
+#          with arrows under the grid to the one before and after; without, it shows the whole run.
+# zoom     the level the grid opens at, by its unit. The days, if left out.
+#
+# Clicking a box that stands for many days zooms in on them. Such a box shows the strongest of its
+# days: lit if any of them matched, and grey only if all of them are. Bookmarks show on days alone.
+
 # The links under a strip on its page. A link left out, or empty, is not drawn.
 #
 # Each is a template, filled in from the strip it is under:

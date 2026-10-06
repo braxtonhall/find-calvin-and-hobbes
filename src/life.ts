@@ -1,5 +1,3 @@
-import { state } from "./state";
-
 /**
  * An easter egg: the Konami code turns the grid into a Game of Life board, seeded with whichever
  * cells were lit. It is drawn with data attributes alone, never classes, so that any class a cell
@@ -42,7 +40,7 @@ export function completesKonami(history: KeyPress[]): boolean {
 
 /**
  * One generation of B3/S23 on a board `cols` wide, stored row by row. Beyond its edges — before
- * Monday, after Sunday, above the first week and below the last — there is nothing.
+ * Monday, after Sunday, above the first row and below the last — there is nothing.
  */
 export function step(alive: Uint8Array, rows: number, cols = 7): Uint8Array {
 	const next = new Uint8Array(alive.length);
@@ -74,12 +72,29 @@ interface Run {
 	snapshot: Map<HTMLElement, string>;
 	board: Uint8Array;
 	rows: number;
+	columns: number;
 	interval: number | null;
 	extinction: number | null;
 	observer: MutationObserver;
 }
 
 let run: Run | null = null;
+
+/** The grid as a board: its cells, and each one's place on a board `columns` wide, row by row. */
+export interface Board {
+	grid: HTMLElement;
+	cells: HTMLElement[];
+	positions: number[];
+	rows: number;
+	columns: number;
+}
+
+/** Where the board comes from: the grid, which says so once it is drawn (see `renderGrid`). */
+let boardSource: (() => Board | null) | null = null;
+
+export function setBoardSource(source: () => Board | null): void {
+	boardSource = source;
+}
 
 function renderingClasses(cell: HTMLElement): string {
 	return [...cell.classList]
@@ -108,7 +123,7 @@ function draw(current: Run, previous: Uint8Array | null): void {
 function tick(): void {
 	if (!run) return;
 	const previous = run.board;
-	run.board = step(previous, run.rows);
+	run.board = step(previous, run.rows, run.columns);
 	draw(run, previous);
 	if (!run.board.includes(1)) settle(run, true);
 	else if (run.board.every((value, index) => value === previous[index])) settle(run, false);
@@ -123,14 +138,13 @@ function settle(current: Run, extinct: boolean): void {
 
 export function startLife(): void {
 	stopLife();
-	const grid = document.getElementById("grid");
-	if (!grid || state.allDays.length === 0) return;
+	const drawn = boardSource?.();
+	if (!drawn || drawn.cells.length === 0) return;
 
-	const cells = [...grid.querySelectorAll<HTMLElement>(".cell")];
-	const rows = state.allDays[state.allDays.length - 1].weekIndex + 1;
-	// The cells were drawn from `allDays`, in its order, and the grid's columns run Monday to Sunday.
-	const positions = state.allDays.map((day) => day.weekIndex * 7 + ((day.dayOfWeek + 6) % 7));
-	const board = new Uint8Array(rows * 7);
+	// The board is the page the grid is showing, at the level it is at: a day's cell, or a box of
+	// many, each where the grid drew it.
+	const { grid, cells, positions, rows, columns } = drawn;
+	const board = new Uint8Array(rows * columns);
 	cells.forEach((cell, index) => {
 		if (isLit(cell)) board[positions[index]] = 1;
 	});
@@ -152,6 +166,7 @@ export function startLife(): void {
 		snapshot: new Map(cells.map((cell) => [cell, renderingClasses(cell)])),
 		board,
 		rows,
+		columns,
 		interval: null,
 		extinction: null,
 		observer,

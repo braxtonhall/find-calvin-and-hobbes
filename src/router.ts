@@ -24,6 +24,7 @@ import { closeFilterMenu } from "./views/filter-bar";
 import { closeBookPopup } from "./views/books";
 import { updateCorrectionLink } from "./views/correction";
 import { cancelCollectionClear } from "./views/cell-highlight";
+import { cellForDate, followRoute, paintGrid } from "./grid";
 
 export function parseRoute(): Route {
 	let path = pathOf(location.pathname);
@@ -350,89 +351,19 @@ export function updateGridState(route: Route): void {
 
 	document.querySelectorAll(".result-row--highlight").forEach((row) => row.classList.remove("result-row--highlight"));
 
-	const allCells = document.querySelectorAll(".cell");
-	for (const cell of allCells) {
-		cell.classList.remove(
-			"cell--search-match",
-			"cell--search-nonmatch",
-			"cell--search-t1",
-			"cell--search-t2",
-			"cell--search-t3",
-			"cell--search-t4",
-			"cell--search-t5",
-			"cell--selected",
-			"cell--bookmarked",
-		);
-	}
+	if (route.view === "landing") state.searchResultTiers = null;
 
-	for (const cell of allCells) {
-		const date = (cell as HTMLElement).dataset.date;
-		if (date && state.bookmarkedDates.has(date)) {
-			cell.classList.add("cell--bookmarked");
-		}
-	}
+	// The grid turns to the page holding what this one is about, if it is showing another.
+	followRoute(route);
 
-	if (route.view === "landing") {
-		state.searchResultTiers = null;
-		return;
-	}
+	paintGrid(route);
 
-	if (route.view === "results") {
-		lightTiers(allCells);
-		return;
-	}
-
-	if (route.view === "detail") {
-		const cell = document.querySelector(`.cell[data-date="${route.date}"]`);
+	if (route.view === "detail" && route.date) {
+		const cell = cellForDate(route.date);
 		if (cell) {
-			cell.classList.add("cell--selected");
 			setTimeout(() => {
-				scrollCellIntoViewIfNeeded(cell as HTMLElement);
+				scrollCellIntoViewIfNeeded(cell);
 			}, 50);
-		}
-		return;
-	}
-
-	// Lit and dimmed the way a book's page is, with the bookmarks as the book — once they are known;
-	// until then an empty set would dim the whole grid, only to light it back up a moment later. A
-	// search of them is lit as any search is.
-	if (route.view === "library") {
-		if (!state.bookmarksLoaded) return;
-		if (state.searchResultTiers) {
-			lightTiers(allCells);
-			return;
-		}
-		for (const cell of allCells) {
-			const date = (cell as HTMLElement).dataset.date;
-			cell.classList.add(date && state.bookmarkedDates.has(date) ? "cell--search-match" : "cell--search-nonmatch");
-		}
-		return;
-	}
-
-	// A book's strips, or an arc's: whichever the page showing set out to light.
-	if ((route.view === "collection" || route.view === "arc") && state.collectionDateSet) {
-		for (const cell of allCells) {
-			const date = (cell as HTMLElement).dataset.date;
-			if (date && state.collectionDateSet.has(date)) {
-				cell.classList.add("cell--search-match");
-			} else {
-				cell.classList.add("cell--search-nonmatch");
-			}
-		}
-		return;
-	}
-}
-
-/** Each search result's cell by how well it matched, and every other cell dimmed. */
-function lightTiers(allCells: NodeListOf<Element>): void {
-	if (!state.searchResultTiers) return;
-	for (const cell of allCells) {
-		const date = (cell as HTMLElement).dataset.date;
-		const tier = date ? state.searchResultTiers.get(date) : undefined;
-		if (tier !== undefined) {
-			cell.classList.add("cell--search-match", `cell--search-t${tier}`);
-		} else {
-			cell.classList.add("cell--search-nonmatch");
 		}
 	}
 }

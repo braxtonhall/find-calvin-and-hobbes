@@ -1,19 +1,38 @@
 #sidebar {
-	--cell-size: 10px;
+	--day-size: 10px;
 	--cell-radius: 1px;
 	--grid-gap: 1px;
 	--label-font-size: 9px;
 	--cell-ring: 2px;
+	--grid-padding: 4px;
 
+	display: flex;
 	width: 100px;
 	flex-shrink: 0;
-	overflow-y: auto;
+	overflow: hidden;
 	border-right: 1px solid var(--neutral);
 	background: var(--bg-sidebar);
 }
 
+/* The grid over the buttons under it. See `index.html`. */
+#grid-column {
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-width: 0;
+	min-height: 0;
+}
+
+/* What scrolls on desktop. On mobile the container does, inside it. */
+#grid-scroller {
+	flex: 1;
+	min-height: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
 #grid-container {
-	padding: 4px;
+	padding: var(--grid-padding);
 }
 
 #main {
@@ -27,14 +46,19 @@
 	top: 0;
 	z-index: 2;
 	display: grid;
-	grid-template-columns: repeat(7, var(--cell-size));
+	grid-template-columns: repeat(7, var(--day-size));
 	gap: var(--grid-gap);
 	background: var(--bg-sidebar);
 	box-shadow: -8px 0 0 var(--bg-sidebar);
 }
 
+/* Zoomed out, where a column is not a day of the week. */
+.grid-header-row--hidden {
+	display: none;
+}
+
 .grid-header {
-	height: var(--cell-size);
+	height: var(--day-size);
 	font-size: var(--label-font-size);
 	color: var(--text-muted);
 	display: flex;
@@ -43,7 +67,14 @@
 	line-height: 1;
 }
 
+/*
+ * The grid is as wide as a week of days, whatever a box stands for: fewer columns make bigger boxes,
+ * and one column a box the width of the grid. `--columns` is the level's, set by `drawGrid`.
+ */
 .grid-layout {
+	--columns: 7;
+	--grid-width: calc(7 * var(--day-size) + 6 * var(--grid-gap));
+	--cell-size: calc((var(--grid-width) - (var(--columns) - 1) * var(--grid-gap)) / var(--columns));
 	display: flex;
 	gap: var(--grid-gap);
 	padding-top: var(--cell-ring);
@@ -56,7 +87,7 @@
 }
 
 /*
- * A run of weeks (see `WEEKS_PER_CHUNK`) that the browser skips styling and drawing while it is off
+ * A run of rows (see `ROWS_PER_CHUNK`) that the browser skips styling and drawing while it is off
  * screen, so that lighting or dimming every cell only costs the cells in view. A skipped chunk takes
  * the size it would have, to the pixel, so the scrollbar and the label columns beside it stay true.
  *
@@ -68,15 +99,15 @@
 .grid-chunk {
 	--chunk-bleed: 12px;
 	display: grid;
-	grid-template-columns: repeat(7, var(--cell-size));
+	grid-template-columns: repeat(var(--columns), var(--cell-size));
 	grid-auto-rows: var(--cell-size);
 	gap: var(--grid-gap);
 	padding: var(--chunk-bleed);
 	margin: calc(-1 * var(--chunk-bleed));
 	pointer-events: none;
 	content-visibility: auto;
-	contain-intrinsic-size: calc(7 * var(--cell-size) + 6 * var(--grid-gap))
-		calc(var(--chunk-weeks) * var(--cell-size) + (var(--chunk-weeks) - 1) * var(--grid-gap));
+	contain-intrinsic-size: var(--grid-width)
+		calc(var(--chunk-rows) * var(--cell-size) + (var(--chunk-rows) - 1) * var(--grid-gap));
 }
 
 /*
@@ -110,6 +141,30 @@
 
 .cell-date {
 	display: none;
+}
+
+/* A box of many days, which zooms in on them: a button, with none of a button's own dressing. */
+.cell--aggregate {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	border: none;
+	font: inherit;
+}
+
+/* A period's name, in its box, coloured as the open day's date is on mobile (see `.cell-date`). */
+.cell-label {
+	font-size: calc(var(--label-font-size) + 3px);
+	font-variant-numeric: tabular-nums;
+	color: rgba(255, 255, 255, 0.95);
+	pointer-events: none;
+}
+
+/* Grey on a grey box, and on a dimmed one, where white would barely show. */
+.cell--none .cell-label,
+.cell--search-nonmatch .cell-label {
+	color: var(--text-muted);
 }
 
 .cell--none {
@@ -212,6 +267,11 @@
 	transform: scale(1.3);
 }
 
+/* A box of many days is too big to grow by a third. */
+.cell--aggregate.cell--hover-highlight {
+	transform: none;
+}
+
 .grid-tooltip {
 	position: fixed;
 	pointer-events: none;
@@ -232,6 +292,11 @@
 }
 
 @media (hover: none) {
+	/* A box of many days is too big to grow by a third. */
+	.cell--aggregate.cell--hover-highlight {
+		transform: none;
+	}
+
 	.grid-tooltip {
 		display: none;
 	}
@@ -251,6 +316,19 @@
 	grid-column: 1;
 }
 
+/* See `createLabelSizer`. Takes no height, and lets the labels show through it. */
+.grid-label-sizer {
+	grid-row: 1;
+	grid-column: 1;
+	height: 0;
+	overflow: hidden;
+	visibility: hidden;
+}
+
+.grid-label-sizer .grid-sticky-label {
+	position: static;
+}
+
 .grid-sticky-label {
 	position: sticky;
 	top: 0;
@@ -267,6 +345,64 @@
 
 #year-rail {
 	display: none;
+}
+
+/*
+ * The buttons under the grid: earlier and later pages, and zooming out and in. Held at the foot of
+ * whatever is scrolling the grid, and drawn as the year rail's pills are.
+ */
+.grid-controls {
+	display: flex;
+	flex: none;
+	padding: 4px var(--grid-padding) var(--grid-padding);
+	background: var(--bg-sidebar);
+}
+
+.grid-controls[hidden],
+.grid-control[hidden] {
+	display: none;
+}
+
+.grid-control {
+	flex: 1 1 0;
+	min-width: 0;
+	overflow: hidden;
+	padding: 3px 0;
+	font-family: var(--font);
+	font-size: 12px;
+	line-height: 1;
+	color: var(--text-muted);
+	background: none;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	touch-action: manipulation;
+	-webkit-user-select: none;
+	user-select: none;
+	transition:
+		background 0.15s,
+		color 0.15s,
+		flex-grow 0.2s ease-in-out,
+		opacity 0.2s ease-in-out;
+}
+
+/* The page buttons, on a level that has no pages: they give up their room to the zoom buttons. */
+.grid-control--gone {
+	flex-grow: 0;
+	opacity: 0;
+	pointer-events: none;
+}
+
+@media (hover: hover) {
+	.grid-control:not(:disabled):hover {
+		background: var(--main);
+		color: #fff;
+	}
+}
+
+.grid-control:disabled {
+	opacity: 0.35;
+	cursor: default;
 }
 
 .year-rail-button {
@@ -300,6 +436,16 @@
 		color 0.15s;
 }
 
+/* See `drawYearRail`. As wide as the widest of the years' pills, bold as the year showing is, and no height at all. */
+.year-rail-sizer {
+	font-weight: 600;
+	flex: none;
+	height: 0;
+	padding-block: 0;
+	overflow: hidden;
+	visibility: hidden;
+}
+
 .year-rail-button--active .year-rail-pill {
 	background: var(--main);
 	color: #fff;
@@ -308,18 +454,26 @@
 
 @media (max-width: 768px) {
 	#sidebar {
-		--cell-size: 28px;
+		--day-size: 28px;
 		--cell-radius: 3px;
 		--grid-gap: 2px;
 		--label-font-size: 12px;
+		--grid-padding: 8px;
 		width: max-content;
 		max-width: 92vw;
 	}
 
+	#grid-scroller {
+		display: flex;
+		flex-direction: column;
+		overflow: hidden;
+	}
+
 	#grid-container {
 		flex: 1;
+		min-height: 0;
+		overflow-x: hidden;
 		overflow-y: auto;
-		padding: 8px;
 	}
 
 	.grid-header-row {
@@ -359,11 +513,18 @@
 		padding-left: 6px;
 	}
 
+	.grid-control {
+		padding: 8px 0;
+		font-size: 16px;
+	}
+
 	#year-rail {
 		display: flex;
 		flex-direction: column;
 		flex-shrink: 0;
 		padding: 8px 4px;
+		/* A drag along the rail is a scrub through the years (see `attachRailScrubbing`), not a pan. */
+		touch-action: none;
 		border-left: 1px solid var(--neutral);
 		background: var(--bg-sidebar);
 	}

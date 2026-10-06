@@ -23,6 +23,27 @@ export interface StripLinkTemplates {
  */
 export type CorrectionTemplates = Partial<Record<CorrectionPage, string>>;
 
+/** What one box of the grid stands for. See `grid-layout.ts`. */
+export type GridUnit = "day" | "week" | "month" | "year" | "period";
+
+export interface GridLevel {
+	unit: GridUnit;
+	/** How many boxes to a row: seven for days, Monday to Sunday. */
+	columns: number;
+	/** Whether the level is drawn a period at a time, with arrows between them, rather than all at once. */
+	paged: boolean;
+}
+
+/** How the grid is drawn: at which levels of detail, and in which stretches of the run. */
+export interface GridConfig {
+	/** The named stretches of the run, each with the ISO date it starts on, in order. */
+	periods: { label: string; start: string }[];
+	/** Most detailed first, which is always the days. */
+	levels: GridLevel[];
+	/** Which of `levels` the grid opens at. */
+	zoom: number;
+}
+
 export interface PageConfig {
 	name: string;
 	/** What the archive is of — "Calvin and Hobbes" — for the sentences the link previews are written in. */
@@ -63,6 +84,7 @@ export interface PageConfig {
 	corrections: CorrectionTemplates;
 	/** What an empty search box types into itself, as templates. See `suggestion-templates.ts`. */
 	suggestions: string[];
+	grid: GridConfig;
 }
 
 declare function require(id: string): unknown;
