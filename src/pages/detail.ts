@@ -318,7 +318,7 @@ function buildBookHtml(
 	isSunday: boolean,
 ): string {
 	const { collection } = printing;
-	const isBlackAndWhite = isSunday && !collection.colour;
+	const isBlackAndWhite = PAGE_CONFIG.colourSundays && isSunday && !collection.colour;
 	const alteration = collection.alterations && collection.alterations[alterationKey];
 	// The collection's ratio holds the space until the cover loads; an edition's own cover may differ.
 	const ratio =
@@ -401,7 +401,7 @@ export function buildAppearancesSectionHtml(
 
 function getAspectRatio(comic: Comic, isSunday: boolean): number {
 	if (comic.aspectRatio) return comic.aspectRatio;
-	return isSunday ? 1.427 : 3.098;
+	return isSunday ? PAGE_CONFIG.aspectRatio.sunday : PAGE_CONFIG.aspectRatio.daily;
 }
 
 function describeImage(description: string | undefined, dateFormatted: string): string {

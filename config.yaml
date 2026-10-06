@@ -172,6 +172,19 @@ corrections:
 arcs: true
 reruns: true
 
+# Whether the Sundays ran in colour and the dailies in black and white, a format of their own. When
+# true, the search has `@is:sunday` and `@is:daily` and the filter bar a Format field to pick one,
+# and each book's `colour` says whether it printed its Sundays in colour, which its page and a
+# strip's list of books show. Off unless set to true, which leaves out all of these.
+colourSundays: true
+
+# A strip's shape, as its width over its height, which a strip's page holds the space for while its
+# image loads. A daily's is required. A Sunday's is the daily's, if left out. A strip with an
+# `aspect-ratio` of its own in comics.yaml, like a special, keeps that.
+aspectRatio:
+  daily: 3.098
+  sunday: 1.427
+
 # The links under a strip on its page. A link left out, or empty, is not drawn.
 #
 # Each is a template, filled in from the strip it is under:

@@ -31,12 +31,14 @@ export interface Edition {
 export interface Collection {
 	id: string;
 	name: string;
-	type: string;
+	/** A line under the name, like `Treasury`. Left out, the book has none. */
+	subtitle?: string;
 	pub_year: number;
 	pub_month: number;
 	pub_day?: number;
 	image: string;
-	colour: boolean;
+	/** Whether it printed the Sundays in colour. Read only where `config.yaml` has `colourSundays`. */
+	colour?: boolean;
 	sundays?: boolean;
 	notes: string[];
 	dailies: string[];

@@ -151,7 +151,7 @@ export interface ArcPage {
  */
 export type CollectionSummary = Pick<
 	Collection,
-	"id" | "name" | "type" | "pub_year" | "pub_month" | "pub_day" | "image" | "dailies" | "sundays"
+	"id" | "name" | "subtitle" | "pub_year" | "pub_month" | "pub_day" | "image" | "dailies" | "sundays"
 >;
 
 export interface CollectionsPage {

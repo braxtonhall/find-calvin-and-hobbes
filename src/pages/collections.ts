@@ -4,7 +4,7 @@ import { ARCS_PATH, BOOKS_PATH, buildCollectionPath } from "../routes";
 import { addressOf } from "../base-path";
 import { CollectionsPage, CollectionSummary, PageSource } from "./page";
 import { buildBackAndHomeButtons } from "./nav-buttons";
-import { formatPublicationDate, getTypeLabel } from "./collection";
+import { formatPublicationDate } from "./collection";
 
 /**
  * Every book, in the order the index already holds them — publication order, which is fixed when
@@ -14,7 +14,7 @@ export function collectionsPageFrom(source: PageSource): CollectionsPage {
 	const collections = (source.collectionIndex?.collections ?? []).map((collection): CollectionSummary => ({
 		id: collection.id,
 		name: collection.name,
-		type: collection.type,
+		...(collection.subtitle ? { subtitle: collection.subtitle } : {}),
 		pub_year: collection.pub_year,
 		pub_month: collection.pub_month,
 		...(collection.pub_day ? { pub_day: collection.pub_day } : {}),
@@ -33,7 +33,7 @@ function buildRowHtml(collection: CollectionSummary): string {
 			</div>
 			<div class="collections-info">
 				<div class="collections-name">${escHtml(collection.name)}</div>
-				<div class="collections-meta">${getTypeLabel(collection.type)} · ${formatPublicationDate(collection)}</div>
+				<div class="collections-meta">${collection.subtitle ? `${escHtml(collection.subtitle)} · ` : ""}${formatPublicationDate(collection)}</div>
 			</div>
 		</a>`;
 }

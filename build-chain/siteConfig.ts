@@ -99,6 +99,8 @@ interface RawConfig {
 	corrections?: { enabled?: unknown; pages?: Partial<Record<string, unknown>> | null } | null;
 	arcs?: unknown;
 	reruns?: unknown;
+	colourSundays?: unknown;
+	aspectRatio?: { daily?: unknown; sunday?: unknown } | null;
 	details?: Partial<Record<string, unknown>> | null;
 	theme?: Partial<Record<string, unknown>> | null;
 	search?: { suggestions?: unknown } | null;
@@ -255,6 +257,21 @@ function pixelSetting(value: unknown, name: string): number | null {
 	return Number(raw);
 }
 
+/** A strip's width over its height: a positive number, or `null` where it is not given. */
+function ratioSetting(value: unknown, name: string): number | null {
+	const raw = stringSetting(value, name);
+	if (!raw) return null;
+	const ratio = Number(raw);
+	if (!(ratio > 0)) throw new Error(`${name} in config.yaml must be a positive number (got "${raw}")`);
+	return ratio;
+}
+
+function loadAspectRatio(aspectRatio: RawConfig["aspectRatio"]): PageConfig["aspectRatio"] {
+	const daily = ratioSetting(aspectRatio?.daily, "aspectRatio.daily");
+	if (daily === null) throw new Error("config.yaml must give a daily strip's shape, as aspectRatio.daily");
+	return { daily, sunday: ratioSetting(aspectRatio?.sunday, "aspectRatio.sunday") ?? daily };
+}
+
 function loadLandingSize(landing: RawConfig["landing"]): PageConfig["landingSize"] {
 	const width = pixelSetting(landing?.width, "landing.width");
 	const height = pixelSetting(landing?.height, "landing.height");
@@ -342,6 +359,8 @@ export function loadPageConfig(projectDir?: string): PageConfig {
 		details: loadLinkTemplates(raw.details),
 		corrections: loadCorrectionTemplates(raw.corrections),
 		suggestions: loadSuggestions(raw.search),
+		colourSundays: flagSetting(raw.colourSundays, "colourSundays", false),
+		aspectRatio: loadAspectRatio(raw.aspectRatio),
 		...loadFeatures(projectDir),
 	};
 }

@@ -50,7 +50,7 @@ function iso(year: number, monthIndex: number, day: number): string {
 /**
  * Today's date in the strip's run, as an ISO date: the archive's full years, from January to
  * December, repeated end to end from the first of them — so for a strip whose full years are
- * 1986 to 1995, 2026 is 1986, 2035 is 1995, and 2036 starts again at 1986.
+ * 2001 to 2010, 2026 is 2006, 2030 is 2010, and 2031 starts again at 2001.
  *
  * A leap day in a common year is the day before. A date in a gap in the run — a sabbatical — is
  * still a day of the run if the paper reran a strip on it, which `reruns` says, and is empty where

@@ -43,6 +43,18 @@ export interface PageConfig {
 	arcs: boolean;
 	/** Whether the site has reruns, from `reruns.yaml`: the days' pages, and `@is:reused` and `@is:rerun`. */
 	reruns: boolean;
+	/**
+	 * Whether the Sundays ran in colour and the dailies in black and white: whether there are
+	 * `@is:sunday` and `@is:daily` and the bar's Format field, and whether a book's `colour` — that
+	 * it printed its Sundays in colour — means anything.
+	 */
+	colourSundays: boolean;
+	/**
+	 * A strip's width over its height, which its page holds the space for until the image loads: a
+	 * daily's, and a Sunday's, which is the daily's where `config.yaml` gives none. A strip's own
+	 * `aspect-ratio` in `comics.yaml` comes first.
+	 */
+	aspectRatio: { daily: number; sunday: number };
 	details: {
 		daily: StripLinkTemplates;
 		rerun: StripLinkTemplates;

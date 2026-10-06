@@ -108,6 +108,30 @@ test("config.yaml", async (suite) => {
 		assert.throws(() => withConfig("name: x\nseries: x\narcs: no\n", loadPageConfig), /arcs.*true or false/);
 	});
 
+	await suite.test("takes a daily's shape, and a Sunday's or the daily's", () => {
+		const both = withConfig("name: x\nseries: x\naspectRatio:\n  daily: 3.098\n  sunday: '1.427'\n", loadPageConfig);
+		assert.deepEqual(both.aspectRatio, { daily: 3.098, sunday: 1.427 });
+		const daily = withConfig("name: x\nseries: x\naspectRatio:\n  daily: 2\n", loadPageConfig);
+		assert.deepEqual(daily.aspectRatio, { daily: 2, sunday: 2 });
+		assert.throws(
+			() => withConfig("name: x\nseries: x\naspectRatio:\n  sunday: 2\n", loadPageConfig),
+			/aspectRatio\.daily/,
+		);
+		assert.throws(
+			() => withConfig("name: x\nseries: x\naspectRatio:\n  daily: wide\n", loadPageConfig),
+			/aspectRatio\.daily.*positive number/,
+		);
+	});
+
+	await suite.test("has colour Sundays only when they are turned on", () => {
+		assert.equal(withConfig("name: x\nseries: x\n", loadPageConfig).colourSundays, false);
+		assert.equal(withConfig("name: x\nseries: x\ncolourSundays: true\n", loadPageConfig).colourSundays, true);
+		assert.throws(
+			() => withConfig("name: x\nseries: x\ncolourSundays: yes\n", loadPageConfig),
+			/colourSundays.*true or false/,
+		);
+	});
+
 	await suite.test("reads no arcs.yaml or reruns.yaml for a site without them", () => {
 		// The project holds only `config.yaml`, so reading either file would throw.
 		withConfig("name: x\nseries: x\narcs: false\nreruns: false\n", (projectDir) => {

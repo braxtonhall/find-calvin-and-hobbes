@@ -13,7 +13,7 @@
 	}
 }
 
-/* Under the date range, where a book's page has its type: the sentence the arc is told in. */
+/* Under the date range, where a book's page has its subtitle: the sentence the arc is told in. */
 .arc-description {
 	font-size: 14px;
 	color: var(--text);

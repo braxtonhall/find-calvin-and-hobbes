@@ -557,7 +557,9 @@ function fit(bar: Bar): void {
 
 	for (const { button } of dropdowns) button.hidden = false;
 	const widths = dropdowns.map(({ button }) => button.getBoundingClientRect().width);
-	const order = SHED_ORDER.map((name) => dropdowns.findIndex(({ field }) => field.name === name));
+	const order = SHED_ORDER.map((name) => dropdowns.findIndex(({ field }) => field.name === name)).filter(
+		(index) => index >= 0,
+	);
 	const gone = shed(widths, GAP, room - count.getBoundingClientRect().width - GAP, order);
 
 	for (const [index, dropdown] of dropdowns.entries()) {

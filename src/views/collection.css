@@ -44,10 +44,9 @@
 	margin-bottom: 4px;
 }
 
-.collection-type {
+.collection-subtitle {
 	font-size: 13px;
 	color: var(--text-muted);
-	text-transform: capitalize;
 	margin-bottom: 8px;
 }
 

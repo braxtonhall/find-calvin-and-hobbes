@@ -46,11 +46,16 @@ export type Vocabulary = () => readonly Term[];
  * start and never empty. Each is independent of the others — a strip can be a Sunday and altered —
  * which is why repeating `@is:` asks for all of them rather than any.
  *
- * The ones about reruns and arcs are left out of a site that has none, which `config.yaml` says.
+ * The ones about reruns and arcs are left out of a site that has none, and `sunday` and `daily` out
+ * of one whose Sundays were not a format of their own, which `config.yaml` says.
  */
 export const TAGS: readonly Term[] = [
-	{ value: "sunday", hint: "A colour Sunday strip" },
-	{ value: "daily", hint: "A black-and-white daily" },
+	...(PAGE_CONFIG.colourSundays
+		? [
+				{ value: "sunday", hint: "A colour Sunday strip" },
+				{ value: "daily", hint: "A black-and-white daily" },
+			]
+		: []),
 	...(PAGE_CONFIG.reruns
 		? [
 				{ value: "reused", hint: "A strip on the day it first ran, later rerun" },

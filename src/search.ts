@@ -85,28 +85,21 @@ export interface Tuning {
  * `1 + sequenceWeight`, so the multiplier can never lift a score above `strength`; `strength` is
  * `base / ceiling` with each term capped at its own ceiling, so only repetition can push it past
  * 1, at `1 + transcriptRepeatWeight * log2(repeats)`; and the agreement bonus adds at most 15%
- * more. Measured 2026-08-21 over the real archive, the highest score any query reaches is 2.316
- * (`i`), then 2.239 (`the`, `a`), 2.107 (`you`), 1.993 (`snow`), 1.702 (`calvin`), 1.499
- * (`rosalyn`). Across the 528 generated fixture queries the top score is p50 0.617, p90 1.158,
- * p99 1.318, max 1.574.
+ * more.
  *
- * `exact` at 3 clears all of that, and reaching it by repetition alone would take one query word
- * said 87 times in a single strip. A reader who wrote a whole date named one day, so it leads.
+ * `exact` at 3 clears all of that short of a query word said dozens of times in a single strip. A
+ * reader who wrote a whole date named one day, so it leads.
  * The cost is bounded: because the expression must be the entire query, an exact date can only
  * ever sit beside a handful of incidental text matches, so there is no case where it flattens a
  * real result set into the faintest grid shade.
  *
  * `narrow` at 1.5 is the band the strongest single keywords occupy — a good text match, not a
- * great one, for the 31 strips of a month or the 52 Sundays of a `sunday 1988`. It is close to
- * unfalsifiable in this archive: `august 1988` and `november 28 1985` return no text results at
- * all, so nothing competes with it.
+ * great one, for the 31 strips of a month or the 52 Sundays of a `sunday 1988`.
  *
- * `broad` at 0.8 is below a strong text match, which is what a bare year should be, and it is the
- * one rung the archive can actually demonstrate. `1988` matches 366 strips by date and exactly
- * two by dialogue — 1988-10-27 at 1.107 and 1987-06-22 at 1.103, the only strips in the archive
- * whose text contains a year — and those two are what the reader wants first. Not lower: the year
- * then lands at 0.65 of the top score, tier 3 of 5, so the calendar lights up legibly instead of
- * at the faintest shade.
+ * `broad` at 0.8 is below a strong text match, which is what a bare year should be: a strip whose
+ * dialogue names the year is what the reader wants first, ahead of every strip that merely ran in
+ * it. Not lower, so that the year's strips still light the calendar up legibly rather than at the
+ * faintest shade.
  */
 export const DATE_STRENGTH: Record<DatePrecision, number> = { exact: 3, narrow: 1.5, broad: 0.8 };
 

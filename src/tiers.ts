@@ -4,8 +4,8 @@
  * Tiers are always relative to the top-scoring result of the same search, never to an absolute
  * score, because the scales differ wildly between queries and between the ranked and literal
  * paths in `search.ts`. Using only part of the ramp is the correct outcome for a precise query:
- * `transmogrifier` matches 17 strips whose weakest still scores 51% of the top, so it should sit
- * in the top few shades rather than being stretched across all five.
+ * a rare word whose every match scores close to the top should sit in the top few shades rather
+ * than being stretched across all five.
  */
 
 export const TIER_COUNT = 5;

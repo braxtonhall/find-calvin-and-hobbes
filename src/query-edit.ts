@@ -2,6 +2,7 @@ import { negatedFilters } from "./boolean-query";
 import { FilterMatch, quotedSpans, scanFilters } from "./filter-query";
 import { terms } from "./filter-vocabulary";
 import { MONTH_NAMES, YEARS } from "./vocabulary";
+import { PAGE_CONFIG } from "./site-config";
 
 /**
  * The filter bar, as string edits.
@@ -102,7 +103,8 @@ function range(from: number, to: number): number[] {
  * `Format` is the only path to `@is:sunday` and `@is:daily`, and it is the distinction a reader of
  * this archive actually thinks in: the colour full-page Sundays against the black-and-white dailies.
  * It is a strip format that merely coincides with a weekday, which is why it reads as its own
- * field rather than as a shape of `@day:`. The other tags are not in the bar.
+ * field rather than as a shape of `@day:`. The other tags are not in the bar, and neither is it
+ * where `config.yaml` has no `colourSundays`, since the tags are not there either.
  */
 // Built once here rather than inside the thunks, which `paint` calls on every keystroke.
 const YEAR_OPTIONS = YEARS.map((year) => ({ token: `@year:${year}`, label: String(year) }));
@@ -138,14 +140,18 @@ export const FILTER_FIELDS: readonly FilterField[] = [
 		shape: "grid",
 		options: () => DAY_OPTIONS,
 	},
-	{
-		name: "format",
-		label: "Format",
-		owns: ["is"],
-		shape: "list",
-		single: true,
-		options: () => FORMAT_OPTIONS,
-	},
+	...(PAGE_CONFIG.colourSundays
+		? [
+				{
+					name: "format",
+					label: "Format",
+					owns: ["is"],
+					shape: "list",
+					single: true,
+					options: () => FORMAT_OPTIONS,
+				} satisfies FilterField,
+			]
+		: []),
 	{
 		name: "book",
 		label: "Book",

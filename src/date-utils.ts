@@ -1,5 +1,6 @@
 import { Collection } from "./types";
 import { SABBATICALS } from "./constants";
+import { PAGE_CONFIG } from "./site-config";
 
 export function compactToDate(compact: string): Date {
 	const year = parseInt(compact.slice(0, 4), 10);
@@ -49,7 +50,7 @@ export function getCollectionCoverage(collection: Collection): string[] {
 	} else {
 		coverage.push("Dailies & Sundays");
 	}
-	coverage.push(collection.colour ? "Sundays in colour" : "Sundays in black & white");
+	if (PAGE_CONFIG.colourSundays) coverage.push(collection.colour ? "Sundays in colour" : "Sundays in black & white");
 	return coverage;
 }
 

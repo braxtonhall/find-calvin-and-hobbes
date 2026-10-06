@@ -312,10 +312,10 @@ interface Day {
  * Every value the archive can offer for one field, given the digits typed so far: the years the
  * strip ran in, the months of one of them, or the days of one of those.
  *
- * A year or a month earns its place by holding at least one strip, which is what keeps 1985 out of
- * the list until November and keeps the sabbaticals out of it altogether. Without that the menu
- * would offer a date from before Calvin existed and then commit it, and the empty page of results
- * would make the menu look like it had lied.
+ * A year or a month earns its place by holding at least one strip, which is what keeps the months
+ * before the first strip out of the list and the gaps in the run out of it altogether. Without that
+ * the menu would offer a date from before the strip began and then commit it, and the empty page of
+ * results would make the menu look like it had lied.
  *
  * A missing day is accounted for too, without the comic index: every day `comics.yaml` has no daily
  * for is one of the gaps the build writes into `SABBATICALS`.

@@ -1,4 +1,5 @@
 import { escHtml } from "../utils";
+import { PAGE_CONFIG } from "../site-config";
 import {
 	isDateInCollection,
 	getCollectionCoverage,
@@ -12,17 +13,6 @@ import { Arc, Collection } from "../types";
 import { CollectionNeighbour, CollectionPage, PageSource } from "./page";
 import { buildBackAndHomeButtons, buildCollectionsButton } from "./nav-buttons";
 import { arcListFrom, buildArcListHtml } from "./arc-list";
-
-export function getTypeLabel(type: string): string {
-	const typeLabels: Record<string, string> = {
-		collection: "Collection",
-		compendium: "Compendium",
-		treasury: "Treasury",
-		complete: "Complete Collection",
-		special: "Special Book",
-	};
-	return typeLabels[type] || type;
-}
 
 /**
  * The arcs a book prints in full, in the order it prints them: by volume, then page, of each arc's
@@ -144,12 +134,15 @@ function filterDate(compact: string, days: number): string {
 /**
  * The search that holds exactly the range, oldest first. `@after` and `@before` leave out the day
  * they name, so each bound is written a day outside the range to keep both ends in it. A book of
- * Sundays only holds only the Sundays between its ends, so its search says so too.
+ * Sundays only holds only the Sundays between its ends, so its search says so too: as the format,
+ * `@is:sunday`, where the site has one, which a reader's own `@day:` narrows rather than widens.
+ * Without colour Sundays there is no such tag, and the weekday is all a Sunday is.
  */
 export function buildRangeSearchPath(entry: string, sundays: boolean = false): string {
 	const [start, end] = parseDailiesRange(entry);
 	const bounds = `@after:${filterDate(start, -1)} @before:${filterDate(end, 1)}`;
-	return buildSearchPath(sundays ? `${bounds} @is:sunday` : bounds, "date");
+	const sunday = PAGE_CONFIG.colourSundays ? "@is:sunday" : "@day:sunday";
+	return buildSearchPath(sundays ? `${bounds} ${sunday}` : bounds, "date");
 }
 
 function buildRangeHtml(entry: string, sundays: boolean): string {
@@ -188,7 +181,6 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 		</div>`;
 	}
 
-	const typeLabel = getTypeLabel(collection.type);
 	const imageUrl = collection.image;
 	const coverage = getCollectionCoverage(collection);
 	const pubDateFormatted = formatPublicationDate(collection);
@@ -231,7 +223,7 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 			</div>
 			<div class="collection-info">
 				<h2 class="collection-name">${escHtml(collection.name)}</h2>
-				<div class="collection-type">${typeLabel}</div>
+				${collection.subtitle ? `<div class="collection-subtitle">${escHtml(collection.subtitle)}</div>` : ""}
 				<p class="collection-meta"><span class="collection-meta--label">Published:</span> ${pubDateFormatted}</p>
 				<p class="collection-meta"><span class="collection-meta--label">Coverage:</span> ${coverage.join(" · ")}</p>
 				${comicsSummary}
