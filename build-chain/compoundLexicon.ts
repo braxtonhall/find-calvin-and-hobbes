@@ -25,7 +25,7 @@ import path from "path";
 import type { LoaderContext } from "webpack";
 import type { CompoundRelation } from "../src/compounds";
 import { loadComicSource } from "./comicSource";
-import { configDependencies, loadOptionalPart } from "./siteConfig";
+import { watchConfig, loadOptionalPart } from "./siteConfig";
 
 const WORD_PATTERN = /[\p{L}\p{N}']+/gu;
 
@@ -184,7 +184,7 @@ export function loadCompoundRelations(projectDir = defaultProjectDir()): [string
  */
 export default function compoundLexiconLoader(this: LoaderContext<unknown>): string {
 	const projectDir = this.rootContext;
-	for (const file of configDependencies(projectDir)) this.addDependency(file);
+	watchConfig(this, projectDir);
 	const entries = JSON.stringify(loadCompoundRelations(projectDir));
 	return [
 		`const entries = ${entries};`,

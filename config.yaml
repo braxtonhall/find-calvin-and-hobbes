@@ -168,6 +168,8 @@ corrections:
 # ones can be set to false instead, which leaves out what they are for and reads nothing.
 #
 #   comics      the strips: their transcripts, descriptions, and specials
+#   collections the books, as a list. `!Map [Import, ./folder/*.yaml]` imports every file a pattern
+#               matches, in the order of their paths
 #   tuning      how the search scores a match, fitted to the strips, with notes on each value
 #   credits     the credits page, in Markdown
 #
@@ -180,6 +182,7 @@ corrections:
 #   compounds   the compound words the search keeps whole or splits beyond what it finds itself
 #   characters  each character's name by id, for @featuring: and the Featuring line under a strip
 comics: !Import ./comics.yaml
+collections: !Map [Import, ./collections/*.yaml]
 tuning: !Import ./tuning.yaml
 credits: !Import ./credits.md
 arcs: !Import ./arcs.yaml

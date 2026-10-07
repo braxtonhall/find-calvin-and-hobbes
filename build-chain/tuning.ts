@@ -1,6 +1,6 @@
 import type { LoaderContext } from "webpack";
 import type { Tuning } from "../src/search";
-import { configDependencies, loadRequiredPart } from "./siteConfig";
+import { watchConfig, loadRequiredPart } from "./siteConfig";
 
 const TUNING_KEYS = [
 	"sequenceWeight",
@@ -60,6 +60,6 @@ export function loadTuning(projectDir?: string): Tuning {
  */
 export default function tuningLoader(this: LoaderContext<unknown>): string {
 	const projectDir = this.rootContext;
-	for (const file of configDependencies(projectDir)) this.addDependency(file);
+	watchConfig(this, projectDir);
 	return `export const TUNING = ${JSON.stringify(loadTuning(projectDir))};\n`;
 }

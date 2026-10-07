@@ -1,7 +1,7 @@
 import type { LoaderContext } from "webpack";
 import { marked } from "marked";
 import { parse } from "node-html-parser";
-import { configDependencies, loadRequiredPart } from "./siteConfig";
+import { watchConfig, loadRequiredPart } from "./siteConfig";
 
 /** The credits `config.yaml` gives, in Markdown, as the HTML the credits page shows below its heading. */
 export function loadCreditsHtml(projectDir?: string): string {
@@ -20,6 +20,6 @@ export function loadCreditsHtml(projectDir?: string): string {
 /** Stands in for `src/credits-content.ts` in the bundle, as `archiveSpan.ts` does for `src/archive.ts`. */
 export default function creditsLoader(this: LoaderContext<unknown>): string {
 	const projectDir = this.rootContext;
-	for (const file of configDependencies(projectDir)) this.addDependency(file);
+	watchConfig(this, projectDir);
 	return `export const CREDITS_HTML = ${JSON.stringify(loadCreditsHtml(projectDir))};\n`;
 }

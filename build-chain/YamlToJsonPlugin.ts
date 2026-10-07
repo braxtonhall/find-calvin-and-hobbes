@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
 import { exportArcsJson, loadArcs } from "./arcs";
@@ -11,24 +9,17 @@ import { exportDescriptions } from "./exportDescriptions";
 import { generateCollectionIndex } from "./generateCollectionIndex";
 import { exportRerunsJson } from "./reruns";
 import { setSiteData } from "./siteData";
-import { configDependencies, loadSiteConfig } from "./siteConfig";
+import { watchConfigIn, loadSiteConfig } from "./siteConfig";
 
 const PLUGIN_NAME = "YamlToJsonPlugin";
 
 /**
- * Tells webpack which data files this plugin read, so `--watch` rebuilds when they change.
- * The collections directory itself is a dependency too, so added and removed files are noticed.
+ * Tells webpack which data files this plugin read, so `--watch` rebuilds when they change: the
+ * configuration and everything it imports, and the folders it imports the books from, so added and
+ * removed files are noticed.
  */
 function watchDataFiles(compilation: Compilation, projectDir: string): void {
-	const collectionsDir = path.join(projectDir, "collections");
-	// The strips, reruns, arcs and characters, from the configuration and the files it imports them from.
-	for (const file of configDependencies(projectDir)) compilation.fileDependencies.add(file);
-	compilation.contextDependencies.add(collectionsDir);
-	for (const file of fs.readdirSync(collectionsDir)) {
-		if (file.endsWith(".yaml")) {
-			compilation.fileDependencies.add(path.join(collectionsDir, file));
-		}
-	}
+	watchConfigIn(compilation, projectDir);
 }
 
 class YamlToJsonPlugin {

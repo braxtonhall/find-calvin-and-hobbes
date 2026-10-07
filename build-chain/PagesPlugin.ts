@@ -23,7 +23,7 @@ import { arcsPageFrom } from "../src/pages/arcs";
 import { buildDocumentHtml } from "../src/pages/shell";
 import { getSiteData, SiteData } from "./siteData";
 import {
-	configDependencies,
+	watchConfigIn,
 	loadCommitSha,
 	loadFeatures,
 	loadPageLayout,
@@ -85,7 +85,7 @@ class PagesPlugin {
 
 		compiler.hooks.thisCompilation.tap(PLUGIN_NAME, (compilation: Compilation) => {
 			compilation.fileDependencies.add(templatePath);
-			for (const file of configDependencies()) compilation.fileDependencies.add(file);
+			watchConfigIn(compilation);
 
 			compilation.hooks.processAssets.tap(
 				{

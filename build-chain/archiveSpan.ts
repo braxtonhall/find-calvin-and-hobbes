@@ -1,7 +1,7 @@
 import type { LoaderContext } from "webpack";
 import type { ArchiveSpan } from "../src/archive";
 import { loadComicSource } from "./comicSource";
-import { configDependencies } from "./siteConfig";
+import { watchConfig } from "./siteConfig";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -30,6 +30,6 @@ export function loadArchiveSpan(projectDir?: string): ArchiveSpan {
  */
 export default function archiveSpanLoader(this: LoaderContext<unknown>): string {
 	const projectDir = this.rootContext;
-	for (const file of configDependencies(projectDir)) this.addDependency(file);
+	watchConfig(this, projectDir);
 	return `export const ARCHIVE_SPAN = ${JSON.stringify(loadArchiveSpan(projectDir))};\n`;
 }

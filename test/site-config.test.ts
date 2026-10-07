@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "fs";
 import path from "path";
-import { configDependencies, loadPageConfig } from "../build-chain/siteConfig";
+import { configDependencies, loadPageConfig, loadRequiredPart } from "../build-chain/siteConfig";
 import { withConfig } from "./helpers/config";
 import { loadArcs } from "../build-chain/arcs";
 import { loadCharacters, stripCharacters } from "../build-chain/characters";
@@ -149,19 +149,65 @@ test("config.yaml", async (suite) => {
 		);
 	});
 
-	await suite.test("watches config.yaml, what it imports however deep, and .env", () => {
+	await suite.test("watches config.yaml, what it imports however deep, .env, and the folders it maps over", () => {
 		withConfig(
-			"comics: !Import ./comics/index.yaml\n",
+			"comics: !Import ./comics/index.yaml\ncollections: !Map [Import, ./books/*.yaml]\n",
 			(projectDir) => {
-				assert.deepEqual(configDependencies(projectDir), [
-					path.join(projectDir, "config.yaml"),
-					path.join(projectDir, "comics", "index.yaml"),
-					path.join(projectDir, "comics", "dailies.yaml"),
-					path.join(projectDir, ".env"),
-				]);
+				assert.deepEqual(configDependencies(projectDir), {
+					files: [
+						path.join(projectDir, "config.yaml"),
+						path.join(projectDir, "comics", "index.yaml"),
+						path.join(projectDir, "comics", "specials", "one.yaml"),
+						path.join(projectDir, "books", "one.yaml"),
+						path.join(projectDir, ".env"),
+					],
+					directories: [path.join(projectDir, "comics", "specials"), path.join(projectDir, "books")],
+				});
 			},
-			{ "comics/index.yaml": "dailies: !Import ./dailies.yaml\n", "comics/dailies.yaml": "{}\n" },
+			{
+				"comics/index.yaml": "specials: !Map [Import, ./specials/*.yaml]\n",
+				"comics/specials/one.yaml": "{}\n",
+				"books/one.yaml": "{}\n",
+			},
 		);
+	});
+
+	// `../`, which from the project itself would leave it: so the path is the importing file's.
+	await suite.test("reads an import's path from the file it is written in", () => {
+		withConfig(
+			"comics: !Import ./strips/index.yaml\n",
+			(projectDir) => assert.deepEqual(loadRequiredPart("comics", projectDir), { dailies: { "19851118": "Hi." } }),
+			{ "strips/index.yaml": "dailies: !Import ../days/dailies.yaml\n", "days/dailies.yaml": "'19851118': Hi.\n" },
+		);
+	});
+
+	await suite.test("maps Import over every file a pattern matches, in the order of their paths", () => {
+		withConfig(
+			"collections: !Map [Import, books/**/*.yaml]\n",
+			(projectDir) =>
+				assert.deepEqual(loadRequiredPart("collections", projectDir), [{ id: "a" }, { id: "b" }, { id: "c" }]),
+			{
+				"books/a.yaml": "id: a\n",
+				"books/b/b.yaml": "id: b\n",
+				"books/c.yaml": "id: c\n",
+				"books/notes.md": "Not a book.\n",
+			},
+		);
+		// From an imported file, the pattern is that file's, as an `!Import` is.
+		withConfig(
+			"comics: !Import ./strips/index.yaml\n",
+			(projectDir) => assert.deepEqual(loadRequiredPart("comics", projectDir), { specials: [{ id: "x" }] }),
+			{ "strips/index.yaml": "specials: !Map [Import, ./specials/*.yaml]\n", "strips/specials/x.yaml": "id: x\n" },
+		);
+	});
+
+	await suite.test("fails for a pattern that matches nothing, or a !Map of anything but Import", () => {
+		withConfig("collections: !Map [Import, ./books/*.yaml]\n", (projectDir) => {
+			assert.throws(() => loadPageConfig(projectDir), /maps Import over \.\/books\/\*\.yaml, which matches no file/);
+		});
+		withConfig("collections: !Map [Include, ./books/*.yaml]\n", (projectDir) => {
+			assert.throws(() => loadPageConfig(projectDir), /not \[Import, a pattern\]/);
+		});
 	});
 
 	await suite.test("takes a daily's shape, and a Sunday's or the daily's", () => {
@@ -207,7 +253,7 @@ test("config.yaml", async (suite) => {
 				{ id: "calvin", name: "Calvin" },
 				{ id: "susie", name: "Susie Derkins" },
 			]);
-			assert.ok(configDependencies(projectDir).includes(path.join(projectDir, "cast", "people.yaml")));
+			assert.ok(configDependencies(projectDir).files.includes(path.join(projectDir, "cast", "people.yaml")));
 			assert.deepEqual(stripCharacters("19851118", { transcript: "", characters: ["susie"] }, characters), ["susie"]);
 			assert.deepEqual(stripCharacters("19851118", { transcript: "" }, characters), []);
 			assert.throws(

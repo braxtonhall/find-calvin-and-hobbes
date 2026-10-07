@@ -1,4 +1,3 @@
-import fs from "fs";
 import path from "path";
 import type { LoaderContext } from "webpack";
 import { exportArcsJson, loadArcs } from "./arcs";
@@ -7,7 +6,7 @@ import { loadCollectionData } from "./collectionPages";
 import { loadComicSource } from "./comicSource";
 import { generateCollectionIndex } from "./generateCollectionIndex";
 import { exportRerunsJson } from "./reruns";
-import { configDependencies, loadSiteConfig } from "./siteConfig";
+import { watchConfig, loadSiteConfig } from "./siteConfig";
 
 /**
  * The small parts of the archive, as JSON: the same text `YamlToJsonPlugin` hands the page build,
@@ -51,12 +50,7 @@ export function loadBundledData(): { RERUNS: unknown; COLLECTION_INDEX: unknown;
  */
 export default function bundledDataLoader(this: LoaderContext<unknown>): string {
 	const projectDir = this.rootContext;
-	const collectionsDir = path.join(projectDir, "collections");
-	for (const file of configDependencies(projectDir)) this.addDependency(file);
-	this.addContextDependency(collectionsDir);
-	for (const file of fs.readdirSync(collectionsDir)) {
-		if (file.endsWith(".yaml")) this.addDependency(path.join(collectionsDir, file));
-	}
+	watchConfig(this, projectDir);
 
 	const json = loadBundledJson(projectDir);
 	const parsed = (text: string) => `JSON.parse(${JSON.stringify(text)})`;

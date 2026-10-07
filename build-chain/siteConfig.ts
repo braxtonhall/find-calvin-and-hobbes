@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { execSync } from "child_process";
 import yaml from "js-yaml";
-import type { LoaderContext } from "webpack";
+import type { Compilation, LoaderContext } from "webpack";
 import type {
 	CorrectionTemplates,
 	GridConfig,
@@ -87,7 +87,7 @@ function substituteEnvironment(text: string, dotenv: Record<string, string>): st
 
 function substituteAll(value: unknown, dotenv: Record<string, string>): unknown {
 	// Read later, and as it is. See `readConfig`.
-	if (value instanceof Import) return value;
+	if (value instanceof Import || value instanceof ImportAll) return value;
 	if (typeof value === "string") return substituteEnvironment(value, dotenv).trim();
 	if (Array.isArray(value)) return value.map((item) => substituteAll(item, dotenv));
 	if (value && typeof value === "object") {
@@ -107,6 +107,7 @@ interface RawConfig {
 	pageLayout?: unknown;
 	corrections?: { enabled?: unknown; pages?: Partial<Record<string, unknown>> | null } | null;
 	comics?: unknown;
+	collections?: unknown;
 	tuning?: unknown;
 	credits?: unknown;
 	arcs?: unknown;
@@ -139,43 +140,117 @@ class Import {
 	) {}
 }
 
-/**
- * `!Import ./file`, relative to the file the tag is written in. In `config.yaml` it stands for an
- * `Import`, read later; anywhere else, for the file's contents, read in place. Every file it reads
- * in place is added to `files`, where there is a list to add it to.
- */
-function importTag(file: string, importing: readonly string[], lazy: boolean, files?: string[]) {
+/** The files `config.yaml` imports with `!Map [Import, pattern]`, and the folder the pattern looks in. */
+class ImportAll {
+	constructor(
+		readonly directory: string,
+		readonly imports: readonly Import[],
+	) {}
+}
+
+/** What reading a configuration has to watch for: the files it read, and the folders a pattern looked in. */
+export interface ConfigDependencies {
+	files: string[];
+	directories: string[];
+}
+
+/** How the files a tag names are read: later, in `config.yaml`, or in place, with what they read noted. */
+interface ImportContext {
+	file: string;
+	importing: readonly string[];
+	lazy: boolean;
+	dependencies?: ConfigDependencies;
+}
+
+/** One file a tag in `context.file` names, read or left for later. See `ImportContext`. */
+function importFile(target: string, context: ImportContext, name: string): unknown {
+	const { file, importing, lazy, dependencies } = context;
+	if (target === file || importing.includes(target)) throw new Error(`${name}, which imports it back`);
+	if (lazy) return new Import(target, [...importing, file]);
+	dependencies?.files.push(target);
+	return readImport(target, [...importing, file], dependencies);
+}
+
+/** `!Import ./file`, relative to the file the tag is written in. */
+function importTag(context: ImportContext) {
 	return yaml.defineScalarTag<unknown>("!Import", {
 		resolve: (source) => {
-			const target = path.resolve(path.dirname(file), source.trim());
-			const name = `${path.basename(file)} imports ${source.trim()}`;
+			const target = path.resolve(path.dirname(context.file), source.trim());
+			const name = `${path.basename(context.file)} imports ${source.trim()}`;
 			if (!fs.existsSync(target)) throw new Error(`${name}, which does not exist`);
-			if (target === file || importing.includes(target)) throw new Error(`${name}, which imports it back`);
-			if (lazy) return new Import(target, [...importing, file]);
-			files?.push(target);
-			return readImport(target, [...importing, file], files);
+			return importFile(target, context, name);
 		},
 		identify: () => false,
 	});
 }
 
+/** The folder a pattern looks in: its path up to the first part with a wildcard in it. */
+function patternBase(pattern: string): string {
+	const parts = pattern.split("/");
+	const wild = parts.findIndex((part) => /[*?[\]{}()!]/.test(part));
+	return parts.slice(0, wild === -1 ? parts.length : wild).join("/") || ".";
+}
+
+/**
+ * `!Map [Import, ./folder/*.yaml]`: every file the pattern matches, relative to the file the tag is
+ * written in, imported in turn, as a list in the order of their paths. Only `Import` can be mapped.
+ * A pattern that matches nothing stops the build, as an `!Import` of a missing file does.
+ */
+function mapTag(context: ImportContext) {
+	return yaml.defineSequenceTag<unknown[], unknown>("!Map", {
+		create: () => [],
+		addItem: (items, item) => {
+			items.push(item);
+		},
+		finalize: ([tag, pattern, ...rest]) => {
+			const from = path.basename(context.file);
+			if (tag !== "Import" || typeof pattern !== "string" || rest.length > 0) {
+				throw new Error(`${from} has a !Map that is not [Import, a pattern]`);
+			}
+			const directory = path.dirname(context.file);
+			const name = `${from} maps Import over ${pattern}`;
+			const matches = fs
+				.globSync(pattern, { cwd: directory })
+				.map((match) => path.resolve(directory, match))
+				.filter((match) => fs.statSync(match).isFile())
+				.sort();
+			if (matches.length === 0) throw new Error(`${name}, which matches no file`);
+			const base = path.resolve(directory, patternBase(pattern));
+			context.dependencies?.directories.push(base);
+			const imported = matches.map((target) => importFile(target, context, name));
+			return context.lazy ? new ImportAll(base, imported as Import[]) : imported;
+		},
+		identify: () => false,
+	});
+}
+
+function importSchema(context: ImportContext): yaml.Schema {
+	return yaml.CORE_SCHEMA.withTags(importTag(context), mapTag(context));
+}
+
 /** An imported file's contents: YAML parsed, its own imports read in place, and Markdown as text. */
-function readImport(file: string, importing: readonly string[], files?: string[]): unknown {
+function readImport(file: string, importing: readonly string[], dependencies?: ConfigDependencies): unknown {
 	const text = fs.readFileSync(file, "utf8");
 	const extension = path.extname(file).toLowerCase();
 	if (extension === ".md") return text;
 	if (extension !== ".yaml" && extension !== ".yml") {
 		throw new Error(`${path.basename(file)} is imported, but is neither YAML nor Markdown`);
 	}
-	const schema = yaml.CORE_SCHEMA.withTags(importTag(file, importing, false, files));
+	const schema = importSchema({ file, importing, lazy: false, dependencies });
 	// `loadAll`, because `load` throws on a file with nothing but comments in it.
 	const [document = null] = yaml.loadAll(text, { schema, filename: file });
 	return document;
 }
 
-/** A value as `config.yaml` gives it: written in place, or read from the file it imports. */
+/** A value as `config.yaml` gives it: written in place, or read from the files it imports. */
 function resolved(value: unknown): unknown {
-	return value instanceof Import ? readImport(value.file, value.importing) : value;
+	if (value instanceof Import) return readImport(value.file, value.importing);
+	if (value instanceof ImportAll) return value.imports.map(resolved);
+	if (Array.isArray(value)) return value.map(resolved);
+	if (value && typeof value === "object") {
+		return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, resolved(item)]));
+	}
+	return value;
 }
 
 /**
@@ -187,31 +262,51 @@ function resolved(value: unknown): unknown {
  */
 function readConfig(projectDir?: string): RawConfig {
 	const file = configPath(projectDir);
-	const schema = yaml.CORE_SCHEMA.withTags(importTag(file, [], true));
+	const schema = importSchema({ file, importing: [], lazy: true });
 	const parsed = yaml.load(fs.readFileSync(file, "utf8"), { schema, filename: file }) ?? {};
 	if (typeof parsed !== "object" || Array.isArray(parsed)) throw new Error(`${file} must be a mapping`);
 	return substituteAll(parsed, readDotenvFile()) as RawConfig;
 }
 
 /**
- * The files a build that reads the configuration depends on: `config.yaml`, every file it imports,
- * however deep, and `.env`, which any value can read. For `--watch`.
+ * What a build that reads the configuration depends on, for `--watch`: `config.yaml`, every file it
+ * imports however deep, and `.env`, which any value can read; and every folder a `!Map` looks in, so
+ * that a file added to one is found.
  *
- * A YAML file is parsed for its own imports only where it has the tag in it at all, so this does not
+ * A YAML file is parsed for its own imports only where it has a tag in it at all, so this does not
  * read the whole archive to find there is nothing more to watch.
  */
-export function configDependencies(projectDir = path.join(__dirname, "..")): string[] {
-	const files = [configPath(projectDir)];
+export function configDependencies(projectDir = path.join(__dirname, "..")): ConfigDependencies {
+	const dependencies: ConfigDependencies = { files: [configPath(projectDir)], directories: [] };
 	const visit = (value: unknown) => {
 		if (value instanceof Import) {
-			files.push(value.file);
-			if (fs.readFileSync(value.file, "utf8").includes("!Import")) readImport(value.file, value.importing, files);
+			dependencies.files.push(value.file);
+			const text = fs.readFileSync(value.file, "utf8");
+			if (/!Import|!Map/.test(text)) readImport(value.file, value.importing, dependencies);
+		} else if (value instanceof ImportAll) {
+			dependencies.directories.push(value.directory);
+			value.imports.forEach(visit);
 		} else if (value && typeof value === "object") {
 			Object.values(value).forEach(visit);
 		}
 	};
 	visit(readConfig(projectDir));
-	return [...files, path.join(projectDir, ".env")];
+	dependencies.files.push(path.join(projectDir, ".env"));
+	return dependencies;
+}
+
+/** Has a loader rebuild when the configuration, or anything it imports, changes. */
+export function watchConfig(loader: LoaderContext<unknown>, projectDir: string): void {
+	const { files, directories } = configDependencies(projectDir);
+	for (const file of files) loader.addDependency(file);
+	for (const directory of directories) loader.addContextDependency(directory);
+}
+
+/** The same, for a plugin's compilation. */
+export function watchConfigIn(compilation: Compilation, projectDir?: string): void {
+	const { files, directories } = configDependencies(projectDir);
+	for (const file of files) compilation.fileDependencies.add(file);
+	for (const directory of directories) compilation.contextDependencies.add(directory);
 }
 
 /** A setting as a string, with empty — or absent — as "". */
@@ -232,7 +327,7 @@ function flagSetting(value: unknown, name: string, fallback: boolean): boolean {
 }
 
 /** The parts of the archive every site has. */
-export type RequiredPart = "comics" | "tuning" | "credits";
+export type RequiredPart = "comics" | "collections" | "tuning" | "credits";
 /** The parts a site can go without, with `false`. */
 export type OptionalPart = "arcs" | "reruns" | "compounds" | "characters";
 
@@ -629,7 +724,7 @@ export function loadPageConfig(projectDir?: string): PageConfig {
  */
 export default function siteConfigLoader(this: LoaderContext<unknown>): string {
 	const projectDir = this.rootContext;
-	for (const file of configDependencies(projectDir)) this.addDependency(file);
+	watchConfig(this, projectDir);
 	return `export const PAGE_CONFIG = ${JSON.stringify(loadPageConfig(projectDir))};\n`;
 }
 

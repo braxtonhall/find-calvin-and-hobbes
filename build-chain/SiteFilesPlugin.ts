@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
-import { configDependencies, loadSiteConfig } from "./siteConfig";
+import { watchConfigIn, loadSiteConfig } from "./siteConfig";
 
 const PLUGIN_NAME = "SiteFilesPlugin";
 
@@ -23,7 +23,7 @@ class SiteFilesPlugin {
 		const staticDir = this.staticDir;
 
 		compiler.hooks.thisCompilation.tap(PLUGIN_NAME, (compilation: Compilation) => {
-			for (const file of configDependencies()) compilation.fileDependencies.add(file);
+			watchConfigIn(compilation);
 
 			compilation.hooks.processAssets.tap(
 				{

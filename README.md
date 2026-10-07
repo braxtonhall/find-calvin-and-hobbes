@@ -101,12 +101,15 @@ where the Read and License links under a strip lead, each a template filled in f
 the file for the fields. A link with no template is not drawn.
 
 It also says where the archive is. Each part is written in place, or imported from a file of its
-own with `!Import ./file.yaml`, relative to `config.yaml`; a Markdown file imports as its text. Every
-part must be given, a file it imports that isn't there fails the build, and the optional parts can
-be set to `false` instead, which leaves out what they are for. This archive imports each from the
-file of the same name:
+own with `!Import ./file.yaml`; a Markdown file imports as its text. `!Map [Import, ./folder/*.yaml]`
+imports every file a pattern matches, as a list in the order of their paths. Either path is read
+from the file it is written in, so an imported file can import others beside it. Every part must be
+given, a file it imports that isn't there — or a pattern that matches nothing — fails the build, and
+the optional parts can be set to `false` instead, which leaves out what they are for. This archive
+imports each from the file of the same name, and the books from `collections/`:
 
 - `comics` holds the strips: their transcripts, descriptions and specials.
+- `collections` lists the books, each with the pages it printed every strip on.
 - `tuning` holds how the search scores a match, fitted to this archive's text, with notes on how each
   value was measured. The measuring is in `test/tuning`: `yarn tune` sweeps the values against its
   queries, and `yarn probe "<query>"` shows what a query returns.
