@@ -187,15 +187,15 @@ corrections:
 #               YYYYMMDD, or by a special's id, with its own extension. A strip has an image if the
 #               folder has one for it, so they can be dropped in as they are found; a folder that
 #               isn't there yet has none. Without one, the strips are shown as their transcripts alone
-comics: !Import ./comics.yaml
-collections: !Map [Import, ./collections/*.yaml]
-tuning: !Import ./tuning.yaml
-credits: !Import ./credits.md
-arcs: !Import ./arcs.yaml
-reruns: !Import ./reruns.yaml
-compounds: !Import ./compounds.yaml
+comics: !Import ./calvin-and-hobbes/comics.yaml
+collections: !Map [Import, ./calvin-and-hobbes/collections/*.yaml]
+tuning: !Import ./calvin-and-hobbes/tuning.yaml
+credits: !Import ./calvin-and-hobbes/credits.md
+arcs: !Import ./calvin-and-hobbes/arcs.yaml
+reruns: !Import ./calvin-and-hobbes/reruns.yaml
+compounds: !Import ./calvin-and-hobbes/compounds.yaml
 characters: false
-comicImages: ./assets/comics
+comicImages: ./calvin-and-hobbes/comics
 
 # Whether the Sundays ran in colour and the dailies in black and white, a format of their own. When
 # true, the search has `@is:sunday` and `@is:daily` and the filter bar a Format field to pick one,

@@ -118,6 +118,5 @@ reach the same form. Set `CORRECTIONS=false` to leave the link off every page.
 
 ### Images
 
-A strip's image goes in the folder `comicImages` names, as `YYYYMMDD.ext` or a special's id — drop
-one in and that strip has an image. A book's cover is a URL, or a file named with `!Path` anywhere in
-the project, which the build copies to `static/`. See `config.yaml`.
+A strip's image goes in the folder `calvin-and-hobbes/comics/`, as `YYYYMMDD.ext` or a special's id — drop
+one in and that strip has an image.

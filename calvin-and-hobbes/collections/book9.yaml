@@ -186,5 +186,5 @@ extras:
   - Front cover art
   - Back cover art
   - Title page and last page art
-image: !Path ../assets/book9.jpg
+image: !Path ./covers/book9.jpg
 aspect-ratio: 1.3699
