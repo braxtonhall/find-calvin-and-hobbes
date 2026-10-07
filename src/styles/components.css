@@ -88,6 +88,57 @@
 	height: 14px;
 }
 
+/* Owning a strip or a book, and a note on it: bookmark buttons, coloured as the bookmarks are, as
+   everything the reader keeps of their own is. See `buildOwnershipControlsHtml`. */
+.ownership {
+	display: contents;
+}
+
+/* The two buttons keep together, whatever the row they are in spaces its own items by. */
+.ownership-buttons {
+	display: inline-flex;
+	gap: 6px;
+}
+
+.ownership-buttons > .bookmark-btn {
+	margin-left: 0;
+}
+
+.ownership-btn--active {
+	color: var(--bookmark);
+	border-color: var(--bookmark);
+}
+
+.ownership-owned-btn.ownership-btn--active .ownership-icon path {
+	fill: currentColor;
+	stroke: none;
+}
+
+/* Wraps onto a line of its own under the buttons it sits among, after all of them. */
+.ownership-note {
+	order: 1;
+	flex: 1 0 100%;
+	min-height: 52px;
+	padding: 6px 8px;
+	font-family: var(--font);
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--text);
+	background: none;
+	border: 1px solid var(--neutral);
+	border-radius: 4px;
+	resize: vertical;
+}
+
+.ownership-note[hidden] {
+	display: none;
+}
+
+.ownership-note:focus {
+	outline: none;
+	border-color: var(--bookmark);
+}
+
 .mobile-grid-toggle {
 	display: none;
 	position: fixed;
@@ -267,6 +318,11 @@
 	}
 
 	.results-input {
+		font-size: 16px;
+	}
+
+	/* As the search box's: smaller, and a phone zooms the page in to type in it. */
+	.ownership-note {
 		font-size: 16px;
 	}
 }

@@ -14,6 +14,7 @@ import {
 } from "../pages/detail";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
+import { attachOwnershipControls } from "./ownership";
 import { attachCellHighlightLink, clearCollectionSoon, highlightCollection } from "./cell-highlight";
 import { attachBookHandlers } from "./books";
 import { dayCell } from "../grid";
@@ -106,6 +107,7 @@ export function renderDetail(page: DetailPage, adopt: boolean = false): void {
 	attachBookHandlers(element);
 
 	attachCopyLinkHandler(element);
+	attachOwnershipControls(element);
 
 	const bookmarkButton = element.querySelector<HTMLButtonElement>("#bookmark-btn");
 	if (bookmarkButton) buildBookmarkButtonHandler(bookmarkButton, page.date);

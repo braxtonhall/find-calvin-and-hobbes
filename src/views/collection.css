@@ -160,3 +160,12 @@ summary.collection-section-heading:hover {
 	color: var(--text-muted);
 	font-size: 13px;
 }
+
+/* Owning the book and a note on it, at the foot of the page as a strip's are at the foot of the strip. */
+.collection-ownership {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 12px;
+	margin-top: 20px;
+}

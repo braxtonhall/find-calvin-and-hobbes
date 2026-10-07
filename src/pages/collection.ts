@@ -13,6 +13,7 @@ import { Arc, Collection } from "../types";
 import { CollectionNeighbour, CollectionPage, PageSource } from "./page";
 import { buildBackAndHomeButtons, buildCollectionsButton } from "./nav-buttons";
 import { arcListFrom, buildArcListHtml } from "./arc-list";
+import { buildOwnershipControlsHtml } from "./ownership";
 
 /**
  * The arcs a book prints in full, in the order it prints them: by volume, then page, of each arc's
@@ -243,5 +244,6 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 		${buildAlterationsHtml(collection.alterations ?? {})}
 		${extrasHtml}
 		${collection.links && collection.links.length > 0 ? `<p class="collection-section-heading">Links</p><div class="collection-links">${collection.links.map((link) => `<a class="collection-link" href="${escHtml(link.href)}" target="_blank" rel="noopener">${escHtml(link.title)}</a>`).join("")}</div>` : ``}
+		<div class="collection-ownership">${buildOwnershipControlsHtml("book", collection.id)}</div>
 	</div>`;
 }

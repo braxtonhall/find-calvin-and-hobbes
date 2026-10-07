@@ -1,63 +1,32 @@
-import { DATABASE_NAME, DATABASE_VERSION, STORE_NAME } from "./constants";
+import { STORE_NAME } from "./constants";
+import { inTransaction } from "./database";
 
-function openBookmarksDatabase(): Promise<IDBDatabase> {
-	return new Promise((resolve, reject) => {
-		const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
-		request.onupgradeneeded = () => {
-			const database = request.result;
-			if (!database.objectStoreNames.contains(STORE_NAME)) {
-				database.createObjectStore(STORE_NAME, { keyPath: "date" });
-			}
-		};
-		request.onsuccess = () => resolve(request.result);
-		request.onerror = () => reject(request.error);
+export function isBookmarked(date: string): Promise<boolean> {
+	return inTransaction<boolean>([STORE_NAME], "readonly", (transaction, finish) => {
+		const request = transaction.objectStore(STORE_NAME).get(date);
+		request.onsuccess = () => finish(!!request.result);
 	});
 }
 
-export async function isBookmarked(date: string): Promise<boolean> {
-	const database = await openBookmarksDatabase();
-	return new Promise((resolve, reject) => {
-		const transaction = database.transaction(STORE_NAME, "readonly");
-		const store = transaction.objectStore(STORE_NAME);
-		const request = store.get(date);
-		request.onsuccess = () => resolve(!!request.result);
-		request.onerror = () => reject(request.error);
-		transaction.oncomplete = () => database.close();
+export function getBookmarkedDates(): Promise<Set<string>> {
+	return inTransaction<Set<string>>([STORE_NAME], "readonly", (transaction, finish) => {
+		const request = transaction.objectStore(STORE_NAME).getAllKeys();
+		request.onsuccess = () => finish(new Set(request.result.map(String)));
 	});
 }
 
-export async function getBookmarkedDates(): Promise<Set<string>> {
-	const database = await openBookmarksDatabase();
-	return new Promise((resolve, reject) => {
-		const transaction = database.transaction(STORE_NAME, "readonly");
-		const store = transaction.objectStore(STORE_NAME);
-		const request = store.getAllKeys();
-		const dates = new Set<string>();
-		request.onsuccess = () => {
-			for (const date of request.result) dates.add(String(date));
-			resolve(dates);
-		};
-		request.onerror = () => reject(request.error);
-		transaction.oncomplete = () => database.close();
-	});
-}
-
-export async function toggleBookmark(date: string): Promise<boolean> {
-	const database = await openBookmarksDatabase();
-	return new Promise((resolve, reject) => {
-		const transaction = database.transaction(STORE_NAME, "readwrite");
+export function toggleBookmark(date: string): Promise<boolean> {
+	return inTransaction<boolean>([STORE_NAME], "readwrite", (transaction, finish) => {
 		const store = transaction.objectStore(STORE_NAME);
 		const getRequest = store.get(date);
 		getRequest.onsuccess = () => {
 			if (getRequest.result) {
 				store.delete(date);
-				resolve(false);
+				finish(false);
 			} else {
 				store.put({ date });
-				resolve(true);
+				finish(true);
 			}
 		};
-		getRequest.onerror = () => reject(getRequest.error);
-		transaction.oncomplete = () => database.close();
 	});
 }

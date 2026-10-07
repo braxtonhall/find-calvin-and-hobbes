@@ -6,6 +6,7 @@ import { CollectionPage } from "../pages/page";
 import { buildCollectionHtml } from "../pages/collection";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
+import { attachOwnershipControls } from "./ownership";
 import { attachCellHighlightLink } from "./cell-highlight";
 import { attachArcListHandlers } from "./arcs";
 
@@ -23,6 +24,7 @@ export function renderCollection(page: CollectionPage, adopt: boolean = false): 
 	if (!adopt) element.innerHTML = buildCollectionHtml(page, canGoBack());
 	attachBackAndHomeHandlers(element);
 	attachCopyLinkHandler(element);
+	attachOwnershipControls(element);
 	element.querySelectorAll<HTMLElement>(".collection-range-date").forEach((link) => {
 		attachCellHighlightLink(link, link.dataset.date!);
 	});

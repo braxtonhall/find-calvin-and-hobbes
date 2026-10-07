@@ -7,6 +7,8 @@ import { BookNeighbours, DetailArc, DetailCollection, DetailPage, PageSource, ar
 import { buildBackAndHomeButtons } from "./nav-buttons";
 import { PAGE_CONFIG } from "../site-config";
 import { StripLinkSubject, stripLinks } from "../strip-links";
+import { ownershipId } from "../library-file";
+import { buildOwnershipControlsHtml } from "./ownership";
 
 export function getAdjacentComicDate(
 	source: PageSource,
@@ -450,18 +452,20 @@ function linkSubject(page: DetailPage, comic: Comic): StripLinkSubject {
 	return { kind: "daily", date: page.date };
 }
 
-/** The strip's Read and License links, as `config.yaml` writes them; nothing when it writes neither. */
+/**
+ * The strip's Read and License links, as `config.yaml` writes them, and after them the buttons for
+ * owning it and noting it — which a strip has even where the config writes no links.
+ */
 function buildStripLinksHtml(page: DetailPage, comic: Comic): string {
 	const subject = linkSubject(page, comic);
 	const links = stripLinks(PAGE_CONFIG.details[subject.kind], subject);
-	if (links.length === 0) return "";
 	const anchors = links
 		.map(
 			({ label, href }) =>
 				`<a class="detail-read-link" href="${escHtml(href)}" target="_blank" rel="noopener">${label} ${LINK_ICON_SVG}</a>`,
 		)
 		.join("");
-	return `<div class="detail-links">${anchors}</div>`;
+	return `<div class="detail-links">${anchors}${buildOwnershipControlsHtml("strip", ownershipId(comic, page.date))}</div>`;
 }
 
 function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: string, isSunday: boolean): string {

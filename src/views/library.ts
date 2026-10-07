@@ -12,6 +12,7 @@ import { buildBackAndHomeButtons } from "../pages/nav-buttons";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachRowHandlers, resultsHtml } from "./result-rows";
 import { SearchBar, buildSearchBar } from "./search-bar";
+import { attachLibraryTransferHandlers, buildLibraryTransferHtml } from "./library-transfer";
 
 const EMPTY = "No bookmarks found";
 
@@ -33,8 +34,10 @@ export function renderLibrary(query: string, sort: SortMode, arriving: boolean):
 	if (arriving || !bar || !element.contains(bar.input)) {
 		element.innerHTML = `${buildBackAndHomeButtons(canGoBack())}
 			<h2 class="library-heading">Library</h2>
+			${buildLibraryTransferHtml()}
 			<div class="library-search"></div>`;
 		attachBackAndHomeHandlers(element);
+		attachLibraryTransferHandlers(element);
 		bar = buildSearchBar(element.querySelector(".library-search")!, {
 			id: "library",
 			placeholder: "Search bookmarks",
