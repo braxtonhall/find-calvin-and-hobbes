@@ -100,7 +100,7 @@ test("SITE_URL", async (suite) => {
 
 test("a site mounted at /repo/", async (suite) => {
 	const template = fs.readFileSync(path.join(PROJECT_DIR, "src", "index.html"), "utf8");
-	const collectionData = loadCollectionData(PROJECT_DIR);
+	const collectionData = loadCollectionData();
 
 	await suite.test("names its images from the mount", () => {
 		const comics: Comic[] = JSON.parse(exportComicsJson(PROJECT_DIR, collectionData, "/repo/"));

@@ -34,13 +34,13 @@ const PROJECT_DIR = process.cwd();
 const template = fs.readFileSync(path.join(PROJECT_DIR, "src", "index.html"), "utf8");
 
 function loadSource(): PageSource {
-	const collectionData = loadCollectionData(PROJECT_DIR);
-	const comicSource = loadComicSource(PROJECT_DIR);
-	const arcs: Arc[] = loadArcs(PROJECT_DIR, comicSource, collectionData);
+	const collectionData = loadCollectionData();
+	const comicSource = loadComicSource();
+	const arcs: Arc[] = loadArcs(comicSource, collectionData);
 	const comics: Comic[] = JSON.parse(exportComicsJson(PROJECT_DIR, collectionData, "/", arcs));
-	const reruns: Record<string, string> = JSON.parse(exportRerunsJson(PROJECT_DIR, comicSource));
+	const reruns: Record<string, string> = JSON.parse(exportRerunsJson(comicSource));
 	const collectionIndex = JSON.parse(generateCollectionIndex(collectionData));
-	const descriptions: Record<string, string> = JSON.parse(exportDescriptions(PROJECT_DIR));
+	const descriptions: Record<string, string> = JSON.parse(exportDescriptions());
 
 	const comicsByDate = new Map<string, Comic[]>();
 	for (const comic of comics) {

@@ -1,7 +1,7 @@
 import { Arc } from "../src/types";
 import { CollectionData } from "./collectionPages";
 import { ComicSource } from "./comicSource";
-import { loadOptionalPart } from "./siteConfig";
+import { loadOptionalPart, configName } from "./siteConfig";
 
 const ARC_ID = /^[a-z0-9]+$/;
 
@@ -35,11 +35,11 @@ function collectionsHolding(compactDates: string[], collectionData: CollectionDa
  *
  * None, and nothing read, where `config.yaml` turns arcs off.
  */
-export function loadArcs(projectDir: string, source: ComicSource, collectionData: CollectionData): Arc[] {
-	const raw = loadOptionalPart("arcs", projectDir);
+export function loadArcs(source: ComicSource, collectionData: CollectionData, config?: string): Arc[] {
+	const raw = loadOptionalPart("arcs", config);
 	if (raw === false) return [];
 	if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-		throw new Error("arcs in config.yaml must be a mapping of arc ids, or false");
+		throw new Error(`arcs in ${configName(config)} must be a mapping of arc ids, or false`);
 	}
 
 	const arcs: Arc[] = [];

@@ -125,7 +125,6 @@ export function themeCss(theme: Theme): string {
  * `config.yaml`, rebuilt under `--watch` when the file or `.env` changes.
  */
 export default function themeLoader(this: LoaderContext<unknown>): string {
-	const projectDir = this.rootContext;
-	watchConfig(this, projectDir);
-	return themeCss(loadTheme(projectDir));
+	watchConfig(this);
+	return themeCss(loadTheme());
 }

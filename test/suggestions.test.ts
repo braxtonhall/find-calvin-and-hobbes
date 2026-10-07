@@ -23,8 +23,8 @@ import { CollectionIndex } from "../src/types";
 import { withConfig } from "./helpers/config";
 
 const PROJECT_DIR = process.cwd();
-const collectionData = loadCollectionData(PROJECT_DIR);
-const comicSource = loadComicSource(PROJECT_DIR);
+const collectionData = loadCollectionData();
+const comicSource = loadComicSource();
 
 /*
  * The books, read out of the very index the app boots with.
@@ -41,10 +41,10 @@ registerVocabulary("in", () =>
 
 /** The archive as the app has it once it has loaded: the strips with their books and arcs, the reruns, the descriptions. */
 function installSiteArchive(): void {
-	const arcs = loadArcs(PROJECT_DIR, comicSource, collectionData);
+	const arcs = loadArcs(comicSource, collectionData);
 	state.comics = JSON.parse(exportComicsJson(PROJECT_DIR, collectionData, "/", arcs));
-	state.reruns = new Map(Object.entries(JSON.parse(exportRerunsJson(PROJECT_DIR, comicSource))));
-	state.descriptions = new Map(Object.entries(JSON.parse(exportDescriptions(PROJECT_DIR))));
+	state.reruns = new Map(Object.entries(JSON.parse(exportRerunsJson(comicSource))));
+	state.descriptions = new Map(Object.entries(JSON.parse(exportDescriptions())));
 }
 
 /** Every day of a leap year, so each month and day — and 29 February — is asked about once. */

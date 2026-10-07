@@ -13,15 +13,6 @@ import { watchConfigIn, loadSiteConfig } from "./siteConfig";
 
 const PLUGIN_NAME = "YamlToJsonPlugin";
 
-/**
- * Tells webpack which data files this plugin read, so `--watch` rebuilds when they change: the
- * configuration and everything it imports, and the folders it imports the books from, so added and
- * removed files are noticed.
- */
-function watchDataFiles(compilation: Compilation, projectDir: string): void {
-	watchConfigIn(compilation, projectDir);
-}
-
 class YamlToJsonPlugin {
 	apply(compiler: Compiler): void {
 		compiler.hooks.thisCompilation.tap(PLUGIN_NAME, (compilation: Compilation) => {
@@ -31,25 +22,26 @@ class YamlToJsonPlugin {
 					stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
 				},
 				() => {
-					const projectDir = compiler.context;
-					watchDataFiles(compilation, projectDir);
-					const collectionData = loadCollectionData(projectDir);
+					// Which data files this read, so `--watch` rebuilds when they change: the configuration and
+					// everything it imports, and the folders it imports the books from.
+					watchConfigIn(compilation);
+					const collectionData = loadCollectionData();
 					// The images are named from the mount, so the app can show them from any page as they are.
 					const basePath = loadSiteConfig()?.basePath ?? "/";
 
-					const source = loadComicSource(projectDir);
-					const arcs = loadArcs(projectDir, source, collectionData);
+					const source = loadComicSource();
+					const arcs = loadArcs(source, collectionData);
 					const arcsJson = exportArcsJson(arcs);
 
-					const characters = loadCharacters(projectDir);
-					const comicsJson = exportComicsJson(projectDir, collectionData, basePath, arcs, characters);
+					const characters = loadCharacters();
+					const comicsJson = exportComicsJson(compiler.context, collectionData, basePath, arcs, characters);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 
 					// Not emitted: the app has these, and the characters, inside its script. See `bundledData.ts`.
-					const rerunsJson = exportRerunsJson(projectDir, source);
+					const rerunsJson = exportRerunsJson(source);
 					const collectionIndexJson = generateCollectionIndex(collectionData, basePath);
 
-					const descriptionsJson = exportDescriptions(projectDir);
+					const descriptionsJson = exportDescriptions();
 					compilation.emitAsset("descriptions.json", new sources.RawSource(descriptionsJson));
 
 					setSiteData(compilation, {

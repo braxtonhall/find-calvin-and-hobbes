@@ -21,11 +21,10 @@
  * is derived on every build rather than checked in, so a corrected transcript is reflected the
  * next time the site is built.
  */
-import path from "path";
 import type { LoaderContext } from "webpack";
 import type { CompoundRelation } from "../src/compounds";
 import { loadComicSource } from "./comicSource";
-import { watchConfig, loadOptionalPart } from "./siteConfig";
+import { watchConfig, loadOptionalPart, configName } from "./siteConfig";
 
 const WORD_PATTERN = /[\p{L}\p{N}']+/gu;
 
@@ -50,10 +49,6 @@ export interface Counts {
 	bigrams: Map<string, number>;
 }
 
-function defaultProjectDir(): string {
-	return path.join(__dirname, "..");
-}
-
 /** A single lowercase word, as the tokeniser would produce it. */
 function isWord(value: string): boolean {
 	return (
@@ -65,12 +60,12 @@ function isWord(value: string): boolean {
  * The compounds `config.yaml` gives, checked; none where it sets them to false, or imports a file with
  * nothing in it.
  */
-export function readCompoundsFile(projectDir = defaultProjectDir()): CompoundsFile {
-	const value = loadOptionalPart("compounds", projectDir);
+export function readCompoundsFile(config?: string): CompoundsFile {
+	const value = loadOptionalPart("compounds", config);
 	if (value === false || value === null) return { keepWhole: new Set(), compounds: [] };
 	const raw = value as Record<string, unknown>;
 	if (typeof raw !== "object" || Array.isArray(raw))
-		throw new Error("compounds in config.yaml must be a mapping, or false");
+		throw new Error(`compounds in ${configName(config)} must be a mapping, or false`);
 	for (const key of Object.keys(raw)) {
 		if (key !== "keepWhole" && key !== "compounds") throw new Error(`compounds has an unknown setting, ${key}`);
 	}
@@ -129,8 +124,8 @@ function tokenise(text: string): string[] {
  * Document frequency, not term frequency: one strip counts once however often it repeats a
  * word, matching how `countDocument` builds the corpus the scorer reads.
  */
-export function countCorpus(projectDir = defaultProjectDir()): Counts {
-	const source = loadComicSource(projectDir);
+export function countCorpus(config?: string): Counts {
+	const source = loadComicSource(config);
 	const words = new Map<string, number>();
 	const bigrams = new Map<string, number>();
 
@@ -150,9 +145,9 @@ export function countCorpus(projectDir = defaultProjectDir()): Counts {
 }
 
 /** Every compound the search splits, by its closed form, in alphabetical order. */
-export function loadCompoundRelations(projectDir = defaultProjectDir()): [string, CompoundRelation][] {
-	const { keepWhole, compounds } = readCompoundsFile(projectDir);
-	const { words, bigrams } = countCorpus(projectDir);
+export function loadCompoundRelations(config?: string): [string, CompoundRelation][] {
+	const { keepWhole, compounds } = readCompoundsFile(config);
+	const { words, bigrams } = countCorpus(config);
 	const lexicon = new Map<string, CompoundRelation>();
 
 	for (const [closed, closedDf] of words) {
@@ -183,9 +178,8 @@ export function loadCompoundRelations(projectDir = defaultProjectDir()): [string
  * the lexicon as a literal, rebuilt under `--watch` when the archive or `compounds.yaml` changes.
  */
 export default function compoundLexiconLoader(this: LoaderContext<unknown>): string {
-	const projectDir = this.rootContext;
-	watchConfig(this, projectDir);
-	const entries = JSON.stringify(loadCompoundRelations(projectDir));
+	watchConfig(this);
+	const entries = JSON.stringify(loadCompoundRelations());
 	return [
 		`const entries = ${entries};`,
 		`export const COMPOUND_RELATIONS = new Map(entries);`,

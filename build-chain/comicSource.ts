@@ -1,4 +1,4 @@
-import { loadRequiredPart } from "./siteConfig";
+import { loadRequiredPart, configName } from "./siteConfig";
 
 export interface DailyEntry {
 	transcript: string;
@@ -27,9 +27,10 @@ interface RawSource {
 }
 
 /** The strips, as `config.yaml` gives them: this project's, unless told otherwise. */
-export function loadComicSource(projectDir?: string): ComicSource {
-	const value = loadRequiredPart("comics", projectDir);
-	if (typeof value !== "object" || Array.isArray(value)) throw new Error("comics in config.yaml must be a mapping");
+export function loadComicSource(config?: string): ComicSource {
+	const value = loadRequiredPart("comics", config);
+	if (typeof value !== "object" || Array.isArray(value))
+		throw new Error(`comics in ${configName(config)} must be a mapping`);
 	const raw = value as RawSource;
 
 	const dailies: Record<string, DailyEntry> = {};

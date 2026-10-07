@@ -29,11 +29,17 @@ export const SAMPLE_ASPECT_RATIO = `aspectRatio:
 export const SAMPLE_PARTS = ["arcs", "reruns", "compounds", "characters"];
 
 /**
- * A project holding just this `config.yaml`, for `loadPageConfig` to read — with `SAMPLE_THEME`,
+ * A project holding just this configuration, for `loadPageConfig` to read — with `SAMPLE_THEME`,
  * `SAMPLE_ASPECT_RATIO` and `SAMPLE_PARTS` added where it gives none of its own — and, beside it,
- * `files`, by their names, for it to import.
+ * `files`, by their names, for it to import. `run` is given the configuration's path, and the folder.
+ *
+ * Named `site.yaml`, not `config.yaml`, so that nothing can find it by its name.
  */
-export function withConfig<T>(contents: string, run: (projectDir: string) => T, files: Record<string, string> = {}): T {
+export function withConfig<T>(
+	contents: string,
+	run: (config: string, projectDir: string) => T,
+	files: Record<string, string> = {},
+): T {
 	const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "config-"));
 	try {
 		const themed = /^theme:/m.test(contents) ? contents : `${contents}\n${SAMPLE_THEME}`;
@@ -42,12 +48,13 @@ export function withConfig<T>(contents: string, run: (projectDir: string) => T, 
 			(config, part) => (new RegExp(`^${part}:`, "m").test(config) ? config : `${config}\n${part}: false\n`),
 			shaped,
 		);
-		fs.writeFileSync(path.join(projectDir, "config.yaml"), parted);
+		const config = path.join(projectDir, "site.yaml");
+		fs.writeFileSync(config, parted);
 		for (const [name, text] of Object.entries(files)) {
 			fs.mkdirSync(path.dirname(path.join(projectDir, name)), { recursive: true });
 			fs.writeFileSync(path.join(projectDir, name), text);
 		}
-		return run(projectDir);
+		return run(config, projectDir);
 	} finally {
 		fs.rmSync(projectDir, { recursive: true, force: true });
 	}

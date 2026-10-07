@@ -6,8 +6,8 @@ import { loadCharacterSetting } from "./siteConfig";
  * The characters a strip can feature, in the order `config.yaml` gives them, which is the order the
  * menu offers them in. None where it sets `characters` to false.
  */
-export function loadCharacters(projectDir: string): Character[] {
-	const characters = loadCharacterSetting(projectDir);
+export function loadCharacters(config?: string): Character[] {
+	const characters = loadCharacterSetting(config);
 	return characters === false ? [] : Object.entries(characters).map(([id, name]) => ({ id, name }));
 }
 

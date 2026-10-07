@@ -1,4 +1,3 @@
-import path from "path";
 import type { LoaderContext } from "webpack";
 import { exportArcsJson, loadArcs } from "./arcs";
 import { exportCharactersJson, loadCharacters } from "./characters";
@@ -19,16 +18,16 @@ export interface BundledJson {
 	characters: string;
 }
 
-export function loadBundledJson(projectDir = path.join(__dirname, "..")): BundledJson {
-	const source = loadComicSource(projectDir);
-	const collectionData = loadCollectionData(projectDir);
+export function loadBundledJson(config?: string): BundledJson {
+	const source = loadComicSource(config);
+	const collectionData = loadCollectionData(config);
 	// The books' images are named from the mount, so the app can show them from any page as they are.
 	const basePath = loadSiteConfig()?.basePath ?? "/";
 	return {
-		reruns: exportRerunsJson(projectDir, source),
+		reruns: exportRerunsJson(source, config),
 		collectionIndex: generateCollectionIndex(collectionData, basePath),
-		arcs: exportArcsJson(loadArcs(projectDir, source, collectionData)),
-		characters: exportCharactersJson(loadCharacters(projectDir)),
+		arcs: exportArcsJson(loadArcs(source, collectionData, config)),
+		characters: exportCharactersJson(loadCharacters(config)),
 	};
 }
 
@@ -49,10 +48,9 @@ export function loadBundledData(): { RERUNS: unknown; COLLECTION_INDEX: unknown;
  * both what it was before it was bundled and the faster of the two for an engine to read.
  */
 export default function bundledDataLoader(this: LoaderContext<unknown>): string {
-	const projectDir = this.rootContext;
-	watchConfig(this, projectDir);
+	watchConfig(this);
 
-	const json = loadBundledJson(projectDir);
+	const json = loadBundledJson();
 	const parsed = (text: string) => `JSON.parse(${JSON.stringify(text)})`;
 	return [
 		`export const RERUNS = ${parsed(json.reruns)};`,

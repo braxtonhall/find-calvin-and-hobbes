@@ -10,8 +10,8 @@ function iso(stamp: number): string {
 }
 
 /** The span of `src/archive.ts`, read from the strips — this project's, unless told otherwise. */
-export function loadArchiveSpan(projectDir?: string): ArchiveSpan {
-	const stamps = Object.keys(loadComicSource(projectDir).dailies)
+export function loadArchiveSpan(config?: string): ArchiveSpan {
+	const stamps = Object.keys(loadComicSource(config).dailies)
 		.map((key) => Date.UTC(Number(key.slice(0, 4)), Number(key.slice(4, 6)) - 1, Number(key.slice(6, 8))))
 		.sort((one, other) => one - other);
 	if (stamps.length === 0) throw new Error("comics has no dailies to take the archive's span from");
@@ -29,7 +29,6 @@ export function loadArchiveSpan(projectDir?: string): ArchiveSpan {
  * literal instead, and a change to the strips rebuilds it under `--watch`.
  */
 export default function archiveSpanLoader(this: LoaderContext<unknown>): string {
-	const projectDir = this.rootContext;
-	watchConfig(this, projectDir);
-	return `export const ARCHIVE_SPAN = ${JSON.stringify(loadArchiveSpan(projectDir))};\n`;
+	watchConfig(this);
+	return `export const ARCHIVE_SPAN = ${JSON.stringify(loadArchiveSpan())};\n`;
 }

@@ -12,7 +12,7 @@ import { CollectionIndex } from "../src/types";
  * floor.
  */
 
-const data = loadCollectionData(process.cwd());
+const data = loadCollectionData();
 const index: CollectionIndex = JSON.parse(generateCollectionIndex(data));
 
 /** Every book a strip claims to have been printed in. */

@@ -7,7 +7,7 @@ import { ENGINE_TUNING } from "./helpers/engine-tuning";
 /** The tuning: that it must give every setting, as a number, and nothing else. */
 
 /** A project whose `config.yaml` imports this `tuning.yaml`, which is not there for `null`. */
-function withTuning<T>(contents: string | null, run: (projectDir: string) => T): T {
+function withTuning<T>(contents: string | null, run: (config: string) => T): T {
 	return withConfig("tuning: !Import ./tuning.yaml\n", run, contents === null ? {} : { "tuning.yaml": contents });
 }
 

@@ -1,6 +1,6 @@
 import type { LoaderContext } from "webpack";
 import type { Tuning } from "../src/search";
-import { watchConfig, loadRequiredPart } from "./siteConfig";
+import { watchConfig, loadRequiredPart, configName } from "./siteConfig";
 
 const TUNING_KEYS = [
 	"sequenceWeight",
@@ -34,9 +34,10 @@ const EVERY_KEY: Record<Exclude<keyof Tuning, (typeof TUNING_KEYS)[number]>, nev
 void EVERY_KEY;
 
 /** The tuning `config.yaml` gives, checked: every setting, each a number, and nothing else. */
-export function loadTuning(projectDir?: string): Tuning {
-	const raw = loadRequiredPart("tuning", projectDir);
-	if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error("tuning in config.yaml must be a mapping");
+export function loadTuning(config?: string): Tuning {
+	const raw = loadRequiredPart("tuning", config);
+	if (!raw || typeof raw !== "object" || Array.isArray(raw))
+		throw new Error(`tuning in ${configName(config)} must be a mapping`);
 
 	const settings = raw as Record<string, unknown>;
 	for (const key of Object.keys(settings)) {
@@ -59,7 +60,6 @@ export function loadTuning(projectDir?: string): Tuning {
  * tuning as a literal, rebuilt under `--watch` when it changes.
  */
 export default function tuningLoader(this: LoaderContext<unknown>): string {
-	const projectDir = this.rootContext;
-	watchConfig(this, projectDir);
-	return `export const TUNING = ${JSON.stringify(loadTuning(projectDir))};\n`;
+	watchConfig(this);
+	return `export const TUNING = ${JSON.stringify(loadTuning())};\n`;
 }

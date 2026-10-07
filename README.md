@@ -96,67 +96,25 @@ pages are written by `build-chain/PagesPlugin.ts`.
 
 ### Configuration
 
-`config.yaml` is where the site is configured: its name, the home page's banner, its colours, and
-where the Read and License links under a strip lead, each a template filled in from the strip — see
-the file for the fields. A link with no template is not drawn.
+Everything about the site and its archive is in `config.yaml`, and its comments explain each
+setting. The build reads whichever file `SITE_CONFIG` names, which every script in `package.json`
+sets to `config.yaml`; to build from another, run `SITE_CONFIG=other.yaml npx webpack --mode production`.
 
-It also says where the archive is. Each part is written in place, or imported from a file of its
-own with `!Import ./file.yaml`; a Markdown file imports as its text. `!Map [Import, ./folder/*.yaml]`
-imports every file a pattern matches, as a list in the order of their paths. Either path is read
-from the file it is written in, so an imported file can import others beside it. Every part must be
-given, a file it imports that isn't there — or a pattern that matches nothing — fails the build, and
-the optional parts can be set to `false` instead, which leaves out what they are for. This archive
-imports each from the file of the same name, and the books from `collections/`:
-
-- `comics` holds the strips: their transcripts, descriptions and specials.
-- `collections` lists the books, each with the pages it printed every strip on.
-- `tuning` holds how the search scores a match, fitted to this archive's text, with notes on how each
-  value was measured. The measuring is in `test/tuning`: `yarn tune` sweeps the values against its
-  queries, and `yarn probe "<query>"` shows what a query returns.
-- `credits` is the credits page, in Markdown.
-- `arcs`, optional, holds the story arcs.
-- `reruns`, optional, maps each day the paper ran an earlier strip again to that strip.
-- `compounds`, optional, tunes how the search treats compound words: the ones to keep whole, and the
-  ones to split that the archive never writes open. `yarn candidates` lists likely compounds it
-  doesn't mention yet.
-- `characters`, optional, names the characters a strip can feature, by the id `@featuring:` takes. A
-  strip lists its characters by those ids under `characters` in `comics`, and a strip that lists
-  none features none.
-
-Any value in `config.yaml` can read the environment as `$NAME`, `${NAME}` or `${NAME:-fallback}`,
-from the process or from `.env` — though not a value it imports, so a `$` in a transcript stays as it
-is. The deployment settings — `SITE_URL`, `PAGE_LAYOUT` and `CORRECTIONS`, below
-— are read that way already, so a fork that only moves the site can leave `config.yaml` alone and
-set them in `.env`, or as Actions variables of the same names for the GitHub Pages workflow.
+The search's tuning is measured in `test/tuning`: `yarn tune` sweeps its values, `yarn probe "<query>"`
+shows what a query returns, and `yarn candidates` lists compound words `compounds` doesn't mention yet.
 
 ### Domain
 
-The site's own URL is optional at build time. Set `SITE_URL` to have the build
-emit the `og:url` and canonical tags on every page, a `robots.txt` sitemap pointer,
-`sitemap.xml`, and a `CNAME` file for a GitHub Pages custom domain.
-
-A `SITE_URL` with a path — `https://user.github.io/repo`, as a GitHub project page is served —
-mounts the site there: every link, fetch and image is written from `/repo/`, the app reads the
-address bar through it, and no `CNAME` is emitted. The mount is compiled into the bundle, so a
-change to it needs a fresh build rather than a `--watch` rebuild.
-
-```sh
-cp .env.sample .env
-# then edit .env and uncomment/set SITE_URL
-```
-
-Leave `SITE_URL` unset to build without those files.
+`SITE_URL` sets the site's address, which turns on its canonical tags, sitemap and `CNAME`, and can
+mount it under a path. Set it in `.env` (copy `.env.sample`) or the Actions variables; `config.yaml`
+explains the rest. The mount is compiled into the bundle, so changing it needs a fresh build rather
+than a `--watch` rebuild.
 
 ### Corrections
 
-Every page that holds something correctable — a strip, a book, the credits — carries a link to a
-form for reporting what is wrong with it. The form opens knowing which page it was sent from, which
-site it was sent from, and which commit that site was built at.
-
-Where the link leads is a template in `config.yaml`, one for each kind of page; a kind of page with
-no template carries no link. A fork leaves these alone, so that its corrections arrive with the rest
-rather than nowhere. A build that wants no part of the form sets `CORRECTIONS=false`, which leaves
-the link out of every page rather than hiding it.
+Every page with something correctable on it links to a form for reporting it. Where each link
+leads is a template in `config.yaml`. Forks should leave these as they are, so corrections all
+reach the same form. Set `CORRECTIONS=false` to leave the link off every page.
 
 ### Images
 

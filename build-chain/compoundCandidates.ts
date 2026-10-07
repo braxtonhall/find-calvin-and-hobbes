@@ -14,10 +14,10 @@ function isObviousFalsePositive(whole: string, parts: string[]): boolean {
 	return whole.includes("'") || /(.)\1{2,}/.test(whole) || OBVIOUS_SUFFIXES.has(parts[1]);
 }
 
-export function buildCandidates(projectDir?: string): CompoundRelation[] {
-	const { keepWhole, compounds } = readCompoundsFile(projectDir);
+export function buildCandidates(config?: string): CompoundRelation[] {
+	const { keepWhole, compounds } = readCompoundsFile(config);
 	const listed = new Set(compounds.map((compound) => compound.whole));
-	const { words, bigrams } = countCorpus(projectDir);
+	const { words, bigrams } = countCorpus(config);
 
 	const candidates = new Map<string, CompoundRelation>();
 	for (const [closed, closedDf] of words) {
@@ -42,7 +42,7 @@ export function buildCandidates(projectDir?: string): CompoundRelation[] {
 	return [...candidates].sort(([a], [b]) => a.localeCompare(b)).map(([, candidate]) => candidate);
 }
 
-const candidates = buildCandidates(process.cwd());
+const candidates = buildCandidates();
 for (const preference of ["closed", "balanced"] as const) {
 	const group = candidates.filter((candidate) => candidate.preference === preference);
 	if (group.length === 0) continue;

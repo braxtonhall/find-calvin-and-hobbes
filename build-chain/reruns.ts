@@ -1,5 +1,5 @@
 import { ComicSource } from "./comicSource";
-import { loadOptionalPart } from "./siteConfig";
+import { loadOptionalPart, configName } from "./siteConfig";
 
 export type Reruns = Record<string, string>;
 
@@ -17,11 +17,11 @@ function compactToIsoDate(value: string): string {
 }
 
 /** None, and nothing read, where `config.yaml` turns reruns off. */
-export function loadReruns(projectDir: string, source: ComicSource): Reruns {
-	const raw = loadOptionalPart("reruns", projectDir);
+export function loadReruns(source: ComicSource, config?: string): Reruns {
+	const raw = loadOptionalPart("reruns", config);
 	if (raw === false) return {};
 	if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-		throw new Error("reruns in config.yaml must be a date mapping, or false");
+		throw new Error(`reruns in ${configName(config)} must be a date mapping, or false`);
 	}
 
 	const originalDates = new Set([
@@ -45,6 +45,6 @@ export function loadReruns(projectDir: string, source: ComicSource): Reruns {
 	return reruns;
 }
 
-export function exportRerunsJson(projectDir: string, source: ComicSource): string {
-	return JSON.stringify(loadReruns(projectDir, source));
+export function exportRerunsJson(source: ComicSource, config?: string): string {
+	return JSON.stringify(loadReruns(source, config));
 }
