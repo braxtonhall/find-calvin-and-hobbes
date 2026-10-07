@@ -91,11 +91,9 @@ export function renderLanding(adopt: boolean = false): void {
 
 	const input = document.getElementById("landing-input") as HTMLInputElement;
 	const submit = document.getElementById("landing-submit") as HTMLButtonElement;
+	// The box is in the page already, with the button inside it, in the room its right padding
+	// reserves; the widget takes the box over as it is.
 	attachQueryInput(input);
-	// Into the box the widget just built, rather than beside it: the page keeps one rounded field
-	// under the logo, and the control lives in room the box already reserves for it with its own
-	// right padding.
-	input.closest(".query-box")!.appendChild(submit);
 	// Not on a touchscreen, where the focus would raise a keyboard the reader never asked for.
 	if (!isTouchDevice()) input.focus();
 

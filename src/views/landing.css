@@ -29,30 +29,33 @@
 	padding: 0 24px;
 }
 
-/* The input alone until `attachQueryInput` wraps it, and then the wrapper, which takes the frame. */
-.landing-input,
+/*
+ * The frame, written into the page around the input and the submit button both, so the button is
+ * in place before the script runs. The height stays the input's, so the whole of it is somewhere to
+ * tap; on the right is room for the button, which sits inside the box rather than beside it.
+ */
 .landing-form .query-box {
-	width: 100%;
-	/* Room on the right for the submit button, which sits inside the box rather than beside it. */
-	padding: 16px 56px 16px 20px;
-	font-size: 18px;
-	font-family: var(--font);
-	color: var(--text);
+	padding: 0 56px 0 20px;
 	background: var(--bg-sidebar);
 	border: 2px solid var(--neutral);
 	border-radius: 8px;
-	outline: none;
 	transition: border-color 0.2s;
 }
 
-/* The height stays the input's, so the whole of it is somewhere to tap. */
-.landing-form .query-box {
-	padding-block: 0;
-}
-
-.landing-input:focus,
 .landing-form .query-box:focus-within {
 	border-color: var(--main);
+}
+
+.landing-input {
+	display: block;
+	width: 100%;
+	padding: 16px 0;
+	font-size: 18px;
+	font-family: var(--font);
+	color: var(--text);
+	background: transparent;
+	border: 0;
+	outline: none;
 }
 
 .landing-input::placeholder {

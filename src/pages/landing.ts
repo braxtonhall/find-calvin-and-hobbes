@@ -21,15 +21,19 @@ export function buildLandingHtml(): string {
 	return `
 		${buildLogoHtml()}
 		<form class="landing-form" id="landing-form">
-			<input
-				type="text"
-				class="landing-input"
-				id="landing-input"
-				placeholder="Search comics..."
-				autocomplete="off"
-				enterkeyhint="search"
-			/>
-			<button type="submit" class="landing-submit" id="landing-submit" title="Search" aria-label="Search">${SEARCH_ICON}</button>
+			<div class="query-field">
+				<div class="query-box">
+					<input
+						type="text"
+						class="landing-input"
+						id="landing-input"
+						placeholder="Search comics..."
+						autocomplete="off"
+						enterkeyhint="search"
+					/>
+					<button type="submit" class="landing-submit" id="landing-submit" title="Search" aria-label="Search">${SEARCH_ICON}</button>
+				</div>
+			</div>
 		</form>
 		<nav class="landing-links">
 			<a href="${addressOf(LIBRARY_PATH)}">Library</a>
