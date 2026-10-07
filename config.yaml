@@ -169,7 +169,9 @@ corrections:
 #
 #   comics      the strips: their transcripts, descriptions, and specials
 #   collections the books, as a list. `!Map [Import, ./folder/*.yaml]` imports every file a pattern
-#               matches, in the order of their paths
+#               matches, in the order of their paths. A book's `image`, its cover, is a URL, or a
+#               file as `!Path ./cover.png`, relative to the file it is written in, which the build
+#               publishes under `static/`
 #   tuning      how the search scores a match, fitted to the strips, with notes on each value
 #   credits     the credits page, in Markdown
 #
@@ -181,6 +183,10 @@ corrections:
 #               a strip's list of the days it reran, and @is:reused and @is:rerun
 #   compounds   the compound words the search keeps whole or splits beyond what it finds itself
 #   characters  each character's name by id, for @featuring: and the Featuring line under a strip
+#   comicImages the folder of the strips' images, relative to this file, each named by its date as
+#               YYYYMMDD, or by a special's id, with its own extension. A strip has an image if the
+#               folder has one for it, so they can be dropped in as they are found; a folder that
+#               isn't there yet has none. Without one, the strips are shown as their transcripts alone
 comics: !Import ./comics.yaml
 collections: !Map [Import, ./collections/*.yaml]
 tuning: !Import ./tuning.yaml
@@ -189,6 +195,7 @@ arcs: !Import ./arcs.yaml
 reruns: !Import ./reruns.yaml
 compounds: !Import ./compounds.yaml
 characters: false
+comicImages: ./assets/comics
 
 # Whether the Sundays ran in colour and the dailies in black and white, a format of their own. When
 # true, the search has `@is:sunday` and `@is:daily` and the filter bar a Format field to pick one,

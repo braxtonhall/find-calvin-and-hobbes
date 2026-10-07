@@ -37,7 +37,7 @@ function loadSource(): PageSource {
 	const collectionData = loadCollectionData();
 	const comicSource = loadComicSource();
 	const arcs: Arc[] = loadArcs(comicSource, collectionData);
-	const comics: Comic[] = JSON.parse(exportComicsJson(PROJECT_DIR, collectionData, "/", arcs));
+	const comics: Comic[] = JSON.parse(exportComicsJson(collectionData, "/", arcs));
 	const reruns: Record<string, string> = JSON.parse(exportRerunsJson(comicSource));
 	const collectionIndex = JSON.parse(generateCollectionIndex(collectionData));
 	const descriptions: Record<string, string> = JSON.parse(exportDescriptions());

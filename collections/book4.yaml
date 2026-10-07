@@ -142,5 +142,5 @@ extras:
   - Front cover art
   - Back cover art
   - Filler B&W vignettes
-image: assets/book4.jpg
+image: !Path ../assets/book4.jpg
 aspect-ratio: 0.9335

@@ -114,6 +114,7 @@ interface RawConfig {
 	reruns?: unknown;
 	compounds?: unknown;
 	characters?: unknown;
+	comicImages?: unknown;
 	colourSundays?: unknown;
 	aspectRatio?: { daily?: unknown; sunday?: unknown } | null;
 	details?: Partial<Record<string, unknown>> | null;
@@ -218,6 +219,23 @@ function importTag(context: ImportContext) {
 	});
 }
 
+/**
+ * `!Path ./file`: the file or folder, relative to the file the tag is written in, as an absolute
+ * path, for the build to copy from. One that isn't there stops the build, as an `!Import` does.
+ */
+function pathTag(context: ImportContext) {
+	return yaml.defineScalarTag<string>("!Path", {
+		resolve: (source) => {
+			const target = path.resolve(path.dirname(context.file), source.trim());
+			if (!fs.existsSync(target)) {
+				throw new Error(`${path.basename(context.file)} names ${source.trim()}, which does not exist`);
+			}
+			return target;
+		},
+		identify: () => false,
+	});
+}
+
 /** The folder a pattern looks in: its path up to the first part with a wildcard in it. */
 function patternBase(pattern: string): string {
 	const parts = pattern.split("/");
@@ -259,7 +277,7 @@ function mapTag(context: ImportContext) {
 }
 
 function importSchema(context: ImportContext): yaml.Schema {
-	return yaml.CORE_SCHEMA.withTags(importTag(context), mapTag(context));
+	return yaml.CORE_SCHEMA.withTags(importTag(context), mapTag(context), pathTag(context));
 }
 
 /** An imported file's contents: YAML parsed, its own imports read in place, and Markdown as text. */
@@ -404,6 +422,21 @@ export function loadFeatures(config?: string): Pick<PageConfig, "arcs" | "reruns
 		reruns: !partIsOff(raw.reruns, "reruns"),
 		characters: !partIsOff(raw.characters, "characters"),
 	}));
+}
+
+/**
+ * The folder of the strips' images, each named by its date or a special's id, relative to the
+ * configuration, or `null` where it names none. The folder need not be there: a strip has an image
+ * if the folder has one for it, so images can be dropped in, or taken out, as they are found.
+ */
+export function loadComicImages(config = configPath()): string | null {
+	const value = readConfig(config).comicImages;
+	if (missing(value) || value === false) return null;
+	const folder = typeof value === "string" ? path.resolve(path.dirname(config), value) : null;
+	if (!folder || (fs.existsSync(folder) && !fs.statSync(folder).isDirectory())) {
+		throw new Error(`comicImages in ${configName(config)} must be a folder, or false`);
+	}
+	return folder;
 }
 
 const CHARACTER_ID = /^[a-z0-9]+$/;

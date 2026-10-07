@@ -139,5 +139,5 @@ extras:
   - Back cover art
   - Filler B&W vignettes
   - Foreword by Pat Oliphant
-image: assets/book2.jpg
+image: !Path ../assets/book2.jpg
 aspect-ratio: 0.9367

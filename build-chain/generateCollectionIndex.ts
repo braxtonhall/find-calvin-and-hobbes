@@ -1,4 +1,10 @@
 import { CollectionData } from "./collectionPages";
+import { isUrl } from "./staticFiles";
+
+/** A cover as a page links to it: a URL as it is, and a published file from the mount, since the page may be at any depth. */
+function publicUrl(image: unknown, basePath: string): unknown {
+	return typeof image === "string" && !isUrl(image) ? `${basePath}${image}` : image;
+}
 
 /**
  * The books, as the site reads them.
@@ -37,8 +43,7 @@ export function generateCollectionIndex(collectionData: CollectionData, basePath
 
 		const collection: Record<string, unknown> = {
 			...rest,
-			// The YAML names the cover relative to the project; the page showing it may live at any depth.
-			image: `${basePath}${String(rest.image).replace(/^\/+/, "")}`,
+			image: publicUrl(rest.image, basePath),
 			dailies: collectionData.rangesById.get(source.id) || [],
 			specials: collectionData.specialsById.get(source.id) || {},
 			alterations: Object.fromEntries(
@@ -50,7 +55,7 @@ export function generateCollectionIndex(collectionData: CollectionData, basePath
 			collection.editions = Object.fromEntries(
 				Object.entries(editions).map(([name, { volumes: _volumes, ...meta }]) => [
 					name,
-					meta.image ? { ...meta, image: `${basePath}${meta.image.replace(/^\/+/, "")}` } : meta,
+					meta.image ? { ...meta, image: publicUrl(meta.image, basePath) } : meta,
 				]),
 			);
 		}

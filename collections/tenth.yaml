@@ -201,5 +201,5 @@ extras:
   - Back cover
   - Dedication page art
   - Extensive commentary and annotations by Watterson
-image: assets/tenth.gif
+image: !Path ../assets/tenth.gif
 aspect-ratio: 1.3957

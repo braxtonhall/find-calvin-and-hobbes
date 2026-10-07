@@ -1,3 +1,4 @@
+import fs from "fs";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
 import { exportArcsJson, loadArcs } from "./arcs";
@@ -9,7 +10,7 @@ import { exportDescriptions } from "./exportDescriptions";
 import { generateCollectionIndex } from "./generateCollectionIndex";
 import { exportRerunsJson } from "./reruns";
 import { setSiteData } from "./siteData";
-import { watchConfigIn, loadSiteConfig } from "./siteConfig";
+import { watchConfigIn, loadComicImages, loadSiteConfig } from "./siteConfig";
 
 const PLUGIN_NAME = "YamlToJsonPlugin";
 
@@ -26,6 +27,15 @@ class YamlToJsonPlugin {
 					// everything it imports, and the folders it imports the books from.
 					watchConfigIn(compilation);
 					const collectionData = loadCollectionData();
+					// The strips' images, which are found by looking in their folder, there or not, so an image
+					// dropped in or taken out is noticed.
+					const comicImages = loadComicImages();
+					if (comicImages) compilation.contextDependencies.add(comicImages);
+					// The covers, each where the books link to it. Watched, since the configuration names them by path.
+					for (const [published, file] of collectionData.files) {
+						compilation.fileDependencies.add(file);
+						compilation.emitAsset(published, new sources.RawSource(fs.readFileSync(file)));
+					}
 					// The images are named from the mount, so the app can show them from any page as they are.
 					const basePath = loadSiteConfig()?.basePath ?? "/";
 
@@ -34,7 +44,7 @@ class YamlToJsonPlugin {
 					const arcsJson = exportArcsJson(arcs);
 
 					const characters = loadCharacters();
-					const comicsJson = exportComicsJson(compiler.context, collectionData, basePath, arcs, characters);
+					const comicsJson = exportComicsJson(collectionData, basePath, arcs, characters);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 
 					// Not emitted: the app has these, and the characters, inside its script. See `bundledData.ts`.

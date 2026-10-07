@@ -118,4 +118,6 @@ reach the same form. Set `CORRECTIONS=false` to leave the link off every page.
 
 ### Images
 
-Comic strip images go in `assets/comics/` named by date as `YYYYMMDD.ext` (e.g. `assets/comics/19851118.gif`). Collection cover images go directly in `assets/` (e.g. `assets/book1.png`). The webpack build discovers these automatically and copies them into `dist/assets/`.
+A strip's image goes in the folder `comicImages` names, as `YYYYMMDD.ext` or a special's id — drop
+one in and that strip has an image. A book's cover is a URL, or a file named with `!Path` anywhere in
+the project, which the build copies to `static/`. See `config.yaml`.

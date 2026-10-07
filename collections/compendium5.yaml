@@ -14,5 +14,5 @@ alterations: {}
 extras:
   - Two 144-page paperback books in archival slipcase
   - Cover art selected by Bill Watterson
-image: assets/compendium5.jpg
+image: !Path ../assets/compendium5.jpg
 aspect-ratio: 0.8021

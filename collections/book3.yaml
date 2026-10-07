@@ -138,5 +138,5 @@ extras:
   - Back cover art
   - Filler B&W vignettes
   - The Yukon Song (original poem)
-image: assets/book3.jpg
+image: !Path ../assets/book3.jpg
 aspect-ratio: 0.9508

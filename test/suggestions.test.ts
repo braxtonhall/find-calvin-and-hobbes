@@ -22,7 +22,6 @@ import { loadArcs } from "../build-chain/arcs";
 import { CollectionIndex } from "../src/types";
 import { withConfig } from "./helpers/config";
 
-const PROJECT_DIR = process.cwd();
 const collectionData = loadCollectionData();
 const comicSource = loadComicSource();
 
@@ -42,7 +41,7 @@ registerVocabulary("in", () =>
 /** The archive as the app has it once it has loaded: the strips with their books and arcs, the reruns, the descriptions. */
 function installSiteArchive(): void {
 	const arcs = loadArcs(comicSource, collectionData);
-	state.comics = JSON.parse(exportComicsJson(PROJECT_DIR, collectionData, "/", arcs));
+	state.comics = JSON.parse(exportComicsJson(collectionData, "/", arcs));
 	state.reruns = new Map(Object.entries(JSON.parse(exportRerunsJson(comicSource))));
 	state.descriptions = new Map(Object.entries(JSON.parse(exportDescriptions())));
 }

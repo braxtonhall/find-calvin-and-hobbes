@@ -130,5 +130,5 @@ extras:
   - Additional non-strip art
   - "Spaceman Spiff: Interplanetary Explorer Extraordinaire! — 10-page story"
   - Afterword by Bill Watterson
-image: assets/lazysunday.gif
+image: !Path ../assets/lazysunday.gif
 aspect-ratio: 0.7832
