@@ -1,4 +1,5 @@
 import { escHtml } from "../utils";
+import { srcsetAttributes } from "../srcset";
 import { PAGE_CONFIG } from "../site-config";
 import { ARCS_PATH, BOOKS_PATH, CREATORS_PATH, buildCollectionPath } from "../routes";
 import { addressOf } from "../base-path";
@@ -19,6 +20,8 @@ export function collectionsPageFrom(source: PageSource): CollectionsPage {
 		pub_month: collection.pub_month,
 		...(collection.pub_day ? { pub_day: collection.pub_day } : {}),
 		image: collection.image,
+		...(collection.aspectRatio !== undefined ? { aspectRatio: collection.aspectRatio } : {}),
+		...(collection.width !== undefined ? { width: collection.width } : {}),
 		dailies: collection.dailies,
 		...(collection.sundays ? { sundays: collection.sundays } : {}),
 	}));
@@ -27,9 +30,12 @@ export function collectionsPageFrom(source: PageSource): CollectionsPage {
 
 /** `data-collection-id` is what the view reads to light up the book's strips while the row is hovered. */
 function buildRowHtml(collection: CollectionSummary): string {
+	// Fitted inside a box fifty-six pixels square, as `.collections-cover` is.
+	const width = Math.ceil(Math.min(56, 56 * (collection.aspectRatio ?? 1)));
+	const srcset = srcsetAttributes(collection.image, collection.width, `${width}px`);
 	return `<a class="collections-row" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}">
 			<div class="collections-cover">
-				<img src="${escHtml(collection.image)}" alt="" loading="lazy" />
+				<img src="${escHtml(collection.image)}"${srcset} alt="" loading="lazy" />
 			</div>
 			<div class="collections-info">
 				<div class="collections-name">${escHtml(collection.name)}</div>

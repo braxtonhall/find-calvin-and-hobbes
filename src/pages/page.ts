@@ -44,7 +44,7 @@ export interface LibraryPage {
  */
 export type DetailCollection = Pick<
 	Collection,
-	"id" | "name" | "pub_year" | "image" | "colour" | "aspectRatio" | "editions" | "alterations"
+	"id" | "name" | "pub_year" | "image" | "colour" | "aspectRatio" | "width" | "editions" | "alterations"
 >;
 
 export interface BookNeighbours {
@@ -158,7 +158,17 @@ export interface ArcPage {
  */
 export type CollectionSummary = Pick<
 	Collection,
-	"id" | "name" | "subtitle" | "pub_year" | "pub_month" | "pub_day" | "image" | "dailies" | "sundays"
+	| "id"
+	| "name"
+	| "subtitle"
+	| "pub_year"
+	| "pub_month"
+	| "pub_day"
+	| "image"
+	| "aspectRatio"
+	| "width"
+	| "dailies"
+	| "sundays"
 >;
 
 export interface CollectionsPage {

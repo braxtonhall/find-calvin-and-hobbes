@@ -6,6 +6,7 @@ import { Arc, Character, Credit } from "../src/types";
 import { stripCharacters } from "./characters";
 import { loadComicImages } from "./siteConfig";
 import { aspectRatio } from "./imageSize";
+import { variantSourceWidth } from "./imageVariants";
 
 const EXTENSIONS = [".gif", ".jpg", ".jpeg", ".png", ".webp", ".bmp"];
 
@@ -14,7 +15,8 @@ export const COMIC_IMAGES_PATH = "assets/comics/";
 
 /**
  * A strip's image, as a page links to it, and its shape, for the page to hold the space for it while
- * it loads; nothing for a strip with none in `images`, the names of the files in `folder`.
+ * it loads, and its width where the build makes smaller copies of it; nothing for a strip with none
+ * in `images`, the names of the files in `folder`.
  */
 function attachImage(entry: Entry, key: string, folder: string, images: ReadonlySet<string>, basePath: string): void {
 	const name = EXTENSIONS.map((ext) => `${key}${ext}`).find((name) => images.has(name));
@@ -22,6 +24,8 @@ function attachImage(entry: Entry, key: string, folder: string, images: Readonly
 	// From the mount, since the page showing it may live at any depth.
 	entry.image = `${basePath}${COMIC_IMAGES_PATH}${name}`;
 	entry.aspectRatio = aspectRatio(path.join(folder, name));
+	const width = variantSourceWidth(path.join(folder, name));
+	if (width !== undefined) entry.width = width;
 }
 
 function formatDate(dateStr: string): string {
@@ -36,6 +40,7 @@ interface Entry {
 	id?: string;
 	sort?: number;
 	aspectRatio?: number;
+	width?: number;
 	appearances?: Appearance[];
 	arcs?: string[];
 	characters?: string[];

@@ -1,4 +1,5 @@
 import { escHtml } from "../utils";
+import { srcsetAttributes } from "../srcset";
 import { PAGE_CONFIG } from "../site-config";
 import {
 	isDateInCollection,
@@ -184,6 +185,8 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 	}
 
 	const imageUrl = collection.image;
+	// A hundred and twenty-eight pixels tall, as `.collection-cover img` draws it.
+	const srcset = srcsetAttributes(imageUrl, collection.width, `${Math.ceil(128 * (collection.aspectRatio ?? 1))}px`);
 	const coverage = getCollectionCoverage(collection);
 	const pubDateFormatted = formatPublicationDate(collection);
 
@@ -221,7 +224,7 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 		${buildNavButtons(canGoBack)}
 		<div class="collection-header">
 			<div class="collection-cover"${collection.aspectRatio ? ` style="aspect-ratio: ${collection.aspectRatio}"` : ""}>
-				<img src="${imageUrl}" alt="${escHtml(collection.name)} cover" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />
+				<img src="${imageUrl}"${srcset} alt="${escHtml(collection.name)} cover" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />
 			</div>
 			<div class="collection-info">
 				<h2 class="collection-name">${escHtml(collection.name)}</h2>

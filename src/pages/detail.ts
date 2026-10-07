@@ -1,5 +1,6 @@
 import { Appearance, Character, Comic } from "../types";
 import { escHtml } from "../utils";
+import { srcsetAttributes } from "../srcset";
 import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
 import { buildArcPath, buildCollectionPath, buildComicPath, buildCreatorPath, buildSearchPath } from "../routes";
 import { addressOf } from "../base-path";
@@ -86,6 +87,7 @@ export function summarizeCollections(source: PageSource, comics: Comic[]): Detai
 				image: collection.image,
 				colour: collection.colour,
 				...(collection.aspectRatio !== undefined ? { aspectRatio: collection.aspectRatio } : {}),
+				...(collection.width !== undefined ? { width: collection.width } : {}),
 				...(collection.editions ? { editions: collection.editions } : {}),
 				alterations,
 			});
@@ -267,6 +269,8 @@ interface Printing {
 	image: string;
 	/** The cover's width over its height, where the build knows it. */
 	aspectRatio?: number;
+	/** The cover's width in pixels, where the build made smaller copies of it. */
+	width?: number;
 	/** Where the strip is, one per volume it is in: the volume, when the book has them, and the pages. */
 	places: { volume?: number; pages: number[] }[];
 }
@@ -297,6 +301,7 @@ function buildPrintings(
 				image: edition?.image ?? collection.image,
 				// An edition's own cover has its own shape, known or not.
 				aspectRatio: edition?.image ? edition.aspectRatio : collection.aspectRatio,
+				width: edition?.image ? edition.width : collection.width,
 				places: [],
 			};
 			printingsByKey.set(key, printing);
@@ -342,6 +347,8 @@ function buildBookHtml(
 	const alteration = collection.alterations && collection.alterations[alterationKey];
 	// The cover's ratio holds the space until it loads.
 	const ratio = printing.aspectRatio ? ` style="aspect-ratio: ${printing.aspectRatio}"` : "";
+	// Sixty-four pixels tall, as `.collection-book img` draws it.
+	const srcset = srcsetAttributes(printing.image, printing.width, `${Math.ceil(64 * (printing.aspectRatio ?? 1))}px`);
 	// One short line for the label under the cover: `Bk 1 · p. 357`, the volume shortened to fit. An
 	// arc's label names only the page its first strip is on; the popup has the rest.
 	const places =
@@ -362,7 +369,7 @@ function buildBookHtml(
 
 	const href = escHtml(addressOf(buildCollectionPath(collection.id)));
 	// A link to the book's page, which a mouse follows; a tap opens the popup instead — see `attachBookHandlers`.
-	const cover = `<a class="book__cover" href="${href}" aria-haspopup="dialog" aria-expanded="false" data-collection-id="${escHtml(collection.id)}" aria-label="${escHtml(printing.name)}"><span class="collection-entry"><span class="collection-book${isBlackAndWhite ? " collection-book--bw" : ""}"${ratio}><img src="${escHtml(printing.image)}" alt="" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${alteration ? ALTERATION_BADGE : ""}</span><span class="collection-pages">${caption}</span></span></a>`;
+	const cover = `<a class="book__cover" href="${href}" aria-haspopup="dialog" aria-expanded="false" data-collection-id="${escHtml(collection.id)}" aria-label="${escHtml(printing.name)}"><span class="collection-entry"><span class="collection-book${isBlackAndWhite ? " collection-book--bw" : ""}"${ratio}><img src="${escHtml(printing.image)}"${srcset} alt="" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${alteration ? ALTERATION_BADGE : ""}</span><span class="collection-pages">${caption}</span></span></a>`;
 
 	// The way to the book's page sits between the arrows through it — alone, where there are none.
 	const goTo = `<a class="nav-btn book__go" href="${href}" data-collection-id="${escHtml(collection.id)}" title="Go to this book" aria-label="Go to this book">${BOOK_ICON}</a>`;
@@ -493,6 +500,10 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 
 		// The image's ratio holds the space until it loads.
 		const ratio = comic.aspectRatio ? ` style="aspect-ratio: ${comic.aspectRatio}"` : "";
+		// The width of the page, which is at most 800 pixels, less its padding on a phone.
+		const srcset = comic.image
+			? srcsetAttributes(comic.image, comic.width, "(max-width: 768px) calc(100vw - 40px), 800px")
+			: "";
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
 		const runsHtml = buildRunsHtml(page, date, comic);
 		const collectionsHtml = buildPrintingsSectionHtml(
@@ -503,7 +514,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 		);
 
 		bodies += `<div class="detail-comic${illustratedClass}" data-comic-key="${escHtml(comic.id || date)}">
-				${comic.image ? `<div class="detail-image-wrapper"${ratio}><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}" alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
+				${comic.image ? `<div class="detail-image-wrapper"${ratio}><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}"${srcset} alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
 			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
 			${transcriptHtml}
 			${readLinkHtml}

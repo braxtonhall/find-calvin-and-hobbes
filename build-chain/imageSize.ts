@@ -83,17 +83,22 @@ export function imageSize(file: string): ImageSize {
 	}
 }
 
-/** Each file's ratio, kept while the file is unchanged, so a rebuild under `--watch` reads only what changed. */
-const ratios = new Map<string, { stamp: string; ratio: number }>();
+/** Each file's size, kept while the file is unchanged, so a rebuild under `--watch` reads only what changed. */
+const sizes = new Map<string, { stamp: string; size: ImageSize }>();
+
+/** `imageSize`, read again only once the file has changed. */
+export function knownImageSize(file: string): ImageSize {
+	const { mtimeMs, size } = fs.statSync(file);
+	const stamp = `${mtimeMs} ${size}`;
+	const known = sizes.get(file);
+	if (known?.stamp === stamp) return known.size;
+	const read = imageSize(file);
+	sizes.set(file, { stamp, size: read });
+	return read;
+}
 
 /** An image's width over its height, to four places, as a page holds the space for it while it loads. */
 export function aspectRatio(file: string): number {
-	const { mtimeMs, size } = fs.statSync(file);
-	const stamp = `${mtimeMs} ${size}`;
-	const known = ratios.get(file);
-	if (known?.stamp === stamp) return known.ratio;
-	const { width, height } = imageSize(file);
-	const ratio = Math.round((width / height) * 10000) / 10000;
-	ratios.set(file, { stamp, ratio });
-	return ratio;
+	const { width, height } = knownImageSize(file);
+	return Math.round((width / height) * 10000) / 10000;
 }

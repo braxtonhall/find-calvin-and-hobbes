@@ -7,6 +7,8 @@ export interface Comic {
 	sort?: number;
 	/** The image's width over its height, read from its file by the build. Only with an image. */
 	aspectRatio?: number;
+	/** The image's width in pixels, where the build makes smaller copies of it. See `srcset.ts`. */
+	width?: number;
 	appearances?: Appearance[];
 	/** The arcs the strip belongs to, by id. None does to more than one today, but nothing forbids it. */
 	arcs?: string[];
@@ -33,6 +35,8 @@ export interface Edition {
 	image?: string;
 	/** Its own cover's width over its height: `aspect-ratio` in its book's file, else read from the file. */
 	aspectRatio?: number;
+	/** Its own cover's width in pixels, where the build makes smaller copies of it. See `srcset.ts`. */
+	width?: number;
 }
 
 export interface Collection {
@@ -54,6 +58,8 @@ export interface Collection {
 	links?: { title: string; href: string }[];
 	/** The cover's width over its height: `aspect-ratio` in the book's file, else read from the cover's file. */
 	aspectRatio?: number;
+	/** The cover's width in pixels, where the build makes smaller copies of it. See `srcset.ts`. */
+	width?: number;
 	editions?: Record<string, Edition>;
 }
 
