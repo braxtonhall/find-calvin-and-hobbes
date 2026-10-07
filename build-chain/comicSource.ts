@@ -7,6 +7,8 @@ export interface DailyEntry {
 	description?: string;
 	source?: string;
 	review?: string;
+	/** Character ids from `characters.yaml`. Checked where it is read, in `characters.ts`. */
+	characters?: string[];
 }
 
 export interface SpecialEntry extends DailyEntry {

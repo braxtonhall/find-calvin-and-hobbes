@@ -106,6 +106,7 @@ interface RawConfig {
 	corrections?: { enabled?: unknown; pages?: Partial<Record<string, unknown>> | null } | null;
 	arcs?: unknown;
 	reruns?: unknown;
+	characters?: unknown;
 	colourSundays?: unknown;
 	aspectRatio?: { daily?: unknown; sunday?: unknown } | null;
 	details?: Partial<Record<string, unknown>> | null;
@@ -119,13 +120,47 @@ export function configPath(projectDir = path.join(__dirname, "..")): string {
 }
 
 /**
+ * A YAML file, with `!Import ./other.yaml` anywhere in it standing for the YAML file at that path,
+ * relative to the file the tag is written in, and read in its place. A file that is not there stops
+ * the build rather than reading as nothing. Each file read is added to `files`, for `--watch`.
+ */
+function loadYamlFile(file: string, files: string[], importing: readonly string[] = []): unknown {
+	files.push(file);
+	const importTag = yaml.defineScalarTag<unknown>("!Import", {
+		resolve: (source) => {
+			const target = path.resolve(path.dirname(file), source.trim());
+			const name = `${path.basename(file)} imports ${source.trim()}`;
+			if (!fs.existsSync(target)) throw new Error(`${name}, which does not exist`);
+			if (target === file || importing.includes(target)) throw new Error(`${name}, which imports it back`);
+			return loadYamlFile(target, files, [...importing, file]);
+		},
+		identify: () => false,
+	});
+	return yaml.load(fs.readFileSync(file, "utf8"), { schema: yaml.CORE_SCHEMA.withTags(importTag), filename: file });
+}
+
+/** `config.yaml` and the files it imports, as read, and the names of every one of them. */
+function readConfigFiles(projectDir?: string): { raw: RawConfig; files: string[] } {
+	const file = configPath(projectDir);
+	const files: string[] = [];
+	const parsed = loadYamlFile(file, files) ?? {};
+	if (typeof parsed !== "object" || Array.isArray(parsed)) throw new Error(`${file} must be a mapping`);
+	return { raw: substituteAll(parsed, readDotenvFile()) as RawConfig, files };
+}
+
+/**
  * Read fresh on every call, as `.env` is, so `--watch` picks up an edit to either. Both are small.
  */
 function readConfig(projectDir?: string): RawConfig {
-	const file = configPath(projectDir);
-	const parsed = yaml.load(fs.readFileSync(file, "utf8")) ?? {};
-	if (typeof parsed !== "object" || Array.isArray(parsed)) throw new Error(`${file} must be a mapping`);
-	return substituteAll(parsed, readDotenvFile()) as RawConfig;
+	return readConfigFiles(projectDir).raw;
+}
+
+/**
+ * The files a build that reads the configuration depends on: `config.yaml`, what it imports, and
+ * `.env`, which any value can read. For `--watch`.
+ */
+export function configDependencies(projectDir = path.join(__dirname, "..")): string[] {
+	return [...readConfigFiles(projectDir).files, path.join(projectDir, ".env")];
 }
 
 /** A setting as a string, with empty — or absent — as "". */
@@ -146,9 +181,42 @@ function flagSetting(value: unknown, name: string, fallback: boolean): boolean {
 }
 
 /** Which of the archive's optional parts this site has. See `PageConfig`. */
-export function loadFeatures(projectDir?: string): Pick<PageConfig, "arcs" | "reruns"> {
+export function loadFeatures(projectDir?: string): Pick<PageConfig, "arcs" | "reruns" | "characters"> {
 	const raw = readConfig(projectDir);
-	return { arcs: flagSetting(raw.arcs, "arcs", true), reruns: flagSetting(raw.reruns, "reruns", true) };
+	return {
+		arcs: flagSetting(raw.arcs, "arcs", true),
+		reruns: flagSetting(raw.reruns, "reruns", true),
+		characters: charactersSetting(raw.characters) !== false,
+	};
+}
+
+const CHARACTER_ID = /^[a-z0-9]+$/;
+
+/**
+ * `characters`: each character's name by id, in the order the menu offers them, or `false` for
+ * none. Required, so that leaving it out is a mistake the build stops for rather than a quiet
+ * change in what the site has. Usually `!Import`ed from a file of its own.
+ */
+function charactersSetting(value: unknown): Record<string, string> | false {
+	if (value === false || value === "false") return false;
+	if (value === undefined || value === null || value === "") {
+		throw new Error("config.yaml must give characters: !Import a file of them, or false for none");
+	}
+	if (typeof value !== "object" || Array.isArray(value)) {
+		throw new Error("characters in config.yaml must be a mapping of character ids to names, or false");
+	}
+	const characters: Record<string, string> = {};
+	for (const [id, name] of Object.entries(value)) {
+		if (!CHARACTER_ID.test(id)) throw new Error(`Invalid character id "${id}": expected lowercase letters and digits.`);
+		if (typeof name !== "string" || name.trim() === "") throw new Error(`Character "${id}" needs a name.`);
+		characters[id] = name;
+	}
+	return characters;
+}
+
+/** The characters, by id, or `false` where `config.yaml` turns them off. See `charactersSetting`. */
+export function loadCharacterSetting(projectDir?: string): Record<string, string> | false {
+	return charactersSetting(readConfig(projectDir).characters);
 }
 
 const STRIP_KINDS: readonly StripKind[] = ["daily", "rerun", "special"];
@@ -487,8 +555,7 @@ export function loadPageConfig(projectDir?: string): PageConfig {
  */
 export default function siteConfigLoader(this: LoaderContext<unknown>): string {
 	const projectDir = this.rootContext;
-	this.addDependency(configPath(projectDir));
-	this.addDependency(path.join(projectDir, ".env"));
+	for (const file of configDependencies(projectDir)) this.addDependency(file);
 	return `export const PAGE_CONFIG = ${JSON.stringify(loadPageConfig(projectDir))};\n`;
 }
 

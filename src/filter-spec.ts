@@ -7,13 +7,14 @@
  * the name list.
  *
  * Deliberately free of the parser — it imports only the tags, from `filter-vocabulary.ts`, which is
- * as free. `filter-query.ts` imports it to derive its own name sets, so anything here that reached
+ * as free, and `config.yaml`'s features. `filter-query.ts` imports it to derive its own name sets, so anything here that reached
  * back into the parser would be a cycle. The predicates that decide
  * whether a half-typed value fits a template therefore live in `completion.ts`, which is allowed
  * to know about both.
  */
 
 import { TAGS } from "./filter-vocabulary";
+import { PAGE_CONFIG } from "./site-config";
 
 /** `a, b or c`. */
 function orList(words: readonly string[]): string {
@@ -56,13 +57,15 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
 ];
 
 /**
- * Ordered as a reader would reach for them — the two that are not about time, then the three
+ * Ordered as a reader would reach for them — the ones that are not about time, then the three
  * calendar fields, then the date forms, then the bounds. Not alphabetically: `@after` is not the
  * thing to meet first.
  *
  * Repeating a filter ORs where a strip can have only one value for it — one year, one month — and
- * for the books, which mostly share no strips; and ANDs for the tags, which a strip carries several
- * of. See `WIDENING` in `boolean-query.ts`.
+ * for the books, which mostly share no strips; and ANDs for the tags and the characters, which a
+ * strip carries several of. See `WIDENING` in `boolean-query.ts`.
+ *
+ * `@featuring:` only where `config.yaml` has characters for it.
  */
 export const FILTER_SPECS: readonly FilterSpec[] = [
 	{
@@ -77,6 +80,16 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		vocabulary: true,
 		templates: [{ label: "tag", hint: orList(TAGS.map((tag) => tag.value)) }],
 	},
+	...(PAGE_CONFIG.characters
+		? [
+				{
+					name: "featuring",
+					hint: "Strips featuring a character",
+					vocabulary: true,
+					templates: [{ label: "character", hint: "a character of the archive" }],
+				} satisfies FilterSpec,
+			]
+		: []),
 	{
 		name: "year",
 		hint: "Strips from one year",

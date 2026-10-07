@@ -1,6 +1,5 @@
-import path from "path";
 import type { LoaderContext } from "webpack";
-import { Theme, configPath, loadTheme } from "./siteConfig";
+import { Theme, configDependencies, loadTheme } from "./siteConfig";
 
 /**
  * The theme's stylesheet: the colours `config.yaml` names, and the ones drawn from them.
@@ -127,7 +126,6 @@ export function themeCss(theme: Theme): string {
  */
 export default function themeLoader(this: LoaderContext<unknown>): string {
 	const projectDir = this.rootContext;
-	this.addDependency(configPath(projectDir));
-	this.addDependency(path.join(projectDir, ".env"));
+	for (const file of configDependencies(projectDir)) this.addDependency(file);
 	return themeCss(loadTheme(projectDir));
 }

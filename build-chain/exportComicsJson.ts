@@ -1,8 +1,9 @@
 import fs from "fs";
 import path from "path";
 import { Appearance, CollectionData } from "./collectionPages";
-import { loadComicSource } from "./comicSource";
-import { Arc } from "../src/types";
+import { DailyEntry, loadComicSource } from "./comicSource";
+import { Arc, Character } from "../src/types";
+import { stripCharacters } from "./characters";
 
 const EXTENSIONS = [".gif", ".jpg", ".jpeg", ".png", ".webp", ".bmp"];
 
@@ -31,6 +32,7 @@ interface Entry {
 	aspectRatio?: number;
 	appearances?: Appearance[];
 	arcs?: string[];
+	characters?: string[];
 }
 
 /**
@@ -39,12 +41,16 @@ interface Entry {
  * Each strip carries the ids of the arcs it belongs to, so a question about a strip's arcs — whether
  * `@is:standalone` lets it through, say — is answered from the strip alone. Only the dailies and
  * Sundays: an arc is made of the strips that ran in the paper, and a special never did.
+ *
+ * Each strip carries its characters the same way, for `@featuring:`, special or not. None where
+ * `characters` is empty, which is a site without `characters.yaml`.
  */
 export function exportComicsJson(
 	projectDir: string,
 	collectionData: CollectionData,
 	basePath: string = "/",
 	arcs: Arc[] = [],
+	characters: Character[] = [],
 ): string {
 	const assetsDir = path.join(projectDir, "assets", "comics");
 	const source = loadComicSource(path.join(projectDir, "comics.yaml"));
@@ -52,6 +58,11 @@ export function exportComicsJson(
 	const attachAppearances = (entry: Entry, lookupKey: string) => {
 		const appearances = collectionData.appearancesByComic.get(lookupKey);
 		if (appearances && appearances.length) entry.appearances = appearances;
+	};
+
+	const attachCharacters = (entry: Entry, key: string, listing: DailyEntry) => {
+		const featured = stripCharacters(key, listing, characters);
+		if (featured.length) entry.characters = featured;
 	};
 
 	const arcsByDate = new Map<string, string[]>();
@@ -72,6 +83,7 @@ export function exportComicsJson(
 		attachAppearances(entry, dateStr);
 		const dailyArcs = arcsByDate.get(entry.date);
 		if (dailyArcs) entry.arcs = dailyArcs;
+		attachCharacters(entry, dateStr, daily);
 		entries.push(entry);
 	}
 
@@ -87,6 +99,7 @@ export function exportComicsJson(
 		const img = findImage(sid, assetsDir, basePath);
 		if (img) entry.image = img;
 		attachAppearances(entry, sid);
+		attachCharacters(entry, sid, special);
 		entries.push(entry);
 	}
 

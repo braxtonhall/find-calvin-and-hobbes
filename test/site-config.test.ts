@@ -2,9 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "fs";
 import path from "path";
-import { loadPageConfig } from "../build-chain/siteConfig";
+import { configDependencies, loadPageConfig } from "../build-chain/siteConfig";
 import { withConfig } from "./helpers/config";
 import { loadArcs } from "../build-chain/arcs";
+import { loadCharacters, stripCharacters } from "../build-chain/characters";
 import { loadReruns } from "../build-chain/reruns";
 import type { CollectionData } from "../build-chain/collectionPages";
 import type { ComicSource } from "../build-chain/comicSource";
@@ -139,6 +140,69 @@ test("config.yaml", async (suite) => {
 			assert.deepEqual(loadArcs(projectDir, source, {} as CollectionData), []);
 			assert.deepEqual(loadReruns(projectDir, source), {});
 		});
+	});
+
+	await suite.test("imports the characters from the file config.yaml names", () => {
+		withConfig("name: x\nseries: x\ncharacters: !Import ./cast/people.yaml\n", (projectDir) => {
+			fs.mkdirSync(path.join(projectDir, "cast"));
+			fs.writeFileSync(path.join(projectDir, "cast", "people.yaml"), "calvin: Calvin\nsusie: Susie Derkins\n");
+			assert.equal(loadPageConfig(projectDir).characters, true);
+			const characters = loadCharacters(projectDir);
+			assert.deepEqual(characters, [
+				{ id: "calvin", name: "Calvin" },
+				{ id: "susie", name: "Susie Derkins" },
+			]);
+			assert.ok(configDependencies(projectDir).includes(path.join(projectDir, "cast", "people.yaml")));
+			assert.deepEqual(stripCharacters("19851118", { transcript: "", characters: ["susie"] }, characters), ["susie"]);
+			assert.deepEqual(stripCharacters("19851118", { transcript: "" }, characters), []);
+			assert.throws(
+				() => stripCharacters("19851118", { transcript: "", characters: ["suzy"] }, characters),
+				/19851118 features "suzy"/,
+			);
+		});
+	});
+
+	await suite.test("imports a file relative to the one importing it", () => {
+		withConfig("name: x\nseries: x\ncharacters: !Import ./cast/index.yaml\n", (projectDir) => {
+			fs.mkdirSync(path.join(projectDir, "cast"));
+			fs.writeFileSync(path.join(projectDir, "cast", "index.yaml"), "!Import ./people.yaml\n");
+			fs.writeFileSync(path.join(projectDir, "cast", "people.yaml"), "hobbes: Hobbes\n");
+			assert.deepEqual(loadCharacters(projectDir), [{ id: "hobbes", name: "Hobbes" }]);
+		});
+		withConfig("name: x\nseries: x\ncharacters: !Import ./loop.yaml\n", (projectDir) => {
+			fs.writeFileSync(path.join(projectDir, "loop.yaml"), "!Import ./config.yaml\n");
+			assert.throws(() => loadPageConfig(projectDir), /imports it back/);
+		});
+	});
+
+	// A missing file is a mistake to stop for rather than a site without characters: only `false` is that.
+	await suite.test("fails for an imported file that is not there", () => {
+		withConfig("name: x\nseries: x\ncharacters: !Import ./people.yaml\n", (projectDir) => {
+			assert.throws(() => loadPageConfig(projectDir), /config\.yaml imports \.\/people\.yaml, which does not exist/);
+			assert.throws(() => loadCharacters(projectDir), /people\.yaml, which does not exist/);
+		});
+	});
+
+	await suite.test("has no characters where config.yaml turns them off, and must say", () => {
+		withConfig("name: x\nseries: x\ncharacters: false\n", (projectDir) => {
+			assert.equal(loadPageConfig(projectDir).characters, false);
+			assert.deepEqual(loadCharacters(projectDir), []);
+			// A strip's list is not read, or checked, on a site without them.
+			assert.deepEqual(stripCharacters("19851118", { transcript: "", characters: ["nobody"] }, []), []);
+		});
+		assert.throws(() => withConfig("name: x\nseries: x\ncharacters:\n", loadPageConfig), /must give characters/);
+		assert.throws(
+			() => withConfig("name: x\nseries: x\ncharacters: true\n", loadPageConfig),
+			/characters.*mapping of character ids to names, or false/,
+		);
+	});
+
+	await suite.test("refuses malformed characters", () => {
+		const read = (characters: string) => () =>
+			withConfig(`name: x\nseries: x\ncharacters:\n${characters}`, loadPageConfig);
+		assert.throws(read("  Miss Wormwood: Miss Wormwood\n"), /Invalid character id/);
+		assert.throws(read("  wormwood:\n"), /needs a name/);
+		assert.throws(read("  - calvin\n"), /mapping/);
 	});
 
 	await suite.test("refuses a site with no name, or no series", () => {

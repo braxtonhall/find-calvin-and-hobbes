@@ -22,16 +22,21 @@ export const SAMPLE_ASPECT_RATIO = `aspectRatio:
   daily: 3
 `;
 
+/** No characters, for a test that is not about them, since `config.yaml` must say. */
+export const SAMPLE_CHARACTERS = `characters: false
+`;
+
 /**
- * A project holding just this `config.yaml`, for `loadPageConfig` to read — with `SAMPLE_THEME`
- * and `SAMPLE_ASPECT_RATIO` added where it gives none of its own.
+ * A project holding just this `config.yaml`, for `loadPageConfig` to read — with `SAMPLE_THEME`,
+ * `SAMPLE_ASPECT_RATIO` and `SAMPLE_CHARACTERS` added where it gives none of its own.
  */
 export function withConfig<T>(contents: string, run: (projectDir: string) => T): T {
 	const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "config-"));
 	try {
 		const themed = /^theme:/m.test(contents) ? contents : `${contents}\n${SAMPLE_THEME}`;
 		const shaped = /^aspectRatio:/m.test(themed) ? themed : `${themed}\n${SAMPLE_ASPECT_RATIO}`;
-		fs.writeFileSync(path.join(projectDir, "config.yaml"), shaped);
+		const cast = /^characters:/m.test(shaped) ? shaped : `${shaped}\n${SAMPLE_CHARACTERS}`;
+		fs.writeFileSync(path.join(projectDir, "config.yaml"), cast);
 		return run(projectDir);
 	} finally {
 		fs.rmSync(projectDir, { recursive: true, force: true });

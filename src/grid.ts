@@ -9,7 +9,7 @@ import { isPlainClick, parseRoute } from "./router";
 import { buildComicPath } from "./routes";
 import { addressOf } from "./base-path";
 import { formatDateRange, formatLongDate } from "./date-utils";
-import { ARCS, COLLECTION_INDEX, RERUNS } from "./bundled-data";
+import { ARCS, CHARACTERS, COLLECTION_INDEX, RERUNS } from "./bundled-data";
 import { PAGE_CONFIG } from "./site-config";
 import { Board, setBoardSource, stopLife } from "./life";
 import {
@@ -920,6 +920,7 @@ function useBundledData(): void {
 	state.collectionsById = new Map(COLLECTION_INDEX.collections.map((collection) => [collection.id, collection]));
 	state.arcs = ARCS;
 	state.arcsById = new Map(ARCS.map((arc) => [arc.id, arc]));
+	state.charactersById = new Map(CHARACTERS.map((character) => [character.id, character]));
 }
 
 export async function loadComicData(): Promise<void> {

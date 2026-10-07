@@ -172,6 +172,11 @@ corrections:
 arcs: true
 reruns: true
 
+# The characters a strip can feature, for @featuring: and the Featuring line under a strip: each one's
+# name by id, or false for none. Required. `!Import ./file.yaml` reads a file in place of a value,
+# relative to this one, and a file it names that isn't there stops the build.
+characters: false
+
 # Whether the Sundays ran in colour and the dailies in black and white, a format of their own. When
 # true, the search has `@is:sunday` and `@is:daily` and the filter bar a Format field to pick one,
 # and each book's `colour` says whether it printed its Sundays in colour, which its page and a

@@ -236,7 +236,7 @@
 	margin-bottom: 24px;
 }
 
-/* Below the strip, before the books: when else it ran, and the arcs it is part of, as one group. */
+/* Below the strip, before the books: who it features, the arcs it is part of, and when else it ran, as one group. */
 .detail-runs {
 	list-style: none;
 	margin: 24px 0 0 0;
@@ -282,7 +282,7 @@
 	text-decoration: underline;
 }
 
-/* Under the reruns and arcs, as close as they are to each other. */
+/* Under the characters, arcs and reruns, as close as they are to each other. */
 .detail-runs + .detail-collections-slot .detail-collections-heading {
 	margin-top: 12px;
 }

@@ -6,16 +6,17 @@ A searchable, browsable archive of every Calvin and Hobbes comic strip (1985–1
 
 Type words to search transcripts. Type `@` in the search box for the list of filters.
 
-| Filter     | Example                        | Meaning                                                   |
-| ---------- | ------------------------------ | --------------------------------------------------------- |
-| `@year:`   | `@year:1990`, `@year:88`       | strips from that year, or any year ending in those digits |
-| `@month:`  | `@month:8`, `@month:august`    | that month, in every year                                 |
-| `@day:`    | `@day:3`, `@day:saturday`      | a day of the month, or a day of the week                  |
-| `@date:`   | `@date:1988`, `@date:1988/9/3` | a date, at whatever precision you give                    |
-| `@before:` | `@before:1990`                 | strips before that date, excluding it                     |
-| `@after:`  | `@after:1987`                  | strips after that date, excluding it                      |
-| `@in:`     | `@in:book3`, `@in:complete`    | strips printed in that book                               |
-| `@is:`     | `@is:sunday`, `@is:rerun`      | strips with that tag                                      |
+| Filter        | Example                        | Meaning                                                   |
+| ------------- | ------------------------------ | --------------------------------------------------------- |
+| `@year:`      | `@year:1990`, `@year:88`       | strips from that year, or any year ending in those digits |
+| `@month:`     | `@month:8`, `@month:august`    | that month, in every year                                 |
+| `@day:`       | `@day:3`, `@day:saturday`      | a day of the month, or a day of the week                  |
+| `@date:`      | `@date:1988`, `@date:1988/9/3` | a date, at whatever precision you give                    |
+| `@before:`    | `@before:1990`                 | strips before that date, excluding it                     |
+| `@after:`     | `@after:1987`                  | strips after that date, excluding it                      |
+| `@in:`        | `@in:book3`, `@in:complete`    | strips printed in that book                               |
+| `@is:`        | `@is:sunday`, `@is:rerun`      | strips with that tag                                      |
+| `@featuring:` | `@featuring:susie`             | strips featuring that character                           |
 
 The tags are `sunday` and `daily` (the colour Sundays and the black-and-white dailies), `reused`
 (a strip on the day it first ran, where it was later rerun), `rerun` (a strip on a day it ran
@@ -28,7 +29,8 @@ Different filters narrow. Repeating a filter widens where a strip can have only 
 books, which mostly share no strips: `@in:book1 @in:book3` is the strips printed in either book
 (`@in:book1 @and @in:book3` is both). Writing `@or` between some of them changes nothing:
 `@year:1988 @or @year:1989 @year:1990` is any of the three years. Repeating a tag narrows: `@is:sunday @is:rerun` is the Sundays
-that ran again. `@day:1 @day:monday` is the Mondays that fell
+that ran again, and so does repeating a character: `@featuring:susie @featuring:rosalyn` is the
+strips with both. `@day:1 @day:monday` is the Mondays that fell
 on the first, because a day of the month and a day of the week are different things. Filters combine
 with ordinary words, so `@year:1988 snowman` searches 1988 alone.
 
@@ -105,6 +107,12 @@ its queries, and `yarn probe "<query>"` shows what a query returns.
 `compounds.yaml`, which is optional, tunes how the search treats compound words: the ones to keep
 whole, and the ones to split that the archive never writes open. `yarn candidates` lists likely
 compounds the file doesn't mention yet.
+
+`characters.yaml` names the characters a strip can feature, by the id `@featuring:` takes. A strip
+lists its characters by those ids under `characters` in `comics.yaml`, and a strip that lists none
+features none. `config.yaml` reads it with `characters: !Import ./characters.yaml`, a path relative
+to it, or turns the characters off with `characters: false`; it must say one or the other, and a
+file it imports that isn't there fails the build.
 
 Any value in it can read the environment as `$NAME`, `${NAME}` or `${NAME:-fallback}`, from the
 process or from `.env`. The deployment settings — `SITE_URL`, `PAGE_LAYOUT` and `CORRECTIONS`, below

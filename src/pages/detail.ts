@@ -1,7 +1,7 @@
-import { Appearance, Comic } from "../types";
+import { Appearance, Character, Comic } from "../types";
 import { escHtml } from "../utils";
 import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
-import { buildArcPath, buildCollectionPath, buildComicPath } from "../routes";
+import { buildArcPath, buildCollectionPath, buildComicPath, buildSearchPath } from "../routes";
 import { addressOf } from "../base-path";
 import { BookNeighbours, DetailArc, DetailCollection, DetailPage, PageSource, arcRange } from "./page";
 import { buildBackAndHomeButtons } from "./nav-buttons";
@@ -199,6 +199,12 @@ function arcsOf(source: PageSource, comics: Comic[]): DetailArc[] {
 	});
 }
 
+/** The characters the page's strips feature, each once, in the order `characters.yaml` lists them. */
+function charactersOf(source: PageSource, comics: Comic[]): Character[] {
+	const featured = new Set(comics.flatMap((comic) => comic.characters ?? []));
+	return [...source.charactersById.values()].filter((character) => featured.has(character.id));
+}
+
 /** The page for a date, from whatever holds the archive — the app's state or the build's data. */
 export function detailPageFrom(source: PageSource, date: string, alternates: string[] = []): DetailPage {
 	const rerunOf = source.reruns.get(date) ?? null;
@@ -217,6 +223,7 @@ export function detailPageFrom(source: PageSource, date: string, alternates: str
 		collections: summarizeCollections(source, comics),
 		descriptions: source.descriptions ? descriptionsFor(source.descriptions, comics) : null,
 		arcs: arcsOf(source, comics),
+		characters: charactersOf(source, comics),
 	};
 }
 
@@ -481,8 +488,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 
 		const aspectRatio = getAspectRatio(comic, isSunday);
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
-		// Only the day's own strip ran in the paper; a special never did, so never reran, and is in no arc.
-		const runsHtml = !comic.id ? buildRunsHtml(page, date) : "";
+		const runsHtml = buildRunsHtml(page, date, comic);
 		const collectionsHtml = buildPrintingsSectionHtml(
 			buildPrintings(comic.appearances || [], collectionsById, (appearance) => printingKey(comic, appearance)),
 			page.bookNeighbours,
@@ -543,13 +549,34 @@ function buildRerunBannerHtml(originalDate: string): string {
 }
 
 /**
- * The arcs the strip is part of, and when else the paper ran it on an original day, together under
- * the strip. A rerun day's reruns are empty; where its strip is from is said above it instead.
+ * `Featuring Calvin, Hobbes and Dad`, in the order `characters.yaml` lists them. Each name is a search
+ * for every strip featuring them, oldest first, since a search that is only a filter has nothing to
+ * rank by.
  */
-function buildRunsHtml(page: DetailPage, date: string): string {
+function buildFeaturingLineHtml(page: DetailPage, comic: Comic): string {
+	const links = page.characters
+		.filter((character) => comic.characters?.includes(character.id))
+		.map(
+			(character) =>
+				`<a class="detail-rerun-link" href="${escHtml(addressOf(buildSearchPath(`@featuring:${character.id}`, "date")))}">${escHtml(character.name)}</a>`,
+		);
+	if (links.length === 0) return "";
+	const names = links.length > 1 ? `${links.slice(0, -1).join(", ")} and ${links[links.length - 1]}` : links[0];
+	return `<li class="detail-run">Featuring ${names}</li>`;
+}
+
+/**
+ * Who the strip features, the arcs it is part of, and when else the paper ran it on an original day,
+ * together under the strip. Only the day's own strip ran in the paper, so a special has only the
+ * first: it never reran, and is in no arc. A rerun day's reruns are empty; where its strip is from is
+ * said above it instead.
+ */
+function buildRunsHtml(page: DetailPage, date: string, comic: Comic): string {
+	const featuring = buildFeaturingLineHtml(page, comic);
+	if (comic.id) return featuring ? `<ul class="detail-runs">${featuring}</ul>` : "";
 	const reruns = page.rerunOf ? [] : page.runs.slice(1);
 	const rerun = reruns.length > 0 ? `<li class="detail-run">Reran ${joinRerunLinks(reruns)}</li>` : "";
-	const lines = page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("") + rerun;
+	const lines = featuring + page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("") + rerun;
 	return lines ? `<ul class="detail-runs">${lines}</ul>` : "";
 }
 

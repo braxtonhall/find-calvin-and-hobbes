@@ -1,4 +1,4 @@
-import { Appearance, Arc, Collection, Comic, CollectionIndex, Day, SortMode } from "../types";
+import { Appearance, Arc, Character, Collection, Comic, CollectionIndex, Day, SortMode } from "../types";
 import { PAGE_CONFIG } from "../site-config";
 import { formatDateRange } from "../date-utils";
 
@@ -71,6 +71,8 @@ export interface DetailPage {
 	descriptions: Record<string, string> | null;
 	/** The arcs the page's strip belongs to — on a rerun day, the arcs of the strip it shows. */
 	arcs: DetailArc[];
+	/** Every character the page's strips feature, for their names; each strip lists its own by id. */
+	characters: Character[];
 }
 
 /** An arc as a strip's page names it: enough to say which part this is, step along it, and light it up. */
@@ -186,6 +188,8 @@ export interface PageSource {
 	/** Oldest first; `null` until they have loaded. */
 	arcs: Arc[] | null;
 	arcsById: Map<string, Arc> | null;
+	/** Empty on a site without characters. */
+	charactersById: Map<string, Character>;
 }
 
 /** An arc by its dates: `Nov 18–19, 1985`. */

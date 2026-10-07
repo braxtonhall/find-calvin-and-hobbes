@@ -3,6 +3,7 @@ import path from "path";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
 import { exportArcsJson, loadArcs } from "./arcs";
+import { loadCharacters } from "./characters";
 import { loadCollectionData } from "./collectionPages";
 import { loadComicSource } from "./comicSource";
 import { exportComicsJson } from "./exportComicsJson";
@@ -10,7 +11,7 @@ import { exportDescriptions } from "./exportDescriptions";
 import { generateCollectionIndex } from "./generateCollectionIndex";
 import { exportRerunsJson } from "./reruns";
 import { setSiteData } from "./siteData";
-import { loadSiteConfig } from "./siteConfig";
+import { configDependencies, loadSiteConfig } from "./siteConfig";
 
 const PLUGIN_NAME = "YamlToJsonPlugin";
 
@@ -23,6 +24,8 @@ function watchDataFiles(compilation: Compilation, projectDir: string): void {
 	compilation.fileDependencies.add(path.join(projectDir, "comics.yaml"));
 	compilation.fileDependencies.add(path.join(projectDir, "reruns.yaml"));
 	compilation.fileDependencies.add(path.join(projectDir, "arcs.yaml"));
+	// The characters are read from the configuration, and whatever it imports them from.
+	for (const file of configDependencies(projectDir)) compilation.fileDependencies.add(file);
 	compilation.contextDependencies.add(collectionsDir);
 	for (const file of fs.readdirSync(collectionsDir)) {
 		if (file.endsWith(".yaml")) {
@@ -50,10 +53,11 @@ class YamlToJsonPlugin {
 					const arcs = loadArcs(projectDir, source, collectionData);
 					const arcsJson = exportArcsJson(arcs);
 
-					const comicsJson = exportComicsJson(projectDir, collectionData, basePath, arcs);
+					const characters = loadCharacters(projectDir);
+					const comicsJson = exportComicsJson(projectDir, collectionData, basePath, arcs, characters);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 
-					// Not emitted: the app has these three inside its script. See `bundledData.ts`.
+					// Not emitted: the app has these, and the characters, inside its script. See `bundledData.ts`.
 					const rerunsJson = exportRerunsJson(projectDir, source);
 					const collectionIndexJson = generateCollectionIndex(collectionData, basePath);
 
@@ -66,6 +70,7 @@ class YamlToJsonPlugin {
 						collectionIndex: JSON.parse(collectionIndexJson),
 						descriptions: JSON.parse(descriptionsJson),
 						arcs: JSON.parse(arcsJson),
+						characters,
 					});
 				},
 			);

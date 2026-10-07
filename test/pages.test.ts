@@ -59,6 +59,7 @@ function loadSource(): PageSource {
 		descriptions: new Map(Object.entries(descriptions)),
 		arcs,
 		arcsById: new Map(arcs.map((arc) => [arc.id, arc])),
+		charactersById: new Map(),
 	};
 }
 
@@ -266,6 +267,44 @@ test("a prerendered document", async (suite) => {
 			source.arcs!.some((arc) => arc.dates.includes(date)),
 		)!;
 		assert.ok(detailPageFrom(source, rerunDate).arcs.some((arc) => arc.dates.includes(original)));
+	});
+
+	await suite.test("names who a strip features, each a search for them, on a special too", () => {
+		// Its own characters, rather than `comics.yaml`'s, which need not list any.
+		const special = [...source.comicsByDate.values()].flat().find((comic) => comic.id)!;
+		const [rerunDate, original] = [...source.reruns][0];
+		const cast = (comic: Comic, ...characters: string[]): Comic => ({ ...comic, characters });
+		const featuring: PageSource = {
+			...source,
+			comicsByDate: new Map([
+				...source.comicsByDate,
+				[original, source.comicsByDate.get(original)!.map((comic) => cast(comic, "dad", "calvin"))],
+				[special.date, [cast(special, "calvin")]],
+			]),
+			charactersById: new Map([
+				["calvin", { id: "calvin", name: "Calvin" }],
+				["hobbes", { id: "hobbes", name: "Hobbes" }],
+				["dad", { id: "dad", name: "Dad" }],
+			]),
+		};
+		const link = (id: string, name: string) =>
+			`<a class="detail-rerun-link" href="/search?q=%40featuring%3A${id}&amp;sort=date">${name}</a>`;
+
+		// In the order `characters.yaml` lists them, and on a rerun day, the strip it shows.
+		for (const date of [original, rerunDate]) {
+			const page = detailPageFrom(featuring, date);
+			assert.deepEqual(
+				page.characters.map((character) => character.id),
+				["calvin", "dad"],
+			);
+			assert.ok(buildViewHtml(page, false).includes(`Featuring ${link("calvin", "Calvin")} and ${link("dad", "Dad")}`));
+		}
+		assert.ok(
+			buildViewHtml(detailPageFrom(featuring, special.date), false).includes(`Featuring ${link("calvin", "Calvin")}<`),
+		);
+		// A strip that lists no one has no line.
+		const [unlisted] = [...source.comicsByDate.keys()].filter((date) => date !== original && date !== special.date);
+		assert.ok(!buildViewHtml(detailPageFrom(featuring, unlisted), false).includes("Featuring"));
 	});
 
 	await suite.test("names itself and where it lives", () => {
