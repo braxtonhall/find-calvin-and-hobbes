@@ -142,14 +142,11 @@
 	}
 }
 
-/* A cover is a button: nothing of one shows but the cover, and the ring when it is focused or selected. */
+/* A cover is a link: nothing of one shows but the cover, and the ring when it is focused or selected. */
 .book__cover {
 	display: block;
-	padding: 0;
-	font: inherit;
 	color: inherit;
-	background: none;
-	border: none;
+	text-decoration: none;
 	border-radius: 3px;
 	cursor: pointer;
 }

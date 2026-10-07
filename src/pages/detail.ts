@@ -343,17 +343,19 @@ function buildBookHtml(
 	const notes = alteration ? [`Altered · ${alteration}`] : [];
 	const book = `${collection.id} ${printing.edition ?? ""}`;
 
-	const cover = `<button type="button" class="book__cover" aria-haspopup="dialog" aria-expanded="false" data-collection-id="${escHtml(collection.id)}" aria-label="${escHtml(printing.name)}"><span class="collection-entry"><span class="collection-book${isBlackAndWhite ? " collection-book--bw" : ""}"${ratio}><img src="${escHtml(printing.image)}" alt="" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${alteration ? ALTERATION_BADGE : ""}</span><span class="collection-pages">${caption}</span></span></button>`;
+	const href = escHtml(addressOf(buildCollectionPath(collection.id)));
+	// A link to the book's page, which a mouse follows; a tap opens the popup instead — see `attachBookHandlers`.
+	const cover = `<a class="book__cover" href="${href}" aria-haspopup="dialog" aria-expanded="false" data-collection-id="${escHtml(collection.id)}" aria-label="${escHtml(printing.name)}"><span class="collection-entry"><span class="collection-book${isBlackAndWhite ? " collection-book--bw" : ""}"${ratio}><img src="${escHtml(printing.image)}" alt="" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${alteration ? ALTERATION_BADGE : ""}</span><span class="collection-pages">${caption}</span></span></a>`;
 
 	// The way to the book's page sits between the arrows through it — alone, where there are none.
-	const goTo = `<a class="nav-btn book__go" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}" title="Go to this book" aria-label="Go to this book">${BOOK_ICON}</a>`;
+	const goTo = `<a class="nav-btn book__go" href="${href}" data-collection-id="${escHtml(collection.id)}" title="Go to this book" aria-label="Go to this book">${BOOK_ICON}</a>`;
 	const nav =
 		neighbours === null
 			? `<span class="book__nav">${goTo}</span>`
 			: `<span class="book__nav">${buildBookArrowHtml(neighbours?.prev ?? null, -1)}${goTo}${buildBookArrowHtml(neighbours?.next ?? null, 1)}</span>`;
 	const card = `<template class="book__card">
 		<div class="book__text">
-			<a class="book__name" href="${escHtml(addressOf(buildCollectionPath(collection.id)))}" data-collection-id="${escHtml(collection.id)}">${escHtml(printing.name)}</a> <span class="book__year">${printing.year}</span>
+			<a class="book__name" href="${href}" data-collection-id="${escHtml(collection.id)}">${escHtml(printing.name)}</a> <span class="book__year">${printing.year}</span>
 			<span class="book__line">${escHtml(where.join("; ") + colour)}</span>
 			${notes.map((note) => `<span class="book__line book__note">${escHtml(note)}</span>`).join("")}
 		</div>
