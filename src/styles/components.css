@@ -313,3 +313,20 @@
 .detail-actions > .nav-btn {
 	margin-left: 0;
 }
+
+/* A line about a strip, on its page or an arc's, after its icon. The text wraps clear of the icon, which sits on its first line. */
+.detail-meta {
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+}
+
+.detail-meta__icon {
+	flex: none;
+	margin-top: 2px;
+	margin-top: calc((1lh - 13px) / 2);
+}
+
+.detail-meta__text {
+	min-width: 0;
+}

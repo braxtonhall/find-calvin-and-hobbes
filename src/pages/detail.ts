@@ -314,6 +314,30 @@ function buildPrintings(
 	return [...printingsByKey.values()];
 }
 
+/** A small icon at the start of each line about a strip, in the line's own colour, so each kind of line is told apart at a glance. */
+function metaIcon(paths: string): string {
+	return `<svg class="detail-meta__icon" viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>`;
+}
+
+const META_ICONS = {
+	by: metaIcon(`<path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/>`),
+	featuring: metaIcon(
+		`<circle cx="9" cy="7" r="4"/><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>`,
+	),
+	arc: metaIcon(
+		`<circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/>`,
+	),
+	rerun: metaIcon(`<path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/>`),
+	collected: metaIcon(`<path d="M16 6l4 14M12 6v14M8 8v12M4 4v16"/>`),
+};
+
+type MetaKind = keyof typeof META_ICONS;
+
+/** A line's icon and its text, the text wrapping clear of the icon. */
+function metaContents(kind: MetaKind, html: string): string {
+	return `${META_ICONS[kind]}<span class="detail-meta__text">${html}</span>`;
+}
+
 const BOOK_ICON = `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 function buildBookArrowHtml(date: string | null, direction: -1 | 1): string {
@@ -399,7 +423,7 @@ function buildPrintingsSectionHtml(
 	alterationKey: string,
 	isSunday: boolean,
 ): string {
-	const heading = `<p class="detail-collections-heading">Collected in</p>`;
+	const heading = `<p class="detail-collections-heading detail-meta">${metaContents("collected", "Collected in")}</p>`;
 	if (printings.length === 0) {
 		return `${heading}<p class="printings__empty">Not reprinted in any book</p>`;
 	}
@@ -557,12 +581,12 @@ function buildArcLineHtml(arc: DetailArc, date: string): string {
 	const index = arc.dates.indexOf(date);
 	const link = `<a class="detail-rerun-link detail-arc-link" href="${escHtml(addressOf(buildArcPath(arc.id)))}" data-arc-id="${escHtml(arc.id)}" title="${escHtml(arc.description)}">${escHtml(arcRange(arc))}</a>`;
 	const steps = buildArcStepHtml(arc.dates[index - 1], "prev") + buildArcStepHtml(arc.dates[index + 1], "next");
-	return `<li class="detail-run detail-arc"><span class="detail-arc__text">Part ${index + 1} of ${arc.dates.length} in the ${link} arc</span><span class="detail-arc__nav">${steps}</span></li>`;
+	return `<li class="detail-run detail-arc"><span class="detail-arc__text detail-meta">${metaContents("arc", `Part ${index + 1} of ${arc.dates.length} in the ${link} arc`)}</span><span class="detail-arc__nav">${steps}</span></li>`;
 }
 
 /** A rerun day shows the strip it reran, so this sits above it as a note of where it's from. */
 function buildRerunBannerHtml(originalDate: string): string {
-	return `<p class="detail-rerun-banner">Originally ran ${buildRerunLinkHtml(originalDate)}</p>`;
+	return `<p class="detail-rerun-banner detail-meta">${metaContents("rerun", `Originally ran ${buildRerunLinkHtml(originalDate)}`)}</p>`;
 }
 
 /**
@@ -577,7 +601,9 @@ function buildFeaturingLineHtml(page: DetailPage, comic: Comic): string {
 			(character) =>
 				`<a class="detail-rerun-link detail-character-link" href="${escHtml(addressOf(buildSearchPath(`@featuring:${character.id}`, "date")))}" data-character-id="${escHtml(character.id)}">${escHtml(character.name)}</a>`,
 		);
-	return links.length > 0 ? `<li class="detail-run">Featuring ${andList(links)}</li>` : "";
+	return links.length > 0
+		? `<li class="detail-run detail-meta">${metaContents("featuring", `Featuring ${andList(links)}`)}</li>`
+		: "";
 }
 
 /** `a`, `a and b`, `a, b and c`. */
@@ -598,7 +624,9 @@ function buildByLineHtml(page: DetailPage, comic: Comic): string {
 		const link = `<a class="detail-rerun-link detail-creator-link" href="${escHtml(addressOf(buildCreatorPath(credit.id)))}" data-creator-id="${escHtml(credit.id)}">${escHtml(name)}</a>`;
 		return [credit.role ? `${link} (${escHtml(credit.role)})` : link];
 	});
-	return links.length > 0 ? `<li class="detail-run">By ${andList(links)}</li>` : "";
+	return links.length > 0
+		? `<li class="detail-run detail-meta">${metaContents("by", `By ${andList(links)}`)}</li>`
+		: "";
 }
 
 /**
@@ -611,7 +639,10 @@ function buildRunsHtml(page: DetailPage, date: string, comic: Comic): string {
 	const people = buildByLineHtml(page, comic) + buildFeaturingLineHtml(page, comic);
 	if (comic.id) return people ? `<ul class="detail-runs">${people}</ul>` : "";
 	const reruns = page.rerunOf ? [] : page.runs.slice(1);
-	const rerun = reruns.length > 0 ? `<li class="detail-run">Reran ${joinRerunLinks(reruns)}</li>` : "";
+	const rerun =
+		reruns.length > 0
+			? `<li class="detail-run detail-meta">${metaContents("rerun", `Reran ${joinRerunLinks(reruns)}`)}</li>`
+			: "";
 	const lines = people + page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("") + rerun;
 	return lines ? `<ul class="detail-runs">${lines}</ul>` : "";
 }
