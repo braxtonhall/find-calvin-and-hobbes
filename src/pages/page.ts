@@ -1,4 +1,4 @@
-import { Appearance, Arc, Character, Collection, Comic, CollectionIndex, Day, SortMode } from "../types";
+import { Appearance, Arc, Character, Collection, Comic, CollectionIndex, Creator, Day, SortMode } from "../types";
 import { PAGE_CONFIG } from "../site-config";
 import { formatDateRange } from "../date-utils";
 
@@ -44,7 +44,7 @@ export interface LibraryPage {
  */
 export type DetailCollection = Pick<
 	Collection,
-	"id" | "name" | "pub_year" | "image" | "colour" | "aspectRatio" | "editions" | "alterations"
+	"id" | "name" | "pub_year" | "image" | "colour" | "aspectRatio" | "width" | "editions" | "alterations"
 >;
 
 export interface BookNeighbours {
@@ -73,7 +73,12 @@ export interface DetailPage {
 	arcs: DetailArc[];
 	/** Every character the page's strips feature, for their names; each strip lists its own by id. */
 	characters: Character[];
+	/** Everyone credited on the page's strips, for their names; each strip lists its own by id. */
+	creators: DetailCreator[];
 }
+
+/** A creator as a strip's page names them. */
+export type DetailCreator = Pick<Creator, "id" | "name">;
 
 /** An arc as a strip's page names it: enough to say which part this is, step along it, and light it up. */
 export type DetailArc = Pick<Arc, "id" | "description" | "dates">;
@@ -153,13 +158,36 @@ export interface ArcPage {
  */
 export type CollectionSummary = Pick<
 	Collection,
-	"id" | "name" | "subtitle" | "pub_year" | "pub_month" | "pub_day" | "image" | "dailies" | "sundays"
+	| "id"
+	| "name"
+	| "subtitle"
+	| "pub_year"
+	| "pub_month"
+	| "pub_day"
+	| "image"
+	| "aspectRatio"
+	| "width"
+	| "dailies"
+	| "sundays"
 >;
 
 export interface CollectionsPage {
 	view: "collections";
 	/** In publication order. */
 	collections: CollectionSummary[];
+}
+
+export interface CreatorsPage {
+	view: "creators";
+	/** In the order the creators' file lists them. */
+	creators: Creator[];
+}
+
+export interface CreatorPage {
+	view: "creator";
+	id: string;
+	/** `null` when the id names no creator. */
+	creator: Creator | null;
 }
 
 export type Page =
@@ -171,7 +199,9 @@ export type Page =
 	| CollectionPage
 	| CollectionsPage
 	| ArcPage
-	| ArcsPage;
+	| ArcsPage
+	| CreatorPage
+	| CreatorsPage;
 
 /**
  * Where a page's data comes from. The app's `state` is one of these; the build assembles another
@@ -190,6 +220,8 @@ export interface PageSource {
 	arcsById: Map<string, Arc> | null;
 	/** Empty on a site without characters. */
 	charactersById: Map<string, Character>;
+	/** In the order the creators' file lists them. Empty on a site without creators. */
+	creatorsById: Map<string, Creator>;
 }
 
 /** An arc by its dates: `Nov 18–19, 1985`. */
@@ -213,6 +245,10 @@ export function pageTitle(page: Page): string {
 			return `${page.arc ? arcRange(page.arc) : "Arc not found"} — ${PAGE_CONFIG.name}`;
 		case "arcs":
 			return `Arcs — ${PAGE_CONFIG.name}`;
+		case "creator":
+			return `${page.creator?.name ?? "Creator not found"} — ${PAGE_CONFIG.name}`;
+		case "creators":
+			return `Creators — ${PAGE_CONFIG.name}`;
 		case "library":
 			return page.q ? `${page.q} — Library — ${PAGE_CONFIG.name}` : `Library — ${PAGE_CONFIG.name}`;
 		case "credits":

@@ -7,6 +7,7 @@ import { buildComicPath } from "../routes";
 import { addressOf } from "../base-path";
 import { dateToCompact, formatLongDate } from "../date-utils";
 import { cellForDate } from "../grid";
+import { srcsetAttributes } from "../srcset";
 
 /**
  * The rows of strips a page lists — the search results, and the bookmarks — and what they do to the
@@ -53,12 +54,16 @@ export function resultsHtml(results: SearchResult[], empty: string): string {
 		// focus and Enter behaviour that had to be spelled out now comes for free — and announces as a
 		// link, which is the truth. `draggable="false"` because dragging from inside an anchor drags the
 		// link instead of selecting text, and the transcript below is text a reader may want to copy.
+		// Covering a box 200 pixels by 140, as `.result-image-wrap` does: a daily, wider than the box, by its height.
+		const srcset = comic.image
+			? srcsetAttributes(comic.image, comic.width, `${Math.max(200, Math.ceil(140 * (comic.aspectRatio ?? 1)))}px`)
+			: "";
 		const comicLink = addressOf(buildComicPath(comic.date, result.matchedAlternate ? [dateToCompact(comic.date)] : []));
 		html += `<a class="result-row${comic.image ? "" : " result-row--no-image"}" href="${comicLink}" draggable="false" data-date="${comic.date}" aria-label="View comic from ${dateFormatted}">
 			<div class="result-header">${dateFormatted}${sourceTag}</div>
 			<div class="result-body">
 				<div class="result-text">${highlighted}</div>
-				${comic.image ? `<div class="result-image-wrap"><img class="result-image" src="${escHtml(comic.image)}" alt="Comic from ${dateFormatted}" onload="this.classList.add('loaded')" onerror="this.style.display='none'" /></div>` : ``}
+				${comic.image ? `<div class="result-image-wrap"><img class="result-image" src="${escHtml(comic.image)}"${srcset} alt="Comic from ${dateFormatted}" onload="this.classList.add('loaded')" onerror="this.style.display='none'" /></div>` : ``}
 			</div>
 		</a>`;
 	}

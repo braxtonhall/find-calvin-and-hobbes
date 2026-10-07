@@ -141,4 +141,3 @@ extras:
   - Back cover art
   - Title page & page 128 art
 image: !Path ./covers/book6.gif
-aspect-ratio: 0.9474

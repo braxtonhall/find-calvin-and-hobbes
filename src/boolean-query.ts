@@ -84,8 +84,22 @@ const OPERATOR_PATTERN = /@(and|or|not)(?![a-zA-Z:])/gi;
  * And the books, which a strip can be in several of, but which a reader asking for two of means
  * either of all the same: two books mostly share no strips, and the ones that do mostly hold one
  * inside the other, so both would be nothing or the smaller book. Both is `@and`.
+ *
+ * And the creators, for the same reason: two people either made every strip together, where both
+ * and either are the same, or one took over from the other, where both is nothing. Only the strips
+ * of a handover tell the two apart, and `@and` is there for them.
  */
-const WIDENING = new Set<Filter["kind"]>(["year", "month", "monthDay", "weekday", "date", "after", "before", "in"]);
+const WIDENING = new Set<Filter["kind"]>([
+	"year",
+	"month",
+	"monthDay",
+	"weekday",
+	"date",
+	"after",
+	"before",
+	"in",
+	"by",
+]);
 
 /** A query of more clauses than this is refused rather than searched. See `normalise`. */
 const MAX_CLAUSES = 256;

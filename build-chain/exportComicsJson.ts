@@ -1,22 +1,31 @@
 import fs from "fs";
+import path from "path";
 import { Appearance, CollectionData } from "./collectionPages";
 import { DailyEntry, loadComicSource } from "./comicSource";
-import { Arc, Character } from "../src/types";
+import { Arc, Character, Credit } from "../src/types";
 import { stripCharacters } from "./characters";
 import { loadComicImages } from "./siteConfig";
+import { aspectRatio } from "./imageSize";
+import { variantSourceWidth } from "./imageVariants";
 
 const EXTENSIONS = [".gif", ".jpg", ".jpeg", ".png", ".webp", ".bmp"];
 
 /** Where the build publishes the strips' images, from the mount. See `comicImages` in the configuration. */
 export const COMIC_IMAGES_PATH = "assets/comics/";
 
-/** A strip's image, as a page links to it, or "" for a strip with none in `images`. */
-function findImage(key: string, images: ReadonlySet<string>, basePath: string): string {
-	for (const ext of EXTENSIONS) {
-		// From the mount, since the page showing it may live at any depth.
-		if (images.has(`${key}${ext}`)) return `${basePath}${COMIC_IMAGES_PATH}${key}${ext}`;
-	}
-	return "";
+/**
+ * A strip's image, as a page links to it, and its shape, for the page to hold the space for it while
+ * it loads, and its width where the build makes smaller copies of it; nothing for a strip with none
+ * in `images`, the names of the files in `folder`.
+ */
+function attachImage(entry: Entry, key: string, folder: string, images: ReadonlySet<string>, basePath: string): void {
+	const name = EXTENSIONS.map((ext) => `${key}${ext}`).find((name) => images.has(name));
+	if (!name) return;
+	// From the mount, since the page showing it may live at any depth.
+	entry.image = `${basePath}${COMIC_IMAGES_PATH}${name}`;
+	entry.aspectRatio = aspectRatio(path.join(folder, name));
+	const width = variantSourceWidth(path.join(folder, name));
+	if (width !== undefined) entry.width = width;
 }
 
 function formatDate(dateStr: string): string {
@@ -31,9 +40,11 @@ interface Entry {
 	id?: string;
 	sort?: number;
 	aspectRatio?: number;
+	width?: number;
 	appearances?: Appearance[];
 	arcs?: string[];
 	characters?: string[];
+	creators?: Credit[];
 }
 
 /**
@@ -45,16 +56,20 @@ interface Entry {
  *
  * Each strip carries its characters the same way, for `@featuring:`, special or not. None where
  * `characters` is empty, which is a site without `characters.yaml`.
+ *
+ * And its creators, keyed in `creators` as `comics.yaml` keys the strip. None where it has none.
  */
 export function exportComicsJson(
 	collectionData: CollectionData,
 	basePath: string = "/",
 	arcs: Arc[] = [],
 	characters: Character[] = [],
+	creators: ReadonlyMap<string, Credit[]> = new Map(),
 	config?: string,
 ): string {
 	const folder = loadComicImages(config);
 	const images = new Set(folder && fs.existsSync(folder) ? fs.readdirSync(folder) : []);
+	const attach = (entry: Entry, key: string) => folder && attachImage(entry, key, folder, images, basePath);
 	const source = loadComicSource(config);
 
 	const attachAppearances = (entry: Entry, lookupKey: string) => {
@@ -65,6 +80,8 @@ export function exportComicsJson(
 	const attachCharacters = (entry: Entry, key: string, listing: DailyEntry) => {
 		const featured = stripCharacters(key, listing, characters);
 		if (featured.length) entry.characters = featured;
+		const credits = creators.get(key);
+		if (credits) entry.creators = credits;
 	};
 
 	const arcsByDate = new Map<string, string[]>();
@@ -80,8 +97,7 @@ export function exportComicsJson(
 			transcript: daily.transcript,
 		};
 		if (daily.alternate) entry.alternate = daily.alternate;
-		const img = findImage(dateStr, images, basePath);
-		if (img) entry.image = img;
+		attach(entry, dateStr);
 		attachAppearances(entry, dateStr);
 		const dailyArcs = arcsByDate.get(entry.date);
 		if (dailyArcs) entry.arcs = dailyArcs;
@@ -97,9 +113,7 @@ export function exportComicsJson(
 		};
 		if (special.alternate) entry.alternate = special.alternate;
 		if (special.sort) entry.sort = special.sort;
-		if (special["aspect-ratio"]) entry.aspectRatio = special["aspect-ratio"];
-		const img = findImage(sid, images, basePath);
-		if (img) entry.image = img;
+		attach(entry, sid);
 		attachAppearances(entry, sid);
 		attachCharacters(entry, sid, special);
 		entries.push(entry);

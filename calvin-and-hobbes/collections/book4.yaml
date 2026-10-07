@@ -143,4 +143,3 @@ extras:
   - Back cover art
   - Filler B&W vignettes
 image: !Path ./covers/book4.jpg
-aspect-ratio: 0.9335

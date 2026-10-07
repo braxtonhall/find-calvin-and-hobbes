@@ -10,6 +10,8 @@ import { buildCollectionHtml } from "./collection";
 import { buildCollectionsHtml } from "./collections";
 import { buildArcHtml } from "./arc";
 import { buildArcsHtml } from "./arcs";
+import { buildCreatorHtml } from "./creator";
+import { buildCreatorsHtml, formatStripCount, formatYears } from "./creators";
 import { arcRange } from "./page";
 import { buildCorrectionLinkHtml } from "./correction";
 
@@ -31,6 +33,8 @@ export const VIEWS = [
 	"collections",
 	"arc",
 	"arcs",
+	"creator",
+	"creators",
 	"library",
 	"credits",
 ] as const;
@@ -82,6 +86,13 @@ function pageDescription(page: Page): string | null {
 		}
 		case "arcs":
 			return `Every ${series} story arc, in the order they ran, and the strips each one is told in.`;
+		case "creator": {
+			const { creator } = page;
+			if (!creator) return description;
+			return `Every ${series} strip by ${creator.name}, ${formatYears(creator.years)}: ${formatStripCount(creator.strips)} in all.`;
+		}
+		case "creators":
+			return `Everyone who made ${series}, and the strips each of them made.`;
 		default:
 			return description;
 	}
@@ -93,15 +104,17 @@ function pageDescription(page: Page): string | null {
  * goes on the origin alone.
  */
 function ownImage(page: Page, siteUrl: string): string | null {
-	const origin = siteUrl ? new URL(siteUrl).origin : "";
 	const own = page.view === "detail" ? page.comics.find((comic) => comic.image)?.image : undefined;
-	if (own) return origin + own;
-	// A cover can be a whole URL, served from elsewhere.
-	if (page.view === "collection" && page.collection) {
-		const cover = page.collection.image;
-		return /^https?:\/\//i.test(cover) ? cover : origin + cover;
-	}
+	if (own) return fromSite(own, siteUrl);
+	if (page.view === "collection" && page.collection) return fromSite(page.collection.image, siteUrl);
+	if (page.view === "creator" && page.creator?.image) return fromSite(page.creator.image, siteUrl);
 	return null;
+}
+
+/** An image as a whole URL: a path the site publishes, on its origin. A cover or the banner may already be one. */
+function fromSite(image: string, siteUrl: string): string {
+	if (/^https?:\/\//i.test(image)) return image;
+	return (siteUrl ? new URL(siteUrl).origin : "") + image;
 }
 
 /** JSON inside a `<script>` ends at the first `</script`, wherever a transcript puts one. */
@@ -114,7 +127,8 @@ function buildHeadHtml(page: Page, options: DocumentOptions): string {
 	const description = pageDescription(page);
 	const own = ownImage(page, options.siteUrl);
 	// The banner stands in for a page with no picture of its own; with no banner either, there is no image.
-	const image = own ?? PAGE_CONFIG.landingImage;
+	const banner = PAGE_CONFIG.landingImage;
+	const image = own ?? (banner && fromSite(banner, options.siteUrl));
 	const url = options.siteUrl ? options.siteUrl + options.path : "";
 
 	const tags = [
@@ -147,6 +161,10 @@ export function buildViewHtml(page: Page, canGoBack: boolean): string {
 			return buildArcHtml(page, canGoBack);
 		case "arcs":
 			return buildArcsHtml(page, canGoBack);
+		case "creator":
+			return buildCreatorHtml(page, canGoBack);
+		case "creators":
+			return buildCreatorsHtml(page, canGoBack);
 		case "results":
 			// The rows are the app's to draw: they depend on the query, and there is no file per query.
 			return "";

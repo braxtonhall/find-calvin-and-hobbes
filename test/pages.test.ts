@@ -10,7 +10,7 @@ import { exportDescriptions } from "../build-chain/exportDescriptions";
 import { generateCollectionIndex } from "../build-chain/generateCollectionIndex";
 import { loadArcs } from "../build-chain/arcs";
 import { computeDays } from "../src/days";
-import { Arc, Collection, Comic } from "../src/types";
+import { Arc, Collection, Comic, Creator } from "../src/types";
 import { Page, PageSource } from "../src/pages/page";
 import { detailPageFrom } from "../src/pages/detail";
 import { buildRangeSearchPath, collectionPageFrom } from "../src/pages/collection";
@@ -19,6 +19,8 @@ import { parseRoutePath } from "../src/routes";
 import { collectionsPageFrom } from "../src/pages/collections";
 import { arcPageFrom } from "../src/pages/arc";
 import { arcsPageFrom } from "../src/pages/arcs";
+import { creatorPageFrom } from "../src/pages/creator";
+import { creatorsPageFrom } from "../src/pages/creators";
 import { isDateInCollection } from "../src/date-utils";
 import { buildDocumentHtml, buildViewHtml, PAGE_DATA_ID } from "../src/pages/shell";
 import { loadPageLayout, pageAssetPath } from "../build-chain/siteConfig";
@@ -60,6 +62,7 @@ function loadSource(): PageSource {
 		arcs,
 		arcsById: new Map(arcs.map((arc) => [arc.id, arc])),
 		charactersById: new Map(),
+		creatorsById: new Map(),
 	};
 }
 
@@ -269,6 +272,80 @@ test("a prerendered document", async (suite) => {
 		assert.ok(detailPageFrom(source, rerunDate).arcs.some((arc) => arc.dates.includes(original)));
 	});
 
+	await suite.test("says who made a strip first, each the way to their page, and lists them", () => {
+		const [rerunDate, original] = [...source.reruns][0];
+		const special = [...source.comicsByDate.values()].flat().find((comic) => comic.id)!;
+		const credit = (comic: Comic, ...creators: Comic["creators"] & {}): Comic => ({ ...comic, creators });
+		const creator = (id: string, name: string, extra: Partial<Creator> = {}): [string, Creator] => [
+			id,
+			{ id, name, strips: 2, years: [Number(original.slice(0, 4))], ranges: [original.replace(/-/g, "")], ...extra },
+		];
+		const credited: PageSource = {
+			...source,
+			comicsByDate: new Map([
+				...source.comicsByDate,
+				[
+					original,
+					source.comicsByDate
+						.get(original)!
+						.map((comic) =>
+							credit(
+								{ ...comic, characters: ["calvin"] },
+								{ id: "scott", role: "story" },
+								{ id: "borgman", role: "art" },
+							),
+						),
+				],
+				[special.date, [credit(special, { id: "scott" })]],
+			]),
+			charactersById: new Map([["calvin", { id: "calvin", name: "Calvin" }]]),
+			creatorsById: new Map([
+				creator("borgman", "Jim Borgman", { link: "https://example.com/borgman", roles: ["art"] }),
+				creator("scott", "Jerry Scott"),
+			]),
+		};
+		const link = (id: string, name: string) =>
+			`<a class="detail-rerun-link detail-creator-link" href="/creator/${id}" data-creator-id="${id}">${name}</a>`;
+
+		// In the order the strip credits them, ahead of who it features, and on a rerun day, the strip it shows.
+		for (const date of [original, rerunDate]) {
+			const html = buildViewHtml(detailPageFrom(credited, date), false);
+			const by = `By ${link("scott", "Jerry Scott")} (story) and ${link("borgman", "Jim Borgman")} (art)`;
+			assert.ok(html.includes(by), date);
+			assert.ok(html.indexOf(by) < html.indexOf("Featuring"));
+		}
+		assert.ok(
+			buildViewHtml(detailPageFrom(credited, special.date), false).includes(`By ${link("scott", "Jerry Scott")}<`),
+		);
+		const [uncredited] = [...source.comicsByDate.keys()].filter((date) => date !== original && date !== special.date);
+		assert.ok(!buildViewHtml(detailPageFrom(credited, uncredited), false).includes(">By "));
+
+		// The list, in the creators' order, and each one's page, with no arrows to the others.
+		const list = buildViewHtml(creatorsPageFrom(credited), false);
+		assert.ok(list.indexOf("Jim Borgman") < list.indexOf("Jerry Scott"));
+		const html = buildViewHtml(creatorPageFrom(credited, "borgman"), false);
+		assert.ok(!html.includes("nav-btn"));
+		assert.ok(html.includes(`href="https://example.com/borgman" target="_blank" rel="noopener">About`));
+		assert.ok(html.includes(`Years:</span> ${original.slice(0, 4)}</p>`));
+		assert.ok(html.includes("Roles:</span> art"));
+		assert.ok(!buildViewHtml(creatorPageFrom(credited, "scott"), false).includes("About"));
+
+		// Their specials, by title, under Other — and no Other for someone with none.
+		const withSpecial: PageSource = {
+			...credited,
+			creatorsById: new Map([
+				creator("scott", "Jerry Scott", { specials: [{ id: "poster", title: "The poster", date: special.date }] }),
+			]),
+		};
+		assert.ok(
+			buildViewHtml(creatorPageFrom(withSpecial, "scott"), false).includes(
+				`Other</p><ul class="collection-ranges creator-specials"><li class="collection-range"><a class="collection-range-date" href="/${special.date}" data-date="${special.date}">The poster</a></li></ul>`,
+			),
+		);
+		assert.ok(!html.includes(">Other<"));
+		assert.equal(creatorPageFrom(credited, "nobody").creator, null);
+	});
+
 	await suite.test("names who a strip features, each a search for them, on a special too", () => {
 		// Its own characters, rather than `comics.yaml`'s, which need not list any.
 		const special = [...source.comicsByDate.values()].flat().find((comic) => comic.id)!;
@@ -288,7 +365,7 @@ test("a prerendered document", async (suite) => {
 			]),
 		};
 		const link = (id: string, name: string) =>
-			`<a class="detail-rerun-link" href="/search?q=%40featuring%3A${id}&amp;sort=date">${name}</a>`;
+			`<a class="detail-rerun-link detail-character-link" href="/search?q=%40featuring%3A${id}&amp;sort=date" data-character-id="${id}">${name}</a>`;
 
 		// In the order `characters.yaml` lists them, and on a rerun day, the strip it shows.
 		for (const date of [original, rerunDate]) {

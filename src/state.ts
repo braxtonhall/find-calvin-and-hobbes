@@ -1,4 +1,4 @@
-import { Arc, Character, Comic, CollectionIndex, Collection, Day, Route } from "./types";
+import { Arc, Character, Comic, CollectionIndex, Collection, Creator, Day, Route } from "./types";
 
 export interface AppState {
 	comics: Comic[];
@@ -14,6 +14,7 @@ export interface AppState {
 	arcs: Arc[] | null;
 	arcsById: Map<string, Arc> | null;
 	charactersById: Map<string, Character>;
+	creatorsById: Map<string, Creator>;
 	keyboardNavActive: boolean;
 	bookmarkedDates: Set<string>;
 	/** The strips the reader owns, by `ownershipId`, and the books, by id. */
@@ -40,6 +41,7 @@ export const state: AppState = {
 	arcs: null,
 	arcsById: null,
 	charactersById: new Map(),
+	creatorsById: new Map(),
 	keyboardNavActive: false,
 	bookmarkedDates: new Set(),
 	ownedStrips: new Set(),

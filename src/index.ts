@@ -2,7 +2,7 @@ import "./styles/theme.css";
 import "./styles/base.css";
 import "./styles/components.css";
 
-import { CHARACTERS } from "./bundled-data";
+import { CHARACTERS, CREATORS } from "./bundled-data";
 import { registerVocabulary } from "./filter-vocabulary";
 import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
@@ -29,6 +29,8 @@ function initialize(): void {
 	);
 	// Empty on a site without characters, where there is no `@featuring:` to ask.
 	registerVocabulary("featuring", () => CHARACTERS.map((character) => ({ value: character.id, hint: character.name })));
+	// And without creators, where there is no `@by:`.
+	registerVocabulary("by", () => CREATORS.map((creator) => ({ value: creator.id, hint: creator.name })));
 
 	// First, so the requests are on the wire while the grid is drawn. Nothing it does after they
 	// answer can run before this function returns, so the grid and the route are in place by then.

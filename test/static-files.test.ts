@@ -4,7 +4,7 @@ import { loadCollectionData } from "../build-chain/collectionPages";
 import { exportComicsJson } from "../build-chain/exportComicsJson";
 import { generateCollectionIndex } from "../build-chain/generateCollectionIndex";
 import { loadComicImages } from "../build-chain/siteConfig";
-import { withConfig } from "./helpers/config";
+import { sampleGif, withConfig } from "./helpers/config";
 
 /** The covers and the strips' images: named by path in the configuration, and published by the build. */
 
@@ -32,9 +32,9 @@ test("publishes a cover named with !Path under static/, by its contents", () => 
 			"books/a.yaml": book("a", "!Path ../covers/one.png"),
 			"books/b.yaml": book("b", "!Path ../covers/copy.png"),
 			"books/c.yaml": book("c", "!Path ../covers/two.png"),
-			"covers/one.png": "one",
-			"covers/copy.png": "one",
-			"covers/two.png": "two",
+			"covers/one.png": sampleGif(1, 1),
+			"covers/copy.png": sampleGif(1, 1),
+			"covers/two.png": sampleGif(2, 1),
 		},
 	);
 });
@@ -53,7 +53,45 @@ test("keeps a cover given as a URL, and writes a published one from the mount", 
 			assert.equal(images.a, "https://example.test/a.png");
 			assert.match(images.b, /^\/repo\/static\/[0-9a-f]{16}\.gif$/);
 		},
-		{ "b.gif": "b" },
+		{ "b.gif": sampleGif(2, 1) },
+	);
+});
+
+test("reads a cover's shape from its file, unless its aspect-ratio says otherwise", () => {
+	const yaml =
+		"collections:\n" +
+		"  - {id: a, image: !Path ./wide.gif}\n" +
+		"  - {id: b, image: !Path ./wide.gif, aspect-ratio: 0.75}\n" +
+		"  - {id: c, image: 'https://example.test/c.png', aspect-ratio: 0.8}\n" +
+		"  - {id: d, image: 'https://example.test/d.png'}\n" +
+		"  - id: e\n" +
+		"    image: !Path ./wide.gif\n" +
+		"    editions:\n" +
+		"      own: {label: Own, image: !Path ./tall.gif}\n" +
+		"      remote: {label: Remote, image: 'https://example.test/e.png', aspect-ratio: 0.5}\n" +
+		"      bare: {label: Bare}\n";
+	withConfig(
+		yaml,
+		(config) => {
+			const sources = loadCollectionData(config).sources;
+			const ratios = Object.fromEntries(sources.map((source) => [source.id, source.aspectRatio]));
+			assert.deepEqual(ratios, { a: 1.5, b: 0.75, c: 0.8, d: undefined, e: 1.5 });
+			assert.equal("aspect-ratio" in sources[0], false);
+			const editions = sources.find((source) => source.id === "e")!.editions!;
+			assert.equal(editions.own.aspectRatio, 0.3333);
+			assert.equal(editions.remote.aspectRatio, 0.5);
+			assert.equal(editions.bare.aspectRatio, undefined);
+		},
+		{ "wide.gif": sampleGif(3, 2), "tall.gif": sampleGif(1, 3) },
+	);
+	assert.throws(
+		() => withConfig("collections:\n  - {id: a, image: !Path ./a.txt}\n", loadCollectionData, { "a.txt": "a" }),
+		/a\.txt is not an image the build can read the size of/,
+	);
+	assert.throws(
+		() =>
+			withConfig("collections:\n  - {id: a, image: 'https://x.test/a.png', aspect-ratio: wide}\n", loadCollectionData),
+		/a's image's aspect-ratio in site\.yaml must be a positive number/,
 	);
 });
 
@@ -71,20 +109,22 @@ test("refuses a cover that is neither a URL nor a file, or a file that is not th
 
 test("finds the strips' images in the folder comicImages names, or none without one", () => {
 	const comics = "comics:\n  dailies:\n    '19870101': Hi.\n    '19870102': Bye.\n";
-	const files = { "strips/19870101.gif": "gif", "strips/notes.txt": "" };
+	const files = { "strips/19870101.gif": sampleGif(31, 10), "strips/notes.txt": "" };
 	const images = (setting: string) =>
 		withConfig(
 			`${comics}collections: []\ncomicImages: ${setting}\n`,
 			(config) => {
 				const data = loadCollectionData(config);
-				return JSON.parse(exportComicsJson(data, "/repo/", [], [], config)).map(
-					(comic: { date: string; image?: string }) => [comic.date, comic.image],
+				return JSON.parse(exportComicsJson(data, "/repo/", [], [], new Map(), config)).map(
+					(comic: { date: string; image?: string; aspectRatio?: number }) =>
+						comic.image ? [comic.date, comic.image, comic.aspectRatio] : [comic.date, comic.image],
 				);
 			},
 			files,
 		);
+	// Each image with its own shape, read from its file.
 	assert.deepEqual(images("./strips"), [
-		["1987-01-01", "/repo/assets/comics/19870101.gif"],
+		["1987-01-01", "/repo/assets/comics/19870101.gif", 3.1],
 		["1987-01-02", undefined],
 	]);
 	assert.deepEqual(images("false"), [

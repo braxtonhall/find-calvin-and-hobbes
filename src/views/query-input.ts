@@ -227,10 +227,13 @@ export function attachQueryInput(input: HTMLInputElement): void {
 		if (!stale.input.isConnected) widgets.delete(stale);
 	}
 
-	const field = document.createElement("div");
-	field.className = "query-field";
-	const box = document.createElement("div");
+	// A page can write the box itself, around the input and anything else that sits inside the frame,
+	// so that it is drawn right before this runs; it is kept as it is, and only the scroller goes in.
+	const written = input.parentElement?.classList.contains("query-box") ? input.parentElement : null;
+	const box = written ?? document.createElement("div");
 	box.className = "query-box";
+	const field = written?.parentElement ?? document.createElement("div");
+	field.className = "query-field";
 	const scroller = document.createElement("div");
 	scroller.className = "query-scroll";
 	const highlights = document.createElement("div");
@@ -242,10 +245,15 @@ export function attachQueryInput(input: HTMLInputElement): void {
 	note.className = "query-note";
 	note.setAttribute("role", "status");
 
-	input.replaceWith(field);
+	if (written) {
+		input.replaceWith(scroller);
+	} else {
+		input.replaceWith(field);
+		box.append(scroller);
+		field.append(box);
+	}
 	scroller.append(highlights, input);
-	box.append(scroller);
-	field.append(box, note);
+	field.append(note);
 
 	input.setAttribute("role", "combobox");
 	input.setAttribute("aria-controls", "query-menu");

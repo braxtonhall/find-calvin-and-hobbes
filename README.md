@@ -17,6 +17,7 @@ Type words to search transcripts. Type `@` in the search box for the list of fil
 | `@in:`        | `@in:book3`, `@in:complete`    | strips printed in that book                               |
 | `@is:`        | `@is:sunday`, `@is:rerun`      | strips with that tag                                      |
 | `@featuring:` | `@featuring:susie`             | strips featuring that character                           |
+| `@by:`        | `@by:watterson`                | strips by that creator                                    |
 
 The tags are `sunday` and `daily` (the colour Sundays and the black-and-white dailies), `reused`
 (a strip on the day it first ran, where it was later rerun), `rerun` (a strip on a day it ran
@@ -27,7 +28,8 @@ date one ran.
 Different filters narrow. Repeating a filter widens where a strip can have only one value for it —
 `@day:saturday @day:sunday` is the weekend, and `@year:1988 @year:1989` is either year — and for
 books, which mostly share no strips: `@in:book1 @in:book3` is the strips printed in either book
-(`@in:book1 @and @in:book3` is both). Writing `@or` between some of them changes nothing:
+(`@in:book1 @and @in:book3` is both) — and for creators, who mostly either made every strip together
+or took over from each other: `@by:foster @by:murphy` is either one's strips. Writing `@or` between some of them changes nothing:
 `@year:1988 @or @year:1989 @year:1990` is any of the three years. Repeating a tag narrows: `@is:sunday @is:rerun` is the Sundays
 that ran again, and so does repeating a character: `@featuring:susie @featuring:rosalyn` is the
 strips with both. `@day:1 @day:monday` is the Mondays that fell

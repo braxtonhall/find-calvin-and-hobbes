@@ -1,4 +1,5 @@
 import { escHtml } from "../utils";
+import { srcsetAttributes } from "../srcset";
 import { PAGE_CONFIG } from "../site-config";
 import {
 	isDateInCollection,
@@ -138,19 +139,21 @@ function filterDate(compact: string, days: number): string {
  * Sundays only holds only the Sundays between its ends, so its search says so too: as the format,
  * `@is:sunday`, where the site has one, which a reader's own `@day:` narrows rather than widens.
  * Without colour Sundays there is no such tag, and the weekday is all a Sunday is.
+ *
+ * `within` is a filter the range is of, like a creator's `@by:`, which goes first.
  */
-export function buildRangeSearchPath(entry: string, sundays: boolean = false): string {
+export function buildRangeSearchPath(entry: string, sundays: boolean = false, within: string = ""): string {
 	const [start, end] = parseDailiesRange(entry);
-	const bounds = `@after:${filterDate(start, -1)} @before:${filterDate(end, 1)}`;
+	const bounds = `${within ? `${within} ` : ""}@after:${filterDate(start, -1)} @before:${filterDate(end, 1)}`;
 	const sunday = PAGE_CONFIG.colourSundays ? "@is:sunday" : "@day:sunday";
 	return buildSearchPath(sundays ? `${bounds} ${sunday}` : bounds, "date");
 }
 
-function buildRangeHtml(entry: string, sundays: boolean): string {
+export function buildRangeHtml(entry: string, sundays: boolean, within: string = ""): string {
 	const [start, end] = parseDailiesRange(entry);
 	if (start === end) return buildRangeDateLink(start);
 	// A small thing to find: the dash between the ends is the search for everything between them.
-	const dash = `<a class="collection-range-dash" href="${escHtml(addressOf(buildRangeSearchPath(entry, sundays)))}">\u2013</a>`;
+	const dash = `<a class="collection-range-dash" href="${escHtml(addressOf(buildRangeSearchPath(entry, sundays, within)))}">\u2013</a>`;
 	return `${buildRangeDateLink(start)} ${dash} ${buildRangeDateLink(end)}`;
 }
 
@@ -183,6 +186,8 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 	}
 
 	const imageUrl = collection.image;
+	// A hundred and twenty-eight pixels tall, as `.collection-cover img` draws it.
+	const srcset = srcsetAttributes(imageUrl, collection.width, `${Math.ceil(128 * (collection.aspectRatio ?? 1))}px`);
 	const coverage = getCollectionCoverage(collection);
 	const pubDateFormatted = formatPublicationDate(collection);
 
@@ -219,8 +224,8 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 	return `<div class="collection-container">
 		${buildNavButtons(canGoBack)}
 		<div class="collection-header">
-			<div class="collection-cover" style="aspect-ratio: ${collection.aspectRatio}">
-				<img src="${imageUrl}" alt="${escHtml(collection.name)} cover" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />
+			<div class="collection-cover"${collection.aspectRatio ? ` style="aspect-ratio: ${collection.aspectRatio}"` : ""}>
+				<img src="${imageUrl}"${srcset} alt="${escHtml(collection.name)} cover" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />
 			</div>
 			<div class="collection-info">
 				<h2 class="collection-name">${escHtml(collection.name)}</h2>

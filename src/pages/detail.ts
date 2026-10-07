@@ -1,9 +1,10 @@
 import { Appearance, Character, Comic } from "../types";
 import { escHtml } from "../utils";
+import { srcsetAttributes } from "../srcset";
 import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
-import { buildArcPath, buildCollectionPath, buildComicPath, buildSearchPath } from "../routes";
+import { buildArcPath, buildCollectionPath, buildComicPath, buildCreatorPath, buildSearchPath } from "../routes";
 import { addressOf } from "../base-path";
-import { BookNeighbours, DetailArc, DetailCollection, DetailPage, PageSource, arcRange } from "./page";
+import { BookNeighbours, DetailArc, DetailCollection, DetailCreator, DetailPage, PageSource, arcRange } from "./page";
 import { buildBackAndHomeButtons } from "./nav-buttons";
 import { PAGE_CONFIG } from "../site-config";
 import { StripLinkSubject, stripLinks } from "../strip-links";
@@ -88,6 +89,7 @@ export function summarizeCollections(source: PageSource, comics: Comic[]): Detai
 				image: collection.image,
 				colour: collection.colour,
 				...(collection.aspectRatio !== undefined ? { aspectRatio: collection.aspectRatio } : {}),
+				...(collection.width !== undefined ? { width: collection.width } : {}),
 				...(collection.editions ? { editions: collection.editions } : {}),
 				alterations,
 			});
@@ -207,6 +209,14 @@ function charactersOf(source: PageSource, comics: Comic[]): Character[] {
 	return [...source.charactersById.values()].filter((character) => featured.has(character.id));
 }
 
+/** Everyone credited on the page's strips, each once, in the order the creators' file lists them. */
+function creatorsOf(source: PageSource, comics: Comic[]): DetailCreator[] {
+	const credited = new Set(comics.flatMap((comic) => (comic.creators ?? []).map((credit) => credit.id)));
+	return [...source.creatorsById.values()]
+		.filter((creator) => credited.has(creator.id))
+		.map((creator) => ({ id: creator.id, name: creator.name }));
+}
+
 /** The page for a date, from whatever holds the archive — the app's state or the build's data. */
 export function detailPageFrom(source: PageSource, date: string, alternates: string[] = []): DetailPage {
 	const rerunOf = source.reruns.get(date) ?? null;
@@ -226,6 +236,7 @@ export function detailPageFrom(source: PageSource, date: string, alternates: str
 		descriptions: source.descriptions ? descriptionsFor(source.descriptions, comics) : null,
 		arcs: arcsOf(source, comics),
 		characters: charactersOf(source, comics),
+		creators: creatorsOf(source, comics),
 	};
 }
 
@@ -258,6 +269,10 @@ interface Printing {
 	name: string;
 	year: number;
 	image: string;
+	/** The cover's width over its height, where the build knows it. */
+	aspectRatio?: number;
+	/** The cover's width in pixels, where the build made smaller copies of it. */
+	width?: number;
 	/** Where the strip is, one per volume it is in: the volume, when the book has them, and the pages. */
 	places: { volume?: number; pages: number[] }[];
 }
@@ -286,6 +301,9 @@ function buildPrintings(
 					: collection.name,
 				year: edition?.pub_year ?? collection.pub_year,
 				image: edition?.image ?? collection.image,
+				// An edition's own cover has its own shape, known or not.
+				aspectRatio: edition?.image ? edition.aspectRatio : collection.aspectRatio,
+				width: edition?.image ? edition.width : collection.width,
 				places: [],
 			};
 			printingsByKey.set(key, printing);
@@ -329,11 +347,10 @@ function buildBookHtml(
 	const { collection } = printing;
 	const isBlackAndWhite = PAGE_CONFIG.colourSundays && isSunday && !collection.colour;
 	const alteration = collection.alterations && collection.alterations[alterationKey];
-	// The collection's ratio holds the space until the cover loads; an edition's own cover may differ.
-	const ratio =
-		printing.image === collection.image && collection.aspectRatio
-			? ` style="aspect-ratio: ${collection.aspectRatio}"`
-			: "";
+	// The cover's ratio holds the space until it loads.
+	const ratio = printing.aspectRatio ? ` style="aspect-ratio: ${printing.aspectRatio}"` : "";
+	// Sixty-four pixels tall, as `.collection-book img` draws it.
+	const srcset = srcsetAttributes(printing.image, printing.width, `${Math.ceil(64 * (printing.aspectRatio ?? 1))}px`);
 	// One short line for the label under the cover: `Bk 1 · p. 357`, the volume shortened to fit. An
 	// arc's label names only the page its first strip is on; the popup has the rest.
 	const places =
@@ -354,7 +371,7 @@ function buildBookHtml(
 
 	const href = escHtml(addressOf(buildCollectionPath(collection.id)));
 	// A link to the book's page, which a mouse follows; a tap opens the popup instead — see `attachBookHandlers`.
-	const cover = `<a class="book__cover" href="${href}" aria-haspopup="dialog" aria-expanded="false" data-collection-id="${escHtml(collection.id)}" aria-label="${escHtml(printing.name)}"><span class="collection-entry"><span class="collection-book${isBlackAndWhite ? " collection-book--bw" : ""}"${ratio}><img src="${escHtml(printing.image)}" alt="" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${alteration ? ALTERATION_BADGE : ""}</span><span class="collection-pages">${caption}</span></span></a>`;
+	const cover = `<a class="book__cover" href="${href}" aria-haspopup="dialog" aria-expanded="false" data-collection-id="${escHtml(collection.id)}" aria-label="${escHtml(printing.name)}"><span class="collection-entry"><span class="collection-book${isBlackAndWhite ? " collection-book--bw" : ""}"${ratio}><img src="${escHtml(printing.image)}"${srcset} alt="" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${alteration ? ALTERATION_BADGE : ""}</span><span class="collection-pages">${caption}</span></span></a>`;
 
 	// The way to the book's page sits between the arrows through it — alone, where there are none.
 	const goTo = `<a class="nav-btn book__go" href="${href}" data-collection-id="${escHtml(collection.id)}" title="Go to this book" aria-label="Go to this book">${BOOK_ICON}</a>`;
@@ -410,11 +427,6 @@ export function buildAppearancesSectionHtml(
 	return buildPrintingsSectionHtml(printings, null, alterationKey, isSunday);
 }
 
-function getAspectRatio(comic: Comic, isSunday: boolean): number {
-	if (comic.aspectRatio) return comic.aspectRatio;
-	return isSunday ? PAGE_CONFIG.aspectRatio.sunday : PAGE_CONFIG.aspectRatio.daily;
-}
-
 function describeImage(description: string | undefined, dateFormatted: string): string {
 	return description ? description : `Comic from ${dateFormatted}`;
 }
@@ -452,7 +464,7 @@ export function describeImageFor(page: DetailPage, comic: Comic): string {
 	return describeImage(getPageDescription(page, comic), formatLongDate(page.date));
 }
 
-const LINK_ICON_SVG = `<svg class="detail-read-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+export const LINK_ICON_SVG = `<svg class="detail-read-icon" viewBox="0 0 24 24" width="14" height="14"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 /** Which of `config.yaml`'s link templates a strip on this page takes, and what fills them in. */
 function linkSubject(page: DetailPage, comic: Comic): StripLinkSubject {
@@ -490,7 +502,12 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 
 		const readLinkHtml = buildStripLinksHtml(page, comic);
 
-		const aspectRatio = getAspectRatio(comic, isSunday);
+		// The image's ratio holds the space until it loads.
+		const ratio = comic.aspectRatio ? ` style="aspect-ratio: ${comic.aspectRatio}"` : "";
+		// The width of the page, which is at most 800 pixels, less its padding on a phone.
+		const srcset = comic.image
+			? srcsetAttributes(comic.image, comic.width, "(max-width: 768px) calc(100vw - 40px), 800px")
+			: "";
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
 		const runsHtml = buildRunsHtml(page, date, comic);
 		const collectionsHtml = buildPrintingsSectionHtml(
@@ -501,7 +518,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 		);
 
 		bodies += `<div class="detail-comic${illustratedClass}" data-comic-key="${escHtml(comic.id || date)}">
-				${comic.image ? `<div class="detail-image-wrapper" style="aspect-ratio: ${aspectRatio}"><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}" alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
+				${comic.image ? `<div class="detail-image-wrapper"${ratio}><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}"${srcset} alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
 			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
 			${transcriptHtml}
 			${readLinkHtml}
@@ -555,32 +572,51 @@ function buildRerunBannerHtml(originalDate: string): string {
 /**
  * `Featuring Calvin, Hobbes and Dad`, in the order `characters.yaml` lists them. Each name is a search
  * for every strip featuring them, oldest first, since a search that is only a filter has nothing to
- * rank by.
+ * rank by; `data-character-id` is what the view reads to light up those strips while it is hovered.
  */
 function buildFeaturingLineHtml(page: DetailPage, comic: Comic): string {
 	const links = page.characters
 		.filter((character) => comic.characters?.includes(character.id))
 		.map(
 			(character) =>
-				`<a class="detail-rerun-link" href="${escHtml(addressOf(buildSearchPath(`@featuring:${character.id}`, "date")))}">${escHtml(character.name)}</a>`,
+				`<a class="detail-rerun-link detail-character-link" href="${escHtml(addressOf(buildSearchPath(`@featuring:${character.id}`, "date")))}" data-character-id="${escHtml(character.id)}">${escHtml(character.name)}</a>`,
 		);
-	if (links.length === 0) return "";
-	const names = links.length > 1 ? `${links.slice(0, -1).join(", ")} and ${links[links.length - 1]}` : links[0];
-	return `<li class="detail-run">Featuring ${names}</li>`;
+	return links.length > 0 ? `<li class="detail-run">Featuring ${andList(links)}</li>` : "";
+}
+
+/** `a`, `a and b`, `a, b and c`. */
+function andList(items: string[]): string {
+	return items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : (items[0] ?? "");
 }
 
 /**
- * Who the strip features, the arcs it is part of, and when else the paper ran it on an original day,
- * together under the strip. Only the day's own strip ran in the paper, so a special has only the
- * first: it never reran, and is in no arc. A rerun day's reruns are empty; where its strip is from is
+ * `By Bill Watterson`, or `By Jerry Scott (story) and Jim Borgman (art)`, in the order the strip's
+ * credit lists them. Each name is the way to that creator's page; `data-creator-id` is what the view
+ * reads to light up their strips while it is hovered.
+ */
+function buildByLineHtml(page: DetailPage, comic: Comic): string {
+	const names = new Map(page.creators.map((creator) => [creator.id, creator.name]));
+	const links = (comic.creators ?? []).flatMap((credit) => {
+		const name = names.get(credit.id);
+		if (!name) return [];
+		const link = `<a class="detail-rerun-link detail-creator-link" href="${escHtml(addressOf(buildCreatorPath(credit.id)))}" data-creator-id="${escHtml(credit.id)}">${escHtml(name)}</a>`;
+		return [credit.role ? `${link} (${escHtml(credit.role)})` : link];
+	});
+	return links.length > 0 ? `<li class="detail-run">By ${andList(links)}</li>` : "";
+}
+
+/**
+ * Who made the strip, who it features, the arcs it is part of, and when else the paper ran it on an
+ * original day, together under the strip. Only the day's own strip ran in the paper, so a special
+ * has only the first two: it never reran, and is in no arc. A rerun day's reruns are empty; where its strip is from is
  * said above it instead.
  */
 function buildRunsHtml(page: DetailPage, date: string, comic: Comic): string {
-	const featuring = buildFeaturingLineHtml(page, comic);
-	if (comic.id) return featuring ? `<ul class="detail-runs">${featuring}</ul>` : "";
+	const people = buildByLineHtml(page, comic) + buildFeaturingLineHtml(page, comic);
+	if (comic.id) return people ? `<ul class="detail-runs">${people}</ul>` : "";
 	const reruns = page.rerunOf ? [] : page.runs.slice(1);
 	const rerun = reruns.length > 0 ? `<li class="detail-run">Reran ${joinRerunLinks(reruns)}</li>` : "";
-	const lines = featuring + page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("") + rerun;
+	const lines = people + page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("") + rerun;
 	return lines ? `<ul class="detail-runs">${lines}</ul>` : "";
 }
 

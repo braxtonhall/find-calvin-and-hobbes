@@ -12,8 +12,9 @@ export interface DailyEntry {
 
 export interface SpecialEntry extends DailyEntry {
 	date: string;
+	/** What a list of strips calls it, having no date of its own to go by: a creator's page lists their specials by it. */
+	title: string;
 	sort?: number;
-	"aspect-ratio"?: number;
 }
 
 export interface ComicSource {
@@ -40,7 +41,9 @@ export function loadComicSource(config?: string): ComicSource {
 
 	const specials: Record<string, SpecialEntry> = {};
 	for (const [key, value] of Object.entries(raw.specials || {})) {
-		specials[String(key)] = { ...value, date: String(value.date) };
+		const title = typeof value.title === "string" ? value.title.trim() : "";
+		if (!title) throw new Error(`Special ${key} needs a title.`);
+		specials[String(key)] = { ...value, date: String(value.date), title };
 	}
 
 	return { dailies, specials };

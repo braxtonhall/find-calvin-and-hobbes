@@ -17,4 +17,3 @@ extras:
   - Cover art selected by Bill Watterson
   - Bonus gallery of stories, poems, and archival art
 image: !Path ./covers/compendium7.jpg
-aspect-ratio: 0.8021

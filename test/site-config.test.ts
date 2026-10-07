@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "fs";
 import path from "path";
-import { configDependencies, loadPageConfig, loadRequiredPart } from "../build-chain/siteConfig";
-import { withConfig } from "./helpers/config";
+import { configDependencies, loadLandingFile, loadPageConfig, loadRequiredPart } from "../build-chain/siteConfig";
+import { sampleGif, withConfig } from "./helpers/config";
 import { loadArcs } from "../build-chain/arcs";
 import { loadCharacters, stripCharacters } from "../build-chain/characters";
 import { loadCreditsHtml } from "../build-chain/credits";
@@ -209,18 +209,29 @@ test("config.yaml", async (suite) => {
 		});
 	});
 
-	await suite.test("takes a daily's shape, and a Sunday's or the daily's", () => {
-		const both = withConfig("name: x\nseries: x\naspectRatio:\n  daily: 3.098\n  sunday: '1.427'\n", loadPageConfig);
-		assert.deepEqual(both.aspectRatio, { daily: 3.098, sunday: 1.427 });
-		const daily = withConfig("name: x\nseries: x\naspectRatio:\n  daily: 2\n", loadPageConfig);
-		assert.deepEqual(daily.aspectRatio, { daily: 2, sunday: 2 });
-		assert.throws(
-			() => withConfig("name: x\nseries: x\naspectRatio:\n  sunday: 2\n", loadPageConfig),
-			/aspectRatio\.daily/,
+	await suite.test("publishes a banner named with !Path, with its size read from the file unless given", () => {
+		const files = { "banner.gif": sampleGif(722, 103) };
+		withConfig(
+			"name: x\nseries: x\nlanding:\n  image: !Path ./banner.gif\n",
+			(config) => {
+				const page = loadPageConfig(config);
+				const landing = loadLandingFile(config);
+				assert.match(landing!.published, /^static\/[0-9a-f]{16}\.gif$/);
+				assert.equal(page.landingImage, `/${landing!.published}`);
+				assert.deepEqual(page.landingSize, { width: 722, height: 103 });
+			},
+			files,
 		);
+		const given = withConfig(
+			"name: x\nseries: x\nlanding:\n  image: !Path ./banner.gif\n  width: 361\n  height: 52\n",
+			loadPageConfig,
+			files,
+		);
+		assert.deepEqual(given.landingSize, { width: 361, height: 52 });
+		assert.equal(withConfig("name: x\nseries: x\nlanding:\n  image: https://x.test/b.png\n", loadLandingFile), null);
 		assert.throws(
-			() => withConfig("name: x\nseries: x\naspectRatio:\n  daily: wide\n", loadPageConfig),
-			/aspectRatio\.daily.*positive number/,
+			() => withConfig("name: x\nseries: x\nlanding:\n  image: banner.png\n", loadPageConfig),
+			/landing\.image in site\.yaml must be a URL, or a file as !Path/,
 		);
 	});
 
