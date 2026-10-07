@@ -109,9 +109,13 @@
 	border-color: var(--bookmark);
 }
 
-.ownership-owned-btn.ownership-btn--active .ownership-icon path {
-	fill: currentColor;
-	stroke: none;
+.ownership-icon__owned,
+.ownership-btn--active .ownership-icon__unowned {
+	display: none;
+}
+
+.ownership-btn--active .ownership-icon__owned {
+	display: inline;
 }
 
 /* Wraps onto a line of its own under the buttons it sits among, after all of them. */
