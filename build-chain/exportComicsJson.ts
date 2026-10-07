@@ -53,7 +53,7 @@ export function exportComicsJson(
 	characters: Character[] = [],
 ): string {
 	const assetsDir = path.join(projectDir, "assets", "comics");
-	const source = loadComicSource(path.join(projectDir, "comics.yaml"));
+	const source = loadComicSource(projectDir);
 
 	const attachAppearances = (entry: Entry, lookupKey: string) => {
 		const appearances = collectionData.appearancesByComic.get(lookupKey);

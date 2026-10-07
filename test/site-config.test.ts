@@ -6,6 +6,7 @@ import { configDependencies, loadPageConfig } from "../build-chain/siteConfig";
 import { withConfig } from "./helpers/config";
 import { loadArcs } from "../build-chain/arcs";
 import { loadCharacters, stripCharacters } from "../build-chain/characters";
+import { loadCreditsHtml } from "../build-chain/credits";
 import { loadReruns } from "../build-chain/reruns";
 import type { CollectionData } from "../build-chain/collectionPages";
 import type { ComicSource } from "../build-chain/comicSource";
@@ -99,14 +100,68 @@ test("config.yaml", async (suite) => {
 		);
 	});
 
-	await suite.test("has arcs and reruns unless they are turned off", () => {
-		const both = withConfig("name: x\nseries: x\n", loadPageConfig);
+	await suite.test("has arcs and reruns unless they are turned off, and must say", () => {
+		const both = withConfig(
+			"name: x\nseries: x\narcs: !Import ./arcs.yaml\nreruns: !Import ./reruns.yaml\n",
+			loadPageConfig,
+			{ "arcs.yaml": "{}\n", "reruns.yaml": "{}\n" },
+		);
 		assert.equal(both.arcs, true);
 		assert.equal(both.reruns, true);
 		const neither = withConfig("name: x\nseries: x\narcs: false\nreruns: 'False'\n", loadPageConfig);
 		assert.equal(neither.arcs, false);
 		assert.equal(neither.reruns, false);
-		assert.throws(() => withConfig("name: x\nseries: x\narcs: no\n", loadPageConfig), /arcs.*true or false/);
+		assert.throws(() => withConfig("name: x\nseries: x\narcs:\n", loadPageConfig), /must give arcs/);
+	});
+
+	await suite.test("reads a part written in place, and imports Markdown as its text", () => {
+		withConfig("name: x\nseries: x\nreruns:\n  '19910505': '19860119'\n", (projectDir) => {
+			const source = { dailies: { "19860119": { transcript: "" } }, specials: {} };
+			assert.deepEqual(loadReruns(projectDir, source), { "1991-05-05": "1986-01-19" });
+		});
+		withConfig(
+			"credits: !Import ./credits.md\n",
+			(projectDir) => {
+				assert.equal(loadCreditsHtml(projectDir), "<p>Thanks to <em>everyone</em>.</p>\n");
+			},
+			{ "credits.md": "Thanks to *everyone*.\n" },
+		);
+		withConfig(
+			"credits: !Import ./credits.txt\n",
+			(projectDir) => {
+				assert.throws(() => loadCreditsHtml(projectDir), /neither YAML nor Markdown/);
+			},
+			{ "credits.txt": "Thanks.\n" },
+		);
+	});
+
+	// `$5` in what a file imports is five dollars, however the environment reads `config.yaml` itself.
+	await suite.test("reads the environment into config.yaml, but not into what it imports", () => {
+		withEnvironment({ FIVE: "five" }, () =>
+			withConfig(
+				"name: $FIVE\nseries: x\ncredits: !Import ./credits.md\n",
+				(projectDir) => {
+					assert.equal(loadPageConfig(projectDir).name, "five");
+					assert.match(loadCreditsHtml(projectDir), /\$FIVE dollars/);
+				},
+				{ "credits.md": "$FIVE dollars\n" },
+			),
+		);
+	});
+
+	await suite.test("watches config.yaml, what it imports however deep, and .env", () => {
+		withConfig(
+			"comics: !Import ./comics/index.yaml\n",
+			(projectDir) => {
+				assert.deepEqual(configDependencies(projectDir), [
+					path.join(projectDir, "config.yaml"),
+					path.join(projectDir, "comics", "index.yaml"),
+					path.join(projectDir, "comics", "dailies.yaml"),
+					path.join(projectDir, ".env"),
+				]);
+			},
+			{ "comics/index.yaml": "dailies: !Import ./dailies.yaml\n", "comics/dailies.yaml": "{}\n" },
+		);
 	});
 
 	await suite.test("takes a daily's shape, and a Sunday's or the daily's", () => {
@@ -171,7 +226,7 @@ test("config.yaml", async (suite) => {
 		});
 		withConfig("name: x\nseries: x\ncharacters: !Import ./loop.yaml\n", (projectDir) => {
 			fs.writeFileSync(path.join(projectDir, "loop.yaml"), "!Import ./config.yaml\n");
-			assert.throws(() => loadPageConfig(projectDir), /imports it back/);
+			assert.throws(() => loadCharacters(projectDir), /imports it back/);
 		});
 	});
 
@@ -192,14 +247,14 @@ test("config.yaml", async (suite) => {
 		});
 		assert.throws(() => withConfig("name: x\nseries: x\ncharacters:\n", loadPageConfig), /must give characters/);
 		assert.throws(
-			() => withConfig("name: x\nseries: x\ncharacters: true\n", loadPageConfig),
+			() => withConfig("name: x\nseries: x\ncharacters: true\n", loadCharacters),
 			/characters.*mapping of character ids to names, or false/,
 		);
 	});
 
 	await suite.test("refuses malformed characters", () => {
 		const read = (characters: string) => () =>
-			withConfig(`name: x\nseries: x\ncharacters:\n${characters}`, loadPageConfig);
+			withConfig(`name: x\nseries: x\ncharacters:\n${characters}`, loadCharacters);
 		assert.throws(read("  Miss Wormwood: Miss Wormwood\n"), /Invalid character id/);
 		assert.throws(read("  wormwood:\n"), /needs a name/);
 		assert.throws(read("  - calvin\n"), /mapping/);

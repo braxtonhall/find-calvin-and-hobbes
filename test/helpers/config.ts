@@ -22,21 +22,31 @@ export const SAMPLE_ASPECT_RATIO = `aspectRatio:
   daily: 3
 `;
 
-/** No characters, for a test that is not about them, since `config.yaml` must say. */
-export const SAMPLE_CHARACTERS = `characters: false
-`;
+/**
+ * The archive's optional parts, all turned off, for a test that is not about them, since
+ * `config.yaml` must say. A part the test gives keeps its own.
+ */
+export const SAMPLE_PARTS = ["arcs", "reruns", "compounds", "characters"];
 
 /**
  * A project holding just this `config.yaml`, for `loadPageConfig` to read — with `SAMPLE_THEME`,
- * `SAMPLE_ASPECT_RATIO` and `SAMPLE_CHARACTERS` added where it gives none of its own.
+ * `SAMPLE_ASPECT_RATIO` and `SAMPLE_PARTS` added where it gives none of its own — and, beside it,
+ * `files`, by their names, for it to import.
  */
-export function withConfig<T>(contents: string, run: (projectDir: string) => T): T {
+export function withConfig<T>(contents: string, run: (projectDir: string) => T, files: Record<string, string> = {}): T {
 	const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "config-"));
 	try {
 		const themed = /^theme:/m.test(contents) ? contents : `${contents}\n${SAMPLE_THEME}`;
 		const shaped = /^aspectRatio:/m.test(themed) ? themed : `${themed}\n${SAMPLE_ASPECT_RATIO}`;
-		const cast = /^characters:/m.test(shaped) ? shaped : `${shaped}\n${SAMPLE_CHARACTERS}`;
-		fs.writeFileSync(path.join(projectDir, "config.yaml"), cast);
+		const parted = SAMPLE_PARTS.reduce(
+			(config, part) => (new RegExp(`^${part}:`, "m").test(config) ? config : `${config}\n${part}: false\n`),
+			shaped,
+		);
+		fs.writeFileSync(path.join(projectDir, "config.yaml"), parted);
+		for (const [name, text] of Object.entries(files)) {
+			fs.mkdirSync(path.dirname(path.join(projectDir, name)), { recursive: true });
+			fs.writeFileSync(path.join(projectDir, name), text);
+		}
 		return run(projectDir);
 	} finally {
 		fs.rmSync(projectDir, { recursive: true, force: true });

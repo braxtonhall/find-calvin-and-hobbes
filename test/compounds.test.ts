@@ -1,10 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import fs from "fs";
-import os from "os";
-import path from "path";
 import { loadCompoundRelations, readCompoundsFile } from "../build-chain/compoundLexicon";
 import { COMPOUND_CANONICAL_FORMS, COMPOUND_RELATIONS } from "../src/compounds";
+import { withConfig } from "./helpers/config";
 
 /**
  * `compounds.yaml`: that the corpus rule runs without it, and that it keeps words whole and splits
@@ -22,21 +20,17 @@ const COMICS = `dailies:
   "20000106": Sun set again, and snow.
 `;
 
-/** A project holding this archive and, unless it is left out, this `compounds.yaml`. */
+/** A project importing this archive and this `compounds.yaml` — or, for `null`, with the compounds off. */
 function withProject<T>(compounds: string | null, run: (projectDir: string) => T): T {
-	const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "compounds-"));
-	try {
-		fs.writeFileSync(path.join(projectDir, "comics.yaml"), COMICS);
-		if (compounds !== null) fs.writeFileSync(path.join(projectDir, "compounds.yaml"), compounds);
-		return run(projectDir);
-	} finally {
-		fs.rmSync(projectDir, { recursive: true, force: true });
-	}
+	const files: Record<string, string> = { "comics.yaml": COMICS };
+	if (compounds !== null) files["compounds.yaml"] = compounds;
+	const part = compounds === null ? "false" : "!Import ./compounds.yaml";
+	return withConfig(`comics: !Import ./comics.yaml\ncompounds: ${part}\n`, run, files);
 }
 
 const wholes = (projectDir: string) => loadCompoundRelations(projectDir).map(([whole]) => whole);
 
-test("without compounds.yaml, the rule splits what the archive writes open", () => {
+test("with the compounds off, the rule splits what the archive writes open", () => {
 	withProject(null, (projectDir) => {
 		assert.deepEqual(wholes(projectDir), ["goodnight", "sunset"]);
 		assert.deepEqual(new Map(loadCompoundRelations(projectDir)).get("goodnight"), {
@@ -47,7 +41,7 @@ test("without compounds.yaml, the rule splits what the archive writes open", () 
 	});
 });
 
-test("a compounds.yaml with nothing in it is the same as none", () => {
+test("a compounds.yaml with nothing in it is the same as the compounds off", () => {
 	withProject("# Nothing yet.\n", (projectDir) => assert.deepEqual(wholes(projectDir), ["goodnight", "sunset"]));
 });
 

@@ -1,4 +1,3 @@
-import path from "path";
 import { loadComicSource } from "./comicSource";
 
 function formatDate(dateStr: string): string {
@@ -6,7 +5,7 @@ function formatDate(dateStr: string): string {
 }
 
 export function exportDescriptions(projectDir: string): string {
-	const source = loadComicSource(path.join(projectDir, "comics.yaml"));
+	const source = loadComicSource(projectDir);
 
 	const descriptions: Record<string, string> = {};
 

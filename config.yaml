@@ -162,19 +162,29 @@ corrections:
     arcs: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.762468410=Arc&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
     credits: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
 
-# The archive's optional parts, each from a file of its own beside comics.yaml. On unless set to
-# false, and a part that is off has its file left unread, so a site without it needs no such file.
+# The archive itself. Each part can be written here in place, but is usually `!Import ./file.yaml`,
+# which reads that file in place of the value, relative to this one; a Markdown file is read as its
+# text. A file named that isn't there stops the build. Every part must be given, and the optional
+# ones can be set to false instead, which leaves out what they are for and reads nothing.
 #
-#   arcs     story arcs, from arcs.yaml: the Arcs tab of Collections and each arc's page, a strip's
-#            place in its arc, a book's list of the arcs it prints, and @is:standalone
-#   reruns   days the paper ran an earlier strip again, from reruns.yaml: each such day's page and
-#            cell in the grid, a strip's list of the days it reran, and @is:reused and @is:rerun
-arcs: true
-reruns: true
-
-# The characters a strip can feature, for @featuring: and the Featuring line under a strip: each one's
-# name by id, or false for none. Required. `!Import ./file.yaml` reads a file in place of a value,
-# relative to this one, and a file it names that isn't there stops the build.
+#   comics      the strips: their transcripts, descriptions, and specials
+#   tuning      how the search scores a match, fitted to the strips, with notes on each value
+#   credits     the credits page, in Markdown
+#
+# Optional:
+#
+#   arcs        story arcs: the Arcs tab of Collections and each arc's page, a strip's place in its
+#               arc, a book's list of the arcs it prints, and @is:standalone
+#   reruns      days the paper ran an earlier strip again: each such day's page and cell in the grid,
+#               a strip's list of the days it reran, and @is:reused and @is:rerun
+#   compounds   the compound words the search keeps whole or splits beyond what it finds itself
+#   characters  each character's name by id, for @featuring: and the Featuring line under a strip
+comics: !Import ./comics.yaml
+tuning: !Import ./tuning.yaml
+credits: !Import ./credits.md
+arcs: !Import ./arcs.yaml
+reruns: !Import ./reruns.yaml
+compounds: !Import ./compounds.yaml
 characters: false
 
 # Whether the Sundays ran in colour and the dailies in black and white, a format of their own. When

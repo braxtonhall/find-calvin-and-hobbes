@@ -100,22 +100,29 @@ pages are written by `build-chain/PagesPlugin.ts`.
 where the Read and License links under a strip lead, each a template filled in from the strip — see
 the file for the fields. A link with no template is not drawn.
 
-`tuning.yaml` holds how the search scores a match, fitted to this archive's text, with notes on how
-each value was measured. The measuring is in `test/tuning`: `yarn tune` sweeps the values against
-its queries, and `yarn probe "<query>"` shows what a query returns.
+It also says where the archive is. Each part is written in place, or imported from a file of its
+own with `!Import ./file.yaml`, relative to `config.yaml`; a Markdown file imports as its text. Every
+part must be given, a file it imports that isn't there fails the build, and the optional parts can
+be set to `false` instead, which leaves out what they are for. This archive imports each from the
+file of the same name:
 
-`compounds.yaml`, which is optional, tunes how the search treats compound words: the ones to keep
-whole, and the ones to split that the archive never writes open. `yarn candidates` lists likely
-compounds the file doesn't mention yet.
+- `comics` holds the strips: their transcripts, descriptions and specials.
+- `tuning` holds how the search scores a match, fitted to this archive's text, with notes on how each
+  value was measured. The measuring is in `test/tuning`: `yarn tune` sweeps the values against its
+  queries, and `yarn probe "<query>"` shows what a query returns.
+- `credits` is the credits page, in Markdown.
+- `arcs`, optional, holds the story arcs.
+- `reruns`, optional, maps each day the paper ran an earlier strip again to that strip.
+- `compounds`, optional, tunes how the search treats compound words: the ones to keep whole, and the
+  ones to split that the archive never writes open. `yarn candidates` lists likely compounds it
+  doesn't mention yet.
+- `characters`, optional, names the characters a strip can feature, by the id `@featuring:` takes. A
+  strip lists its characters by those ids under `characters` in `comics`, and a strip that lists
+  none features none.
 
-`characters.yaml` names the characters a strip can feature, by the id `@featuring:` takes. A strip
-lists its characters by those ids under `characters` in `comics.yaml`, and a strip that lists none
-features none. `config.yaml` reads it with `characters: !Import ./characters.yaml`, a path relative
-to it, or turns the characters off with `characters: false`; it must say one or the other, and a
-file it imports that isn't there fails the build.
-
-Any value in it can read the environment as `$NAME`, `${NAME}` or `${NAME:-fallback}`, from the
-process or from `.env`. The deployment settings — `SITE_URL`, `PAGE_LAYOUT` and `CORRECTIONS`, below
+Any value in `config.yaml` can read the environment as `$NAME`, `${NAME}` or `${NAME:-fallback}`,
+from the process or from `.env` — though not a value it imports, so a `$` in a transcript stays as it
+is. The deployment settings — `SITE_URL`, `PAGE_LAYOUT` and `CORRECTIONS`, below
 — are read that way already, so a fork that only moves the site can leave `config.yaml` alone and
 set them in `.env`, or as Actions variables of the same names for the GitHub Pages workflow.
 

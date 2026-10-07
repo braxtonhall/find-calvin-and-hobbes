@@ -35,7 +35,7 @@ const template = fs.readFileSync(path.join(PROJECT_DIR, "src", "index.html"), "u
 
 function loadSource(): PageSource {
 	const collectionData = loadCollectionData(PROJECT_DIR);
-	const comicSource = loadComicSource(path.join(PROJECT_DIR, "comics.yaml"));
+	const comicSource = loadComicSource(PROJECT_DIR);
 	const arcs: Arc[] = loadArcs(PROJECT_DIR, comicSource, collectionData);
 	const comics: Comic[] = JSON.parse(exportComicsJson(PROJECT_DIR, collectionData, "/", arcs));
 	const reruns: Record<string, string> = JSON.parse(exportRerunsJson(PROJECT_DIR, comicSource));

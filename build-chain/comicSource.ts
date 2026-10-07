@@ -1,5 +1,4 @@
-import fs from "fs";
-import yaml from "js-yaml";
+import { loadRequiredPart } from "./siteConfig";
 
 export interface DailyEntry {
 	transcript: string;
@@ -27,8 +26,11 @@ interface RawSource {
 	specials?: Record<string, SpecialEntry>;
 }
 
-export function loadComicSource(yamlPath: string): ComicSource {
-	const raw = yaml.load(fs.readFileSync(yamlPath, "utf-8")) as RawSource;
+/** The strips, as `config.yaml` gives them: this project's, unless told otherwise. */
+export function loadComicSource(projectDir?: string): ComicSource {
+	const value = loadRequiredPart("comics", projectDir);
+	if (typeof value !== "object" || Array.isArray(value)) throw new Error("comics in config.yaml must be a mapping");
+	const raw = value as RawSource;
 
 	const dailies: Record<string, DailyEntry> = {};
 	for (const [key, value] of Object.entries(raw.dailies || {})) {

@@ -1,10 +1,7 @@
-import fs from "fs";
-import path from "path";
-import yaml from "js-yaml";
 import { Arc } from "../src/types";
 import { CollectionData } from "./collectionPages";
 import { ComicSource } from "./comicSource";
-import { loadFeatures } from "./siteConfig";
+import { loadOptionalPart } from "./siteConfig";
 
 const ARC_ID = /^[a-z0-9]+$/;
 
@@ -36,14 +33,13 @@ function collectionsHolding(compactDates: string[], collectionData: CollectionDa
  * the content is trusted: whether the dates make a story is a question the data was checked for
  * once, by hand, rather than one the build asks every time.
  *
- * None, and `arcs.yaml` not read, where `config.yaml` turns arcs off.
+ * None, and nothing read, where `config.yaml` turns arcs off.
  */
 export function loadArcs(projectDir: string, source: ComicSource, collectionData: CollectionData): Arc[] {
-	if (!loadFeatures(projectDir).arcs) return [];
-	const filename = path.join(projectDir, "arcs.yaml");
-	const raw = yaml.load(fs.readFileSync(filename, "utf8"));
+	const raw = loadOptionalPart("arcs", projectDir);
+	if (raw === false) return [];
 	if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-		throw new Error("arcs.yaml must contain a mapping of arc ids.");
+		throw new Error("arcs in config.yaml must be a mapping of arc ids, or false");
 	}
 
 	const arcs: Arc[] = [];

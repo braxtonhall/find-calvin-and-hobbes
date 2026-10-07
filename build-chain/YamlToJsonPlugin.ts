@@ -21,10 +21,7 @@ const PLUGIN_NAME = "YamlToJsonPlugin";
  */
 function watchDataFiles(compilation: Compilation, projectDir: string): void {
 	const collectionsDir = path.join(projectDir, "collections");
-	compilation.fileDependencies.add(path.join(projectDir, "comics.yaml"));
-	compilation.fileDependencies.add(path.join(projectDir, "reruns.yaml"));
-	compilation.fileDependencies.add(path.join(projectDir, "arcs.yaml"));
-	// The characters are read from the configuration, and whatever it imports them from.
+	// The strips, reruns, arcs and characters, from the configuration and the files it imports them from.
 	for (const file of configDependencies(projectDir)) compilation.fileDependencies.add(file);
 	compilation.contextDependencies.add(collectionsDir);
 	for (const file of fs.readdirSync(collectionsDir)) {
@@ -49,7 +46,7 @@ class YamlToJsonPlugin {
 					// The images are named from the mount, so the app can show them from any page as they are.
 					const basePath = loadSiteConfig()?.basePath ?? "/";
 
-					const source = loadComicSource(path.join(projectDir, "comics.yaml"));
+					const source = loadComicSource(projectDir);
 					const arcs = loadArcs(projectDir, source, collectionData);
 					const arcsJson = exportArcsJson(arcs);
 

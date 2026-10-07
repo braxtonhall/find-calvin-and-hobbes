@@ -1,6 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import path from "path";
 import { suggestedQueries, randomQuery } from "../src/suggestions";
 import { featuredDate, fillSuggestion, suggestionFields } from "../src/suggestion-templates";
 import { scanFilters } from "../src/filter-query";
@@ -25,7 +24,7 @@ import { withConfig } from "./helpers/config";
 
 const PROJECT_DIR = process.cwd();
 const collectionData = loadCollectionData(PROJECT_DIR);
-const comicSource = loadComicSource(path.join(PROJECT_DIR, "comics.yaml"));
+const comicSource = loadComicSource(PROJECT_DIR);
 
 /*
  * The books, read out of the very index the app boots with.

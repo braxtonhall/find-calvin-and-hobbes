@@ -1,8 +1,5 @@
-import fs from "fs";
-import path from "path";
-import yaml from "js-yaml";
 import { ComicSource } from "./comicSource";
-import { loadFeatures } from "./siteConfig";
+import { loadOptionalPart } from "./siteConfig";
 
 export type Reruns = Record<string, string>;
 
@@ -19,13 +16,12 @@ function compactToIsoDate(value: string): string {
 	return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
 }
 
-/** None, and `reruns.yaml` not read, where `config.yaml` turns reruns off. */
+/** None, and nothing read, where `config.yaml` turns reruns off. */
 export function loadReruns(projectDir: string, source: ComicSource): Reruns {
-	if (!loadFeatures(projectDir).reruns) return {};
-	const filename = path.join(projectDir, "reruns.yaml");
-	const raw = yaml.load(fs.readFileSync(filename, "utf8"));
+	const raw = loadOptionalPart("reruns", projectDir);
+	if (raw === false) return {};
 	if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-		throw new Error("reruns.yaml must contain a date mapping.");
+		throw new Error("reruns in config.yaml must be a date mapping, or false");
 	}
 
 	const originalDates = new Set([

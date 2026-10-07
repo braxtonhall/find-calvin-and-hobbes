@@ -86,6 +86,8 @@ function substituteEnvironment(text: string, dotenv: Record<string, string>): st
 }
 
 function substituteAll(value: unknown, dotenv: Record<string, string>): unknown {
+	// Read later, and as it is. See `readConfig`.
+	if (value instanceof Import) return value;
 	if (typeof value === "string") return substituteEnvironment(value, dotenv).trim();
 	if (Array.isArray(value)) return value.map((item) => substituteAll(item, dotenv));
 	if (value && typeof value === "object") {
@@ -104,8 +106,12 @@ interface RawConfig {
 	url?: unknown;
 	pageLayout?: unknown;
 	corrections?: { enabled?: unknown; pages?: Partial<Record<string, unknown>> | null } | null;
+	comics?: unknown;
+	tuning?: unknown;
+	credits?: unknown;
 	arcs?: unknown;
 	reruns?: unknown;
+	compounds?: unknown;
 	characters?: unknown;
 	colourSundays?: unknown;
 	aspectRatio?: { daily?: unknown; sunday?: unknown } | null;
@@ -120,47 +126,92 @@ export function configPath(projectDir = path.join(__dirname, "..")): string {
 }
 
 /**
- * A YAML file, with `!Import ./other.yaml` anywhere in it standing for the YAML file at that path,
- * relative to the file the tag is written in, and read in its place. A file that is not there stops
- * the build rather than reading as nothing. Each file read is added to `files`, for `--watch`.
+ * A file `config.yaml` imports a value from, as `!Import ./file.yaml`: read only where that value is,
+ * so that reading the configuration — which the build does over and over — does not read the
+ * archive with it. Whether the file is there is asked at once, though, so a file named and missing
+ * stops the build however little of the configuration it reads.
  */
-function loadYamlFile(file: string, files: string[], importing: readonly string[] = []): unknown {
-	files.push(file);
-	const importTag = yaml.defineScalarTag<unknown>("!Import", {
+class Import {
+	constructor(
+		readonly file: string,
+		/** The files that imported it, outermost first, so a file that imports one of them is caught. */
+		readonly importing: readonly string[],
+	) {}
+}
+
+/**
+ * `!Import ./file`, relative to the file the tag is written in. In `config.yaml` it stands for an
+ * `Import`, read later; anywhere else, for the file's contents, read in place. Every file it reads
+ * in place is added to `files`, where there is a list to add it to.
+ */
+function importTag(file: string, importing: readonly string[], lazy: boolean, files?: string[]) {
+	return yaml.defineScalarTag<unknown>("!Import", {
 		resolve: (source) => {
 			const target = path.resolve(path.dirname(file), source.trim());
 			const name = `${path.basename(file)} imports ${source.trim()}`;
 			if (!fs.existsSync(target)) throw new Error(`${name}, which does not exist`);
 			if (target === file || importing.includes(target)) throw new Error(`${name}, which imports it back`);
-			return loadYamlFile(target, files, [...importing, file]);
+			if (lazy) return new Import(target, [...importing, file]);
+			files?.push(target);
+			return readImport(target, [...importing, file], files);
 		},
 		identify: () => false,
 	});
-	return yaml.load(fs.readFileSync(file, "utf8"), { schema: yaml.CORE_SCHEMA.withTags(importTag), filename: file });
 }
 
-/** `config.yaml` and the files it imports, as read, and the names of every one of them. */
-function readConfigFiles(projectDir?: string): { raw: RawConfig; files: string[] } {
-	const file = configPath(projectDir);
-	const files: string[] = [];
-	const parsed = loadYamlFile(file, files) ?? {};
-	if (typeof parsed !== "object" || Array.isArray(parsed)) throw new Error(`${file} must be a mapping`);
-	return { raw: substituteAll(parsed, readDotenvFile()) as RawConfig, files };
+/** An imported file's contents: YAML parsed, its own imports read in place, and Markdown as text. */
+function readImport(file: string, importing: readonly string[], files?: string[]): unknown {
+	const text = fs.readFileSync(file, "utf8");
+	const extension = path.extname(file).toLowerCase();
+	if (extension === ".md") return text;
+	if (extension !== ".yaml" && extension !== ".yml") {
+		throw new Error(`${path.basename(file)} is imported, but is neither YAML nor Markdown`);
+	}
+	const schema = yaml.CORE_SCHEMA.withTags(importTag(file, importing, false, files));
+	// `loadAll`, because `load` throws on a file with nothing but comments in it.
+	const [document = null] = yaml.loadAll(text, { schema, filename: file });
+	return document;
+}
+
+/** A value as `config.yaml` gives it: written in place, or read from the file it imports. */
+function resolved(value: unknown): unknown {
+	return value instanceof Import ? readImport(value.file, value.importing) : value;
 }
 
 /**
- * Read fresh on every call, as `.env` is, so `--watch` picks up an edit to either. Both are small.
+ * Read fresh on every call, as `.env` is, so `--watch` picks up an edit to either. Small, since what
+ * it imports is left unread until it is asked for.
+ *
+ * The environment is read into what `config.yaml` writes, but never into what it imports: `$5` in a
+ * transcript is five dollars.
  */
 function readConfig(projectDir?: string): RawConfig {
-	return readConfigFiles(projectDir).raw;
+	const file = configPath(projectDir);
+	const schema = yaml.CORE_SCHEMA.withTags(importTag(file, [], true));
+	const parsed = yaml.load(fs.readFileSync(file, "utf8"), { schema, filename: file }) ?? {};
+	if (typeof parsed !== "object" || Array.isArray(parsed)) throw new Error(`${file} must be a mapping`);
+	return substituteAll(parsed, readDotenvFile()) as RawConfig;
 }
 
 /**
- * The files a build that reads the configuration depends on: `config.yaml`, what it imports, and
- * `.env`, which any value can read. For `--watch`.
+ * The files a build that reads the configuration depends on: `config.yaml`, every file it imports,
+ * however deep, and `.env`, which any value can read. For `--watch`.
+ *
+ * A YAML file is parsed for its own imports only where it has the tag in it at all, so this does not
+ * read the whole archive to find there is nothing more to watch.
  */
 export function configDependencies(projectDir = path.join(__dirname, "..")): string[] {
-	return [...readConfigFiles(projectDir).files, path.join(projectDir, ".env")];
+	const files = [configPath(projectDir)];
+	const visit = (value: unknown) => {
+		if (value instanceof Import) {
+			files.push(value.file);
+			if (fs.readFileSync(value.file, "utf8").includes("!Import")) readImport(value.file, value.importing, files);
+		} else if (value && typeof value === "object") {
+			Object.values(value).forEach(visit);
+		}
+	};
+	visit(readConfig(projectDir));
+	return [...files, path.join(projectDir, ".env")];
 }
 
 /** A setting as a string, with empty — or absent — as "". */
@@ -180,29 +231,57 @@ function flagSetting(value: unknown, name: string, fallback: boolean): boolean {
 	return raw === "true";
 }
 
-/** Which of the archive's optional parts this site has. See `PageConfig`. */
+/** The parts of the archive every site has. */
+export type RequiredPart = "comics" | "tuning" | "credits";
+/** The parts a site can go without, with `false`. */
+export type OptionalPart = "arcs" | "reruns" | "compounds" | "characters";
+
+/** Whether nothing was given for the part at all. */
+function missing(value: unknown): boolean {
+	return value === undefined || value === null || value === "";
+}
+
+/**
+ * Whether `config.yaml` turns the part off. Not left to a default: every part must be given, or set
+ * to false, so that leaving one out is a mistake the build stops for rather than a quiet change in
+ * what the site has.
+ */
+function partIsOff(value: unknown, name: OptionalPart): boolean {
+	if (value === false || (typeof value === "string" && value.toLowerCase() === "false")) return true;
+	if (missing(value)) throw new Error(`config.yaml must give ${name}: !Import a file of them, or false for none`);
+	return false;
+}
+
+/** A part every site has, as written or imported. Unchecked: each part's own loader checks it. */
+export function loadRequiredPart(name: RequiredPart, projectDir?: string): unknown {
+	const value = readConfig(projectDir)[name];
+	if (missing(value) || value === false) throw new Error(`config.yaml must give ${name}: !Import a file of it`);
+	return resolved(value);
+}
+
+/** A part a site can go without, as written or imported, or `false` where it is turned off. Unchecked, as above. */
+export function loadOptionalPart(name: OptionalPart, projectDir?: string): unknown {
+	const value = readConfig(projectDir)[name];
+	return partIsOff(value, name) ? false : resolved(value);
+}
+
+/** Which of the archive's optional parts this site has, from `config.yaml` alone. See `PageConfig`. */
 export function loadFeatures(projectDir?: string): Pick<PageConfig, "arcs" | "reruns" | "characters"> {
 	const raw = readConfig(projectDir);
 	return {
-		arcs: flagSetting(raw.arcs, "arcs", true),
-		reruns: flagSetting(raw.reruns, "reruns", true),
-		characters: charactersSetting(raw.characters) !== false,
+		arcs: !partIsOff(raw.arcs, "arcs"),
+		reruns: !partIsOff(raw.reruns, "reruns"),
+		characters: !partIsOff(raw.characters, "characters"),
 	};
 }
 
 const CHARACTER_ID = /^[a-z0-9]+$/;
 
-/**
- * `characters`: each character's name by id, in the order the menu offers them, or `false` for
- * none. Required, so that leaving it out is a mistake the build stops for rather than a quiet
- * change in what the site has. Usually `!Import`ed from a file of its own.
- */
-function charactersSetting(value: unknown): Record<string, string> | false {
-	if (value === false || value === "false") return false;
-	if (value === undefined || value === null || value === "") {
-		throw new Error("config.yaml must give characters: !Import a file of them, or false for none");
-	}
-	if (typeof value !== "object" || Array.isArray(value)) {
+/** The characters, each one's name by id, in the order the menu offers them, or `false` for none. */
+export function loadCharacterSetting(projectDir?: string): Record<string, string> | false {
+	const value = loadOptionalPart("characters", projectDir);
+	if (value === false) return false;
+	if (!value || typeof value !== "object" || Array.isArray(value)) {
 		throw new Error("characters in config.yaml must be a mapping of character ids to names, or false");
 	}
 	const characters: Record<string, string> = {};
@@ -212,11 +291,6 @@ function charactersSetting(value: unknown): Record<string, string> | false {
 		characters[id] = name;
 	}
 	return characters;
-}
-
-/** The characters, by id, or `false` where `config.yaml` turns them off. See `charactersSetting`. */
-export function loadCharacterSetting(projectDir?: string): Record<string, string> | false {
-	return charactersSetting(readConfig(projectDir).characters);
 }
 
 const STRIP_KINDS: readonly StripKind[] = ["daily", "rerun", "special"];
