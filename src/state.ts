@@ -15,7 +15,10 @@ export interface AppState {
 	arcsById: Map<string, Arc> | null;
 	keyboardNavActive: boolean;
 	bookmarkedDates: Set<string>;
-	/** Whether IndexedDB has answered — or failed to — so an empty `bookmarkedDates` means none. */
+	/** The strips the reader owns, by `ownershipId`, and the books, by id. */
+	ownedStrips: Set<string>;
+	ownedBooks: Set<string>;
+	/** Whether IndexedDB has answered — or failed to — so an empty library means there is none. */
 	bookmarksLoaded: boolean;
 	dataLoaded: boolean;
 	pendingRoute: Route | null;
@@ -37,6 +40,8 @@ export const state: AppState = {
 	arcsById: null,
 	keyboardNavActive: false,
 	bookmarkedDates: new Set(),
+	ownedStrips: new Set(),
+	ownedBooks: new Set(),
 	bookmarksLoaded: false,
 	dataLoaded: false,
 	pendingRoute: null,

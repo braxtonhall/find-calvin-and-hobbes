@@ -1,8 +1,8 @@
-import { state } from "../state";
 import { basePath } from "../base-path";
 import { handleRoute } from "../router";
 import { escHtml } from "../utils";
-import { readLibrary, replaceLibrary } from "../ownership";
+import { holdLibrary, readLibrary, replaceLibrary } from "../ownership";
+import { flashButton } from "./copy-link";
 import { isLibraryEmpty, libraryFile, libraryFileName, mergeLibraries, parseLibraryFile } from "../library-file";
 
 /** The site this page is served from, mount and all: what an export says it came from. */
@@ -12,10 +12,10 @@ function thisSite(): string {
 
 export function buildLibraryTransferHtml(): string {
 	return `<div class="detail-actions library-transfer">
+		<span class="library-transfer__status" role="status"></span>
 		<button type="button" class="copy-link-btn" id="library-export-btn">Export</button>
 		<button type="button" class="copy-link-btn" id="library-import-btn">Import</button>
 		<input type="file" id="library-import-file" accept="application/json,.json" hidden />
-		<span class="library-transfer__status" role="status"></span>
 	</div>`;
 }
 
@@ -63,12 +63,12 @@ const CANCEL = "Cancel";
 /**
  * Reads a file into the library. A file from another site has to be confirmed first, since its
  * ids may be another archive's; a library that already has something in it asks whether to
- * overwrite it or merge the file into it; an empty one just takes the file. Settles with what to
- * tell the reader.
+ * overwrite it or merge the file into it; an empty one just takes the file. Settles with whether
+ * it was imported, and anything else to tell the reader.
  */
-async function importLibrary(file: File): Promise<string> {
+async function importLibrary(file: File): Promise<{ imported: boolean; message: string }> {
 	const parsed = parseLibraryFile(await file.text());
-	if (!parsed.ok) return parsed.error;
+	if (!parsed.ok) return { imported: false, message: parsed.error };
 
 	if (parsed.site !== thisSite()) {
 		const from = parsed.site
@@ -78,7 +78,7 @@ async function importLibrary(file: File): Promise<string> {
 			"I'm sure, import it",
 			CANCEL,
 		]);
-		if (!sure) return "";
+		if (!sure) return { imported: false, message: "" };
 	}
 
 	const current = await readLibrary();
@@ -88,15 +88,15 @@ async function importLibrary(file: File): Promise<string> {
 			"Your library already has bookmarks, owned strips or books, or notes. Overwrite it with this file, or merge the file into it?",
 			[OVERWRITE, MERGE, CANCEL],
 		);
-		if (!choice) return "";
+		if (!choice) return { imported: false, message: "" };
 		if (choice === MERGE) data = mergeLibraries(current, parsed.data);
 	}
 
 	await replaceLibrary(data);
-	state.bookmarkedDates = new Set(data.bookmarks);
+	holdLibrary(data);
 	const skipped =
-		parsed.skipped > 0 ? ` Skipped ${parsed.skipped} entr${parsed.skipped === 1 ? "y" : "ies"} it couldn't read.` : "";
-	return `Imported.${skipped}`;
+		parsed.skipped > 0 ? `Skipped ${parsed.skipped} entr${parsed.skipped === 1 ? "y" : "ies"} it couldn't read.` : "";
+	return { imported: true, message: skipped };
 }
 
 /** Wires the Library page's Export and Import buttons — see `buildLibraryTransferHtml`. */
@@ -116,7 +116,8 @@ export function attachLibraryTransferHandlers(element: HTMLElement): void {
 			});
 	});
 
-	element.querySelector("#library-import-btn")!.addEventListener("click", () => input.click());
+	const importButton = element.querySelector<HTMLButtonElement>("#library-import-btn")!;
+	importButton.addEventListener("click", () => input.click());
 
 	input.addEventListener("change", () => {
 		const file = input.files?.[0];
@@ -125,10 +126,11 @@ export function attachLibraryTransferHandlers(element: HTMLElement): void {
 		if (!file) return;
 		status.textContent = "";
 		importLibrary(file)
-			.then((message) => {
-				// Drawn again with the bookmarks as they now are, the grid too. The status line is
-				// part of the page that stays, so the message is set after.
+			.then(({ imported, message }) => {
+				// Drawn again with the bookmarks as they now are, the grid too. The buttons and the
+				// status line are part of the page that stays, so they are changed after.
 				handleRoute();
+				if (imported) flashButton(importButton, "Imported!", "Import");
 				status.textContent = message;
 			})
 			.catch(() => {

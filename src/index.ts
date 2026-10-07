@@ -2,7 +2,6 @@ import "./styles/theme.css";
 import "./styles/base.css";
 import "./styles/components.css";
 
-import { getBookmarkedDates } from "./bookmarks";
 import { registerVocabulary } from "./filter-vocabulary";
 import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
@@ -19,6 +18,7 @@ import {
 import { HOME_PATH, buildComicPath } from "./routes";
 import { getSameDayComicDate } from "./pages/detail";
 import { attachLifeEasterEgg } from "./life";
+import { holdLibrary, readLibrary } from "./ownership";
 
 function initialize(): void {
 	// The one filter whose values are loaded data. A thunk, so this can be registered before the
@@ -39,14 +39,12 @@ function initialize(): void {
 
 	// After the first paint, not before it: opening IndexedDB can take longer than drawing a
 	// prerendered page, and what waits on the answer is the grid's bookmark highlights and the
-	// bookmarks page, which shows a spinner until it lands.
-	// The bookmark button on a strip's page asks for its own date separately.
-	getBookmarkedDates()
-		.then((dates) => {
-			state.bookmarkedDates = dates;
-		})
+	// Library page, which shows a spinner until it lands.
+	// The bookmark and ownership buttons on a page ask for their own separately.
+	readLibrary()
+		.then(holdLibrary)
 		.catch(() => {
-			// IndexedDB unavailable — bookmarks won't work, and the bookmarks page says there are none
+			// IndexedDB unavailable — the library won't work, and the Library page says it is empty
 		})
 		.finally(() => {
 			state.bookmarksLoaded = true;

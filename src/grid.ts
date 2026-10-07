@@ -7,6 +7,7 @@ import { state } from "./state";
 import { loadDescriptions } from "./details";
 import { isPlainClick, parseRoute } from "./router";
 import { buildComicPath } from "./routes";
+import { libraryDates } from "./ownership";
 import { addressOf } from "./base-path";
 import { formatDateRange, formatLongDate } from "./date-utils";
 import { ARCS, COLLECTION_INDEX, RERUNS } from "./bundled-data";
@@ -418,7 +419,7 @@ function subjectOf(route: Route): { key: string; dates: ReadonlySet<string> } | 
 	if (route.view === "results" && tiers) return { key: `results:${route.q ?? ""}`, dates: bestMatches(tiers) };
 	if (route.view === "library" && state.bookmarksLoaded) {
 		const key = `library:${route.q ?? ""}`;
-		return { key, dates: tiers ? bestMatches(tiers) : state.bookmarkedDates };
+		return { key, dates: tiers ? bestMatches(tiers) : libraryDates() };
 	}
 	if ((route.view === "collection" || route.view === "arc") && state.collectionDateSet) {
 		return { key: `${route.view}:${route.id ?? ""}`, dates: state.collectionDateSet };
@@ -506,12 +507,14 @@ function lightFor(route: Route): ((date: string) => Light) | undefined {
 
 	if (route.view === "results") return byTier;
 
-	// Lit and dimmed the way a book's page is, with the bookmarks as the book — once they are known;
+	// Lit and dimmed the way a book's page is, with the library as the book — once it is known;
 	// until then an empty set would dim the whole grid, only to light it back up a moment later. A
 	// search of them is lit as any search is.
 	if (route.view === "library") {
 		if (!state.bookmarksLoaded) return undefined;
-		return byTier ?? ((date) => state.bookmarkedDates.has(date));
+		if (byTier) return byTier;
+		const dates = libraryDates();
+		return (date) => dates.has(date);
 	}
 
 	// A book's strips, or an arc's: whichever the page showing set out to light.

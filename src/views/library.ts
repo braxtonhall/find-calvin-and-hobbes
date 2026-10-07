@@ -3,6 +3,7 @@ import "./library.css";
 import { state } from "../state";
 import { SortMode } from "../types";
 import { searchBookmarks } from "../search";
+import { isLibraryResult, libraryDates } from "../ownership";
 import { TUNING } from "../tuning";
 import { COMPOUND_CANONICAL_FORMS } from "../compounds";
 import { assignTiers } from "../tiers";
@@ -14,7 +15,7 @@ import { attachRowHandlers, resultsHtml } from "./result-rows";
 import { SearchBar, buildSearchBar } from "./search-bar";
 import { attachLibraryTransferHandlers, buildLibraryTransferHtml } from "./library-transfer";
 
-const EMPTY = "No bookmarks found";
+const EMPTY = "Nothing in your library found";
 
 /**
  * Built with the page and kept while the reader searches it, as the search page's is — see
@@ -24,8 +25,9 @@ const EMPTY = "No bookmarks found";
 let bar: SearchBar | null = null;
 
 /**
- * The bookmarked strips, drawn as the search results are, and searched the way they are. Only drawn
- * once both the archive and the bookmarks have arrived — see `pageFor` — so an empty list here
+ * The bookmarked strips and the owned ones — owned themselves, or in an owned book — drawn as the
+ * search results are, and searched the way they are. Only drawn once both the archive and the
+ * library have arrived — see `pageFor` — so an empty list here
  * means there really are none, or none the query matches.
  */
 export function renderLibrary(query: string, sort: SortMode, arriving: boolean): void {
@@ -33,21 +35,25 @@ export function renderLibrary(query: string, sort: SortMode, arriving: boolean):
 
 	if (arriving || !bar || !element.contains(bar.input)) {
 		element.innerHTML = `${buildBackAndHomeButtons(canGoBack())}
-			<h2 class="library-heading">Library</h2>
-			${buildLibraryTransferHtml()}
+			<div class="library-header">
+				<h2 class="library-heading">Library</h2>
+				${buildLibraryTransferHtml()}
+			</div>
 			<div class="library-search"></div>`;
 		attachBackAndHomeHandlers(element);
 		attachLibraryTransferHandlers(element);
 		bar = buildSearchBar(element.querySelector(".library-search")!, {
 			id: "library",
-			placeholder: "Search bookmarks",
+			placeholder: "Search library",
 			pathFor: buildLibraryPath,
-			// An empty box on this page is every bookmark, not a way home.
+			// An empty box on this page is the whole library, not a way home.
 			listsWithoutQuery: true,
 		});
 	}
 
-	const results = searchBookmarks(query, sort, TUNING, COMPOUND_CANONICAL_FORMS, state.bookmarkedDates);
+	const results = searchBookmarks(query, sort, TUNING, COMPOUND_CANONICAL_FORMS, libraryDates()).filter(
+		isLibraryResult,
+	);
 	bar.update(query, sort, results.length);
 	bar.list.innerHTML = resultsHtml(results, EMPTY);
 	attachRowHandlers(bar.list);

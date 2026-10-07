@@ -1,6 +1,8 @@
 import { BOOKS_STORE_NAME, STORE_NAME, STRIPS_STORE_NAME } from "./constants";
 import { inTransaction } from "./database";
-import { LibraryData, OwnershipRecord, cleanNote } from "./library-file";
+import { LibraryData, OwnershipRecord, cleanNote, inLibrary, ownedDates } from "./library-file";
+import type { SearchResult } from "./search";
+import { state } from "./state";
 
 export type OwnershipKind = "strip" | "book";
 
@@ -19,7 +21,7 @@ export function getOwnership(kind: OwnershipKind, id: string): Promise<Ownership
 /**
  * Changes one record, read and written in the same transaction so a change made before the page
  * has read the record cannot write over the rest of it. A record left neither owned nor noted is
- * removed. Settles with the record as it now stands.
+ * removed. Settles with the record as it now stands, once `state` holds it too.
  */
 export function updateOwnership(
 	kind: OwnershipKind,
@@ -40,7 +42,33 @@ export function updateOwnership(
 			else store.delete(id);
 			finish(next);
 		};
+	}).then((record) => {
+		// Once it is saved, so the Library page never lists what the browser did not keep.
+		const owned = kind === "strip" ? state.ownedStrips : state.ownedBooks;
+		if (record.owned) owned.add(id);
+		else owned.delete(id);
+		return record;
 	});
+}
+
+/** Takes what is in the library into `state`, where the pages and the grid read it. */
+export function holdLibrary(data: LibraryData): void {
+	state.bookmarkedDates = new Set(data.bookmarks);
+	state.ownedStrips = new Set(data.strips.filter((record) => record.owned).map((record) => record.id));
+	state.ownedBooks = new Set(data.books.filter((record) => record.owned).map((record) => record.id));
+}
+
+/** The days the Library page lists: the bookmarks, and every strip the reader owns. */
+export function libraryDates(): Set<string> {
+	const dates = ownedDates(state.ownedStrips, state.ownedBooks, state.comics);
+	for (const date of state.bookmarkedDates) dates.add(date);
+	return dates;
+}
+
+/** Whether a row of the Library page's search is a printing in the library — see `inLibrary`. */
+export function isLibraryResult(result: SearchResult): boolean {
+	const library = { bookmarks: state.bookmarkedDates, strips: state.ownedStrips, books: state.ownedBooks };
+	return inLibrary(library, result.comic, result.rerun === true);
 }
 
 /** Everything in the library, as a file holds it. */
