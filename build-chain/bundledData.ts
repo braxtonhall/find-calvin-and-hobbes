@@ -3,6 +3,7 @@ import { exportArcsJson, loadArcs } from "./arcs";
 import { exportCharactersJson, loadCharacters } from "./characters";
 import { loadCollectionData } from "./collectionPages";
 import { loadComicSource } from "./comicSource";
+import { exportCreatorsJson, loadCreators } from "./creators";
 import { generateCollectionIndex } from "./generateCollectionIndex";
 import { exportRerunsJson } from "./reruns";
 import { watchConfig, loadSiteConfig } from "./siteConfig";
@@ -16,6 +17,7 @@ export interface BundledJson {
 	collectionIndex: string;
 	arcs: string;
 	characters: string;
+	creators: string;
 }
 
 export function loadBundledJson(config?: string): BundledJson {
@@ -28,17 +30,25 @@ export function loadBundledJson(config?: string): BundledJson {
 		collectionIndex: generateCollectionIndex(collectionData, basePath),
 		arcs: exportArcsJson(loadArcs(source, collectionData, config)),
 		characters: exportCharactersJson(loadCharacters(config)),
+		creators: exportCreatorsJson(loadCreators(source, basePath, config).creators),
 	};
 }
 
 /** For `src/bundled-data.ts` under Node; see there. */
-export function loadBundledData(): { RERUNS: unknown; COLLECTION_INDEX: unknown; ARCS: unknown; CHARACTERS: unknown } {
+export function loadBundledData(): {
+	RERUNS: unknown;
+	COLLECTION_INDEX: unknown;
+	ARCS: unknown;
+	CHARACTERS: unknown;
+	CREATORS: unknown;
+} {
 	const json = loadBundledJson();
 	return {
 		RERUNS: JSON.parse(json.reruns),
 		COLLECTION_INDEX: JSON.parse(json.collectionIndex),
 		ARCS: JSON.parse(json.arcs),
 		CHARACTERS: JSON.parse(json.characters),
+		CREATORS: JSON.parse(json.creators),
 	};
 }
 
@@ -57,6 +67,7 @@ export default function bundledDataLoader(this: LoaderContext<unknown>): string 
 		`export const COLLECTION_INDEX = ${parsed(json.collectionIndex)};`,
 		`export const ARCS = ${parsed(json.arcs)};`,
 		`export const CHARACTERS = ${parsed(json.characters)};`,
+		`export const CREATORS = ${parsed(json.creators)};`,
 		"",
 	].join("\n");
 }

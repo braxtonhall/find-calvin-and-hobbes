@@ -1,0 +1,26 @@
+#view-creator.active,
+#view-creators.active {
+	display: block;
+	/* The corrections link floats over the bottom of the page; the last line clears it. */
+	padding: 20px 20px 56px;
+}
+
+@media (max-width: 768px) {
+	/* On mobile the link follows the page instead of floating over it, so there is nothing to clear. */
+	#view-creator.active,
+	#view-creators.active {
+		padding-bottom: 20px;
+	}
+}
+
+/* A list of creators: rows of the list of books, the name taking the room a missing cover leaves. */
+.creator-row .collections-info {
+	flex: 1;
+}
+
+/* A creator's specials: a list, drawn as the date ranges above it are, one to a line. */
+.creator-specials {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}

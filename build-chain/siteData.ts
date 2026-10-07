@@ -1,5 +1,5 @@
 import type { Compilation } from "webpack";
-import { Arc, Character, Comic, CollectionIndex } from "../src/types";
+import { Arc, Character, Comic, CollectionIndex, Creator } from "../src/types";
 
 /**
  * The archive as the site reads it: the parsed forms of the five JSON texts the app has — two it
@@ -16,6 +16,7 @@ export interface SiteData {
 	descriptions: Record<string, string>;
 	arcs: Arc[];
 	characters: Character[];
+	creators: Creator[];
 }
 
 const dataByCompilation = new WeakMap<Compilation, SiteData>();

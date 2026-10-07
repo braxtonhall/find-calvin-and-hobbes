@@ -63,6 +63,16 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "arcs" };
 	}
 
+	// Creators the same way, on a site without them.
+	const creatorMatch = path.match(/^\/creator\/([a-z0-9]+)$/);
+	if (creatorMatch && PAGE_CONFIG.creators) {
+		return { view: "creator", id: creatorMatch[1] };
+	}
+
+	if (path === CREATORS_PATH && PAGE_CONFIG.creators) {
+		return { view: "creators" };
+	}
+
 	// The same query a search takes, over the bookmarks only. Unlike `/search`, no query is a page
 	// of its own — every bookmark — so an empty `?q=` is not written; see `buildLibraryPath`.
 	if (path === LIBRARY_PATH) {
@@ -104,9 +114,14 @@ export function buildArcPath(arcId: string): string {
 	return "/arc/" + arcId;
 }
 
-/** The two tabs of Collections: the books, and the arcs. */
+export function buildCreatorPath(creatorId: string): string {
+	return "/creator/" + creatorId;
+}
+
+/** The tabs of Collections: the books, the arcs, and the creators. */
 export const BOOKS_PATH = "/books";
 export const ARCS_PATH = "/arcs";
+export const CREATORS_PATH = "/creators";
 
 /**
  * Where Collections used to be a list of books alone. It is the books tab now, and the address is

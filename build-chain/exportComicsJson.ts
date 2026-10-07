@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Appearance, CollectionData } from "./collectionPages";
 import { DailyEntry, loadComicSource } from "./comicSource";
-import { Arc, Character } from "../src/types";
+import { Arc, Character, Credit } from "../src/types";
 import { stripCharacters } from "./characters";
 import { loadComicImages } from "./siteConfig";
 import { aspectRatio } from "./imageSize";
@@ -39,6 +39,7 @@ interface Entry {
 	appearances?: Appearance[];
 	arcs?: string[];
 	characters?: string[];
+	creators?: Credit[];
 }
 
 /**
@@ -50,12 +51,15 @@ interface Entry {
  *
  * Each strip carries its characters the same way, for `@featuring:`, special or not. None where
  * `characters` is empty, which is a site without `characters.yaml`.
+ *
+ * And its creators, keyed in `creators` as `comics.yaml` keys the strip. None where it has none.
  */
 export function exportComicsJson(
 	collectionData: CollectionData,
 	basePath: string = "/",
 	arcs: Arc[] = [],
 	characters: Character[] = [],
+	creators: ReadonlyMap<string, Credit[]> = new Map(),
 	config?: string,
 ): string {
 	const folder = loadComicImages(config);
@@ -71,6 +75,8 @@ export function exportComicsJson(
 	const attachCharacters = (entry: Entry, key: string, listing: DailyEntry) => {
 		const featured = stripCharacters(key, listing, characters);
 		if (featured.length) entry.characters = featured;
+		const credits = creators.get(key);
+		if (credits) entry.creators = credits;
 	};
 
 	const arcsByDate = new Map<string, string[]>();

@@ -62,10 +62,10 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
  * thing to meet first.
  *
  * Repeating a filter ORs where a strip can have only one value for it — one year, one month — and
- * for the books, which mostly share no strips; and ANDs for the tags and the characters, which a
- * strip carries several of. See `WIDENING` in `boolean-query.ts`.
+ * for the books and the creators, which mostly share no strips; and ANDs for the tags and the
+ * characters, which a strip carries several of. See `WIDENING` in `boolean-query.ts`.
  *
- * `@featuring:` only where `config.yaml` has characters for it.
+ * `@featuring:` only where `config.yaml` has characters for it, and `@by:` only where it has creators.
  */
 export const FILTER_SPECS: readonly FilterSpec[] = [
 	{
@@ -87,6 +87,16 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 					hint: "Strips featuring a character",
 					vocabulary: true,
 					templates: [{ label: "character", hint: "a character of the archive" }],
+				} satisfies FilterSpec,
+			]
+		: []),
+	...(PAGE_CONFIG.creators
+		? [
+				{
+					name: "by",
+					hint: "Strips by a creator",
+					vocabulary: true,
+					templates: [{ label: "creator", hint: "a creator of the archive" }],
 				} satisfies FilterSpec,
 			]
 		: []),

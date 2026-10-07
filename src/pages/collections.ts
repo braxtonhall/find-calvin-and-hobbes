@@ -1,6 +1,6 @@
 import { escHtml } from "../utils";
 import { PAGE_CONFIG } from "../site-config";
-import { ARCS_PATH, BOOKS_PATH, buildCollectionPath } from "../routes";
+import { ARCS_PATH, BOOKS_PATH, CREATORS_PATH, buildCollectionPath } from "../routes";
 import { addressOf } from "../base-path";
 import { CollectionsPage, CollectionSummary, PageSource } from "./page";
 import { buildBackAndHomeButtons } from "./nav-buttons";
@@ -38,12 +38,13 @@ function buildRowHtml(collection: CollectionSummary): string {
 		</a>`;
 }
 
-export type CollectionsTab = "books" | "arcs";
+export type CollectionsTab = "books" | "arcs" | "creators";
 
 /**
- * Collections is books and arcs, each a collection of strips, and each tab has an address of its
- * own. The tab showing is plain bold text; the other is a link, quiet the way the home page's are.
- * A site without arcs has only the books, and no tabs.
+ * Collections is books, arcs and creators, each a collection of strips, and each tab has an address
+ * of its own. The tab showing is plain bold text; the others are links, quiet the way the home
+ * page's are. A site without arcs or creators has only the tabs it has, and with only the books, no
+ * tabs at all.
  */
 export function buildCollectionsHeaderHtml(current: CollectionsTab, canGoBack: boolean): string {
 	const tab = (name: CollectionsTab, label: string, path: string) =>
@@ -52,12 +53,15 @@ export function buildCollectionsHeaderHtml(current: CollectionsTab, canGoBack: b
 			: `<a class="collections-tab" href="${addressOf(path)}">${label}</a>`;
 	const heading = `${buildBackAndHomeButtons(canGoBack)}
 		<h2 class="collections-heading">Collections</h2>`;
-	if (!PAGE_CONFIG.arcs) return heading;
+	const tabs = [
+		tab("books", "Books", BOOKS_PATH),
+		...(PAGE_CONFIG.arcs ? [tab("arcs", "Arcs", ARCS_PATH)] : []),
+		...(PAGE_CONFIG.creators ? [tab("creators", "Creators", CREATORS_PATH)] : []),
+	];
+	if (tabs.length === 1) return heading;
 	return `${heading}
 		<nav class="collections-tabs" aria-label="Collections">
-			${tab("books", "Books", BOOKS_PATH)}
-			<span aria-hidden="true">·</span>
-			${tab("arcs", "Arcs", ARCS_PATH)}
+			${tabs.join(`\n\t\t\t<span aria-hidden="true">·</span>\n\t\t\t`)}
 		</nav>`;
 }
 

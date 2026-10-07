@@ -118,6 +118,34 @@ test("filters", async (suite) => {
 		assert.ok(passes(cast("1988-06-01", "susie"), "@featuring:susie @or @featuring:rosalyn"));
 	});
 
+	await suite.test("@by names a creator by their id", () => {
+		try {
+			registerVocabulary("by", () => [{ value: "watterson", hint: "Bill Watterson" }]);
+			assert.deepEqual(read("@by:Watterson"), { kind: "by", creator: "watterson" });
+			assert.equal(read("@by:waterson"), null);
+		} finally {
+			registerVocabulary("by", () => []);
+		}
+	});
+
+	// Two creators mostly either made every strip together or took over one from the other, so two
+	// side by side are either, as the books are — and both is `@and`.
+	await suite.test("creators side by side widen", () => {
+		const by = (...ids: string[]): Comic => ({
+			date: "1988-06-01",
+			transcript: "",
+			creators: ids.map((id) => ({ id })),
+		});
+		const query = "@by:foster @by:murphy";
+		assert.ok(passes(by("foster"), query));
+		assert.ok(passes(by("murphy"), query));
+		assert.ok(!passes(by("schultz"), query));
+		assert.ok(passes(by("foster", "murphy"), "@by:foster @and @by:murphy"));
+		assert.ok(!passes(by("foster"), "@by:foster @and @by:murphy"));
+		assert.ok(!passes({ date: "1988-06-01", transcript: "" }, "@by:foster"));
+		assert.ok(!passes("1988-06-01", "@by:foster"));
+	});
+
 	await suite.test("a strip that lists no characters features none", () => {
 		assert.ok(!passes({ date: "1988-06-01", transcript: "" }, "@featuring:calvin"));
 		assert.ok(passes({ date: "1988-06-01", transcript: "" }, "@not @featuring:calvin"));

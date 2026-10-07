@@ -1,8 +1,8 @@
-import { Arc, Character, CollectionIndex } from "./types";
+import { Arc, Character, CollectionIndex, Creator } from "./types";
 
 /**
  * The parts of the archive small enough to ship inside the script rather than fetch after it:
- * which days were reruns of which, the books, the arcs, and the characters. Together they are a few kilobytes,
+ * which days were reruns of which, the books, the arcs, the characters, and the creators. Together they are a few kilobytes,
  * and having them up front leaves `comics.json` and `descriptions.json` as the only requests the
  * app has to wait for.
  *
@@ -17,7 +17,8 @@ const { loadBundledData } = require("../build-chain/bundledData") as {
 		COLLECTION_INDEX: CollectionIndex;
 		ARCS: Arc[];
 		CHARACTERS: Character[];
+		CREATORS: Creator[];
 	};
 };
 
-export const { RERUNS, COLLECTION_INDEX, ARCS, CHARACTERS } = loadBundledData();
+export const { RERUNS, COLLECTION_INDEX, ARCS, CHARACTERS, CREATORS } = loadBundledData();

@@ -11,12 +11,15 @@ import { collectionPageFrom } from "./pages/collection";
 import { collectionsPageFrom } from "./pages/collections";
 import { arcPageFrom } from "./pages/arc";
 import { arcsPageFrom } from "./pages/arcs";
+import { creatorPageFrom } from "./pages/creator";
+import { creatorsPageFrom } from "./pages/creators";
 import { renderLanding } from "./views/landing";
 import { renderResults } from "./views/results";
 import { renderDetail } from "./views/detail";
 import { renderCollection } from "./views/collection";
 import { renderCollections } from "./views/collections";
 import { renderArc, renderArcs } from "./views/arcs";
+import { renderCreator, renderCreators } from "./views/creators";
 import { loadDescriptions } from "./details";
 import { renderLibrary } from "./views/library";
 import { renderCredits } from "./views/credits";
@@ -155,6 +158,11 @@ function pageFor(route: Route): Page | null {
 			return state.dataLoaded ? collectionsPageFrom(state) : null;
 		case "arcs":
 			return state.dataLoaded ? arcsPageFrom(state) : null;
+		// The creators ship inside the script, so their pages need nothing fetched.
+		case "creators":
+			return creatorsPageFrom(state);
+		case "creator":
+			return creatorPageFrom(state, route.id ?? "");
 		case "arc":
 			if (!state.dataLoaded) return null;
 			// The rows are the strips' descriptions, which arrive on their own; the spinner waits for
@@ -210,6 +218,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		case "credits":
 		case "collections":
 		case "arcs":
+		case "creators":
 			return { page: prerendered, adopt: true };
 		case "results":
 		case "library":
@@ -224,6 +233,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		}
 		case "collection":
 		case "arc":
+		case "creator":
 			return prerendered.id === route.id ? { page: prerendered, adopt: true } : null;
 	}
 }
@@ -309,6 +319,16 @@ export function handleRoute(prerendered: Page | null = null): void {
 		}
 		case "arcs": {
 			renderArcs(page, adopt);
+			document.getElementById("main")!.scrollTop = 0;
+			break;
+		}
+		case "creator": {
+			renderCreator(page, adopt);
+			document.getElementById("main")!.scrollTop = 0;
+			break;
+		}
+		case "creators": {
+			renderCreators(page, adopt);
 			document.getElementById("main")!.scrollTop = 0;
 			break;
 		}

@@ -5,6 +5,7 @@ import { exportArcsJson, loadArcs } from "./arcs";
 import { loadCharacters } from "./characters";
 import { loadCollectionData } from "./collectionPages";
 import { loadComicSource } from "./comicSource";
+import { loadCreators } from "./creators";
 import { exportComicsJson } from "./exportComicsJson";
 import { exportDescriptions } from "./exportDescriptions";
 import { generateCollectionIndex } from "./generateCollectionIndex";
@@ -44,10 +45,16 @@ class YamlToJsonPlugin {
 					const arcsJson = exportArcsJson(arcs);
 
 					const characters = loadCharacters();
-					const comicsJson = exportComicsJson(collectionData, basePath, arcs, characters);
+					const creators = loadCreators(source, basePath);
+					// The portraits, each where the creators link to it, as the covers are.
+					for (const [published, file] of creators.files) {
+						compilation.fileDependencies.add(file);
+						compilation.emitAsset(published, new sources.RawSource(fs.readFileSync(file)));
+					}
+					const comicsJson = exportComicsJson(collectionData, basePath, arcs, characters, creators.byStrip);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 
-					// Not emitted: the app has these, and the characters, inside its script. See `bundledData.ts`.
+					// Not emitted: the app has these, and the characters and the creators, inside its script. See `bundledData.ts`.
 					const rerunsJson = exportRerunsJson(source);
 					const collectionIndexJson = generateCollectionIndex(collectionData, basePath);
 
@@ -61,6 +68,7 @@ class YamlToJsonPlugin {
 						descriptions: JSON.parse(descriptionsJson),
 						arcs: JSON.parse(arcsJson),
 						characters,
+						creators: creators.creators,
 					});
 				},
 			);

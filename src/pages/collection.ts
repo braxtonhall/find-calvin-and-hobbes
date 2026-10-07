@@ -137,19 +137,21 @@ function filterDate(compact: string, days: number): string {
  * Sundays only holds only the Sundays between its ends, so its search says so too: as the format,
  * `@is:sunday`, where the site has one, which a reader's own `@day:` narrows rather than widens.
  * Without colour Sundays there is no such tag, and the weekday is all a Sunday is.
+ *
+ * `within` is a filter the range is of, like a creator's `@by:`, which goes first.
  */
-export function buildRangeSearchPath(entry: string, sundays: boolean = false): string {
+export function buildRangeSearchPath(entry: string, sundays: boolean = false, within: string = ""): string {
 	const [start, end] = parseDailiesRange(entry);
-	const bounds = `@after:${filterDate(start, -1)} @before:${filterDate(end, 1)}`;
+	const bounds = `${within ? `${within} ` : ""}@after:${filterDate(start, -1)} @before:${filterDate(end, 1)}`;
 	const sunday = PAGE_CONFIG.colourSundays ? "@is:sunday" : "@day:sunday";
 	return buildSearchPath(sundays ? `${bounds} ${sunday}` : bounds, "date");
 }
 
-function buildRangeHtml(entry: string, sundays: boolean): string {
+export function buildRangeHtml(entry: string, sundays: boolean, within: string = ""): string {
 	const [start, end] = parseDailiesRange(entry);
 	if (start === end) return buildRangeDateLink(start);
 	// A small thing to find: the dash between the ends is the search for everything between them.
-	const dash = `<a class="collection-range-dash" href="${escHtml(addressOf(buildRangeSearchPath(entry, sundays)))}">\u2013</a>`;
+	const dash = `<a class="collection-range-dash" href="${escHtml(addressOf(buildRangeSearchPath(entry, sundays, within)))}">\u2013</a>`;
 	return `${buildRangeDateLink(start)} ${dash} ${buildRangeDateLink(end)}`;
 }
 

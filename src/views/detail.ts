@@ -14,7 +14,13 @@ import {
 } from "../pages/detail";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
-import { attachCellHighlightLink, clearCollectionSoon, highlightCollection } from "./cell-highlight";
+import {
+	attachCellHighlightLink,
+	clearCollectionSoon,
+	creatorDates,
+	featuringDates,
+	highlightCollection,
+} from "./cell-highlight";
 import { attachBookHandlers } from "./books";
 import { dayCell } from "../grid";
 
@@ -72,21 +78,43 @@ function attachStripLinkHandlers(element: HTMLElement): void {
 }
 
 /**
- * Hovering an arc's range lights up the whole arc in the grid, as a book's cover lights up the book.
- * The arc's dates are on the page, so this works on a cold load too.
+ * Hovering — or focusing — a link to a set of strips lights up that set in the grid, as a book's cover
+ * lights up the book: what the page it leads to would light. `datesOf` is asked on each hover, and
+ * `null` for a link it knows nothing about.
  */
-function attachArcLinkHandlers(element: HTMLElement, page: DetailPage): void {
-	const arcs = new Map(page.arcs.map((arc) => [arc.id, arc]));
-	element.querySelectorAll<HTMLElement>(".detail-arc-link").forEach((link) => {
-		const arc = arcs.get(link.dataset.arcId ?? "");
-		if (!arc) return;
-		const show = () => element.classList.contains("active") && highlightCollection(new Set(arc.dates));
+function attachSetLinkHandlers(
+	element: HTMLElement,
+	selector: string,
+	datesOf: (link: HTMLElement) => ReadonlySet<string> | null,
+): void {
+	element.querySelectorAll<HTMLElement>(selector).forEach((link) => {
+		const show = () => {
+			const dates = element.classList.contains("active") ? datesOf(link) : null;
+			if (dates) highlightCollection(dates);
+		};
 		const clear = () => element.classList.contains("active") && clearCollectionSoon();
 		link.addEventListener("mouseenter", show);
 		link.addEventListener("focus", show);
 		link.addEventListener("mouseleave", clear);
 		link.addEventListener("blur", clear);
 	});
+}
+
+/**
+ * An arc's range lights the arc, its dates on the page; a creator's name, their strips, from the
+ * ranges that ship in the script — so both work on a cold load too. A character's name lights the
+ * strips they are in, which only the archive can say, so it waits for the archive.
+ */
+function attachGroupLinkHandlers(element: HTMLElement, page: DetailPage): void {
+	const arcs = new Map(page.arcs.map((arc) => [arc.id, new Set(arc.dates)]));
+	attachSetLinkHandlers(element, ".detail-arc-link", (link) => arcs.get(link.dataset.arcId ?? "") ?? null);
+	attachSetLinkHandlers(element, ".detail-creator-link", (link) => {
+		const creator = state.creatorsById.get(link.dataset.creatorId ?? "");
+		return creator ? creatorDates(creator) : null;
+	});
+	attachSetLinkHandlers(element, ".detail-character-link", (link) =>
+		state.dataLoaded ? featuringDates(link.dataset.characterId ?? "") : null,
+	);
 }
 
 /**
@@ -102,7 +130,7 @@ export function renderDetail(page: DetailPage, adopt: boolean = false): void {
 
 	attachBackAndHomeHandlers(element);
 	attachStripLinkHandlers(element);
-	attachArcLinkHandlers(element, page);
+	attachGroupLinkHandlers(element, page);
 	attachBookHandlers(element);
 
 	attachCopyLinkHandler(element);

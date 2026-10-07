@@ -29,7 +29,7 @@ export function sampleGif(width: number, height: number): Buffer {
  * The archive's optional parts, all turned off, for a test that is not about them, since
  * `config.yaml` must say. A part the test gives keeps its own.
  */
-export const SAMPLE_PARTS = ["arcs", "reruns", "compounds", "characters"];
+export const SAMPLE_PARTS = ["arcs", "reruns", "compounds", "characters", "creators"];
 
 /**
  * A project holding just this configuration, for `loadPageConfig` to read — with `SAMPLE_THEME` and

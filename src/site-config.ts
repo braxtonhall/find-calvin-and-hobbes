@@ -66,6 +66,8 @@ export interface PageConfig {
 	reruns: boolean;
 	/** Whether the site has characters, from the file `config.yaml` names: `@featuring:` and a strip's Featuring line. */
 	characters: boolean;
+	/** Whether the site has creators, from the file `config.yaml` names: `@by:`, a strip's By line, and their pages. */
+	creators: boolean;
 	/**
 	 * Whether the Sundays ran in colour and the dailies in black and white: whether there are
 	 * `@is:sunday` and `@is:daily` and the bar's Format field, and whether a book's `colour` — that

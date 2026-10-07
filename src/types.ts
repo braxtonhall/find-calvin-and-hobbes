@@ -12,6 +12,8 @@ export interface Comic {
 	arcs?: string[];
 	/** The characters the strip features, by id, as `comics.yaml` lists them. */
 	characters?: string[];
+	/** Who made the strip, as the creators' file credits it. */
+	creators?: Credit[];
 }
 
 export interface Appearance {
@@ -79,6 +81,40 @@ export interface Character {
 	name: string;
 }
 
+/** One person credited on a strip, and what they did on it where the credit says: `story`, `art`. */
+export interface Credit {
+	id: string;
+	role?: string;
+}
+
+/** Someone who made strips: the id `@by:` takes, the name a reader knows them by, and where they are found. */
+export interface Creator {
+	id: string;
+	name: string;
+	/** A portrait, from the mount where the build publishes it. */
+	image?: string;
+	/** A page about them elsewhere, like an encyclopedia's. */
+	link?: string;
+	/** How many strips they are credited on, specials too. */
+	strips: number;
+	/** The years with a strip of theirs, in order. */
+	years: number[];
+	/** Their daily and Sunday strips, as a book's date ranges are written: compact, `start-end`, over the strips in order. */
+	ranges: string[];
+	/** What their credits say they did, in the order first met; none where no credit says. */
+	roles?: string[];
+	/** The specials they are credited on, which no range holds, oldest first; none where they have none. */
+	specials?: CreditedSpecial[];
+}
+
+/** A special as a creator's page lists it: by its title, and the day it is filed under, which is where it is shown. */
+export interface CreditedSpecial {
+	id: string;
+	title: string;
+	/** As the site writes a date: `1985-11-28`. */
+	date: string;
+}
+
 export interface Day {
 	date: string;
 	weekIndex: number;
@@ -89,7 +125,18 @@ export interface Day {
 export type SortMode = "date" | "rank";
 
 export interface Route {
-	view: "landing" | "results" | "detail" | "collection" | "collections" | "arc" | "arcs" | "library" | "credits";
+	view:
+		| "landing"
+		| "results"
+		| "detail"
+		| "collection"
+		| "collections"
+		| "arc"
+		| "arcs"
+		| "creator"
+		| "creators"
+		| "library"
+		| "credits";
 	q?: string;
 	sort?: SortMode;
 	date?: string;

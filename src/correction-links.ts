@@ -20,6 +20,8 @@ export const CORRECTION_PAGES = [
 	"books",
 	"arc",
 	"arcs",
+	"creator",
+	"creators",
 	"library",
 	"credits",
 ] as const;

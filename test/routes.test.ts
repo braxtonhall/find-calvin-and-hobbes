@@ -14,9 +14,27 @@ import {
 	normalizePathname,
 	parseRoutePath,
 	redirectedPath,
+	CREATORS_PATH,
+	buildCreatorPath,
 } from "../src/routes";
+import { PAGE_CONFIG } from "../src/site-config";
 
 test("routes", async (suite) => {
+	// Whatever `config.yaml` says about creators: `routes.ts` asks each time it reads a path.
+	await suite.test("a creator's page and their list are pages only where there are creators", () => {
+		const { creators } = PAGE_CONFIG;
+		try {
+			PAGE_CONFIG.creators = true;
+			assert.deepEqual(parseRoutePath(CREATORS_PATH, ""), { view: "creators" });
+			assert.deepEqual(parseRoutePath(buildCreatorPath("watterson"), ""), { view: "creator", id: "watterson" });
+			PAGE_CONFIG.creators = false;
+			assert.equal(parseRoutePath(CREATORS_PATH, ""), null);
+			assert.equal(parseRoutePath(buildCreatorPath("watterson"), ""), null);
+		} finally {
+			PAGE_CONFIG.creators = creators;
+		}
+	});
+
 	await suite.test("every path a builder writes parses back to the route it was built from", () => {
 		assert.deepEqual(parseRoutePath("/", ""), { view: "landing" });
 		assert.deepEqual(parseRoutePath("/credits", ""), { view: "credits" });

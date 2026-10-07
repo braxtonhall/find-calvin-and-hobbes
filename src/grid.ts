@@ -9,7 +9,7 @@ import { isPlainClick, parseRoute } from "./router";
 import { buildComicPath } from "./routes";
 import { addressOf } from "./base-path";
 import { formatDateRange, formatLongDate } from "./date-utils";
-import { ARCS, CHARACTERS, COLLECTION_INDEX, RERUNS } from "./bundled-data";
+import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS, RERUNS } from "./bundled-data";
 import { PAGE_CONFIG } from "./site-config";
 import { Board, setBoardSource, stopLife } from "./life";
 import {
@@ -408,6 +408,9 @@ function bestMatches(tiers: ReadonlyMap<string, number>): Set<string> {
 	return new Set([...tiers].filter(([, tier]) => tier === best).map(([date]) => date));
 }
 
+/** The pages that light a set of strips of their own, in `state.collectionDateSet`: a book's, an arc's, a creator's. */
+const LIGHTS_ITS_OWN = new Set<Route["view"]>(["collection", "arc", "creator"]);
+
 /**
  * What the page showing is about, and the days the grid should turn to for it: a search's best
  * matches, a book's or an arc's strips, the bookmarks. `null` where the page is about no days, or
@@ -420,7 +423,7 @@ function subjectOf(route: Route): { key: string; dates: ReadonlySet<string> } | 
 		const key = `library:${route.q ?? ""}`;
 		return { key, dates: tiers ? bestMatches(tiers) : state.bookmarkedDates };
 	}
-	if ((route.view === "collection" || route.view === "arc") && state.collectionDateSet) {
+	if (LIGHTS_ITS_OWN.has(route.view) && state.collectionDateSet) {
 		return { key: `${route.view}:${route.id ?? ""}`, dates: state.collectionDateSet };
 	}
 	return null;
@@ -445,7 +448,7 @@ export function followRoute(route: Route): void {
 	}
 	const subject = subjectOf(route);
 	if (!subject) {
-		if (!["results", "library", "collection", "arc"].includes(route.view)) subjectShown = null;
+		if (!["results", "library", ...LIGHTS_ITS_OWN].includes(route.view)) subjectShown = null;
 		return;
 	}
 	if (subject.key === subjectShown) return;
@@ -514,9 +517,9 @@ function lightFor(route: Route): ((date: string) => Light) | undefined {
 		return byTier ?? ((date) => state.bookmarkedDates.has(date));
 	}
 
-	// A book's strips, or an arc's: whichever the page showing set out to light.
+	// A book's strips, an arc's or a creator's: whichever the page showing set out to light.
 	const dates = state.collectionDateSet;
-	if ((route.view === "collection" || route.view === "arc") && dates) return (date) => dates.has(date);
+	if (LIGHTS_ITS_OWN.has(route.view) && dates) return (date) => dates.has(date);
 
 	return undefined;
 }
@@ -921,6 +924,7 @@ function useBundledData(): void {
 	state.arcs = ARCS;
 	state.arcsById = new Map(ARCS.map((arc) => [arc.id, arc]));
 	state.charactersById = new Map(CHARACTERS.map((character) => [character.id, character]));
+	state.creatorsById = new Map(CREATORS.map((creator) => [creator.id, creator]));
 }
 
 export async function loadComicData(): Promise<void> {

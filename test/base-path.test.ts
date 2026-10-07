@@ -131,6 +131,7 @@ test("a site mounted at /repo/", async (suite) => {
 				descriptions: {},
 				arcs: [],
 				characters: [],
+				creators: [],
 			};
 			const document = buildDocumentHtml(template, page, {
 				siteUrl: "https://user.github.io/repo",

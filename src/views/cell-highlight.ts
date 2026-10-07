@@ -2,7 +2,7 @@ import { state } from "../state";
 import { anyCellInView, scrollCellIntoViewIfNeeded } from "../utils";
 import { cellForDate, lightDates } from "../grid";
 import { isDateInCollection } from "../date-utils";
-import { Collection } from "../types";
+import { Collection, Creator } from "../types";
 
 /**
  * Lights up a strip's cell in the grid while a link to that strip is hovered or focused — the same
@@ -42,6 +42,32 @@ export function datesOf(collection: BookRanges): Set<string> {
 	const dates = new Set(state.allDays.map((day) => day.date).filter((date) => isDateInCollection(date, collection)));
 	// Before the grid is built there are no days to find, and so nothing worth remembering.
 	if (state.allDays.length > 0) bookDates.set(collection, dates);
+	return dates;
+}
+
+/** Each creator's ranges as a book's, kept so `datesOf` can remember the days it finds for them. */
+const creatorRanges = new Map<string, BookRanges>();
+
+/** A creator's strips, from their ranges, which ship in the script, so this works on a cold load too. */
+export function creatorDates(creator: Pick<Creator, "id" | "ranges">): Set<string> {
+	if (!creatorRanges.has(creator.id)) creatorRanges.set(creator.id, { dailies: creator.ranges });
+	return datesOf(creatorRanges.get(creator.id)!);
+}
+
+/** Each character's days, worked out the first time they are hovered. */
+const characterDates = new Map<string, Set<string>>();
+
+/**
+ * The days of the strips a character is in, the ones `@featuring:` finds. Read off the archive,
+ * which is the only place a strip's characters are written, so none until it has arrived.
+ */
+export function featuringDates(character: string): Set<string> {
+	const known = characterDates.get(character);
+	if (known) return known;
+	const dates = new Set(
+		state.comics.filter((comic) => comic.characters?.includes(character)).map((comic) => comic.date),
+	);
+	if (state.dataLoaded) characterDates.set(character, dates);
 	return dates;
 }
 

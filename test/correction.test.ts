@@ -40,6 +40,7 @@ const detail: Page = {
 	descriptions: {},
 	arcs: [],
 	characters: [],
+	creators: [],
 };
 
 const rerun: Page = { ...detail, date: "1995-12-31", rerunOf: "1986-07-07" };

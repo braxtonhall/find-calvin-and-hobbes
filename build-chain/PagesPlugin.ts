@@ -1,7 +1,7 @@
 import fs from "fs";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
-import { Arc, Character, Collection, Comic } from "../src/types";
+import { Arc, Character, Collection, Comic, Creator } from "../src/types";
 import { computeDays } from "../src/days";
 import {
 	ARCS_PATH,
@@ -10,7 +10,9 @@ import {
 	buildArcPath,
 	buildCollectionPath,
 	buildComicPath,
+	buildCreatorPath,
 	COLLECTIONS_PATH,
+	CREATORS_PATH,
 	CREDITS_PATH,
 	HOME_PATH,
 } from "../src/routes";
@@ -20,6 +22,8 @@ import { collectionPageFrom } from "../src/pages/collection";
 import { collectionsPageFrom } from "../src/pages/collections";
 import { arcPageFrom } from "../src/pages/arc";
 import { arcsPageFrom } from "../src/pages/arcs";
+import { creatorPageFrom } from "../src/pages/creator";
+import { creatorsPageFrom } from "../src/pages/creators";
 import { buildDocumentHtml } from "../src/pages/shell";
 import { getSiteData, SiteData } from "./siteData";
 import {
@@ -61,6 +65,7 @@ function buildPageSource(data: SiteData): PageSource {
 		arcs: data.arcs,
 		arcsById: new Map(data.arcs.map((arc): [string, Arc] => [arc.id, arc])),
 		charactersById: new Map(data.characters.map((character): [string, Character] => [character.id, character])),
+		creatorsById: new Map(data.creators.map((creator): [string, Creator] => [creator.id, creator])),
 	};
 }
 
@@ -126,8 +131,9 @@ class PagesPlugin {
 					// a file there. This one is the books page, naming `/books` as where it lives; the app
 					// puts that in the bar. See `redirectedPath`.
 					emit(pageAssetPath(COLLECTIONS_PATH, layout), BOOKS_PATH, books);
-					const arcs = loadFeatures().arcs;
+					const { arcs, creators } = loadFeatures();
 					if (arcs) emitPage(ARCS_PATH, arcsPageFrom(source));
+					if (creators) emitPage(CREATORS_PATH, creatorsPageFrom(source));
 
 					const collectionPaths: string[] = [];
 					for (const collection of data.collectionIndex.collections) {
@@ -143,6 +149,13 @@ class PagesPlugin {
 						emitPage(routePath, arcPageFrom(source, arc.id));
 					}
 
+					const creatorPaths: string[] = [];
+					for (const creator of data.creators) {
+						const routePath = buildCreatorPath(creator.id);
+						creatorPaths.push(routePath);
+						emitPage(routePath, creatorPageFrom(source, creator.id));
+					}
+
 					// A rerun day has a page too, pointing at the strip that ran again on it.
 					for (const date of [...source.comicsByDate.keys(), ...source.reruns.keys()]) {
 						emitPage(buildComicPath(date), detailPageFrom(source, date));
@@ -154,9 +167,11 @@ class PagesPlugin {
 							CREDITS_PATH,
 							BOOKS_PATH,
 							...(arcs ? [ARCS_PATH] : []),
+							...(creators ? [CREATORS_PATH] : []),
 							LIBRARY_PATH,
 							...collectionPaths,
 							...arcPaths,
+							...creatorPaths,
 						]);
 						compilation.emitAsset("sitemap.xml", new sources.RawSource(sitemap));
 					}

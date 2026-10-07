@@ -146,6 +146,8 @@ pageLayout: ${PAGE_LAYOUT:-html}
 #   books    the Books tab of Collections
 #   arc      an arc's page
 #   arcs     the Arcs tab of Collections
+#   creator  a creator's page
+#   creators the Creators tab of Collections
 #   library  the bookmarks
 #   credits  the credits
 #
@@ -171,7 +173,8 @@ corrections:
 # text. A file named that isn't there stops the build. Every part must be given, and the optional
 # ones can be set to false instead, which leaves out what they are for and reads nothing.
 #
-#   comics      the strips: their transcripts, descriptions, and specials
+#   comics      the strips: their transcripts, descriptions, and specials, each special with a
+#               `title`, which a creator's page lists it by
 #   collections the books, as a list. `!Map [Import, ./folder/*.yaml]` imports every file a pattern
 #               matches, in the order of their paths. A book's `image`, its cover, is a URL, or a
 #               file as `!Path ./cover.png`, relative to the file it is written in, which the build
@@ -189,6 +192,18 @@ corrections:
 #               a strip's list of the days it reran, and @is:reused and @is:rerun
 #   compounds   the compound words the search keeps whole or splits beyond what it finds itself
 #   characters  each character's name by id, for @featuring: and the Featuring line under a strip
+#   creators    who made the strips: the Creators tab of Collections and each creator's page, the By
+#               line under a strip, and @by:. A mapping of `people`, each by id with a `name`, and
+#               optionally an `image` (a URL, or `!Path`, as a cover is) and a `link` out, like an
+#               encyclopedia's page; `runs`, a list of stretches of the dailies and Sundays (never a
+#               special) each credited `by` people,
+#               `from` and `to` as YYYYMMDD, both ends in and either left open, optionally only on
+#               the Sundays or only on the rest, as `days: sunday` or `days: daily`, a later run
+#               taking a strip from an earlier one; `strips`, single strips by date, each credited
+#               to people over any run; and `specials`, by id, each credited to people, which a
+#               creator's page lists under Other. A credit is an id, or `{ id,
+#               role }` for what they did, like `story` or `art`; a strip's own credit replaces its
+#               run's rather than adding to it
 #   comicImages the folder of the strips' images, relative to this file, each named by its date as
 #               YYYYMMDD, or by a special's id, with its own extension. A strip has an image if the
 #               folder has one for it, so they can be dropped in as they are found; a folder that
@@ -203,6 +218,7 @@ arcs: !Import ./calvin-and-hobbes/arcs.yaml
 reruns: !Import ./calvin-and-hobbes/reruns.yaml
 compounds: !Import ./calvin-and-hobbes/compounds.yaml
 characters: false
+creators: false
 comicImages: ./calvin-and-hobbes/comics
 
 # Whether the Sundays ran in colour and the dailies in black and white, a format of their own. When

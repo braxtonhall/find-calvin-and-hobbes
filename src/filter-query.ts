@@ -19,7 +19,7 @@ import { Comic } from "./types";
  * where a strip has only one value for it (`@year:1988 @year:1989` is either year), and for the
  * books (`@in:book1 @in:book3` is either book), and narrows for the tags (`@is:sunday @is:rerun` is
  * the Sundays that ran again) and the characters (`@featuring:susie @featuring:rosalyn` is the
- * strips with both).
+ * strips with both). The creators widen, as the books do (`@by:a @by:b` is either one's strips).
  */
 
 /**
@@ -37,6 +37,7 @@ export type Filter =
 	| { kind: "in"; collection: string }
 	| { kind: "is"; tag: string }
 	| { kind: "featuring"; character: string }
+	| { kind: "by"; creator: string }
 	| { kind: "date"; expression: DateExpression }
 	| { kind: "after"; bound: string }
 	| { kind: "before"; bound: string };
@@ -164,6 +165,7 @@ export function readFilter(name: string, value: string | undefined): Filter | nu
 
 	// A closed vocabulary of proper nouns, like the books.
 	if (name === "featuring") return knows("featuring", value) ? { kind: "featuring", character: value } : null;
+	if (name === "by") return knows("by", value) ? { kind: "by", creator: value } : null;
 
 	// `@date`, `@before` and `@after` all read a date the same way: year first, and with no
 	// requirement that the year be one the archive holds. See `DateSource` for both reasons.
@@ -253,6 +255,12 @@ function features(subject: string | Comic, character: string): boolean {
 	return (subject.characters ?? []).includes(character);
 }
 
+/** Whether the creator is credited on the strip, which only a strip can answer, as above. */
+function madeBy(subject: string | Comic, creator: string): boolean {
+	if (typeof subject === "string") return false;
+	return (subject.creators ?? []).some((credit) => credit.id === creator);
+}
+
 /**
  * Whether the row carries the tag.
  *
@@ -304,6 +312,8 @@ export function passesFilter(subject: string | Comic, filter: Filter, run?: Run)
 			return hasTag(subject, date, filter.tag, run);
 		case "featuring":
 			return features(subject, filter.character);
+		case "by":
+			return madeBy(subject, filter.creator);
 		case "after":
 			return date > filter.bound;
 		case "before":
