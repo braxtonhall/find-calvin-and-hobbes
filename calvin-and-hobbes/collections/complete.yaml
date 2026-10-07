@@ -2756,4 +2756,3 @@ extras:
   - "Front and reverse cover: The Calvin and Hobbes Tenth Anniversary Book"
   - Original colour endpaper illustrations in each volume
 image: !Path ./covers/complete.jpg
-aspect-ratio: 1.0

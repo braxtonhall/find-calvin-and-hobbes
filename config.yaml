@@ -22,11 +22,15 @@ favicon: https://static.wikitide.net/calvinandhobbeswiki/f/f3/CalvinAndHobbes.pn
 
 landing:
   # The banner over the home page's search box, and the link preview's image for a page with none of
-  # its own. Without one, the home page shows the name instead, and such a page previews no image.
+  # its own: a URL, or a file as `!Path ./banner.png`, relative to this file, which the build
+  # publishes under `static/`. Without one, the home page shows the name instead, and such a page
+  # previews no image.
   image: https://upload.wikimedia.org/wikipedia/commons/9/96/Calvin_and_Hobbes_title.png
   # What the banner says, for a reader who can't see it. The name, if left out.
   alt: Calvin and Hobbes
-  # Its size in pixels, so the page holds the right space for it while it loads. Both or neither.
+  # Its size in pixels, so the page holds the right space for it while it loads. Both or neither. A
+  # file's is read from the file where these are left out; a URL's is only what is given here, since
+  # the build never fetches it.
   width: 722
   height: 103
 
@@ -171,7 +175,9 @@ corrections:
 #   collections the books, as a list. `!Map [Import, ./folder/*.yaml]` imports every file a pattern
 #               matches, in the order of their paths. A book's `image`, its cover, is a URL, or a
 #               file as `!Path ./cover.png`, relative to the file it is written in, which the build
-#               publishes under `static/`
+#               publishes under `static/`. Its shape, which its pages hold the space for while it
+#               loads, is read from the file; a URL's is only its `aspect-ratio`, its width over its
+#               height, which a file's can be given too, to override it. An edition's cover is the same
 #   tuning      how the search scores a match, fitted to the strips, with notes on each value
 #   credits     the credits page, in Markdown
 #
@@ -186,7 +192,9 @@ corrections:
 #   comicImages the folder of the strips' images, relative to this file, each named by its date as
 #               YYYYMMDD, or by a special's id, with its own extension. A strip has an image if the
 #               folder has one for it, so they can be dropped in as they are found; a folder that
-#               isn't there yet has none. Without one, the strips are shown as their transcripts alone
+#               isn't there yet has none. Each image's shape is read from its file, for a strip's page
+#               to hold the space for it while it loads. Without one, the strips are shown as their
+#               transcripts alone
 comics: !Import ./calvin-and-hobbes/comics.yaml
 collections: !Map [Import, ./calvin-and-hobbes/collections/*.yaml]
 tuning: !Import ./calvin-and-hobbes/tuning.yaml
@@ -202,13 +210,6 @@ comicImages: ./calvin-and-hobbes/comics
 # and each book's `colour` says whether it printed its Sundays in colour, which its page and a
 # strip's list of books show. Off unless set to true, which leaves out all of these.
 colourSundays: true
-
-# A strip's shape, as its width over its height, which a strip's page holds the space for while its
-# image loads. A daily's is required. A Sunday's is the daily's, if left out. A strip with an
-# `aspect-ratio` of its own in comics.yaml, like a special, keeps that.
-aspectRatio:
-  daily: 3.098
-  sunday: 1.427
 
 # How the grid down the side of every page is drawn: how much each box stands for, and how much of
 # the run it shows at once, under `grid`. Without one, as here, every day of the run is a box, all

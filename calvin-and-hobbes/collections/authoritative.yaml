@@ -259,4 +259,3 @@ extras:
   - Back cover art
   - Seven-page elephant story
 image: !Path ./covers/authoritative.jpg
-aspect-ratio: 0.78

@@ -13,7 +13,6 @@ export interface DailyEntry {
 export interface SpecialEntry extends DailyEntry {
 	date: string;
 	sort?: number;
-	"aspect-ratio"?: number;
 }
 
 export interface ComicSource {

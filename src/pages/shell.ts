@@ -93,15 +93,16 @@ function pageDescription(page: Page): string | null {
  * goes on the origin alone.
  */
 function ownImage(page: Page, siteUrl: string): string | null {
-	const origin = siteUrl ? new URL(siteUrl).origin : "";
 	const own = page.view === "detail" ? page.comics.find((comic) => comic.image)?.image : undefined;
-	if (own) return origin + own;
-	// A cover can be a whole URL, served from elsewhere.
-	if (page.view === "collection" && page.collection) {
-		const cover = page.collection.image;
-		return /^https?:\/\//i.test(cover) ? cover : origin + cover;
-	}
+	if (own) return fromSite(own, siteUrl);
+	if (page.view === "collection" && page.collection) return fromSite(page.collection.image, siteUrl);
 	return null;
+}
+
+/** An image as a whole URL: a path the site publishes, on its origin. A cover or the banner may already be one. */
+function fromSite(image: string, siteUrl: string): string {
+	if (/^https?:\/\//i.test(image)) return image;
+	return (siteUrl ? new URL(siteUrl).origin : "") + image;
 }
 
 /** JSON inside a `<script>` ends at the first `</script`, wherever a transcript puts one. */
@@ -114,7 +115,8 @@ function buildHeadHtml(page: Page, options: DocumentOptions): string {
 	const description = pageDescription(page);
 	const own = ownImage(page, options.siteUrl);
 	// The banner stands in for a page with no picture of its own; with no banner either, there is no image.
-	const image = own ?? PAGE_CONFIG.landingImage;
+	const banner = PAGE_CONFIG.landingImage;
+	const image = own ?? (banner && fromSite(banner, options.siteUrl));
 	const url = options.siteUrl ? options.siteUrl + options.path : "";
 
 	const tags = [

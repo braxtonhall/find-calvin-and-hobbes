@@ -86,4 +86,3 @@ alterations: {}
 extras:
   - 36 Sunday strips chosen by Watterson with original sketches and commentary
 image: !Path ./covers/sundaypages.jpg
-aspect-ratio: 1.1593

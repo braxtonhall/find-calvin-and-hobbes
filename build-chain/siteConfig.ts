@@ -14,6 +14,8 @@ import type {
 import { StripKind, StripLinkSubject, stripLinks } from "../src/strip-links";
 import { CORRECTION_PAGES, correctionUrl } from "../src/correction-links";
 import { SUGGESTION_FIELDS, SuggestionFields, fillSuggestion } from "../src/suggestion-templates";
+import { imageSize } from "./imageSize";
+import { isUrl, staticPath } from "./staticFiles";
 
 export interface SiteConfig {
 	/** The site's address with no trailing slash — `https://example.com`, or `https://example.com/prefix` — which every page's path is appended to. */
@@ -116,7 +118,6 @@ interface RawConfig {
 	characters?: unknown;
 	comicImages?: unknown;
 	colourSundays?: unknown;
-	aspectRatio?: { daily?: unknown; sunday?: unknown } | null;
 	details?: Partial<Record<string, unknown>> | null;
 	theme?: Partial<Record<string, unknown>> | null;
 	search?: { suggestions?: unknown } | null;
@@ -575,28 +576,40 @@ function pixelSetting(value: unknown, name: string): number | null {
 	return Number(raw);
 }
 
-/** A strip's width over its height: a positive number, or `null` where it is not given. */
-function ratioSetting(value: unknown, name: string): number | null {
-	const raw = stringSetting(value, name);
-	if (!raw) return null;
-	const ratio = Number(raw);
-	if (!(ratio > 0)) throw new ConfigError((file) => `${name} in ${file} must be a positive number (got "${raw}")`);
-	return ratio;
+/**
+ * The banner's file, where `config.yaml` names one with `!Path` rather than giving a URL, or `null`.
+ * A value that is neither stops the build.
+ */
+function landingFile(landing: RawConfig["landing"]): string | null {
+	const image = stringSetting(landing?.image, "landing.image");
+	if (!image || isUrl(image)) return null;
+	if (path.isAbsolute(image)) return image;
+	throw new ConfigError((file) => `landing.image in ${file} must be a URL, or a file as !Path ./banner.png`);
 }
 
-function loadAspectRatio(aspectRatio: RawConfig["aspectRatio"]): PageConfig["aspectRatio"] {
-	const daily = ratioSetting(aspectRatio?.daily, "aspectRatio.daily");
-	if (daily === null) throw new ConfigError((file) => `${file} must give a daily strip's shape, as aspectRatio.daily`);
-	return { daily, sunday: ratioSetting(aspectRatio?.sunday, "aspectRatio.sunday") ?? daily };
+/** The banner's file, and where the build publishes it, from the mount; `null` for a banner that is a URL, or none. */
+export function loadLandingFile(config?: string): { file: string; published: string } | null {
+	const file = naming(config, () => landingFile(readConfig(config).landing));
+	return file ? { file, published: staticPath(file) } : null;
 }
 
+/** The banner, as the pages link to it: a URL as it is, and a published file from the mount. */
+function loadLandingImage(landing: RawConfig["landing"], config?: string): string | null {
+	const file = landingFile(landing);
+	if (file) return `${loadSiteConfig(config)?.basePath ?? "/"}${staticPath(file)}`;
+	return stringSetting(landing?.image, "landing.image") || null;
+}
+
+/** The banner's size: as `config.yaml` gives it, or else read from its file. A URL's is only what is given. */
 function loadLandingSize(landing: RawConfig["landing"]): PageConfig["landingSize"] {
 	const width = pixelSetting(landing?.width, "landing.width");
 	const height = pixelSetting(landing?.height, "landing.height");
 	if ((width === null) !== (height === null)) {
 		throw new ConfigError((file) => `landing.width and landing.height in ${file} go together: give both or neither`);
 	}
-	return width !== null && height !== null ? { width, height } : null;
+	if (width !== null && height !== null) return { width, height };
+	const file = landingFile(landing);
+	return file ? imageSize(file) : null;
 }
 
 /** The colours `config.yaml` names, by their role on the page. See `theme.ts`, which draws the rest from them. */
@@ -794,7 +807,7 @@ function pageConfig(raw: RawConfig, config?: string): PageConfig {
 		series,
 		description: stringSetting(raw.description, "description") || null,
 		favicon: stringSetting(raw.favicon, "favicon") || null,
-		landingImage: stringSetting(raw.landing?.image, "landing.image") || null,
+		landingImage: loadLandingImage(raw.landing, config),
 		landingAlt: stringSetting(raw.landing?.alt, "landing.alt") || name,
 		landingSize: loadLandingSize(raw.landing),
 		themeColor: loadThemeSettings(raw.theme).main,
@@ -802,7 +815,6 @@ function pageConfig(raw: RawConfig, config?: string): PageConfig {
 		corrections: loadCorrectionTemplates(raw.corrections),
 		suggestions: loadSuggestions(raw.search),
 		colourSundays: flagSetting(raw.colourSundays, "colourSundays", false),
-		aspectRatio: loadAspectRatio(raw.aspectRatio),
 		grid: loadGrid(raw.grid),
 		...loadFeatures(config),
 	};
@@ -867,9 +879,9 @@ export function loadCommitSha(): string {
  * A path on the URL mounts the site below the origin's root — `https://user.github.io/repo` is
  * what a GitHub project page is served at — and the build writes every address from there.
  */
-export function loadSiteConfig(): SiteConfig | null {
-	const { url: setting } = readConfig();
-	const raw = naming(undefined, () => stringSetting(setting, "url"));
+export function loadSiteConfig(config?: string): SiteConfig | null {
+	const { url: setting } = readConfig(config);
+	const raw = naming(config, () => stringSetting(setting, "url"));
 	if (!raw) {
 		return null;
 	}

@@ -218,7 +218,7 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 	return `<div class="collection-container">
 		${buildNavButtons(canGoBack)}
 		<div class="collection-header">
-			<div class="collection-cover" style="aspect-ratio: ${collection.aspectRatio}">
+			<div class="collection-cover"${collection.aspectRatio ? ` style="aspect-ratio: ${collection.aspectRatio}"` : ""}>
 				<img src="${imageUrl}" alt="${escHtml(collection.name)} cover" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />
 			</div>
 			<div class="collection-info">

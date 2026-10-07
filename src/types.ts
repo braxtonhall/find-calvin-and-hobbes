@@ -5,6 +5,7 @@ export interface Comic {
 	image?: string;
 	id?: string;
 	sort?: number;
+	/** The image's width over its height, read from its file by the build. Only with an image. */
 	aspectRatio?: number;
 	appearances?: Appearance[];
 	/** The arcs the strip belongs to, by id. None does to more than one today, but nothing forbids it. */
@@ -28,6 +29,8 @@ export interface Edition {
 	pub_year?: number;
 	/** Its own cover, when it has one; otherwise it wears the collection's. */
 	image?: string;
+	/** Its own cover's width over its height: `aspect-ratio` in its book's file, else read from the file. */
+	aspectRatio?: number;
 }
 
 export interface Collection {
@@ -47,6 +50,7 @@ export interface Collection {
 	alterations: Record<string, string>;
 	specials: Record<string, string>;
 	links?: { title: string; href: string }[];
+	/** The cover's width over its height: `aspect-ratio` in the book's file, else read from the cover's file. */
 	aspectRatio?: number;
 	editions?: Record<string, Edition>;
 }

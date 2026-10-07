@@ -256,6 +256,8 @@ interface Printing {
 	name: string;
 	year: number;
 	image: string;
+	/** The cover's width over its height, where the build knows it. */
+	aspectRatio?: number;
 	/** Where the strip is, one per volume it is in: the volume, when the book has them, and the pages. */
 	places: { volume?: number; pages: number[] }[];
 }
@@ -284,6 +286,8 @@ function buildPrintings(
 					: collection.name,
 				year: edition?.pub_year ?? collection.pub_year,
 				image: edition?.image ?? collection.image,
+				// An edition's own cover has its own shape, known or not.
+				aspectRatio: edition?.image ? edition.aspectRatio : collection.aspectRatio,
 				places: [],
 			};
 			printingsByKey.set(key, printing);
@@ -327,11 +331,8 @@ function buildBookHtml(
 	const { collection } = printing;
 	const isBlackAndWhite = PAGE_CONFIG.colourSundays && isSunday && !collection.colour;
 	const alteration = collection.alterations && collection.alterations[alterationKey];
-	// The collection's ratio holds the space until the cover loads; an edition's own cover may differ.
-	const ratio =
-		printing.image === collection.image && collection.aspectRatio
-			? ` style="aspect-ratio: ${collection.aspectRatio}"`
-			: "";
+	// The cover's ratio holds the space until it loads.
+	const ratio = printing.aspectRatio ? ` style="aspect-ratio: ${printing.aspectRatio}"` : "";
 	// One short line for the label under the cover: `Bk 1 · p. 357`, the volume shortened to fit. An
 	// arc's label names only the page its first strip is on; the popup has the rest.
 	const places =
@@ -408,11 +409,6 @@ export function buildAppearancesSectionHtml(
 	return buildPrintingsSectionHtml(printings, null, alterationKey, isSunday);
 }
 
-function getAspectRatio(comic: Comic, isSunday: boolean): number {
-	if (comic.aspectRatio) return comic.aspectRatio;
-	return isSunday ? PAGE_CONFIG.aspectRatio.sunday : PAGE_CONFIG.aspectRatio.daily;
-}
-
 function describeImage(description: string | undefined, dateFormatted: string): string {
 	return description ? description : `Comic from ${dateFormatted}`;
 }
@@ -486,7 +482,8 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 
 		const readLinkHtml = buildStripLinksHtml(page, comic);
 
-		const aspectRatio = getAspectRatio(comic, isSunday);
+		// The image's ratio holds the space until it loads.
+		const ratio = comic.aspectRatio ? ` style="aspect-ratio: ${comic.aspectRatio}"` : "";
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
 		const runsHtml = buildRunsHtml(page, date, comic);
 		const collectionsHtml = buildPrintingsSectionHtml(
@@ -497,7 +494,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 		);
 
 		bodies += `<div class="detail-comic${illustratedClass}" data-comic-key="${escHtml(comic.id || date)}">
-				${comic.image ? `<div class="detail-image-wrapper" style="aspect-ratio: ${aspectRatio}"><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}" alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
+				${comic.image ? `<div class="detail-image-wrapper"${ratio}><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}" alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
 			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
 			${transcriptHtml}
 			${readLinkHtml}

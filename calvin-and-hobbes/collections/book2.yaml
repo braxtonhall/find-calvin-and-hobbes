@@ -140,4 +140,3 @@ extras:
   - Filler B&W vignettes
   - Foreword by Pat Oliphant
 image: !Path ./covers/book2.jpg
-aspect-ratio: 0.9367

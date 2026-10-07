@@ -141,4 +141,3 @@ extras:
   - Filler B&W vignettes
   - Foreword by Garry Trudeau
 image: !Path ./covers/book1.png
-aspect-ratio: 0.9347

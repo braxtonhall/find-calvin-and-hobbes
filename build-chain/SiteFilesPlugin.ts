@@ -2,13 +2,13 @@ import fs from "fs";
 import path from "path";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
-import { watchConfigIn, loadSiteConfig } from "./siteConfig";
+import { watchConfigIn, loadLandingFile, loadSiteConfig } from "./siteConfig";
 
 const PLUGIN_NAME = "SiteFilesPlugin";
 
 /**
  * Emits the site's static files that depend on `SITE_URL`: `robots.txt` and the `CNAME` file for a
- * GitHub Pages custom domain. Reads `config.yaml` and `.env` fresh on every compilation and watches
+ * GitHub Pages custom domain. And the home page's banner, where `config.yaml` names it by its path. Reads `config.yaml` and `.env` fresh on every compilation and watches
  * them, so `--watch` rebuilds when the configured URL changes. When no `SITE_URL` is set, the sitemap reference and
  * `CNAME` are omitted and the site deploys to the default `*.github.io`. The sitemap itself is
  * `PagesPlugin`'s, since it is a list of the pages that plugin writes.
@@ -47,6 +47,12 @@ class SiteFilesPlugin {
 
 					if (config && basePath === "/") {
 						compilation.emitAsset("CNAME", new sources.RawSource(config.host));
+					}
+
+					const landing = loadLandingFile();
+					if (landing) {
+						compilation.fileDependencies.add(landing.file);
+						compilation.emitAsset(landing.published, new sources.RawSource(fs.readFileSync(landing.file)));
 					}
 				},
 			);
