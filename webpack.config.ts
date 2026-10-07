@@ -5,15 +5,17 @@ import CopyWebpackPlugin from "copy-webpack-plugin";
 import SiteFilesPlugin from "./build-chain/SiteFilesPlugin";
 import YamlToJsonPlugin from "./build-chain/YamlToJsonPlugin";
 import PagesPlugin from "./build-chain/PagesPlugin";
-import { loadSiteConfig } from "./build-chain/siteConfig";
+import { loadComicImages, loadSiteConfig } from "./build-chain/siteConfig";
+import { COMIC_IMAGES_PATH } from "./build-chain/exportComicsJson";
 
 const srcDir = path.join(__dirname, "src");
 const staticDir = path.join(__dirname, "static");
 const outputDir = path.join(__dirname, "dist");
 
 // Read once, here: the bundle is compiled with the mount as a literal, so a change to it needs a
-// fresh `webpack` run anyway.
+// fresh `webpack` run anyway, as does naming another folder for the strips' images.
 const basePath = loadSiteConfig()?.basePath ?? "/";
+const comicImages = loadComicImages();
 
 module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configuration => ({
 	devtool: options.mode !== "production" ? "source-map" : undefined,
@@ -98,9 +100,15 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 		// The mount, for the app's addresses; see `src/base-path.ts`.
 		new webpack.DefinePlugin({ __BASE_PATH__: JSON.stringify(basePath) }),
 		new YamlToJsonPlugin(),
-		new CopyWebpackPlugin({
-			patterns: [{ from: "assets", to: "assets", context: path.join(__dirname) }],
-		}),
+		// The strips' images, from the folder the configuration names, if it names one. The covers are
+		// published by `YamlToJsonPlugin`, beside the books that name them.
+		...(comicImages
+			? [
+					new CopyWebpackPlugin({
+						patterns: [{ from: comicImages, to: COMIC_IMAGES_PATH, noErrorOnMissing: true }],
+					}),
+				]
+			: []),
 		// A stylesheet of its own rather than one injected by the script: a prerendered page has
 		// content to paint before the script runs, and it should be painted styled.
 		new MiniCssExtractPlugin({ filename: "[name].css" }),

@@ -1,8 +1,7 @@
 import fs from "fs";
-import path from "path";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
-import { Arc, Collection, Comic } from "../src/types";
+import { Arc, Character, Collection, Comic } from "../src/types";
 import { computeDays } from "../src/days";
 import {
 	ARCS_PATH,
@@ -23,7 +22,14 @@ import { arcPageFrom } from "../src/pages/arc";
 import { arcsPageFrom } from "../src/pages/arcs";
 import { buildDocumentHtml } from "../src/pages/shell";
 import { getSiteData, SiteData } from "./siteData";
-import { configPath, loadCommitSha, loadFeatures, loadPageLayout, loadSiteConfig, pageAssetPath } from "./siteConfig";
+import {
+	watchConfigIn,
+	loadCommitSha,
+	loadFeatures,
+	loadPageLayout,
+	loadSiteConfig,
+	pageAssetPath,
+} from "./siteConfig";
 import { buildSitemapXml } from "./sitemap";
 
 const PLUGIN_NAME = "PagesPlugin";
@@ -54,6 +60,7 @@ function buildPageSource(data: SiteData): PageSource {
 		descriptions: new Map(Object.entries(data.descriptions)),
 		arcs: data.arcs,
 		arcsById: new Map(data.arcs.map((arc): [string, Arc] => [arc.id, arc])),
+		charactersById: new Map(data.characters.map((character): [string, Character] => [character.id, character])),
 	};
 }
 
@@ -78,8 +85,7 @@ class PagesPlugin {
 
 		compiler.hooks.thisCompilation.tap(PLUGIN_NAME, (compilation: Compilation) => {
 			compilation.fileDependencies.add(templatePath);
-			compilation.fileDependencies.add(path.join(process.cwd(), ".env"));
-			compilation.fileDependencies.add(configPath());
+			watchConfigIn(compilation);
 
 			compilation.hooks.processAssets.tap(
 				{

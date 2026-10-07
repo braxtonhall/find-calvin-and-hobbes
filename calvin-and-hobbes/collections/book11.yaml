@@ -175,5 +175,5 @@ alterations: {}
 extras:
   - Front cover art
   - Back cover art — Calvin and Hobbes hugging
-image: assets/book11.png
+image: !Path ./covers/book11.png
 aspect-ratio: 1.3916

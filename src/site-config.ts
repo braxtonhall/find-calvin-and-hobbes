@@ -64,6 +64,8 @@ export interface PageConfig {
 	arcs: boolean;
 	/** Whether the site has reruns, from `reruns.yaml`: the days' pages, and `@is:reused` and `@is:rerun`. */
 	reruns: boolean;
+	/** Whether the site has characters, from the file `config.yaml` names: `@featuring:` and a strip's Featuring line. */
+	characters: boolean;
 	/**
 	 * Whether the Sundays ran in colour and the dailies in black and white: whether there are
 	 * `@is:sunday` and `@is:daily` and the bar's Format field, and whether a book's `colour` — that

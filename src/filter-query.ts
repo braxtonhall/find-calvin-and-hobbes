@@ -18,7 +18,8 @@ import { Comic } from "./types";
  * under `@not` — is `boolean-query.ts`: different fields intersect, and repeating a field widens
  * where a strip has only one value for it (`@year:1988 @year:1989` is either year), and for the
  * books (`@in:book1 @in:book3` is either book), and narrows for the tags (`@is:sunday @is:rerun` is
- * the Sundays that ran again).
+ * the Sundays that ran again) and the characters (`@featuring:susie @featuring:rosalyn` is the
+ * strips with both).
  */
 
 /**
@@ -35,6 +36,7 @@ export type Filter =
 	| { kind: "weekday"; weekday: number }
 	| { kind: "in"; collection: string }
 	| { kind: "is"; tag: string }
+	| { kind: "featuring"; character: string }
 	| { kind: "date"; expression: DateExpression }
 	| { kind: "after"; bound: string }
 	| { kind: "before"; bound: string };
@@ -160,6 +162,9 @@ export function readFilter(name: string, value: string | undefined): Filter | nu
 
 	if (name === "is") return knows("is", value) ? { kind: "is", tag: value } : null;
 
+	// A closed vocabulary of proper nouns, like the books.
+	if (name === "featuring") return knows("featuring", value) ? { kind: "featuring", character: value } : null;
+
 	// `@date`, `@before` and `@after` all read a date the same way: year first, and with no
 	// requirement that the year be one the archive holds. See `DateSource` for both reasons.
 	// `@date:1988/9/3` is September 3rd, never March 9th, and `@after:1984` is a real bound.
@@ -240,6 +245,15 @@ function printedIn(subject: string | Comic, collection: string): boolean {
 }
 
 /**
+ * Whether the strip features the character, which only a strip can answer, as `printedIn` says of
+ * a book. A strip that lists no characters features none.
+ */
+function features(subject: string | Comic, character: string): boolean {
+	if (typeof subject === "string") return false;
+	return (subject.characters ?? []).includes(character);
+}
+
+/**
  * Whether the row carries the tag.
  *
  * `sunday` and `daily` are about the day, so a bare date answers them. The rest need more, and a
@@ -288,6 +302,8 @@ export function passesFilter(subject: string | Comic, filter: Filter, run?: Run)
 			return printedIn(subject, filter.collection);
 		case "is":
 			return hasTag(subject, date, filter.tag, run);
+		case "featuring":
+			return features(subject, filter.character);
 		case "after":
 			return date > filter.bound;
 		case "before":

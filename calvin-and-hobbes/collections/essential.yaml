@@ -253,5 +253,5 @@ extras:
   - Back cover art — giant Calvin rampaging through Chagrin Falls
   - Foreword by Charles M. Schulz
   - A Nauseous Nocturne (illustrated poem)
-image: assets/essential.png
+image: !Path ./covers/essential.png
 aspect-ratio: 0.7789

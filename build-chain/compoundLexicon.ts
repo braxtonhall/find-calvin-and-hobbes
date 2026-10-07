@@ -1,5 +1,5 @@
 /**
- * The compound lexicon of `src/compounds.ts`, read from `compounds.yaml` and the archive.
+ * The compound lexicon of `src/compounds.ts`, read from the archive and the compounds `config.yaml` gives.
  *
  * `goodnight` and `good night` are the same phrase to a reader and two unrelated tokens to
  * the engine, which is how `aren't you going to say goodnight to hobbes` reaches a strip
@@ -16,17 +16,15 @@
  * and the frequent ones (`all the`, `in to`, `may be`, `a way`) would wreck any joining
  * rule. A splitting rule never sees them.
  *
- * `compounds.yaml` adjusts the rule from both sides: the words it must keep whole, and the
- * compounds it cannot find, split by hand. Both are optional, and so is the file. The lexicon
+ * The compounds `config.yaml` gives adjust the rule from both sides: the words it must keep whole, and the
+ * compounds it cannot find, split by hand. Both are optional, and so are the compounds, which can be false. The lexicon
  * is derived on every build rather than checked in, so a corrected transcript is reflected the
  * next time the site is built.
  */
-import fs from "fs";
-import path from "path";
-import yaml from "js-yaml";
 import type { LoaderContext } from "webpack";
 import type { CompoundRelation } from "../src/compounds";
 import { loadComicSource } from "./comicSource";
+import { watchConfig, loadOptionalPart, configName } from "./siteConfig";
 
 const WORD_PATTERN = /[\p{L}\p{N}']+/gu;
 
@@ -51,14 +49,6 @@ export interface Counts {
 	bigrams: Map<string, number>;
 }
 
-function defaultProjectDir(): string {
-	return path.join(__dirname, "..");
-}
-
-export function compoundsPath(projectDir = defaultProjectDir()): string {
-	return path.join(projectDir, "compounds.yaml");
-}
-
 /** A single lowercase word, as the tokeniser would produce it. */
 function isWord(value: string): boolean {
 	return (
@@ -66,24 +56,26 @@ function isWord(value: string): boolean {
 	);
 }
 
-/** `compounds.yaml`, checked; an empty one where the archive has none. */
-export function readCompoundsFile(projectDir = defaultProjectDir()): CompoundsFile {
-	const file = compoundsPath(projectDir);
-	if (!fs.existsSync(file)) return { keepWhole: new Set(), compounds: [] };
-
-	// `loadAll`, because `load` throws on a file with nothing but comments in it.
-	const [raw = {}] = yaml.loadAll(fs.readFileSync(file, "utf8")) as Record<string, unknown>[];
-	if (typeof raw !== "object" || Array.isArray(raw)) throw new Error("compounds.yaml must be a mapping");
+/**
+ * The compounds `config.yaml` gives, checked; none where it sets them to false, or imports a file with
+ * nothing in it.
+ */
+export function readCompoundsFile(config?: string): CompoundsFile {
+	const value = loadOptionalPart("compounds", config);
+	if (value === false || value === null) return { keepWhole: new Set(), compounds: [] };
+	const raw = value as Record<string, unknown>;
+	if (typeof raw !== "object" || Array.isArray(raw))
+		throw new Error(`compounds in ${configName(config)} must be a mapping, or false`);
 	for (const key of Object.keys(raw)) {
-		if (key !== "keepWhole" && key !== "compounds") throw new Error(`compounds.yaml has an unknown setting, ${key}`);
+		if (key !== "keepWhole" && key !== "compounds") throw new Error(`compounds has an unknown setting, ${key}`);
 	}
 
 	const keepWhole = new Set<string>();
 	const rawKeep = raw.keepWhole ?? [];
-	if (!Array.isArray(rawKeep)) throw new Error("keepWhole in compounds.yaml must be a list of words");
+	if (!Array.isArray(rawKeep)) throw new Error("keepWhole in compounds must be a list of words");
 	for (const word of rawKeep) {
 		if (typeof word !== "string" || !isWord(word) || word.includes(" ")) {
-			throw new Error(`keepWhole in compounds.yaml lists ${JSON.stringify(word)}, which is not one lowercase word`);
+			throw new Error(`keepWhole in compounds lists ${JSON.stringify(word)}, which is not one lowercase word`);
 		}
 		keepWhole.add(word);
 	}
@@ -92,14 +84,14 @@ export function readCompoundsFile(projectDir = defaultProjectDir()): CompoundsFi
 	const seen = new Set<string>();
 	const rawGroups = (raw.compounds ?? {}) as Record<string, unknown>;
 	if (typeof rawGroups !== "object" || Array.isArray(rawGroups)) {
-		throw new Error("compounds in compounds.yaml must be a mapping of closed, balanced and open");
+		throw new Error("compounds in compounds must be a mapping of closed, balanced and open");
 	}
 	for (const [group, entries] of Object.entries(rawGroups)) {
 		const preference = PREFERENCES.find((candidate) => candidate === group);
-		if (!preference) throw new Error(`compounds in compounds.yaml has an unknown group, ${group}`);
+		if (!preference) throw new Error(`compounds in compounds has an unknown group, ${group}`);
 		if (entries === null) continue;
 		if (typeof entries !== "object" || Array.isArray(entries)) {
-			throw new Error(`compounds.${group} in compounds.yaml must map each compound to its parts`);
+			throw new Error(`compounds.${group} in compounds must map each compound to its parts`);
 		}
 		for (const [whole, written] of Object.entries(entries as Record<string, unknown>)) {
 			const parts = typeof written === "string" ? written.split(" ") : [];
@@ -110,12 +102,10 @@ export function readCompoundsFile(projectDir = defaultProjectDir()): CompoundsFi
 				!isWord(written) ||
 				parts.length < 2
 			) {
-				throw new Error(
-					`compounds.${group}.${whole} in compounds.yaml must be one lowercase word split into two or more`,
-				);
+				throw new Error(`compounds.${group}.${whole} in compounds must be one lowercase word split into two or more`);
 			}
-			if (seen.has(whole)) throw new Error(`compounds.yaml lists ${whole} more than once`);
-			if (keepWhole.has(whole)) throw new Error(`compounds.yaml both splits ${whole} and keeps it whole`);
+			if (seen.has(whole)) throw new Error(`compounds lists ${whole} more than once`);
+			if (keepWhole.has(whole)) throw new Error(`compounds both splits ${whole} and keeps it whole`);
 			seen.add(whole);
 			compounds.push({ whole, parts, preference });
 		}
@@ -134,8 +124,8 @@ function tokenise(text: string): string[] {
  * Document frequency, not term frequency: one strip counts once however often it repeats a
  * word, matching how `countDocument` builds the corpus the scorer reads.
  */
-export function countCorpus(projectDir = defaultProjectDir()): Counts {
-	const source = loadComicSource(path.join(projectDir, "comics.yaml"));
+export function countCorpus(config?: string): Counts {
+	const source = loadComicSource(config);
 	const words = new Map<string, number>();
 	const bigrams = new Map<string, number>();
 
@@ -155,9 +145,9 @@ export function countCorpus(projectDir = defaultProjectDir()): Counts {
 }
 
 /** Every compound the search splits, by its closed form, in alphabetical order. */
-export function loadCompoundRelations(projectDir = defaultProjectDir()): [string, CompoundRelation][] {
-	const { keepWhole, compounds } = readCompoundsFile(projectDir);
-	const { words, bigrams } = countCorpus(projectDir);
+export function loadCompoundRelations(config?: string): [string, CompoundRelation][] {
+	const { keepWhole, compounds } = readCompoundsFile(config);
+	const { words, bigrams } = countCorpus(config);
 	const lexicon = new Map<string, CompoundRelation>();
 
 	for (const [closed, closedDf] of words) {
@@ -188,10 +178,8 @@ export function loadCompoundRelations(projectDir = defaultProjectDir()): [string
  * the lexicon as a literal, rebuilt under `--watch` when the archive or `compounds.yaml` changes.
  */
 export default function compoundLexiconLoader(this: LoaderContext<unknown>): string {
-	const projectDir = this.rootContext;
-	this.addDependency(path.join(projectDir, "comics.yaml"));
-	this.addDependency(compoundsPath(projectDir));
-	const entries = JSON.stringify(loadCompoundRelations(projectDir));
+	watchConfig(this);
+	const entries = JSON.stringify(loadCompoundRelations());
 	return [
 		`const entries = ${entries};`,
 		`export const COMPOUND_RELATIONS = new Map(entries);`,

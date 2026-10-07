@@ -16,5 +16,5 @@ extras:
   - Two paperback books in archival slipcase
   - Cover art selected by Bill Watterson
   - Bonus gallery of stories, poems, and archival art
-image: assets/compendium7.jpg
+image: !Path ./covers/compendium7.jpg
 aspect-ratio: 0.8021

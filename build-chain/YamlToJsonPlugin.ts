@@ -1,8 +1,8 @@
 import fs from "fs";
-import path from "path";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
 import { exportArcsJson, loadArcs } from "./arcs";
+import { loadCharacters } from "./characters";
 import { loadCollectionData } from "./collectionPages";
 import { loadComicSource } from "./comicSource";
 import { exportComicsJson } from "./exportComicsJson";
@@ -10,26 +10,9 @@ import { exportDescriptions } from "./exportDescriptions";
 import { generateCollectionIndex } from "./generateCollectionIndex";
 import { exportRerunsJson } from "./reruns";
 import { setSiteData } from "./siteData";
-import { loadSiteConfig } from "./siteConfig";
+import { watchConfigIn, loadComicImages, loadSiteConfig } from "./siteConfig";
 
 const PLUGIN_NAME = "YamlToJsonPlugin";
-
-/**
- * Tells webpack which data files this plugin read, so `--watch` rebuilds when they change.
- * The collections directory itself is a dependency too, so added and removed files are noticed.
- */
-function watchDataFiles(compilation: Compilation, projectDir: string): void {
-	const collectionsDir = path.join(projectDir, "collections");
-	compilation.fileDependencies.add(path.join(projectDir, "comics.yaml"));
-	compilation.fileDependencies.add(path.join(projectDir, "reruns.yaml"));
-	compilation.fileDependencies.add(path.join(projectDir, "arcs.yaml"));
-	compilation.contextDependencies.add(collectionsDir);
-	for (const file of fs.readdirSync(collectionsDir)) {
-		if (file.endsWith(".yaml")) {
-			compilation.fileDependencies.add(path.join(collectionsDir, file));
-		}
-	}
-}
 
 class YamlToJsonPlugin {
 	apply(compiler: Compiler): void {
@@ -40,24 +23,35 @@ class YamlToJsonPlugin {
 					stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
 				},
 				() => {
-					const projectDir = compiler.context;
-					watchDataFiles(compilation, projectDir);
-					const collectionData = loadCollectionData(projectDir);
+					// Which data files this read, so `--watch` rebuilds when they change: the configuration and
+					// everything it imports, and the folders it imports the books from.
+					watchConfigIn(compilation);
+					const collectionData = loadCollectionData();
+					// The strips' images, which are found by looking in their folder, there or not, so an image
+					// dropped in or taken out is noticed.
+					const comicImages = loadComicImages();
+					if (comicImages) compilation.contextDependencies.add(comicImages);
+					// The covers, each where the books link to it. Watched, since the configuration names them by path.
+					for (const [published, file] of collectionData.files) {
+						compilation.fileDependencies.add(file);
+						compilation.emitAsset(published, new sources.RawSource(fs.readFileSync(file)));
+					}
 					// The images are named from the mount, so the app can show them from any page as they are.
 					const basePath = loadSiteConfig()?.basePath ?? "/";
 
-					const source = loadComicSource(path.join(projectDir, "comics.yaml"));
-					const arcs = loadArcs(projectDir, source, collectionData);
+					const source = loadComicSource();
+					const arcs = loadArcs(source, collectionData);
 					const arcsJson = exportArcsJson(arcs);
 
-					const comicsJson = exportComicsJson(projectDir, collectionData, basePath, arcs);
+					const characters = loadCharacters();
+					const comicsJson = exportComicsJson(collectionData, basePath, arcs, characters);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 
-					// Not emitted: the app has these three inside its script. See `bundledData.ts`.
-					const rerunsJson = exportRerunsJson(projectDir, source);
+					// Not emitted: the app has these, and the characters, inside its script. See `bundledData.ts`.
+					const rerunsJson = exportRerunsJson(source);
 					const collectionIndexJson = generateCollectionIndex(collectionData, basePath);
 
-					const descriptionsJson = exportDescriptions(projectDir);
+					const descriptionsJson = exportDescriptions();
 					compilation.emitAsset("descriptions.json", new sources.RawSource(descriptionsJson));
 
 					setSiteData(compilation, {
@@ -66,6 +60,7 @@ class YamlToJsonPlugin {
 						collectionIndex: JSON.parse(collectionIndexJson),
 						descriptions: JSON.parse(descriptionsJson),
 						arcs: JSON.parse(arcsJson),
+						characters,
 					});
 				},
 			);

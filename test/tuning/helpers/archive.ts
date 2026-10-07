@@ -1,4 +1,3 @@
-import path from "path";
 import { loadComicSource } from "../../../build-chain/comicSource";
 import { state } from "../../../src/state";
 import { Comic } from "../../../src/types";
@@ -9,8 +8,6 @@ export interface Archive {
 	descriptions: Map<string, string>;
 }
 
-const PROJECT_DIR = process.cwd();
-
 function formatDate(key: string): string {
 	return `${key.slice(0, 4)}-${key.slice(4, 6)}-${key.slice(6, 8)}`;
 }
@@ -20,7 +17,7 @@ let realArchive: Archive | null = null;
 export function loadRealArchive(): Archive {
 	if (realArchive) return realArchive;
 
-	const source = loadComicSource(path.join(PROJECT_DIR, "comics.yaml"));
+	const source = loadComicSource();
 	const comics: Comic[] = [];
 	const descriptions = new Map<string, string>();
 

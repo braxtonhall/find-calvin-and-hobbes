@@ -6,16 +6,17 @@ A searchable, browsable archive of every Calvin and Hobbes comic strip (1985–1
 
 Type words to search transcripts. Type `@` in the search box for the list of filters.
 
-| Filter     | Example                        | Meaning                                                   |
-| ---------- | ------------------------------ | --------------------------------------------------------- |
-| `@year:`   | `@year:1990`, `@year:88`       | strips from that year, or any year ending in those digits |
-| `@month:`  | `@month:8`, `@month:august`    | that month, in every year                                 |
-| `@day:`    | `@day:3`, `@day:saturday`      | a day of the month, or a day of the week                  |
-| `@date:`   | `@date:1988`, `@date:1988/9/3` | a date, at whatever precision you give                    |
-| `@before:` | `@before:1990`                 | strips before that date, excluding it                     |
-| `@after:`  | `@after:1987`                  | strips after that date, excluding it                      |
-| `@in:`     | `@in:book3`, `@in:complete`    | strips printed in that book                               |
-| `@is:`     | `@is:sunday`, `@is:rerun`      | strips with that tag                                      |
+| Filter        | Example                        | Meaning                                                   |
+| ------------- | ------------------------------ | --------------------------------------------------------- |
+| `@year:`      | `@year:1990`, `@year:88`       | strips from that year, or any year ending in those digits |
+| `@month:`     | `@month:8`, `@month:august`    | that month, in every year                                 |
+| `@day:`       | `@day:3`, `@day:saturday`      | a day of the month, or a day of the week                  |
+| `@date:`      | `@date:1988`, `@date:1988/9/3` | a date, at whatever precision you give                    |
+| `@before:`    | `@before:1990`                 | strips before that date, excluding it                     |
+| `@after:`     | `@after:1987`                  | strips after that date, excluding it                      |
+| `@in:`        | `@in:book3`, `@in:complete`    | strips printed in that book                               |
+| `@is:`        | `@is:sunday`, `@is:rerun`      | strips with that tag                                      |
+| `@featuring:` | `@featuring:susie`             | strips featuring that character                           |
 
 The tags are `sunday` and `daily` (the colour Sundays and the black-and-white dailies), `reused`
 (a strip on the day it first ran, where it was later rerun), `rerun` (a strip on a day it ran
@@ -28,7 +29,8 @@ Different filters narrow. Repeating a filter widens where a strip can have only 
 books, which mostly share no strips: `@in:book1 @in:book3` is the strips printed in either book
 (`@in:book1 @and @in:book3` is both). Writing `@or` between some of them changes nothing:
 `@year:1988 @or @year:1989 @year:1990` is any of the three years. Repeating a tag narrows: `@is:sunday @is:rerun` is the Sundays
-that ran again. `@day:1 @day:monday` is the Mondays that fell
+that ran again, and so does repeating a character: `@featuring:susie @featuring:rosalyn` is the
+strips with both. `@day:1 @day:monday` is the Mondays that fell
 on the first, because a day of the month and a day of the week are different things. Filters combine
 with ordinary words, so `@year:1988 snowman` searches 1988 alone.
 
@@ -94,52 +96,27 @@ pages are written by `build-chain/PagesPlugin.ts`.
 
 ### Configuration
 
-`config.yaml` is where the site is configured: its name, the home page's banner, its colours, and
-where the Read and License links under a strip lead, each a template filled in from the strip — see
-the file for the fields. A link with no template is not drawn.
+Everything about the site and its archive is in `config.yaml`, and its comments explain each
+setting. The build reads whichever file `SITE_CONFIG` names, which every script in `package.json`
+sets to `config.yaml`; to build from another, run `SITE_CONFIG=other.yaml npx webpack --mode production`.
 
-`tuning.yaml` holds how the search scores a match, fitted to this archive's text, with notes on how
-each value was measured. The measuring is in `test/tuning`: `yarn tune` sweeps the values against
-its queries, and `yarn probe "<query>"` shows what a query returns.
-
-`compounds.yaml`, which is optional, tunes how the search treats compound words: the ones to keep
-whole, and the ones to split that the archive never writes open. `yarn candidates` lists likely
-compounds the file doesn't mention yet.
-
-Any value in it can read the environment as `$NAME`, `${NAME}` or `${NAME:-fallback}`, from the
-process or from `.env`. The deployment settings — `SITE_URL`, `PAGE_LAYOUT` and `CORRECTIONS`, below
-— are read that way already, so a fork that only moves the site can leave `config.yaml` alone and
-set them in `.env`, or as Actions variables of the same names for the GitHub Pages workflow.
+The search's tuning is measured in `test/tuning`: `yarn tune` sweeps its values, `yarn probe "<query>"`
+shows what a query returns, and `yarn candidates` lists compound words `compounds` doesn't mention yet.
 
 ### Domain
 
-The site's own URL is optional at build time. Set `SITE_URL` to have the build
-emit the `og:url` and canonical tags on every page, a `robots.txt` sitemap pointer,
-`sitemap.xml`, and a `CNAME` file for a GitHub Pages custom domain.
-
-A `SITE_URL` with a path — `https://user.github.io/repo`, as a GitHub project page is served —
-mounts the site there: every link, fetch and image is written from `/repo/`, the app reads the
-address bar through it, and no `CNAME` is emitted. The mount is compiled into the bundle, so a
-change to it needs a fresh build rather than a `--watch` rebuild.
-
-```sh
-cp .env.sample .env
-# then edit .env and uncomment/set SITE_URL
-```
-
-Leave `SITE_URL` unset to build without those files.
+`SITE_URL` sets the site's address, which turns on its canonical tags, sitemap and `CNAME`, and can
+mount it under a path. Set it in `.env` (copy `.env.sample`) or the Actions variables; `config.yaml`
+explains the rest. The mount is compiled into the bundle, so changing it needs a fresh build rather
+than a `--watch` rebuild.
 
 ### Corrections
 
-Every page that holds something correctable — a strip, a book, the credits — carries a link to a
-form for reporting what is wrong with it. The form opens knowing which page it was sent from, which
-site it was sent from, and which commit that site was built at.
-
-Where the link leads is a template in `config.yaml`, one for each kind of page; a kind of page with
-no template carries no link. A fork leaves these alone, so that its corrections arrive with the rest
-rather than nowhere. A build that wants no part of the form sets `CORRECTIONS=false`, which leaves
-the link out of every page rather than hiding it.
+Every page with something correctable on it links to a form for reporting it. Where each link
+leads is a template in `config.yaml`. Forks should leave these as they are, so corrections all
+reach the same form. Set `CORRECTIONS=false` to leave the link off every page.
 
 ### Images
 
-Comic strip images go in `assets/comics/` named by date as `YYYYMMDD.ext` (e.g. `assets/comics/19851118.gif`). Collection cover images go directly in `assets/` (e.g. `assets/book1.png`). The webpack build discovers these automatically and copies them into `dist/assets/`.
+A strip's image goes in the folder `calvin-and-hobbes/comics/`, as `YYYYMMDD.ext` or a special's id — drop
+one in and that strip has an image.

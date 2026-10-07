@@ -2,12 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "fs";
 import path from "path";
-import { loadPageConfig } from "../build-chain/siteConfig";
+import { configDependencies, loadPageConfig, loadRequiredPart } from "../build-chain/siteConfig";
 import { withConfig } from "./helpers/config";
 import { loadArcs } from "../build-chain/arcs";
+import { loadCharacters, stripCharacters } from "../build-chain/characters";
+import { loadCreditsHtml } from "../build-chain/credits";
 import { loadReruns } from "../build-chain/reruns";
 import type { CollectionData } from "../build-chain/collectionPages";
-import type { ComicSource } from "../build-chain/comicSource";
+import { loadComicSource, type ComicSource } from "../build-chain/comicSource";
 import { stripLinks } from "../src/strip-links";
 import { PAGE_CONFIG } from "../src/site-config";
 import { buildDocumentHtml } from "../src/pages/shell";
@@ -98,14 +100,113 @@ test("config.yaml", async (suite) => {
 		);
 	});
 
-	await suite.test("has arcs and reruns unless they are turned off", () => {
-		const both = withConfig("name: x\nseries: x\n", loadPageConfig);
+	await suite.test("has arcs and reruns unless they are turned off, and must say", () => {
+		const both = withConfig(
+			"name: x\nseries: x\narcs: !Import ./arcs.yaml\nreruns: !Import ./reruns.yaml\n",
+			loadPageConfig,
+			{ "arcs.yaml": "{}\n", "reruns.yaml": "{}\n" },
+		);
 		assert.equal(both.arcs, true);
 		assert.equal(both.reruns, true);
 		const neither = withConfig("name: x\nseries: x\narcs: false\nreruns: 'False'\n", loadPageConfig);
 		assert.equal(neither.arcs, false);
 		assert.equal(neither.reruns, false);
-		assert.throws(() => withConfig("name: x\nseries: x\narcs: no\n", loadPageConfig), /arcs.*true or false/);
+		assert.throws(() => withConfig("name: x\nseries: x\narcs:\n", loadPageConfig), /must give arcs/);
+	});
+
+	await suite.test("reads a part written in place, and imports Markdown as its text", () => {
+		withConfig("name: x\nseries: x\nreruns:\n  '19910505': '19860119'\n", (config) => {
+			const source = { dailies: { "19860119": { transcript: "" } }, specials: {} };
+			assert.deepEqual(loadReruns(source, config), { "1991-05-05": "1986-01-19" });
+		});
+		withConfig(
+			"credits: !Import ./credits.md\n",
+			(config) => {
+				assert.equal(loadCreditsHtml(config), "<p>Thanks to <em>everyone</em>.</p>\n");
+			},
+			{ "credits.md": "Thanks to *everyone*.\n" },
+		);
+		withConfig(
+			"credits: !Import ./credits.txt\n",
+			(config) => {
+				assert.throws(() => loadCreditsHtml(config), /neither YAML nor Markdown/);
+			},
+			{ "credits.txt": "Thanks.\n" },
+		);
+	});
+
+	// `$5` in what a file imports is five dollars, however the environment reads `config.yaml` itself.
+	await suite.test("reads the environment into config.yaml, but not into what it imports", () => {
+		withEnvironment({ FIVE: "five" }, () =>
+			withConfig(
+				"name: $FIVE\nseries: x\ncredits: !Import ./credits.md\n",
+				(config) => {
+					assert.equal(loadPageConfig(config).name, "five");
+					assert.match(loadCreditsHtml(config), /\$FIVE dollars/);
+				},
+				{ "credits.md": "$FIVE dollars\n" },
+			),
+		);
+	});
+
+	await suite.test("watches config.yaml, what it imports however deep, .env, and the folders it maps over", () => {
+		withConfig(
+			"comics: !Import ./comics/index.yaml\ncollections: !Map [Import, ./books/*.yaml]\n",
+			(config, projectDir) => {
+				assert.deepEqual(configDependencies(config), {
+					files: [
+						config,
+						path.join(projectDir, "comics", "index.yaml"),
+						path.join(projectDir, "comics", "specials", "one.yaml"),
+						path.join(projectDir, "books", "one.yaml"),
+						path.join(process.cwd(), ".env"),
+					],
+					directories: [path.join(projectDir, "comics", "specials"), path.join(projectDir, "books")],
+				});
+			},
+			{
+				"comics/index.yaml": "specials: !Map [Import, ./specials/*.yaml]\n",
+				"comics/specials/one.yaml": "{}\n",
+				"books/one.yaml": "{}\n",
+			},
+		);
+	});
+
+	// `../`, which from the project itself would leave it: so the path is the importing file's.
+	await suite.test("reads an import's path from the file it is written in", () => {
+		withConfig(
+			"comics: !Import ./strips/index.yaml\n",
+			(config) => assert.deepEqual(loadRequiredPart("comics", config), { dailies: { "19851118": "Hi." } }),
+			{ "strips/index.yaml": "dailies: !Import ../days/dailies.yaml\n", "days/dailies.yaml": "'19851118': Hi.\n" },
+		);
+	});
+
+	await suite.test("maps Import over every file a pattern matches, in the order of their paths", () => {
+		withConfig(
+			"collections: !Map [Import, books/**/*.yaml]\n",
+			(config) => assert.deepEqual(loadRequiredPart("collections", config), [{ id: "a" }, { id: "b" }, { id: "c" }]),
+			{
+				"books/a.yaml": "id: a\n",
+				"books/b/b.yaml": "id: b\n",
+				"books/c.yaml": "id: c\n",
+				"books/notes.md": "Not a book.\n",
+			},
+		);
+		// From an imported file, the pattern is that file's, as an `!Import` is.
+		withConfig(
+			"comics: !Import ./strips/index.yaml\n",
+			(config) => assert.deepEqual(loadRequiredPart("comics", config), { specials: [{ id: "x" }] }),
+			{ "strips/index.yaml": "specials: !Map [Import, ./specials/*.yaml]\n", "strips/specials/x.yaml": "id: x\n" },
+		);
+	});
+
+	await suite.test("fails for a pattern that matches nothing, or a !Map of anything but Import", () => {
+		withConfig("collections: !Map [Import, ./books/*.yaml]\n", (config) => {
+			assert.throws(() => loadPageConfig(config), /maps Import over \.\/books\/\*\.yaml, which matches no file/);
+		});
+		withConfig("collections: !Map [Include, ./books/*.yaml]\n", (config) => {
+			assert.throws(() => loadPageConfig(config), /not \[Import, a pattern\]/);
+		});
 	});
 
 	await suite.test("takes a daily's shape, and a Sunday's or the daily's", () => {
@@ -134,16 +235,88 @@ test("config.yaml", async (suite) => {
 
 	await suite.test("reads no arcs.yaml or reruns.yaml for a site without them", () => {
 		// The project holds only `config.yaml`, so reading either file would throw.
-		withConfig("name: x\nseries: x\narcs: false\nreruns: false\n", (projectDir) => {
+		withConfig("name: x\nseries: x\narcs: false\nreruns: false\n", (config) => {
 			const source = {} as ComicSource;
-			assert.deepEqual(loadArcs(projectDir, source, {} as CollectionData), []);
-			assert.deepEqual(loadReruns(projectDir, source), {});
+			assert.deepEqual(loadArcs(source, {} as CollectionData, config), []);
+			assert.deepEqual(loadReruns(source, config), {});
 		});
+	});
+
+	await suite.test("imports the characters from the file config.yaml names", () => {
+		withConfig("name: x\nseries: x\ncharacters: !Import ./cast/people.yaml\n", (config, projectDir) => {
+			fs.mkdirSync(path.join(projectDir, "cast"));
+			fs.writeFileSync(path.join(projectDir, "cast", "people.yaml"), "calvin: Calvin\nsusie: Susie Derkins\n");
+			assert.equal(loadPageConfig(config).characters, true);
+			const characters = loadCharacters(config);
+			assert.deepEqual(characters, [
+				{ id: "calvin", name: "Calvin" },
+				{ id: "susie", name: "Susie Derkins" },
+			]);
+			assert.ok(configDependencies(config).files.includes(path.join(projectDir, "cast", "people.yaml")));
+			assert.deepEqual(stripCharacters("19851118", { transcript: "", characters: ["susie"] }, characters), ["susie"]);
+			assert.deepEqual(stripCharacters("19851118", { transcript: "" }, characters), []);
+			assert.throws(
+				() => stripCharacters("19851118", { transcript: "", characters: ["suzy"] }, characters),
+				/19851118 features "suzy"/,
+			);
+		});
+	});
+
+	await suite.test("imports a file relative to the one importing it", () => {
+		withConfig("name: x\nseries: x\ncharacters: !Import ./cast/index.yaml\n", (config, projectDir) => {
+			fs.mkdirSync(path.join(projectDir, "cast"));
+			fs.writeFileSync(path.join(projectDir, "cast", "index.yaml"), "!Import ./people.yaml\n");
+			fs.writeFileSync(path.join(projectDir, "cast", "people.yaml"), "hobbes: Hobbes\n");
+			assert.deepEqual(loadCharacters(config), [{ id: "hobbes", name: "Hobbes" }]);
+		});
+		withConfig("name: x\nseries: x\ncharacters: !Import ./loop.yaml\n", (config, projectDir) => {
+			fs.writeFileSync(path.join(projectDir, "loop.yaml"), "!Import ./site.yaml\n");
+			assert.throws(() => loadCharacters(config), /imports it back/);
+		});
+	});
+
+	// A missing file is a mistake to stop for rather than a site without characters: only `false` is that.
+	await suite.test("fails for an imported file that is not there", () => {
+		withConfig("name: x\nseries: x\ncharacters: !Import ./people.yaml\n", (config) => {
+			assert.throws(() => loadPageConfig(config), /site\.yaml imports \.\/people\.yaml, which does not exist/);
+			assert.throws(() => loadCharacters(config), /people\.yaml, which does not exist/);
+		});
+	});
+
+	await suite.test("has no characters where config.yaml turns them off, and must say", () => {
+		withConfig("name: x\nseries: x\ncharacters: false\n", (config) => {
+			assert.equal(loadPageConfig(config).characters, false);
+			assert.deepEqual(loadCharacters(config), []);
+			// A strip's list is not read, or checked, on a site without them.
+			assert.deepEqual(stripCharacters("19851118", { transcript: "", characters: ["nobody"] }, []), []);
+		});
+		assert.throws(() => withConfig("name: x\nseries: x\ncharacters:\n", loadPageConfig), /must give characters/);
+		assert.throws(
+			() => withConfig("name: x\nseries: x\ncharacters: true\n", loadCharacters),
+			/characters.*mapping of character ids to names, or false/,
+		);
+	});
+
+	await suite.test("refuses malformed characters", () => {
+		const read = (characters: string) => () =>
+			withConfig(`name: x\nseries: x\ncharacters:\n${characters}`, loadCharacters);
+		assert.throws(read("  Miss Wormwood: Miss Wormwood\n"), /Invalid character id/);
+		assert.throws(read("  wormwood:\n"), /needs a name/);
+		assert.throws(read("  - calvin\n"), /mapping/);
 	});
 
 	await suite.test("refuses a site with no name, or no series", () => {
 		assert.throws(() => withConfig("landing: {}\n", loadPageConfig), /name/);
 		assert.throws(() => withConfig("name: x\n", loadPageConfig), /series/);
+	});
+
+	// `withConfig` names the file `site.yaml`.
+	await suite.test("names the configuration file a mistake is in", () => {
+		assert.throws(() => withConfig("name: x\n", loadPageConfig), /^Error: site\.yaml must say what the archive is of/);
+		assert.throws(() => withConfig("name: x\nseries: x\ngrid: []\n", loadPageConfig), /grid in site\.yaml/);
+		assert.throws(() => withConfig("name: x\nseries: x\narcs:\n", loadPageConfig), /site\.yaml must give arcs/);
+		assert.throws(() => withConfig("comics: []\n", loadComicSource), /comics in site\.yaml must be a mapping/);
+		assert.throws(() => withConfig("credits: !Import ./nope.md\n", loadCreditsHtml), /site\.yaml imports \.\/nope\.md/);
 	});
 });
 

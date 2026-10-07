@@ -100,17 +100,19 @@ test("SITE_URL", async (suite) => {
 
 test("a site mounted at /repo/", async (suite) => {
 	const template = fs.readFileSync(path.join(PROJECT_DIR, "src", "index.html"), "utf8");
-	const collectionData = loadCollectionData(PROJECT_DIR);
+	const collectionData = loadCollectionData();
 
 	await suite.test("names its images from the mount", () => {
-		const comics: Comic[] = JSON.parse(exportComicsJson(PROJECT_DIR, collectionData, "/repo/"));
+		const comics: Comic[] = JSON.parse(exportComicsJson(collectionData, "/repo/"));
 		const index: CollectionIndex = JSON.parse(generateCollectionIndex(collectionData, "/repo/"));
 		// The strips are not in the repository, so their images may or may not be on disk; the covers are.
 		for (const comic of comics) if (comic.image) assert.match(comic.image, /^\/repo\/assets\/comics\//);
 		assert.ok(index.collections.length > 0);
-		for (const collection of index.collections) assert.match(collection.image, /^\/repo\/assets\//);
+		for (const collection of index.collections)
+			assert.match(collection.image, /^\/repo\/static\/[0-9a-f]{16}\.(png|jpg|gif)$/);
 		const editions = index.collections.flatMap((collection) => Object.values(collection.editions ?? {}));
-		for (const edition of editions) if (edition.image) assert.match(edition.image, /^\/repo\/assets\//);
+		for (const edition of editions)
+			if (edition.image) assert.match(edition.image, /^\/repo\/static\/[0-9a-f]{16}\.(png|jpg|gif)$/);
 	});
 
 	await suite.test("links, fetches and unfurls from the mount", () => {
@@ -128,6 +130,7 @@ test("a site mounted at /repo/", async (suite) => {
 				collections: [],
 				descriptions: {},
 				arcs: [],
+				characters: [],
 			};
 			const document = buildDocumentHtml(template, page, {
 				siteUrl: "https://user.github.io/repo",

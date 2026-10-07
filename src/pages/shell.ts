@@ -96,7 +96,11 @@ function ownImage(page: Page, siteUrl: string): string | null {
 	const origin = siteUrl ? new URL(siteUrl).origin : "";
 	const own = page.view === "detail" ? page.comics.find((comic) => comic.image)?.image : undefined;
 	if (own) return origin + own;
-	if (page.view === "collection" && page.collection) return origin + page.collection.image;
+	// A cover can be a whole URL, served from elsewhere.
+	if (page.view === "collection" && page.collection) {
+		const cover = page.collection.image;
+		return /^https?:\/\//i.test(cover) ? cover : origin + cover;
+	}
 	return null;
 }
 

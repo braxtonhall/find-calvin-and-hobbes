@@ -187,5 +187,5 @@ alterations: {}
 extras:
   - Front cover art
   - Back cover art
-image: assets/book10.gif
+image: !Path ./covers/book10.gif
 aspect-ratio: 1.3916

@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+// First, before the filters are read. See there.
+import "./helpers/characters";
 import { parseDateExpression } from "../src/date-query";
 import { admits, parseQuery } from "../src/boolean-query";
 import { Filter, Run, scanFilters } from "../src/filter-query";
@@ -94,6 +96,32 @@ test("filters", async (suite) => {
 		const loose: Comic = { date: "1985-11-28", transcript: "" };
 		assert.ok(!passes(loose, "@in:book3"));
 		assert.ok(passes(loose, "@year:1985"));
+	});
+
+	await suite.test("@featuring names a character by its id", () => {
+		try {
+			registerVocabulary("featuring", () => [{ value: "susie", hint: "Susie Derkins" }]);
+			assert.deepEqual(read("@featuring:Susie"), { kind: "featuring", character: "susie" });
+			assert.equal(read("@featuring:suzy"), null);
+		} finally {
+			registerVocabulary("featuring", () => []);
+		}
+	});
+
+	// A strip features several characters at once, so asking for two is asking for both, as the
+	// tags do — and either is `@or`.
+	await suite.test("characters side by side intersect", () => {
+		const cast = (date: string, ...characters: string[]): Comic => ({ date, transcript: "", characters });
+		const query = "@featuring:susie @featuring:rosalyn";
+		assert.ok(passes(cast("1988-06-01", "calvin", "susie", "rosalyn"), query));
+		assert.ok(!passes(cast("1988-06-01", "susie"), query));
+		assert.ok(passes(cast("1988-06-01", "susie"), "@featuring:susie @or @featuring:rosalyn"));
+	});
+
+	await suite.test("a strip that lists no characters features none", () => {
+		assert.ok(!passes({ date: "1988-06-01", transcript: "" }, "@featuring:calvin"));
+		assert.ok(passes({ date: "1988-06-01", transcript: "" }, "@not @featuring:calvin"));
+		assert.ok(!passes("1988-06-01", "@featuring:calvin"));
 	});
 
 	/*

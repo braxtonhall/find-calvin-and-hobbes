@@ -9,6 +9,8 @@ export interface Comic {
 	appearances?: Appearance[];
 	/** The arcs the strip belongs to, by id. None does to more than one today, but nothing forbids it. */
 	arcs?: string[];
+	/** The characters the strip features, by id, as `comics.yaml` lists them. */
+	characters?: string[];
 }
 
 export interface Appearance {
@@ -65,6 +67,12 @@ export interface Arc {
 	dates: string[];
 	/** The books that print every strip of it, once per book however many editions it has, in publication order. */
 	collections: string[];
+}
+
+/** Someone a strip can feature: the id `@featuring:` takes, and the name a reader knows them by. */
+export interface Character {
+	id: string;
+	name: string;
 }
 
 export interface Day {

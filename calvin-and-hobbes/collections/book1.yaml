@@ -140,5 +140,5 @@ extras:
   - Back cover art
   - Filler B&W vignettes
   - Foreword by Garry Trudeau
-image: assets/book1.png
+image: !Path ./covers/book1.png
 aspect-ratio: 0.9347

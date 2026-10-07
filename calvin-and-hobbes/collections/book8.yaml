@@ -186,5 +186,5 @@ alterations: {}
 extras:
   - Front cover art
   - Back cover art
-image: assets/book8.png
+image: !Path ./covers/book8.png
 aspect-ratio: 1.3389

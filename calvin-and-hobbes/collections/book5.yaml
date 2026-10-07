@@ -137,5 +137,5 @@ extras:
   - Front cover art
   - Back cover art
   - Page 2 & 128 art
-image: assets/book5.jpg
+image: !Path ./covers/book5.jpg
 aspect-ratio: 0.9453

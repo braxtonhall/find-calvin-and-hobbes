@@ -14,5 +14,5 @@ alterations: {}
 extras:
   - Two paperback books in archival slipcase
   - Cover art selected by Bill Watterson
-image: assets/compendium6.jpg
+image: !Path ./covers/compendium6.jpg
 aspect-ratio: 0.8021

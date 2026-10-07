@@ -1,10 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import fs from "fs";
-import os from "os";
-import path from "path";
 import { loadCompoundRelations, readCompoundsFile } from "../build-chain/compoundLexicon";
 import { COMPOUND_CANONICAL_FORMS, COMPOUND_RELATIONS } from "../src/compounds";
+import { withConfig } from "./helpers/config";
 
 /**
  * `compounds.yaml`: that the corpus rule runs without it, and that it keeps words whole and splits
@@ -22,24 +20,20 @@ const COMICS = `dailies:
   "20000106": Sun set again, and snow.
 `;
 
-/** A project holding this archive and, unless it is left out, this `compounds.yaml`. */
-function withProject<T>(compounds: string | null, run: (projectDir: string) => T): T {
-	const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "compounds-"));
-	try {
-		fs.writeFileSync(path.join(projectDir, "comics.yaml"), COMICS);
-		if (compounds !== null) fs.writeFileSync(path.join(projectDir, "compounds.yaml"), compounds);
-		return run(projectDir);
-	} finally {
-		fs.rmSync(projectDir, { recursive: true, force: true });
-	}
+/** A project importing this archive and this `compounds.yaml` — or, for `null`, with the compounds off. */
+function withProject<T>(compounds: string | null, run: (config: string) => T): T {
+	const files: Record<string, string> = { "comics.yaml": COMICS };
+	if (compounds !== null) files["compounds.yaml"] = compounds;
+	const part = compounds === null ? "false" : "!Import ./compounds.yaml";
+	return withConfig(`comics: !Import ./comics.yaml\ncompounds: ${part}\n`, run, files);
 }
 
-const wholes = (projectDir: string) => loadCompoundRelations(projectDir).map(([whole]) => whole);
+const wholes = (config: string) => loadCompoundRelations(config).map(([whole]) => whole);
 
-test("without compounds.yaml, the rule splits what the archive writes open", () => {
-	withProject(null, (projectDir) => {
-		assert.deepEqual(wholes(projectDir), ["goodnight", "sunset"]);
-		assert.deepEqual(new Map(loadCompoundRelations(projectDir)).get("goodnight"), {
+test("with the compounds off, the rule splits what the archive writes open", () => {
+	withProject(null, (config) => {
+		assert.deepEqual(wholes(config), ["goodnight", "sunset"]);
+		assert.deepEqual(new Map(loadCompoundRelations(config)).get("goodnight"), {
 			whole: "goodnight",
 			parts: ["good", "night"],
 			preference: "open",
@@ -47,17 +41,17 @@ test("without compounds.yaml, the rule splits what the archive writes open", () 
 	});
 });
 
-test("a compounds.yaml with nothing in it is the same as none", () => {
-	withProject("# Nothing yet.\n", (projectDir) => assert.deepEqual(wholes(projectDir), ["goodnight", "sunset"]));
+test("a compounds.yaml with nothing in it is the same as the compounds off", () => {
+	withProject("# Nothing yet.\n", (config) => assert.deepEqual(wholes(config), ["goodnight", "sunset"]));
 });
 
 test("keepWhole stops the rule splitting a word", () => {
-	withProject("keepWhole:\n  - sunset\n", (projectDir) => assert.deepEqual(wholes(projectDir), ["goodnight"]));
+	withProject("keepWhole:\n  - sunset\n", (config) => assert.deepEqual(wholes(config), ["goodnight"]));
 });
 
 test("a compound split by hand is split, with its preference", () => {
-	withProject("compounds:\n  closed:\n    snowman: snow man\n", (projectDir) => {
-		assert.deepEqual(new Map(loadCompoundRelations(projectDir)).get("snowman"), {
+	withProject("compounds:\n  closed:\n    snowman: snow man\n", (config) => {
+		assert.deepEqual(new Map(loadCompoundRelations(config)).get("snowman"), {
 			whole: "snowman",
 			parts: ["snow", "man"],
 			preference: "closed",
@@ -66,14 +60,14 @@ test("a compound split by hand is split, with its preference", () => {
 });
 
 test("a compound split by hand overrides the rule's split of it", () => {
-	withProject("compounds:\n  balanced:\n    sunset: sun set\n", (projectDir) => {
-		assert.equal(new Map(loadCompoundRelations(projectDir)).get("sunset")?.preference, "balanced");
+	withProject("compounds:\n  balanced:\n    sunset: sun set\n", (config) => {
+		assert.equal(new Map(loadCompoundRelations(config)).get("sunset")?.preference, "balanced");
 	});
 });
 
 test("a malformed compounds.yaml stops the build", () => {
 	const rejects = (contents: string, message: RegExp) =>
-		withProject(contents, (projectDir) => assert.throws(() => readCompoundsFile(projectDir), message));
+		withProject(contents, (config) => assert.throws(() => readCompoundsFile(config), message));
 
 	rejects("deny:\n  - sunset\n", /unknown setting, deny/);
 	rejects("keepWhole: sunset\n", /must be a list/);

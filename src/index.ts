@@ -2,6 +2,7 @@ import "./styles/theme.css";
 import "./styles/base.css";
 import "./styles/components.css";
 
+import { CHARACTERS } from "./bundled-data";
 import { registerVocabulary } from "./filter-vocabulary";
 import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
@@ -21,11 +22,13 @@ import { attachLifeEasterEgg } from "./life";
 import { holdLibrary, readLibrary } from "./ownership";
 
 function initialize(): void {
-	// The one filter whose values are loaded data. A thunk, so this can be registered before the
+	// The filters whose values are loaded data. A thunk, so this can be registered before the
 	// collection index is in `state` and answer with the books once it is. See `filter-vocabulary.ts`.
 	registerVocabulary("in", () =>
 		(state.collectionIndex?.collections ?? []).map((collection) => ({ value: collection.id, hint: collection.name })),
 	);
+	// Empty on a site without characters, where there is no `@featuring:` to ask.
+	registerVocabulary("featuring", () => CHARACTERS.map((character) => ({ value: character.id, hint: character.name })));
 
 	// First, so the requests are on the wire while the grid is drawn. Nothing it does after they
 	// answer can run before this function returns, so the grid and the route are in place by then.
