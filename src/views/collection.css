@@ -66,13 +66,25 @@
 	margin: 12px 0 0;
 }
 
-.collection-note {
-	font-size: 13px;
-	color: var(--text-muted);
-	font-style: italic;
-	line-height: 1.5;
-	margin-top: 8px;
+/* A book's row of actions runs the width of the page, under its cover and its details. */
+.collection-header--book {
 	margin-bottom: 16px;
+}
+
+.collection-actions {
+	margin-bottom: 24px;
+}
+
+/* What there is to say about the book, under its row of actions, as a strip's transcript is under its image. */
+.collection-note {
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--text-muted);
+	margin-bottom: 24px;
+}
+
+.collection-note:empty {
+	display: none;
 }
 
 .collection-section-heading {

@@ -4,6 +4,8 @@ import { registerVocabulary } from "../src/filter-vocabulary";
 import {
 	FILTER_FIELDS,
 	FilterField,
+	asksForBookmarks,
+	toggleBookmarks,
 	chooseToken,
 	clearField,
 	insertToken,
@@ -442,4 +444,29 @@ test("insert: an open quotation is closed before a token is appended", () => {
 	assert.equal(insertToken('"snow goons', "@year:1990"), '"snow goons" @year:1990');
 	assert.equal(insertToken('"snow goons"', "@year:1990"), '"snow goons" @year:1990');
 	assert.equal(insertToken('"snow goons @year:1988', "@year:1990"), '"snow goons @year:1988" @year:1990');
+});
+
+test("the bookmark button", async (suite) => {
+	await suite.test("pressed, it puts @i:bookmarked on the end; pressed again, it takes it out", () => {
+		assert.equal(toggleBookmarks(""), "@i:bookmarked");
+		assert.equal(toggleBookmarks("snow @year:1988"), "snow @year:1988 @i:bookmarked");
+		assert.equal(toggleBookmarks('"snow goons'), '"snow goons" @i:bookmarked');
+		assert.equal(toggleBookmarks("snow @i:bookmarked @year:1988"), "snow @year:1988");
+		assert.equal(toggleBookmarks("@i:bookmarked @or @is:sunday"), "@is:sunday");
+	});
+
+	await suite.test("it shows pressed only for bookmarks the bar can see", () => {
+		assert.equal(asksForBookmarks("snow @i:bookmarked"), true);
+		assert.equal(asksForBookmarks("snow"), false);
+		assert.equal(asksForBookmarks("@not @i:bookmarked"), false);
+		assert.equal(asksForBookmarks("@in (@has @i:bookmarked)"), false);
+		// Unpressed, so pressing it adds one; it never touches the one it cannot see.
+		assert.equal(toggleBookmarks("@not @i:bookmarked"), "@not @i:bookmarked @i:bookmarked");
+	});
+
+	await suite.test("pressing twice gives back the query", () => {
+		for (const query of ["", "snow", "@year:1988 snow", '"snow goons"', "calvin @or hobbes"]) {
+			assert.equal(toggleBookmarks(toggleBookmarks(query)), query, query);
+		}
+	});
 });

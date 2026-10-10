@@ -49,8 +49,12 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "collection", id: collectionMatch[1] };
 	}
 
+	// An empty `?q=` asks nothing, the same as none. See `buildTabPath`.
+	const q = params.get("q");
+	const searched = q ? { q } : {};
+
 	if (path === BOOKS_PATH || path === COLLECTIONS_PATH) {
-		return { view: "collections" };
+		return { view: "collections", ...searched };
 	}
 
 	// A site without arcs has none of their addresses, so they go home like any other.
@@ -60,7 +64,7 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 	}
 
 	if (path === ARCS_PATH && PAGE_CONFIG.arcs) {
-		return { view: "arcs" };
+		return { view: "arcs", ...searched };
 	}
 
 	// Creators the same way, on a site without them.
@@ -70,13 +74,19 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 	}
 
 	if (path === CREATORS_PATH && PAGE_CONFIG.creators) {
-		return { view: "creators" };
+		return { view: "creators", ...searched };
 	}
 
-	// The same query a search takes, over the bookmarks only. Unlike `/search`, no query is a page
-	// of its own — every bookmark — so an empty `?q=` is not written; see `buildLibraryPath`.
-	if (path === LIBRARY_PATH) {
-		return { view: "library", q: params.get("q") ?? "", sort };
+	if (path === SETTINGS_PATH) {
+		return { view: "settings" };
+	}
+
+	if (path === BOOKMARKS_PATH) {
+		return { view: "bookmarks" };
+	}
+
+	if (path === BOOKSHELF_PATH) {
+		return { view: "bookshelf" };
 	}
 
 	if (path === "/credits") {
@@ -92,13 +102,27 @@ export function buildSearchPath(query: string, sort: SortMode = "rank"): string 
 	return "/search?q=" + encodeURIComponent(query) + (sort === "date" ? "&sort=date" : "");
 }
 
-/**
- * The sort is kept without a query, so that a reader who picks date order before typing gets it
- * when they do. The query is not: `?q=` alone says nothing `/library` does not.
- */
-export function buildLibraryPath(query: string = "", sort: SortMode = "rank"): string {
-	const params = [query ? "q=" + encodeURIComponent(query) : "", sort === "date" ? "sort=date" : ""].filter(Boolean);
-	return LIBRARY_PATH + (params.length > 0 ? "?" + params.join("&") : "");
+/** The pages of the reader's own library, each a search that is always the same one, with no box to change it. */
+export type LibraryView = "bookmarks" | "bookshelf";
+
+export const LIBRARY_QUERIES: Record<LibraryView, string> = {
+	bookmarks: "@i:bookmarked",
+	// The strips they own, and the strips in the books they own.
+	bookshelf: "@i:own @or @in @i:own",
+};
+
+export function isLibraryView(view: string): view is LibraryView {
+	return Object.hasOwn(LIBRARY_QUERIES, view);
+}
+
+/** The tabs of Collections. */
+export type CollectionsTab = "books" | "arcs" | "creators";
+
+const TAB_PATHS: Record<CollectionsTab, string> = { books: "/books", arcs: "/arcs", creators: "/creators" };
+
+/** A tab of Collections, with `query` in its search box — or, given none or an empty one, the whole tab. */
+export function buildTabPath(tab: CollectionsTab, query?: string): string {
+	return TAB_PATHS[tab] + (query ? "?q=" + encodeURIComponent(query) : "");
 }
 
 export function buildComicPath(date: string, alternates: string[] = []): string {
@@ -129,7 +153,9 @@ export const CREATORS_PATH = "/creators";
  * books' own address in the bar.
  */
 export const COLLECTIONS_PATH = "/collections";
-export const LIBRARY_PATH = "/library";
+export const SETTINGS_PATH = "/settings";
+export const BOOKMARKS_PATH = "/bookmarks";
+export const BOOKSHELF_PATH = "/bookshelf";
 export const CREDITS_PATH = "/credits";
 export const HOME_PATH = "/";
 

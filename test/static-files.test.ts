@@ -41,7 +41,7 @@ test("publishes a cover named with !Path under static/, by its contents", () => 
 
 test("keeps a cover given as a URL, and writes a published one from the mount", () => {
 	withConfig(
-		"comics:\n  dailies:\n    '19870101': Hi.\ncollections:\n" +
+		"comics:\n  strips:\n    '19870101': Hi.\ncollections:\n" +
 			"  - {id: a, pub_year: 1987, pub_month: 1, image: 'https://example.test/a.png', pages: {1: ['19870101']}}\n" +
 			"  - {id: b, pub_year: 1987, pub_month: 2, image: !Path ./b.gif, pages: {1: ['19870101']}}\n",
 		(config) => {
@@ -108,7 +108,7 @@ test("refuses a cover that is neither a URL nor a file, or a file that is not th
 });
 
 test("finds the strips' images in the folder comicImages names, or none without one", () => {
-	const comics = "comics:\n  dailies:\n    '19870101': Hi.\n    '19870102': Bye.\n";
+	const comics = "comics:\n  strips:\n    '19870101': Hi.\n    '19870102': Bye.\n";
 	const files = { "strips/19870101.gif": sampleGif(31, 10), "strips/notes.txt": "" };
 	const images = (setting: string) =>
 		withConfig(

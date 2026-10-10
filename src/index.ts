@@ -2,9 +2,9 @@ import "./styles/theme.css";
 import "./styles/base.css";
 import "./styles/components.css";
 
-import { getBookmarkedDates } from "./bookmarks";
-import { CHARACTERS, CREATORS } from "./bundled-data";
-import { registerVocabulary } from "./filter-vocabulary";
+import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS } from "./bundled-data";
+import { Term, registerVocabulary } from "./filter-vocabulary";
+import { arcRange } from "./pages/page";
 import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
 import {
@@ -20,6 +20,7 @@ import {
 import { HOME_PATH, buildComicPath } from "./routes";
 import { getSameDayComicDate } from "./pages/detail";
 import { attachLifeEasterEgg } from "./life";
+import { holdLibrary, readLibrary } from "./ownership";
 
 function initialize(): void {
 	// The filters whose values are loaded data. A thunk, so this can be registered before the
@@ -31,6 +32,38 @@ function initialize(): void {
 	registerVocabulary("featuring", () => CHARACTERS.map((character) => ({ value: character.id, hint: character.name })));
 	// And without creators, where there is no `@by:`.
 	registerVocabulary("by", () => CREATORS.map((creator) => ({ value: creator.id, hint: creator.name })));
+	// And without arcs, where there is no `@during:`. An arc has no name, so it is offered by its dates.
+	const arcs: Term[] = ARCS.map((arc) => ({ value: arc.id, hint: `${arcRange(arc)}: ${arc.description}` }));
+	registerVocabulary("during", () => arcs);
+
+	// `@id:` takes any collection's, and inside an operator or on a tab that says which kind, that
+	// kind's alone is offered. See `completion.ts`.
+	const ids: Record<string, Term[]> = {
+		book: COLLECTION_INDEX.collections.map((collection) => ({ value: collection.id, hint: collection.name })),
+		arc: arcs,
+		creator: CREATORS.map((creator) => ({ value: creator.id, hint: creator.name })),
+		character: CHARACTERS.map((character) => ({ value: character.id, hint: character.name })),
+	};
+	for (const [type, values] of Object.entries(ids)) registerVocabulary(`id:${type}`, () => values);
+	registerVocabulary("id", () => Object.values(ids).flat());
+
+	// `@published:` takes any year, but the menu offers the ones a book came out in or an arc ran in
+	// — on a tab, its own kind's. A year of 0 is a book with no year to give.
+	const yearTerms = (years: number[]): Term[] =>
+		[...new Set(years)]
+			.filter((year) => year > 0)
+			.sort((a, b) => a - b)
+			.map((year) => ({ value: String(year), hint: "" }));
+	const bookYears = COLLECTION_INDEX.collections.map((collection) => collection.pub_year);
+	const arcYears = ARCS.flatMap((arc) => arc.dates.map((date) => Number(date.slice(0, 4))));
+	const published = {
+		book: yearTerms(bookYears),
+		arc: yearTerms(arcYears),
+		all: yearTerms([...bookYears, ...arcYears]),
+	};
+	registerVocabulary("published:book", () => published.book);
+	registerVocabulary("published:arc", () => published.arc);
+	registerVocabulary("published", () => published.all);
 
 	// First, so the requests are on the wire while the grid is drawn. Nothing it does after they
 	// answer can run before this function returns, so the grid and the route are in place by then.
@@ -43,15 +76,13 @@ function initialize(): void {
 	handleRoute(readPrerenderedPage());
 
 	// After the first paint, not before it: opening IndexedDB can take longer than drawing a
-	// prerendered page, and what waits on the answer is the grid's bookmark highlights and the
-	// bookmarks page, which shows a spinner until it lands.
-	// The bookmark button on a strip's page asks for its own date separately.
-	getBookmarkedDates()
-		.then((dates) => {
-			state.bookmarkedDates = dates;
-		})
+	// prerendered page, and what waits on the answer is the grid's bookmark highlights and any search
+	// about the reader's own library, which shows a spinner until it lands.
+	// The bookmark and ownership buttons on a page ask for their own separately.
+	readLibrary()
+		.then(holdLibrary)
 		.catch(() => {
-			// IndexedDB unavailable — bookmarks won't work, and the bookmarks page says there are none
+			// IndexedDB unavailable — the library won't work, and a search of it finds nothing
 		})
 		.finally(() => {
 			state.bookmarksLoaded = true;
@@ -105,15 +136,23 @@ document.addEventListener("DOMContentLoaded", () => {
 			const route = parseRoute();
 			if (route.view === "detail") {
 				event.preventDefault();
-				const bookmarkButton = document.querySelector<HTMLButtonElement>("#bookmark-btn");
-				if (bookmarkButton) bookmarkButton.click();
+				// Every strip on the page, or, where they all are already, none of them. Which is which
+				// comes from `state`, not from the buttons, which may not have been told yet — so
+				// until the library has loaded there is no telling, and nothing is done.
+				if (!state.bookmarksLoaded) return;
+				const buttons = [...document.querySelectorAll<HTMLButtonElement>("#view-detail .ownership-bookmark-btn")];
+				const bookmarked = (button: HTMLButtonElement) => state.bookmarkedStrips.has(button.dataset.bookmark!);
+				const all = buttons.every(bookmarked);
+				for (const button of buttons) {
+					if (bookmarked(button) === all) button.click();
+				}
 			}
 		}
 
 		if (event.key === "/" && !isInput) {
 			event.preventDefault();
 			const landingInput = document.getElementById("landing-input") as HTMLInputElement | null;
-			// The search page's box, or the bookmarks page's, whichever is showing.
+			// The search page's box, or a Collections tab's search, whichever is showing.
 			const resultsInput = document.querySelector<HTMLInputElement>(".view.active .results-input");
 			if (resultsInput) {
 				resultsInput.focus();

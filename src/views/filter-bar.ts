@@ -10,13 +10,16 @@ import {
 	clearField,
 	insertToken,
 	joinOf,
+	asksForBookmarks,
 	removeToken,
 	selectedTokens,
 	setJoin,
+	toggleBookmarks,
 } from "../query-edit";
 import { naturalHeight, onViewportShift, place, shed, viewport } from "../placement";
 import { escHtml } from "../utils";
 import { editQueryInput } from "./query-input";
+import { BOOKMARK_ICON_SVG } from "../pages/bookmark-icon";
 
 /**
  * The row under the search box: a result count, and five dropdowns that write `@filters` into the
@@ -99,6 +102,7 @@ function joinHtml(join: JoinState): string {
  * `Book` is not in it. Every other field is a shortcut to a token the reader could type, and on a
  * phone a reader who has seen `@year:1988` once can type it again. A book's token is an id, and
  * the dropdown is the only place its title is spelled out — take it away and there is no way in.
+ * Nor is the bookmark button, which is not a dropdown and is not in the running.
  */
 const SHED_ORDER = ["day", "month", "format", "year"];
 
@@ -106,8 +110,8 @@ const SHED_ORDER = ["day", "month", "format", "year"];
 const GAP = 6;
 
 /**
- * One row under one search box. The search page and the bookmarks page each have their own, and
- * the menu below is shared between them, since only one of them is ever on screen.
+ * One row under one search box: the search page's. The menu below is shared by every bar there is,
+ * since only one of them is ever on screen.
  */
 interface Bar {
 	/** The box every click writes into, and the box every checkmark is read back out of. */
@@ -115,6 +119,8 @@ interface Bar {
 	element: HTMLElement;
 	dropdowns: Dropdown[];
 	count: HTMLElement;
+	/** Bookmarks only, on and off: `@i:bookmarked`. A button rather than a dropdown, at the end of the row. */
+	bookmarks: HTMLButtonElement;
 	selected: Set<string>;
 }
 
@@ -515,6 +521,10 @@ function dropdownHtml(field: FilterField): string {
  */
 function paint(bar: Bar): void {
 	bar.selected = selectedTokens(bar.target.value);
+	// Pressed as a strip's page's is for a bookmarked strip: filled, in the bookmark colour.
+	const bookmarks = asksForBookmarks(bar.target.value);
+	bar.bookmarks.classList.toggle("bookmark-btn--active", bookmarks);
+	bar.bookmarks.setAttribute("aria-pressed", String(bookmarks));
 
 	for (const dropdown of bar.dropdowns) {
 		const options = dropdown.field.options();
@@ -560,7 +570,8 @@ function fit(bar: Bar): void {
 	const order = SHED_ORDER.map((name) => dropdowns.findIndex(({ field }) => field.name === name)).filter(
 		(index) => index >= 0,
 	);
-	const gone = shed(widths, GAP, room - count.getBoundingClientRect().width - GAP, order);
+	const fixed = count.getBoundingClientRect().width + GAP + bar.bookmarks.getBoundingClientRect().width + GAP;
+	const gone = shed(widths, GAP, room - fixed, order);
 
 	for (const [index, dropdown] of dropdowns.entries()) {
 		const hidden = gone.has(index);
@@ -582,13 +593,15 @@ export function buildFilterBar(input: HTMLInputElement): FilterBar {
 	const element = document.createElement("div");
 	element.className = "filter-bar";
 	element.innerHTML = `<div class="filter-count" role="status"></div>
-		<div class="filter-fields">${FILTER_FIELDS.map(dropdownHtml).join("")}</div>`;
+		<div class="filter-fields">${FILTER_FIELDS.map(dropdownHtml).join("")}</div>
+		<button type="button" class="bookmark-btn filter-bookmarks" title="Bookmarks only" aria-label="Bookmarks only" aria-pressed="false">${BOOKMARK_ICON_SVG}</button>`;
 
 	const bar: Bar = {
 		target: input,
 		element,
 		dropdowns: [],
 		count: element.querySelector<HTMLElement>(".filter-count")!,
+		bookmarks: element.querySelector<HTMLButtonElement>(".filter-bookmarks")!,
 		selected: new Set(),
 	};
 	bar.dropdowns = FILTER_FIELDS.map((field) => ({
@@ -597,6 +610,7 @@ export function buildFilterBar(input: HTMLInputElement): FilterBar {
 		button: element.querySelector<HTMLButtonElement>(`[data-field="${field.name}"]`)!,
 	}));
 	for (const dropdown of bar.dropdowns) attachDropdown(dropdown);
+	bar.bookmarks.addEventListener("click", () => write(bar, toggleBookmarks(bar.target.value)));
 
 	// Straight off the box rather than out of the render, so a hand-typed `@month:aug` ticks August on
 	// the keystroke that finishes it instead of 200ms later when the search comes back.

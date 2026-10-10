@@ -23,9 +23,22 @@
 
 /* Books · Arcs, in the home page's idiom: the tab showing in bold, the other a quiet link. */
 .collections-tabs {
-	margin: 0 0 12px -6px;
+	margin-left: -6px;
+	margin-bottom: 8px;
 	font-size: 13px;
 	color: var(--text-muted);
+}
+
+/*
+ * Arriving from another tab, the header is already on screen as it was, so the view comes in at
+ * once and only the list under it fades in. Set by `handleRoute`.
+ */
+.view.view--tab-switch.active {
+	animation: none;
+}
+
+.view--tab-switch .collections-body {
+	animation: viewFadeIn 0.5s ease;
 }
 
 /* Padded rather than spaced, so each tab's tap target reaches the dot beside it. */
@@ -55,6 +68,8 @@ a.collections-tab:hover {
 	padding: 10px 8px;
 	border-bottom: 1px solid var(--neutral);
 	transition: background 0.1s;
+	/* A long press opens the book's own menu (see `row-menu.ts`), not iOS's for the link. */
+	-webkit-touch-callout: none;
 }
 
 .collections-row:hover,

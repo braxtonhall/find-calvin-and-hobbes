@@ -1,63 +1,46 @@
-import { DATABASE_NAME, DATABASE_VERSION, STORE_NAME } from "./constants";
+import { STORE_NAME } from "./constants";
+import { inTransaction } from "./database";
+import { state } from "./state";
+import { dayCell } from "./grid";
 
-function openBookmarksDatabase(): Promise<IDBDatabase> {
-	return new Promise((resolve, reject) => {
-		const request = indexedDB.open(DATABASE_NAME, DATABASE_VERSION);
-		request.onupgradeneeded = () => {
-			const database = request.result;
-			if (!database.objectStoreNames.contains(STORE_NAME)) {
-				database.createObjectStore(STORE_NAME, { keyPath: "date" });
-			}
-		};
-		request.onsuccess = () => resolve(request.result);
-		request.onerror = () => reject(request.error);
+// A bookmark is a strip's, by `bookmarkId`. The store's key is still called `date`, as it was when
+// a bookmark was a whole day's; a special's bookmark keeps its id there.
+
+export function isBookmarked(id: string): Promise<boolean> {
+	return inTransaction<boolean>([STORE_NAME], "readonly", (transaction, finish) => {
+		const request = transaction.objectStore(STORE_NAME).get(id);
+		request.onsuccess = () => finish(!!request.result);
 	});
 }
 
-export async function isBookmarked(date: string): Promise<boolean> {
-	const database = await openBookmarksDatabase();
-	return new Promise((resolve, reject) => {
-		const transaction = database.transaction(STORE_NAME, "readonly");
+/**
+ * Bookmarks the strip that ran on `date`, or takes its bookmark off. Settles with whether it is now
+ * bookmarked, once `state` and the day's cell on the grid show it too.
+ */
+export function toggleBookmark(id: string, date: string): Promise<boolean> {
+	return inTransaction<boolean>([STORE_NAME], "readwrite", (transaction, finish) => {
 		const store = transaction.objectStore(STORE_NAME);
-		const request = store.get(date);
-		request.onsuccess = () => resolve(!!request.result);
-		request.onerror = () => reject(request.error);
-		transaction.oncomplete = () => database.close();
-	});
-}
-
-export async function getBookmarkedDates(): Promise<Set<string>> {
-	const database = await openBookmarksDatabase();
-	return new Promise((resolve, reject) => {
-		const transaction = database.transaction(STORE_NAME, "readonly");
-		const store = transaction.objectStore(STORE_NAME);
-		const request = store.getAllKeys();
-		const dates = new Set<string>();
-		request.onsuccess = () => {
-			for (const date of request.result) dates.add(String(date));
-			resolve(dates);
-		};
-		request.onerror = () => reject(request.error);
-		transaction.oncomplete = () => database.close();
-	});
-}
-
-export async function toggleBookmark(date: string): Promise<boolean> {
-	const database = await openBookmarksDatabase();
-	return new Promise((resolve, reject) => {
-		const transaction = database.transaction(STORE_NAME, "readwrite");
-		const store = transaction.objectStore(STORE_NAME);
-		const getRequest = store.get(date);
+		const getRequest = store.get(id);
 		getRequest.onsuccess = () => {
 			if (getRequest.result) {
-				store.delete(date);
-				resolve(false);
+				store.delete(id);
+				finish(false);
 			} else {
-				store.put({ date });
-				resolve(true);
+				store.put({ date: id });
+				finish(true);
 			}
 		};
-		getRequest.onerror = () => reject(getRequest.error);
-		transaction.oncomplete = () => database.close();
+	}).then((bookmarked) => {
+		if (bookmarked) state.bookmarkedStrips.add(id);
+		else state.bookmarkedStrips.delete(id);
+		// A box of many days, zoomed out, shows no bookmarks.
+		dayCell(date)?.classList.toggle("cell--bookmarked", isDayBookmarked(date));
+		return bookmarked;
 	});
+}
+
+/** Whether any strip that ran on `date` is bookmarked: the day's own, a rerun, or a special. The grid shows a day so. */
+export function isDayBookmarked(date: string): boolean {
+	if (state.bookmarkedStrips.has(date)) return true;
+	return (state.comicsByDate.get(date) ?? []).some((comic) => comic.id && state.bookmarkedStrips.has(comic.id));
 }

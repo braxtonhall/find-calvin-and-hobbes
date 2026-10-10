@@ -1,0 +1,91 @@
+#view-settings.active {
+	display: block;
+	/* The corrections link floats over the bottom of the page; the last line clears it. */
+	padding: 20px 20px 56px;
+}
+
+@media (max-width: 768px) {
+	/* On mobile the link follows the page instead of floating over it, so there is nothing to clear. */
+	#view-settings.active {
+		padding-bottom: 20px;
+	}
+}
+
+.settings-container {
+	max-width: 800px;
+}
+
+/* The collections page's heading. */
+.settings-heading {
+	font-size: 22px;
+	font-weight: 700;
+	margin-bottom: 16px;
+}
+
+/* A section's heading, in the idiom of a book page's. */
+.settings-section-heading {
+	font-size: 15px;
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.settings-section {
+	margin-bottom: 28px;
+}
+
+.settings-section-text {
+	font-size: 14px;
+	color: var(--text-muted);
+	line-height: 1.5;
+	margin-bottom: 12px;
+}
+
+/* The status line sits after the buttons, so a message never moves them. */
+.library-transfer {
+	margin-bottom: 0;
+}
+
+.library-transfer__status {
+	font-size: 12px;
+	color: var(--text-muted);
+}
+
+/* Takes no gap beside the buttons until there is something to say. */
+.library-transfer__status:empty {
+	display: none;
+}
+
+/* Inferred · English · Incorrect, in the Collections tabs' idiom: the one chosen in bold, the others quiet. */
+.settings-choices {
+	margin: 0 0 4px -6px;
+	font-size: 13px;
+	color: var(--text-muted);
+}
+
+/* Padded rather than spaced, so each choice's tap target reaches the dot beside it. */
+.settings-choice {
+	padding: 8px 6px;
+	font: inherit;
+	color: inherit;
+	background: none;
+	border: none;
+	cursor: pointer;
+}
+
+.settings-choice:hover {
+	color: var(--main);
+}
+
+.settings-choice[aria-checked="true"] {
+	font-weight: 700;
+	color: var(--text);
+}
+
+.settings-preview {
+	font-size: 14px;
+	color: var(--text-muted);
+}
+
+.settings-preview-word {
+	color: var(--text);
+}

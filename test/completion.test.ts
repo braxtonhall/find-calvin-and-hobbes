@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { Completion, Row, completionsAt, describeInvalid, filterSpans } from "../src/completion";
-import { FILTER_SPECS } from "../src/filter-spec";
+import { CROSSING_SPECS, FILTER_SPECS } from "../src/filter-spec";
 import { registerVocabulary } from "../src/filter-vocabulary";
-import { passesFilter, scanFilters } from "../src/filter-query";
+import { collectionQuery, passesFilter, scanFilters } from "../src/filter-query";
 import { RANGE_END, RANGE_START } from "../src/constants";
 import { isSabbatical } from "../src/date-utils";
 import { MONTH_NAMES, WEEKDAY_NAMES, YEARS } from "../src/vocabulary";
@@ -100,7 +100,9 @@ function everyValueOffered(): { name: string; typed: string; written: string; in
 	}
 
 	const found: { name: string; typed: string; written: string; insert: string }[] = [];
-	for (const spec of FILTER_SPECS) {
+	// The main search's own: the collection language's are offered inside `@in (…)` and on a tab, and
+	// `@here:` only inside an operator.
+	for (const spec of FILTER_SPECS.filter((spec) => spec.language === "strip")) {
 		for (const value of typed) {
 			const text = `@${spec.name}:${value}`;
 			for (const row of completionsAt(text, text.length)?.rows ?? []) {
@@ -116,8 +118,18 @@ function everyValueOffered(): { name: string; typed: string; written: string; in
 const ALPHABET = [..."0123456789", ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(97 + index))];
 
 test("naming a filter", async (suite) => {
+	// The crossing operators last of all, under the logical ones, bare as they are written.
 	await suite.test("a bare @ offers every filter there is, then the operators", () => {
-		assert.deepEqual(names("@|"), [...FILTER_SPECS.map((spec) => spec.name), "and", "or", "not"]);
+		assert.deepEqual(names("@|"), [
+			...FILTER_SPECS.filter((spec) => spec.language === "strip").map((spec) => spec.name),
+			"and",
+			"or",
+			"not",
+			"only",
+			...CROSSING_SPECS.filter((spec) => spec.from === "strip").map((spec) => spec.name),
+		]);
+		assert.deepEqual(completions("@in|"), ["@in:", "@in "]);
+		assert.deepEqual(templates("@in|"), ["book", undefined]);
 	});
 
 	await suite.test("an operator narrows by prefix, under the filters", () => {
@@ -129,9 +141,9 @@ test("naming a filter", async (suite) => {
 
 	await suite.test("a partial name narrows by prefix", () => {
 		assert.deepEqual(names("@y|"), ["year"]);
-		assert.deepEqual(names("@d|"), ["day", "date"]);
+		assert.deepEqual(names("@d|"), ["during", "day", "date", "during"]);
 		assert.deepEqual(names("@da|"), ["day", "date"]);
-		assert.deepEqual(names("@i|"), ["in", "is"]);
+		assert.deepEqual(names("@i|"), ["in", "is", "i", "in"]);
 		assert.deepEqual(names("@dat|"), ["date"]);
 	});
 
@@ -195,6 +207,12 @@ test("offering the values", async (suite) => {
 		assert.deepEqual(values("@is:rer|"), ["rerun"]);
 		assert.deepEqual(completions("@is:s|"), ["@is:sunday ", "@is:standalone "]);
 		assert.equal(at("@is:x|"), null);
+	});
+
+	await suite.test("@i: offers the reader's own tags, apart from @is:", () => {
+		assert.deepEqual(values("@i:|"), ["own", "bookmarked", "noted"]);
+		assert.deepEqual(completions("@i:o|"), ["@i:own "]);
+		assert.equal(at("@i:sunday|"), null);
 	});
 
 	await suite.test("a colon after a name that is not a filter has nothing to offer", () => {
@@ -338,8 +356,8 @@ test("the values the archive can offer", async (suite) => {
 		let checked = 0;
 		for (const value of everyValueOffered()) {
 			if (value.written === value.typed) continue;
-			// A tag is not a day, and most tags are not answerable from one — see `hasTag`.
-			if (value.name === "is") continue;
+			// A tag is not a day, and most tags are not answerable from one — see `hasTag` and `isMine`.
+			if (value.name === "is" || value.name === "i") continue;
 			assert.ok(namesRealStrips(value.name, value.written), `@${value.name}:${value.written}`);
 			checked++;
 		}
@@ -568,7 +586,7 @@ test("explaining a filter that will not work", async (suite) => {
 		assert.equal(reason("@year"), "@year needs a value — YYYY or YY");
 		// True of a vocabulary too — a filter with no value has not reached the question of whether
 		// the value is one the archive has.
-		assert.equal(reason("@in"), "@in needs a value — book");
+		assert.equal(reason("@in:"), "@in needs a value — book");
 	});
 
 	await suite.test("a tag that is not one says so", () => {
@@ -643,9 +661,10 @@ test("a vocabulary that arrives with the data", async (suite) => {
 	// The one row before the colon still shows a shape, because there is nothing to fill in yet —
 	// and `book` is a word rather than a slot, which is the whole of what the filter takes.
 	await suite.test("the name row says the filter takes a book", () => {
-		assert.deepEqual(names("@in|"), ["in"]);
-		assert.deepEqual(templates("@in|"), ["book"]);
-		assert.deepEqual(completions("@in|"), ["@in:"]);
+		// And with the operators, the one of the same name, which takes a query about one.
+		assert.deepEqual(names("@in|"), ["in", "in"]);
+		assert.deepEqual(templates("@in|"), ["book", undefined]);
+		assert.deepEqual(completions("@in|"), ["@in:", "@in "]);
 	});
 
 	await suite.test("a bare colon offers every book, in the order they were registered", () => {
@@ -746,7 +765,7 @@ test("a vocabulary that arrives with the data", async (suite) => {
 		assert.equal(at("@in:|"), null);
 		assert.equal(at("@in:book3|"), null);
 		// The name is still offered: it comes from the static table, not from the archive.
-		assert.deepEqual(templates("@in|"), ["book"]);
+		assert.deepEqual(templates("@in|"), ["book", undefined]);
 		assert.deepEqual(spans("@in:book3|"), [["match", "@in:book3"]]);
 		assert.deepEqual(spans("@in:snowman|"), [["match", "@in:snowman"]]);
 	});
@@ -770,6 +789,32 @@ test("painting the operators", async (suite) => {
 		assert.deepEqual(spans("@not |"), [["match", "@not"]]);
 		assert.deepEqual(spans("calvin @or |"), [["match", "@or"]]);
 		assert.deepEqual(spans("calvin @and|"), [["match", "@and"]]);
+	});
+
+	// More operators waiting on the same atom are still the query being written: `@in @has` is on its
+	// way to `@in @has @is:sunday`, wherever the caret has got to in it.
+	await suite.test("so is a chain of operators at the end", () => {
+		assert.deepEqual(spans("@in @has|"), [
+			["match", "@in"],
+			["match", "@has"],
+		]);
+		assert.deepEqual(spans("@in @ha|s"), [
+			["match", "@in"],
+			["match", "@has"],
+		]);
+		assert.deepEqual(spans("@not @only @in |"), [
+			["match", "@not"],
+			["match", "@only"],
+			["match", "@in"],
+		]);
+		assert.deepEqual(spans("@in @has"), [
+			["invalid", "@in"],
+			["invalid", "@has"],
+		]);
+		assert.deepEqual(spans("(@in @has) snow|"), [
+			["invalid", "@in"],
+			["invalid", "@has"],
+		]);
 	});
 
 	await suite.test("and a mistake once it is not", () => {
@@ -806,8 +851,8 @@ test("quotation marks", async (suite) => {
 	});
 
 	await suite.test("the menu comes back outside one", () => {
-		assert.deepEqual(names('"rosalyn" @o|'), ["or"]);
-		assert.deepEqual(names('"rosalyn"@o|'), ["or"]);
+		assert.deepEqual(names('"rosalyn" @o|'), ["or", "only"]);
+		assert.deepEqual(names('"rosalyn"@o|'), ["or", "only"]);
 	});
 
 	await suite.test("nothing inside a quotation is painted", () => {
@@ -818,4 +863,49 @@ test("quotation marks", async (suite) => {
 			["match", "@year:1988"],
 		]);
 	});
+});
+
+test("@published offers the years books came out in, as @year: offers its own", async (suite) => {
+	const offered = (marked: string, type?: "book" | "arc") => {
+		const caret = marked.indexOf("|");
+		const text = marked.slice(0, caret) + marked.slice(caret + 1);
+		return (completionsAt(text, caret, collectionQuery(type))?.rows ?? []).map((row) => [row.value, row.hint]);
+	};
+	const valuesOffered = (marked: string, type?: "book" | "arc") => offered(marked, type).map(([value]) => value);
+	const year = (value: string) => ({ value, hint: "" });
+	registerVocabulary("published", () => [year("1987"), year("1990"), year("1996"), year("2005")]);
+	registerVocabulary("published:arc", () => [year("1987"), year("1988")]);
+	try {
+		await suite.test("every year, said to be a year as @year: says it", () => {
+			assert.deepEqual(offered("@published:|"), [
+				["1987", "a four-digit year"],
+				["1990", ""],
+				["1996", ""],
+				["2005", ""],
+			]);
+		});
+
+		await suite.test("narrowed by the digits typed, two of them beginning a year as in @year:", () => {
+			assert.deepEqual(valuesOffered("@published:19|"), ["1987", "1990", "1996"]);
+			assert.deepEqual(valuesOffered("@published:9|"), ["1990", "1996"]);
+		});
+
+		await suite.test("a year no book came out in is still a year", () => {
+			assert.deepEqual(valuesOffered("@published:2001|"), ["2001"]);
+		});
+
+		await suite.test("no comparisons, and still nothing for @strips", () => {
+			assert.equal(at("@published:>|"), null);
+			assert.deepEqual(offered("@published:x|"), []);
+			assert.deepEqual(offered("@strips:|"), []);
+		});
+
+		await suite.test("a tab its own kind's years", () => {
+			assert.deepEqual(valuesOffered("@published:|", "arc"), ["1987", "1988"]);
+			assert.deepEqual(valuesOffered("@published:|", "book"), ["1987", "1990", "1996", "2005"]);
+		});
+	} finally {
+		registerVocabulary("published", () => []);
+		registerVocabulary("published:arc", () => []);
+	}
 });

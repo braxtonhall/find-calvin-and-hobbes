@@ -16,21 +16,25 @@ Type words to search transcripts. Type `@` in the search box for the list of fil
 | `@after:`     | `@after:1987`                  | strips after that date, excluding it                      |
 | `@in:`        | `@in:book3`, `@in:complete`    | strips printed in that book                               |
 | `@is:`        | `@is:sunday`, `@is:rerun`      | strips with that tag                                      |
+| `@i:`         | `@i:own`, `@i:bookmarked`      | strips you own, bookmarked or noted                       |
 | `@featuring:` | `@featuring:susie`             | strips featuring that character                           |
 | `@by:`        | `@by:watterson`                | strips by that creator                                    |
+| `@during:`    | `@during:goonarmy`             | strips in that story arc                                  |
 
 The tags are `sunday` and `daily` (the colour Sundays and the black-and-white dailies), `reused`
 (a strip on the day it first ran, where it was later rerun), `rerun` (a strip on a day it ran
-again), `altered` (a strip some book printed with changes) and `empty` (a strip with an empty
-transcript). Reruns only appear in results when the search asks for `@is:rerun`, or names the exact
-date one ran.
+again), `altered` (a strip some book printed with changes), `empty` (a strip with an empty
+transcript) and `standalone` (a strip in no arc). Those are facts about the strip; `@i:` is your
+relationship to it, kept in your browser: `@i:own` (a printing you own), `@i:bookmarked` and
+`@i:noted` (a strip you wrote a note on). Reruns only appear in results when the search asks for
+`@is:rerun` or `@i:`, or names the exact date one ran.
 
 Different filters narrow. Repeating a filter widens where a strip can have only one value for it —
 `@day:saturday @day:sunday` is the weekend, and `@year:1988 @year:1989` is either year — and for
 books, which mostly share no strips: `@in:book1 @in:book3` is the strips printed in either book
 (`@in:book1 @and @in:book3` is both) — and for creators, who mostly either made every strip together
 or took over from each other: `@by:foster @by:murphy` is either one's strips. Writing `@or` between some of them changes nothing:
-`@year:1988 @or @year:1989 @year:1990` is any of the three years. Repeating a tag narrows: `@is:sunday @is:rerun` is the Sundays
+`@year:1988 @or @year:1989 @year:1990` is any of the three years. Repeating a tag narrows, for `@i:` as for `@is:`: `@is:sunday @is:rerun` is the Sundays
 that ran again, and so does repeating a character: `@featuring:susie @featuring:rosalyn` is the
 strips with both. `@day:1 @day:monday` is the Mondays that fell
 on the first, because a day of the month and a day of the week are different things. Filters combine
@@ -61,6 +65,43 @@ searched for.
 and the menu lists every book the archive indexes with its title beside it, so `@in:book3` is _Yukon
 Ho!_ and `@in:complete` is the whole Complete. A book that is not on that list matches nothing and
 says so.
+
+### Strips and their collections
+
+Books, story arcs, creators and characters are each a collection of strips, and one operator crosses
+from a strip to each kind: `@in` to its books, `@during` to its arcs, `@by` to its creators and
+`@featuring` to its characters. Each takes the one word, filter or `(group)` after it, which is about
+the collection rather than the strip — `@in:book3` is short for `@in (@id:book3)`:
+
+| Example                         | Meaning                                         |
+| ------------------------------- | ----------------------------------------------- |
+| `@in @i:own`                    | in a book you own                               |
+| `@i:own @or @in @i:own`         | a printing you own, or in a book you own        |
+| `@only @in @i:own`              | in at least one book, and only in books you own |
+| `@in (@id:book1 @here:altered)` | altered in Book 1                               |
+
+<!-- @strips: is not user facing yet.
+| `@in (@i:own @strips:<1000)`            | in an owned book that isn't one of the huge Completes |
+| `@not @in @strips:>0`                   | in no book at all                                     |
+| `@during (@strips:>20 @has @is:sunday)` | in a long arc that has a Sunday                       |
+-->
+
+`@only` before any of these is "at least one, and all of them". `@here:altered`, inside one, is
+about how that collection prints that strip, where `@is:altered` is altered in any book.
+
+The Collections page has a search box too, and the tab you are on says which kind of collection it
+finds. A collection's words are its own — a book's title, an arc's description
+— and every word of its strips, so `susie mom` finds the arcs where both appear, in one strip or
+two. Anything about its strips goes in `@has`, which crosses back down: `@has @is:sunday` is an arc
+with a Sunday, `@not @has @is:sunday` one without, and `@only @has @year:1988` one entirely in 1988.
+A collection's own filters are `@is:` (`book`, `arc`, `creator`, `character`, `colour`, `writer`,
+`artist` — a tag that cannot be true of a kind is false), `@i:` (`own`, `noted` — only a book), `@id:`
+<!-- @strips: is not user facing yet.
+`@strips:` (`>5`, `>=5`, `<5`, `<=5`, `5`, `5..10`)
+-->
+
+and `@published:` (a year, as `@year:` takes it: a book's year, or any year one of an arc's strips ran;
+two side by side mean either).
 
 Filter values are read year first — `@date:1988/9/3` is September 3rd, never March 9th — and take
 no spaces. A bare date typed on its own is understood without any `@`, as long as it starts from

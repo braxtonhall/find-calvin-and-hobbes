@@ -1,5 +1,5 @@
-import { negatedFilters } from "./boolean-query";
-import { FilterMatch, quotedSpans, scanFilters } from "./filter-query";
+import { negatedFilters, scanQuery } from "./boolean-query";
+import { FilterMatch, STRIP_QUERY, quotedSpans } from "./filter-query";
 import { terms } from "./filter-vocabulary";
 import { MONTH_NAMES, YEARS } from "./vocabulary";
 import { PAGE_CONFIG } from "./site-config";
@@ -194,8 +194,9 @@ function fieldFor(token: string): FilterField | undefined {
 function tokenOf(match: FilterMatch): string | null {
 	const filter = match.filter;
 	if (filter === null) return null;
-	// A tag, like a book, has only the one spelling.
+	// A tag, like a book, has only the one spelling — `@is:`'s and `@i:`'s alike.
 	if (filter.kind === "is") return `@is:${filter.tag}`;
+	if (filter.kind === "i") return `@i:${filter.tag}`;
 	if (filter.kind === "in") return `@in:${filter.collection}`;
 	if (filter.kind === "year") {
 		const { year, ending } = filter.expression.candidates[0];
@@ -208,12 +209,13 @@ function tokenOf(match: FilterMatch): string | null {
 
 /**
  * The filters the bar can see: every one but those under an `@not`, which assert the opposite of
- * their box — see `negatedFilters`. Left alone by every edit as well as unticked, exactly as
- * `@day:saturday` is.
+ * their box — see `negatedFilters` — and those inside a crossing operator, which are about a book or
+ * a strip on the other side of it rather than the strip itself: `@in (@has @year:1988)` is not a
+ * strip from 1988. Left alone by every edit as well as unticked, exactly as `@day:saturday` is.
  */
 function positives(text: string): FilterMatch[] {
 	const negated = negatedFilters(text);
-	return scanFilters(text).filter((match) => !negated.has(match.start));
+	return scanQuery(text, STRIP_QUERY).filters.filter((match) => !negated.has(match.start) && !match.context.link);
 }
 
 /** The filters in the query that tick one of this field's boxes, in the order they were written. */
@@ -335,6 +337,24 @@ export function insertToken(text: string, token: string): string {
 	}
 	const glue = field.joins === true ? glueBeside(text, field) : " ";
 	return `${text.slice(0, anchor)}${glue}${token}${text.slice(anchor)}`;
+}
+
+/** The bookmark button's one filter: the strips the reader bookmarked. */
+export const BOOKMARKED = "@i:bookmarked";
+
+/** Whether the query asks for the bookmarks, as the bar sees it — not under `@not`, nor inside an operator. */
+export function asksForBookmarks(text: string): boolean {
+	return positives(text).some((match) => tokenOf(match) === BOOKMARKED);
+}
+
+/**
+ * The bookmark button, pressed: `@i:bookmarked` on the end of the query, or taken out of it by the
+ * same rules a dropdown's row is, wherever and however often it was written.
+ */
+export function toggleBookmarks(text: string): string {
+	if (asksForBookmarks(text)) return removeTokens(text, [BOOKMARKED]);
+	const head = closeQuote(text.replace(/\s+$/, ""));
+	return head === "" ? BOOKMARKED : `${head} ${BOOKMARKED}`;
 }
 
 /**

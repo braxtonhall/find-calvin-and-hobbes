@@ -1,19 +1,12 @@
-#view-library.active {
+#view-bookmarks.active,
+#view-bookshelf.active {
 	display: block;
-	/* The corrections link floats over the bottom of the page; the last line clears it. */
-	padding: 20px 20px 56px;
+	padding: 20px;
 }
 
-@media (max-width: 768px) {
-	/* On mobile the link follows the page instead of floating over it, so there is nothing to clear. */
-	#view-library.active {
-		padding-bottom: 20px;
-	}
-}
-
-/* The collections page's heading, and room under it before the first row. */
+/* The settings' heading. */
 .library-heading {
 	font-size: 22px;
 	font-weight: 700;
-	margin-bottom: 20px;
+	margin-bottom: 16px;
 }

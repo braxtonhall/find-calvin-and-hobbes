@@ -5,9 +5,11 @@ import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
 import { buildArcPath, buildCollectionPath, buildComicPath, buildCreatorPath, buildSearchPath } from "../routes";
 import { addressOf } from "../base-path";
 import { BookNeighbours, DetailArc, DetailCollection, DetailCreator, DetailPage, PageSource, arcRange } from "./page";
-import { buildBackAndHomeButtons } from "./nav-buttons";
+import { buildBackAndHomeButtons, buildFlashLabels } from "./nav-buttons";
 import { PAGE_CONFIG } from "../site-config";
 import { StripLinkSubject, stripLinks } from "../strip-links";
+import { bookmarkId, ownershipId } from "../library-file";
+import { buildOwnershipControlsHtml } from "./ownership";
 
 export function getAdjacentComicDate(
 	source: PageSource,
@@ -495,18 +497,25 @@ function linkSubject(page: DetailPage, comic: Comic): StripLinkSubject {
 	return { kind: "daily", date: page.date };
 }
 
-/** The strip's Read and License links, as `config.yaml` writes them; nothing when it writes neither. */
+/** The buttons for bookmarking a strip, owning it and noting it. */
+function buildStripOwnershipHtml(page: DetailPage, comic: Comic): string {
+	return buildOwnershipControlsHtml("strip", ownershipId(comic, page.date), {
+		id: bookmarkId(comic, page.date),
+		date: page.date,
+	});
+}
+
+/** The strip's Read and License links, as `config.yaml` writes them, if it writes any. */
 function buildStripLinksHtml(page: DetailPage, comic: Comic): string {
 	const subject = linkSubject(page, comic);
 	const links = stripLinks(PAGE_CONFIG.details[subject.kind], subject);
-	if (links.length === 0) return "";
 	const anchors = links
 		.map(
 			({ label, href }) =>
 				`<a class="detail-read-link" href="${escHtml(href)}" target="_blank" rel="noopener">${label} ${LINK_ICON_SVG}</a>`,
 		)
 		.join("");
-	return `<div class="detail-links">${anchors}</div>`;
+	return anchors ? `<div class="detail-links">${anchors}</div>` : "";
 }
 
 function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: string, isSunday: boolean): string {
@@ -515,7 +524,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 	const descriptionsResolved = page.descriptions !== null;
 
 	let bodies = "";
-	for (const comic of comics) {
+	for (const [index, comic] of comics.entries()) {
 		const description = getPageDescription(page, comic);
 
 		const transcriptHtml = buildTranscriptHtml(comic, date, alternates);
@@ -529,6 +538,9 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 			? srcsetAttributes(comic.image, comic.width, "(max-width: 768px) calc(100vw - 40px), 800px")
 			: "";
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
+		// The first strip's buttons are in the day's own row of actions; any other has a row of its own.
+		const actionsHtml =
+			index > 0 ? `<div class="detail-actions detail-comic-actions">${buildStripOwnershipHtml(page, comic)}</div>` : "";
 		const runsHtml = buildRunsHtml(page, date, comic);
 		const collectionsHtml = buildPrintingsSectionHtml(
 			buildPrintings(comic.appearances || [], collectionsById, (appearance) => printingKey(comic, appearance)),
@@ -538,6 +550,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 		);
 
 		bodies += `<div class="detail-comic${illustratedClass}" data-comic-key="${escHtml(comic.id || date)}">
+				${actionsHtml}
 				${comic.image ? `<div class="detail-image-wrapper"${ratio}><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}"${srcset} alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
 			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
 			${transcriptHtml}
@@ -667,7 +680,9 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 		${buildBackAndHomeButtons(canGoBack)}
 		<h2 class="detail-date">${dateFormatted}</h2>
 		<div class="detail-actions">
-			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark"><svg class="bookmark-icon" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button> ${prevButtonHtml} ${nextButtonHtml}
+			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">${buildFlashLabels("Copy link", "Copied!")}</button>
+			${comics.length > 0 ? buildStripOwnershipHtml(page, comics[0]) : ""}
+			<span class="detail-actions__arrows">${prevButtonHtml}${nextButtonHtml}</span>
 		</div>`;
 
 	const rerunBannerHtml = rerunOf ? buildRerunBannerHtml(rerunOf) : "";

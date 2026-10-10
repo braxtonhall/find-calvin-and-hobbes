@@ -8,11 +8,12 @@ import { addressOf } from "../base-path";
 import { dateToCompact, formatLongDate } from "../date-utils";
 import { cellForDate } from "../grid";
 import { srcsetAttributes } from "../srcset";
+import { bookmarkId, ownershipId } from "../library-file";
+import { attachRowMenu } from "./row-menu";
 
 /**
- * The rows of strips a page lists — the search results, and the bookmarks — and what they do to the
- * grid while they are hovered or stepped through. Both pages draw them the same way; the bookmarks
- * are rows no query found, so they arrive here as `SearchResult`s too. See `bookmarkResults`.
+ * The rows of strips a page lists — the search results, and an arc's strips — and what they do to
+ * the grid while they are hovered or stepped through.
  */
 
 // A transcript match carries no label, as it always has: it is the default, and naming it would
@@ -50,7 +51,8 @@ export function resultsHtml(results: SearchResult[], empty: string): string {
 		const sourceTag = label ? `<span class="result-source">${label}</span>` : ``;
 
 		// An anchor rather than the `tabindex`/`role="button"` div it used to be: the row goes somewhere
-		// with an address, so the browser can offer to copy it or open it in a second tab, and the
+		// with an address, so a cmd-click opens it in a second tab (a right-click opens the strip's own
+		// menu instead — see `row-menu.ts`), and the
 		// focus and Enter behaviour that had to be spelled out now comes for free — and announces as a
 		// link, which is the truth. `draggable="false"` because dragging from inside an anchor drags the
 		// link instead of selecting text, and the transcript below is text a reader may want to copy.
@@ -59,7 +61,7 @@ export function resultsHtml(results: SearchResult[], empty: string): string {
 			? srcsetAttributes(comic.image, comic.width, `${Math.max(200, Math.ceil(140 * (comic.aspectRatio ?? 1)))}px`)
 			: "";
 		const comicLink = addressOf(buildComicPath(comic.date, result.matchedAlternate ? [dateToCompact(comic.date)] : []));
-		html += `<a class="result-row${comic.image ? "" : " result-row--no-image"}" href="${comicLink}" draggable="false" data-date="${comic.date}" aria-label="View comic from ${dateFormatted}">
+		html += `<a class="result-row${comic.image ? "" : " result-row--no-image"}" href="${comicLink}" draggable="false" data-date="${comic.date}" data-bookmark="${escHtml(bookmarkId(comic, comic.date))}" data-ownership="${escHtml(ownershipId(comic, comic.date))}" aria-label="View comic from ${dateFormatted}">
 			<div class="result-header">${dateFormatted}${sourceTag}</div>
 			<div class="result-body">
 				<div class="result-text">${highlighted}</div>
@@ -68,6 +70,28 @@ export function resultsHtml(results: SearchResult[], empty: string): string {
 		</a>`;
 	}
 	return html;
+}
+
+/** Where the mouse last was, so the row under it can be lit again once the rows are redrawn. */
+let pointer: { x: number; y: number } | null = null;
+document.addEventListener("mousemove", (event) => {
+	pointer = { x: event.clientX, y: event.clientY };
+});
+
+/**
+ * After the rows are drawn again, takes the light off the rows and cell that were lit — their row may
+ * be gone — and, when the mouse is what changed them, lights the row now under it, as moving onto it
+ * would have.
+ */
+export function relightRows(byPointer: boolean): void {
+	if (state.hoveredCell) {
+		state.hoveredCell.classList.remove("cell--hover-highlight");
+		state.hoveredCell = null;
+	}
+	clearRowHighlights();
+	if (!byPointer || !pointer) return;
+	state.keyboardNavActive = false;
+	document.elementFromPoint(pointer.x, pointer.y)?.closest(".result-row")?.dispatchEvent(new MouseEvent("mouseenter"));
 }
 
 /**
@@ -108,6 +132,8 @@ export function attachRowHandlers(list: HTMLElement): void {
 			const scrollTo = mark.offsetTop - textElement.clientHeight / 2;
 			textElement.scrollTop = Math.max(0, Math.min(scrollTo, maxScroll));
 		}
+
+		if (row.dataset.ownership) attachRowMenu(row);
 
 		row.addEventListener("mouseenter", () => {
 			if (state.keyboardNavActive) return;

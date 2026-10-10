@@ -141,7 +141,9 @@ export interface Route {
 		| "arcs"
 		| "creator"
 		| "creators"
-		| "library"
+		| "settings"
+		| "bookmarks"
+		| "bookshelf"
 		| "credits";
 	q?: string;
 	sort?: SortMode;

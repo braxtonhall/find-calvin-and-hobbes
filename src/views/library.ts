@@ -1,54 +1,46 @@
 import "./library.css";
 
 import { state } from "../state";
-import { SortMode } from "../types";
-import { searchBookmarks } from "../search";
+import { search } from "../search";
 import { TUNING } from "../tuning";
 import { COMPOUND_CANONICAL_FORMS } from "../compounds";
 import { assignTiers } from "../tiers";
 import { canGoBack } from "../router";
-import { buildLibraryPath } from "../routes";
-import { buildBackAndHomeButtons } from "../pages/nav-buttons";
+import { LIBRARY_QUERIES, LibraryView } from "../routes";
+import { buildLibraryHtml } from "../pages/library";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
-import { attachRowHandlers, resultsHtml } from "./result-rows";
-import { SearchBar, buildSearchBar } from "./search-bar";
+import { attachRowFocusHandler, attachRowHandlers, resultsHtml } from "./result-rows";
 
-const EMPTY = "No bookmarks found";
+const EMPTY: Record<LibraryView, string> = {
+	bookmarks: "No bookmarks yet",
+	bookshelf: "Nothing owned yet",
+};
 
-/**
- * Built with the page and kept while the reader searches it, as the search page's is — see
- * `buildSearchBar`. Built again on `arriving` from elsewhere, because the back button is drawn with
- * the page, and whether it can go back depends on how the reader got here.
- */
-let bar: SearchBar | null = null;
+/** The views whose focus handler is attached already: it is delegated, and the view outlives its rows. */
+const focusAttached = new WeakSet<HTMLElement>();
 
 /**
- * The bookmarked strips, drawn as the search results are, and searched the way they are. Only drawn
- * once both the archive and the bookmarks have arrived — see `pageFor` — so an empty list here
- * means there really are none, or none the query matches.
+ * Draws the reader's bookmarks or bookshelf: the search its query is, in date order, with no box to
+ * change it. Drawn afresh on every visit, since the library may have changed since the last.
  */
-export function renderLibrary(query: string, sort: SortMode, arriving: boolean): void {
-	const element = document.getElementById("view-library")!;
-
-	if (arriving || !bar || !element.contains(bar.input)) {
-		element.innerHTML = `${buildBackAndHomeButtons(canGoBack())}
-			<h2 class="library-heading">Library</h2>
-			<div class="library-search"></div>`;
-		attachBackAndHomeHandlers(element);
-		bar = buildSearchBar(element.querySelector(".library-search")!, {
-			id: "library",
-			placeholder: "Search bookmarks",
-			pathFor: buildLibraryPath,
-			// An empty box on this page is every bookmark, not a way home.
-			listsWithoutQuery: true,
-		});
+export function renderLibrary(view: LibraryView): void {
+	const element = document.getElementById(`view-${view}`)!;
+	element.innerHTML = buildLibraryHtml(view, canGoBack());
+	attachBackAndHomeHandlers(element);
+	if (!focusAttached.has(element)) {
+		attachRowFocusHandler(element);
+		focusAttached.add(element);
 	}
 
-	const results = searchBookmarks(query, sort, TUNING, COMPOUND_CANONICAL_FORMS, state.bookmarkedDates);
-	bar.update(query, sort, results.length);
-	bar.list.innerHTML = resultsHtml(results, EMPTY);
-	attachRowHandlers(bar.list);
-	// With a query the grid shows how well each bookmark matched, as the search page's does; without
-	// one, `updateGridState` lights every bookmark alike.
-	state.searchResultTiers = query ? assignTiers(results) : null;
+	renderLibraryRows(view);
+}
+
+/** Draws the page's rows again, and only them: what is in the library has changed while it is open. */
+export function renderLibraryRows(view: LibraryView): void {
+	const element = document.getElementById(`view-${view}`)!;
+	const results = search(LIBRARY_QUERIES[view], "date", TUNING, COMPOUND_CANONICAL_FORMS);
+	const list = element.querySelector<HTMLElement>(".library-list")!;
+	list.innerHTML = resultsHtml(results, EMPTY[view]);
+	state.searchResultTiers = assignTiers(results);
+	attachRowHandlers(list);
 }

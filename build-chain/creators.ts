@@ -207,10 +207,10 @@ export function loadCreators(source: ComicSource, basePath: string = "/", config
 		const run = readRuns.findLast((candidate) => covers(candidate, compact));
 		if (run) byStrip.set(compact, run.by);
 	};
-	for (const compact of Object.keys(source.dailies)) credit(compact);
+	for (const compact of Object.keys(source.strips)) credit(compact);
 
 	for (const [key, value] of Object.entries(readMapping(strips, "strips"))) {
-		if (!source.dailies[key]) throw new Error(`The creators credit strip ${key}, which is not a strip.`);
+		if (!source.strips[key]) throw new Error(`The creators credit strip ${key}, which is not a strip.`);
 		byStrip.set(key, readCredits(value, `Strip ${key} in the creators`, known));
 	}
 	for (const [key, value] of Object.entries(readMapping(specials, "specials"))) {
@@ -218,11 +218,11 @@ export function loadCreators(source: ComicSource, basePath: string = "/", config
 		byStrip.set(key, readCredits(value, `Special ${key} in the creators`, known));
 	}
 
-	const dailies = Object.keys(source.dailies).sort();
+	const days = Object.keys(source.strips).sort();
 	const creators = listed.map((creator): Creator => {
 		const credits = [...byStrip].filter(([, credits]) => credits.some((credit) => credit.id === creator.id));
 		if (credits.length === 0) throw new Error(`Creator "${creator.id}" is credited on no strip.`);
-		const dates = credits.map(([key]) => key).filter((key) => source.dailies[key]);
+		const dates = credits.map(([key]) => key).filter((key) => source.strips[key]);
 		const specials = credits
 			.flatMap(([key]): CreditedSpecial[] => {
 				const special = source.specials[key];
@@ -243,7 +243,7 @@ export function loadCreators(source: ComicSource, basePath: string = "/", config
 			...creator,
 			strips: credits.length,
 			years: [...years].sort((a, b) => a - b),
-			ranges: rangesOf(dates, dailies),
+			ranges: rangesOf(dates, days),
 			...(roles.length > 0 ? { roles } : {}),
 			...(specials.length > 0 ? { specials } : {}),
 		};

@@ -164,12 +164,26 @@ test("a prerendered document", async (suite) => {
 		}
 	});
 
-	await suite.test("holds nothing for the bookmarks, which only the browser knows", () => {
-		const page: Page = { view: "library", q: "", sort: "rank" };
-		const document = buildDocumentHtml(template, page, { ...options, path: "/library" });
+	await suite.test("holds the settings, which are the same for everyone until the app fills them in", () => {
+		const page: Page = { view: "settings" };
+		const document = buildDocumentHtml(template, page, { ...options, path: "/settings" });
 		assert.deepEqual(embeddedPage(document), page);
-		assert.equal(activeView(document, "library"), "");
-		assert.match(document, /<title>Library — Find Calvin and Hobbes<\/title>/);
+		assert.equal(activeView(document, "settings"), buildViewHtml(page, false));
+		assert.match(activeView(document, "settings"), /id="library-export-btn"/);
+		assert.match(activeView(document, "settings"), /id="settings-clear-btn"/);
+		// The three spellings, none of them chosen until the app has asked this browser.
+		const choices = [
+			...activeView(document, "settings").matchAll(/role="radio" aria-checked="false" data-spelling="(\w*)">(\w+)</g),
+		];
+		assert.deepEqual(
+			choices.map((choice) => [choice[1], choice[2]]),
+			[
+				["", "Inferred"],
+				["british", "English"],
+				["american", "Incorrect"],
+			],
+		);
+		assert.match(document, /<title>Settings — Find Calvin and Hobbes<\/title>/);
 	});
 
 	await suite.test("holds the view its embedded data draws, for the list of books", () => {

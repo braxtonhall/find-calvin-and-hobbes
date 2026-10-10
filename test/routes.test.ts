@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import {
 	ARCS_PATH,
 	BOOKS_PATH,
-	LIBRARY_PATH,
+	SETTINGS_PATH,
+	BOOKMARKS_PATH,
+	BOOKSHELF_PATH,
 	buildArcPath,
-	buildLibraryPath,
+	buildTabPath,
 	buildCollectionPath,
 	buildComicPath,
 	buildSearchPath,
@@ -40,18 +42,9 @@ test("routes", async (suite) => {
 		assert.deepEqual(parseRoutePath("/credits", ""), { view: "credits" });
 		assert.deepEqual(parseRoutePath(BOOKS_PATH, ""), { view: "collections" });
 		assert.deepEqual(parseRoutePath(ARCS_PATH, ""), { view: "arcs" });
-		assert.deepEqual(parseRoutePath(LIBRARY_PATH, ""), { view: "library", q: "", sort: "rank" });
-
-		const [libraryPath, libraryQuery] = buildLibraryPath("snow goons & co", "date").split("?");
-		assert.equal(libraryPath, LIBRARY_PATH);
-		assert.deepEqual(parseRoutePath(libraryPath, "?" + libraryQuery), {
-			view: "library",
-			q: "snow goons & co",
-			sort: "date",
-		});
-		assert.equal(buildLibraryPath(), LIBRARY_PATH);
-		assert.equal(buildLibraryPath("", "date"), LIBRARY_PATH + "?sort=date");
-		assert.deepEqual(parseRoutePath(LIBRARY_PATH, "?sort=date"), { view: "library", q: "", sort: "date" });
+		assert.deepEqual(parseRoutePath(SETTINGS_PATH, ""), { view: "settings" });
+		assert.deepEqual(parseRoutePath(BOOKMARKS_PATH, ""), { view: "bookmarks" });
+		assert.deepEqual(parseRoutePath(BOOKSHELF_PATH, ""), { view: "bookshelf" });
 
 		const [comicPath, comicSearch] = buildComicPath("1986-07-07").split("?");
 		assert.deepEqual(parseRoutePath(comicPath, comicSearch ?? ""), {
@@ -92,8 +85,18 @@ test("routes", async (suite) => {
 		assert.deepEqual(parseRoutePath("/credits/", ""), { view: "credits" });
 		assert.deepEqual(parseRoutePath("/books/", ""), { view: "collections" });
 		assert.deepEqual(parseRoutePath("/arcs.html", ""), { view: "arcs" });
-		assert.deepEqual(parseRoutePath("/library/", ""), { view: "library", q: "", sort: "rank" });
-		assert.deepEqual(parseRoutePath("/library.html", ""), { view: "library", q: "", sort: "rank" });
+		assert.deepEqual(parseRoutePath("/settings/", ""), { view: "settings" });
+		assert.deepEqual(parseRoutePath("/settings.html", ""), { view: "settings" });
+	});
+
+	await suite.test("a tab's address holds its query, and an empty one is no query at all", () => {
+		assert.equal(buildTabPath("books"), BOOKS_PATH);
+		assert.equal(buildTabPath("arcs", ""), ARCS_PATH);
+		const [path, search] = buildTabPath("arcs", "snow @has @is:sunday").split("?");
+		assert.deepEqual(parseRoutePath(path, "?" + search), { view: "arcs", q: "snow @has @is:sunday" });
+		assert.deepEqual(parseRoutePath(BOOKS_PATH, "?q="), { view: "collections" });
+		assert.deepEqual(parseRoutePath(COLLECTIONS_PATH, "?q=owned"), { view: "collections", q: "owned" });
+		assert.equal(parseRoutePath("/library", ""), null, "the Library page is gone");
 	});
 
 	// On purpose, and with no forwarding: a book's old address is not ours any more.

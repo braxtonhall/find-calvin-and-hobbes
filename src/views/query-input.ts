@@ -1,6 +1,8 @@
 import "./query-input.css";
 
 import { Completion, FilterSpan, Row, SpanKind, completionsAt, filterSpans } from "../completion";
+import { QueryContext, STRIP_QUERY } from "../filter-query";
+import { rememberSpelling } from "../spelling";
 import { naturalHeight, onViewportShift, place, viewport } from "../placement";
 import { escHtml } from "../utils";
 
@@ -218,7 +220,11 @@ export function editQueryInput(input: HTMLInputElement, value: string, arriving 
 	}
 }
 
-export function attachQueryInput(input: HTMLInputElement): void {
+/**
+ * Teaches the box the filters, as they are written where it stands: `root` is the language of the
+ * box — the strips' in the main search, or a Collections tab's.
+ */
+export function attachQueryInput(input: HTMLInputElement, root: QueryContext = STRIP_QUERY): void {
 	if (input.parentElement?.classList.contains("query-scroll")) return;
 
 	// `renderLanding` rebuilds its input from scratch on every visit, so the widget it was attached
@@ -431,9 +437,9 @@ export function attachQueryInput(input: HTMLInputElement): void {
 	function refresh(follow = true): void {
 		const text = input.value;
 		const caret = input.selectionStart;
-		completion = completionsAt(text, caret ?? text.length);
+		completion = completionsAt(text, caret ?? text.length, root);
 
-		spans = filterSpans(text, writing ? caret : null);
+		spans = filterSpans(text, writing ? caret : null, root);
 		highlights.innerHTML = paintHighlights(text, spans);
 		fitWidth();
 		if (follow) followCaret();
@@ -464,6 +470,8 @@ export function attachQueryInput(input: HTMLInputElement): void {
 		const caret = completion.start + row.insert.length;
 		input.value = text.slice(0, completion.start) + row.insert + text.slice(rest);
 		input.setSelectionRange(caret, caret);
+		// A spelling accepted in full is the one to offer next time. See `spelling.ts`.
+		if (row.insert.endsWith(" ")) rememberSpelling(row.insert);
 		// Let the view's own handler see it, so the results follow the accepted filter.
 		input.dispatchEvent(new Event("input", { bubbles: true }));
 	}
@@ -492,6 +500,7 @@ export function attachQueryInput(input: HTMLInputElement): void {
 			// being written was going to be finished. It was not: `@year:` had its chance. Left to
 			// propagate, so the view's own handler searches as it always did.
 			if (event.key === "Enter" && !(visible() && highlighted >= 0)) {
+				rememberSpelling(input.value);
 				writing = false;
 				armed = false;
 				refresh();

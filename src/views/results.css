@@ -67,15 +67,15 @@
 	flex-shrink: 0;
 }
 
+/* As a disabled nav button looks. */
+.results-clear:disabled {
+	opacity: 0.25;
+	cursor: default;
+}
+
 .results-clear:hover:not(:disabled) {
 	color: var(--text);
 	background: var(--neutral);
-}
-
-/* Nothing to clear: an empty box on the bookmarks page is every bookmark, not a way home. */
-.results-clear:disabled {
-	opacity: 0.4;
-	cursor: default;
 }
 
 .results-sort {
@@ -120,6 +120,8 @@
 	transition: background 0.1s;
 	position: relative;
 	min-height: 140px;
+	/* A long press opens the strip's own menu (see `row-menu.ts`), not iOS's for the link. */
+	-webkit-touch-callout: none;
 }
 
 .result-row:hover {

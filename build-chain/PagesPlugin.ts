@@ -6,7 +6,9 @@ import { computeDays } from "../src/days";
 import {
 	ARCS_PATH,
 	BOOKS_PATH,
-	LIBRARY_PATH,
+	SETTINGS_PATH,
+	BOOKMARKS_PATH,
+	BOOKSHELF_PATH,
 	buildArcPath,
 	buildCollectionPath,
 	buildComicPath,
@@ -123,7 +125,9 @@ class PagesPlugin {
 
 					emitPage(CREDITS_PATH, { view: "credits" });
 					emitPage(SEARCH_PATH, { view: "results", q: "", sort: "rank" });
-					emitPage(LIBRARY_PATH, { view: "library", q: "", sort: "rank" });
+					emitPage(SETTINGS_PATH, { view: "settings" });
+					emitPage(BOOKMARKS_PATH, { view: "bookmarks" });
+					emitPage(BOOKSHELF_PATH, { view: "bookshelf" });
 
 					const books = collectionsPageFrom(source);
 					emitPage(BOOKS_PATH, books);
@@ -168,7 +172,6 @@ class PagesPlugin {
 							BOOKS_PATH,
 							...(arcs ? [ARCS_PATH] : []),
 							...(creators ? [CREATORS_PATH] : []),
-							LIBRARY_PATH,
 							...collectionPaths,
 							...arcPaths,
 							...creatorPaths,

@@ -2,7 +2,6 @@ import "./detail.css";
 
 import { state } from "../state";
 import { loadDescriptions } from "../details";
-import { isBookmarked, toggleBookmark } from "../bookmarks";
 import { canGoBack, parseRoute } from "../router";
 import { DetailPage } from "../pages/page";
 import {
@@ -14,6 +13,7 @@ import {
 } from "../pages/detail";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
+import { attachOwnershipControls } from "./ownership";
 import {
 	attachCellHighlightLink,
 	clearCollectionSoon,
@@ -22,32 +22,6 @@ import {
 	highlightCollection,
 } from "./cell-highlight";
 import { attachBookHandlers } from "./books";
-import { dayCell } from "../grid";
-
-function buildBookmarkButtonHandler(bookmarkButton: HTMLButtonElement, date: string): void {
-	isBookmarked(date).then((bookmarked) => {
-		if (bookmarked) bookmarkButton.classList.add("bookmark-btn--active");
-	});
-	bookmarkButton.addEventListener("click", async () => {
-		const isNowBookmarked = await toggleBookmark(date);
-		if (isNowBookmarked) {
-			bookmarkButton.classList.add("bookmark-btn--active");
-			state.bookmarkedDates.add(date);
-		} else {
-			bookmarkButton.classList.remove("bookmark-btn--active");
-			state.bookmarkedDates.delete(date);
-		}
-		// A box of many days, zoomed out, shows no bookmarks.
-		const cell = dayCell(date);
-		if (cell) {
-			if (isNowBookmarked) {
-				cell.classList.add("cell--bookmarked");
-			} else {
-				cell.classList.remove("cell--bookmarked");
-			}
-		}
-	});
-}
 
 function patchDetailBlocks(element: HTMLElement, page: DetailPage): void {
 	for (const comic of page.comics) {
@@ -134,9 +108,7 @@ export function renderDetail(page: DetailPage, adopt: boolean = false): void {
 	attachBookHandlers(element);
 
 	attachCopyLinkHandler(element);
-
-	const bookmarkButton = element.querySelector<HTMLButtonElement>("#bookmark-btn");
-	if (bookmarkButton) buildBookmarkButtonHandler(bookmarkButton, page.date);
+	attachOwnershipControls(element);
 
 	if (page.descriptions === null) {
 		loadDescriptions().then(() => {

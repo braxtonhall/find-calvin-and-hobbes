@@ -3,7 +3,7 @@ import { buildComicPath, buildCreatorPath } from "../routes";
 import { addressOf } from "../base-path";
 import { CreatorPage, PageSource } from "./page";
 import { CreditedSpecial } from "../types";
-import { buildBackAndHomeButtons, buildCreatorsButton } from "./nav-buttons";
+import { buildFlashLabels, buildBackAndHomeButtons, buildCreatorsButton } from "./nav-buttons";
 import { buildRangeHtml } from "./collection";
 import { formatStripCount, formatYears } from "./creators";
 import { LINK_ICON_SVG } from "./detail";
@@ -72,7 +72,7 @@ export function buildCreatorHtml(page: CreatorPage, canGoBack: boolean): string 
 				<p class="collection-meta"><span class="collection-meta--label">Years:</span> ${formatYears(creator.years)}</p>
 				${roles}
 				<div class="detail-actions">
-					<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildCreatorPath(creator.id)))}">Copy link</button>
+					<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildCreatorPath(creator.id)))}">${buildFlashLabels("Copy link", "Copied!")}</button>
 				</div>
 				${link}
 			</div>

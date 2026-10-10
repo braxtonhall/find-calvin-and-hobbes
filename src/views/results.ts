@@ -33,7 +33,6 @@ export function renderResults(query: string, sort: SortMode): void {
 			id: "results",
 			placeholder: "Search comics...",
 			pathFor: buildSearchPath,
-			listsWithoutQuery: false,
 			onEmpty: () => navigate(HOME_PATH),
 		});
 	}

@@ -9,7 +9,7 @@ export function exportDescriptions(config?: string): string {
 
 	const descriptions: Record<string, string> = {};
 
-	for (const [dateStr, daily] of Object.entries(source.dailies)) {
+	for (const [dateStr, daily] of Object.entries(source.strips)) {
 		if (daily.description) descriptions[formatDate(dateStr)] = daily.description;
 	}
 

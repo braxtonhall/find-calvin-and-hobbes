@@ -65,6 +65,11 @@
 	border-top: 1px solid var(--neutral);
 }
 
+/* A later strip's own row of actions sits a little closer under the rule than a strip would. */
+.detail-comic + .detail-comic:has(> .detail-comic-actions) {
+	padding-top: 24px;
+}
+
 .detail-description {
 	font-size: 15px;
 	line-height: 1.7;

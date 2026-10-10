@@ -19,7 +19,7 @@ const template = fs.readFileSync(path.join(PROJECT_DIR, "src", "index.html"), "u
 
 const options = { siteUrl: "https://example.test", path: "", commit: "abc1234" };
 
-/** The URL a page's link leads to, which the tests below expect `config.yaml` to give every page but home, search and the library. */
+/** The URL a page's link leads to, which the tests below expect `config.yaml` to give every page but home, search and the settings. */
 function correction(context: Parameters<typeof buildCorrectionUrl>[0]): string {
 	const url = buildCorrectionUrl(context);
 	assert.ok(url, `${context.view} has a corrections template`);
@@ -111,8 +111,8 @@ test("the corrections form's address", async (suite) => {
 		}
 		assert.equal(buildCorrectionUrl({ view: "landing", url: "", commit: "" }), null);
 		assert.equal(buildCorrectionUrl({ view: "results", url: "", commit: "" }), null);
-		// The bookmarks are this reader's own, so there is nothing of the archive on the page to be wrong.
-		assert.equal(buildCorrectionUrl({ view: "library", url: "", commit: "" }), null);
+		// The settings are this reader's own, so there is nothing of the archive on the page to be wrong.
+		assert.equal(buildCorrectionUrl({ view: "settings", url: "", commit: "" }), null);
 		assert.equal(
 			buildCorrectionUrl({ view: "detail", url: "", commit: "", rerun: true }, { strip: "https://x.test" }),
 			null,

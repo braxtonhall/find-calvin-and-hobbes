@@ -9,8 +9,11 @@ import { Page } from "./page";
  * `CORRECTIONS=false` has no templates, and the link is never written.
  */
 
-/** A page's kind, as `config.yaml` names it. A strip's page is a rerun's when its day reran an earlier strip. */
-export function correctionPage(view: Page["view"], rerun: boolean): CorrectionPage {
+/**
+ * A page's kind, as `config.yaml` names it. A strip's page is a rerun's when its day reran an earlier
+ * strip. `null` for the reader's own lists, which hold nothing of the archive's to correct.
+ */
+export function correctionPage(view: Page["view"], rerun: boolean): CorrectionPage | null {
 	switch (view) {
 		case "landing":
 			return "home";
@@ -22,6 +25,9 @@ export function correctionPage(view: Page["view"], rerun: boolean): CorrectionPa
 			return "book";
 		case "collections":
 			return "books";
+		case "bookmarks":
+		case "bookshelf":
+			return null;
 		default:
 			return view;
 	}

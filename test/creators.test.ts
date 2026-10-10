@@ -15,7 +15,7 @@ const strip = { transcript: "" };
 
 /** A Saturday, a Sunday and a Monday in 1988, the Sunday after, and a strip in 1990; and a special. */
 const SOURCE: ComicSource = {
-	dailies: {
+	strips: {
 		"19880102": strip,
 		"19880103": strip,
 		"19880104": strip,
@@ -38,7 +38,7 @@ const ids = (data: ReturnType<typeof load>, key: string) => data.byStrip.get(key
 test("creators", async (suite) => {
 	await suite.test("credits every daily and Sunday a run covers, and a special only by name", () => {
 		const data = load("people:\n  a: { name: Ann }\nruns:\n  - by: [a]\n");
-		for (const key of Object.keys(SOURCE.dailies)) assert.deepEqual(ids(data, key), ["a"]);
+		for (const key of Object.keys(SOURCE.strips)) assert.deepEqual(ids(data, key), ["a"]);
 		assert.equal(ids(data, "poster"), undefined);
 		const [ann] = data.creators;
 		assert.equal(ann.strips, 5);
@@ -140,7 +140,7 @@ test("creators", async (suite) => {
 	await suite.test("a special needs a title, which is what a creator's page lists it by", () => {
 		const comics = (special: string) =>
 			withConfig("name: x\nseries: x\ncomics: !Import ./comics.yaml\n", loadComicSource, {
-				"comics.yaml": `dailies: {}\nspecials:\n  poster:\n    date: "19890601"\n    transcript: ""\n${special}`,
+				"comics.yaml": `strips: {}\nspecials:\n  poster:\n    date: "19890601"\n    transcript: ""\n${special}`,
 			});
 		assert.equal(comics("    title: ' The poster '\n").specials.poster.title, "The poster");
 		assert.throws(() => comics(""), /Special poster needs a title/);

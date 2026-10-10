@@ -4,8 +4,9 @@ import { addressOf } from "../base-path";
 import { formatLongDate } from "../date-utils";
 import { Appearance, Arc, Comic } from "../types";
 import { ArcNeighbour, ArcPage, ArcStrip, PageSource, arcRange } from "./page";
-import { buildArcsButton, buildBackAndHomeButtons } from "./nav-buttons";
+import { buildFlashLabels, buildArcsButton, buildBackAndHomeButtons } from "./nav-buttons";
 import { buildAppearancesSectionHtml, summarizeCollections } from "./detail";
+import { bookmarkId, ownershipId } from "../library-file";
 
 /** The strip an arc's date names: the day's own, never a special that shares its date. */
 function stripOn(source: PageSource, date: string): Comic | undefined {
@@ -94,11 +95,12 @@ function buildNeighbourButton(arc: ArcNeighbour | null, direction: "prev" | "nex
 
 /**
  * The arc's strips as rows of the search results' kind — the same markup, so the same handlers light
- * each one's cell while it is hovered. A strip with no description shows its transcript instead.
+ * each one's cell while it is hovered, and open its menu. Each is the day's own strip, never a
+ * special. A strip with no description shows its transcript instead.
  */
 function buildStripRowHtml(strip: ArcStrip): string {
 	const dateFormatted = formatLongDate(strip.date);
-	return `<a class="result-row result-row--no-image" href="${addressOf(buildComicPath(strip.date))}" draggable="false" data-date="${strip.date}" aria-label="View comic from ${dateFormatted}">
+	return `<a class="result-row result-row--no-image" href="${addressOf(buildComicPath(strip.date))}" draggable="false" data-date="${strip.date}" data-bookmark="${bookmarkId({}, strip.date)}" data-ownership="${ownershipId({}, strip.date)}" aria-label="View comic from ${dateFormatted}">
 			<div class="result-header">${dateFormatted}</div>
 			<div class="result-body">
 				<div class="result-text">${escHtml(strip.text)}</div>
@@ -128,7 +130,7 @@ export function buildArcHtml(page: ArcPage, canGoBack: boolean): string {
 				<p class="arc-description">${escHtml(arc.description)}</p>
 				<p class="collection-meta"><span class="collection-meta--label">Comics:</span> ${count} strip${count !== 1 ? "s" : ""}</p>
 				<div class="detail-actions">
-					<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildArcPath(arc.id)))}">Copy link</button>
+					<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildArcPath(arc.id)))}">${buildFlashLabels("Copy link", "Copied!")}</button>
 					${buildNeighbourButton(page.prev, "prev")}
 					${buildNeighbourButton(page.next, "next")}
 				</div>

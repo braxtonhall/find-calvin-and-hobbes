@@ -78,6 +78,30 @@ function startTypeOut(input: HTMLInputElement): void {
 	typeStep(input, query, 1);
 }
 
+function setMenuOpen(open: boolean): void {
+	const toggle = document.getElementById("landing-menu-toggle");
+	const list = document.getElementById("landing-menu");
+	if (toggle === null || list === null) return;
+	toggle.setAttribute("aria-expanded", String(open));
+	list.hidden = !open;
+}
+
+// Once for the page rather than once per render, since every visit draws a fresh menu. A click on
+// one of its links shuts it too: a link home from home leaves the same menu standing.
+document.addEventListener("click", (event) => {
+	const element = event.target as HTMLElement;
+	if (element.closest(".landing-menu-toggle") !== null) return;
+	setMenuOpen(false);
+});
+
+document.addEventListener("keydown", (event) => {
+	if (event.key !== "Escape") return;
+	const toggle = document.getElementById("landing-menu-toggle");
+	if (toggle?.getAttribute("aria-expanded") !== "true") return;
+	setMenuOpen(false);
+	toggle.focus();
+});
+
 /**
  * Draws the home page, or — with `adopt` — takes over the one the build drew, which is the same
  * markup. The box is focused and wired either way.
@@ -88,6 +112,10 @@ export function renderLanding(adopt: boolean = false): void {
 
 	const element = document.getElementById("view-landing")!;
 	if (!adopt) element.innerHTML = buildLandingHtml();
+
+	document.getElementById("landing-menu-toggle")!.addEventListener("click", (event) => {
+		setMenuOpen((event.currentTarget as HTMLElement).getAttribute("aria-expanded") !== "true");
+	});
 
 	const input = document.getElementById("landing-input") as HTMLInputElement;
 	const submit = document.getElementById("landing-submit") as HTMLButtonElement;

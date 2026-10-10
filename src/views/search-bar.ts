@@ -23,18 +23,13 @@ function sortLabelFor(sort: SortMode): string {
 }
 
 export interface SearchBarOptions {
-	/** Prefixes the input's and the list's ids, which have to differ between the pages that have a bar. */
+	/** Prefixes the input's and the list's ids. */
 	id: string;
 	placeholder: string;
 	/** Where a query takes the reader, in the order asked for. */
 	pathFor(query: string, sort: SortMode): string;
-	/**
-	 * Whether an empty box is a page of its own. The search page's is not — emptying it goes home —
-	 * and the bookmarks page's is every bookmark, which can still be sorted, and has nothing to clear.
-	 */
-	listsWithoutQuery: boolean;
-	/** Where an emptied box goes, when `listsWithoutQuery` is not set. */
-	onEmpty?(): void;
+	/** Where an emptied box goes: an empty search is not a page of its own. */
+	onEmpty(): void;
 }
 
 export interface SearchBar {
@@ -83,16 +78,7 @@ export function buildSearchBar(element: HTMLElement, options: SearchBarOptions):
 	const input = element.querySelector<HTMLInputElement>(".results-input")!;
 	const sortButton = element.querySelector<HTMLButtonElement>(".results-sort")!;
 	const clearButton = element.querySelector<HTMLButtonElement>(".results-clear")!;
-	const onEmpty = (): void => {
-		if (options.listsWithoutQuery) replaceSearch(options.pathFor("", currentSort));
-		else options.onEmpty?.();
-	};
-	// Straight off the box rather than out of the render, so the button goes the moment the last
-	// character does rather than 200ms later.
-	const syncClear = (): void => {
-		if (options.listsWithoutQuery) clearButton.disabled = input.value.trim() === "";
-	};
-	input.addEventListener("input", syncClear);
+	const onEmpty = (): void => options.onEmpty();
 	const list = element.querySelector<HTMLElement>(`#${options.id}-list`)!;
 	attachQueryInput(input);
 	// Attached to the search bar rather than built beside it: the two rows are one block, and the
@@ -135,7 +121,7 @@ export function buildSearchBar(element: HTMLElement, options: SearchBarOptions):
 	sortButton.addEventListener("click", () => {
 		if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
 		const inputQuery = input.value.trim() || currentQuery;
-		if (inputQuery || options.listsWithoutQuery) {
+		if (inputQuery) {
 			replaceSearch(options.pathFor(inputQuery, currentSort === "rank" ? "date" : "rank"));
 		}
 	});
@@ -165,7 +151,6 @@ export function buildSearchBar(element: HTMLElement, options: SearchBarOptions):
 				input.setSelectionRange(query.length, query.length);
 				syncQueryInput(input);
 			}
-			syncClear();
 
 			filterBar.sync(results);
 		},

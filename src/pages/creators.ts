@@ -3,11 +3,11 @@ import { buildCreatorPath } from "../routes";
 import { addressOf } from "../base-path";
 import { Creator } from "../types";
 import { CreatorsPage, PageSource } from "./page";
-import { buildCollectionsHeaderHtml } from "./collections";
+import { buildCollectionsHeaderHtml, buildNoMatchesHtml } from "./collections";
 
 /** Every creator, in the order the creators' file lists them. */
-export function creatorsPageFrom(source: PageSource): CreatorsPage {
-	return { view: "creators", creators: [...source.creatorsById.values()] };
+export function creatorsPageFrom(source: PageSource, q?: string): CreatorsPage {
+	return { view: "creators", creators: [...source.creatorsById.values()], ...(q === undefined ? {} : { q }) };
 }
 
 /** `1985–1995`, or `1950–1960, 1963`: the years, with each run of them as its ends. */
@@ -44,14 +44,23 @@ function buildRowHtml(creator: Creator, portraits: boolean): string {
 		</a>`;
 }
 
-export function buildCreatorsHtml(page: CreatorsPage, canGoBack: boolean): string {
+/** The list, narrowed to `ids` where a search has narrowed it. */
+export function buildCreatorsBodyHtml(page: CreatorsPage, ids: ReadonlySet<string> | null = null): string {
+	if (page.creators.length === 0) return `<p class="detail-missing">Creator data not available.</p>`;
+	// Whether any has a portrait is the whole list's question, so the names line up the same narrowed.
 	const portraits = page.creators.some((creator) => creator.image);
-	const body =
-		page.creators.length > 0
-			? `<div class="collections-list">${page.creators.map((creator) => buildRowHtml(creator, portraits)).join("")}</div>`
-			: `<p class="detail-missing">Creator data not available.</p>`;
+	const shown = ids === null ? page.creators : page.creators.filter((creator) => ids.has(creator.id));
+	if (shown.length === 0) return buildNoMatchesHtml("creators");
+	return `<div class="collections-list">${shown.map((creator) => buildRowHtml(creator, portraits)).join("")}</div>`;
+}
+
+export function buildCreatorsHtml(
+	page: CreatorsPage,
+	canGoBack: boolean,
+	ids: ReadonlySet<string> | null = null,
+): string {
 	return `<div class="collections-container">
-		${buildCollectionsHeaderHtml("creators", canGoBack)}
-		${body}
+		${buildCollectionsHeaderHtml("creators", canGoBack, page.q)}
+		<div class="collections-body">${buildCreatorsBodyHtml(page, ids)}</div>
 	</div>`;
 }
