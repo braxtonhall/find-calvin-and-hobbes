@@ -26,6 +26,9 @@ export const LIBRARY_CHANGE_EVENT = "librarychange";
 let menu: HTMLElement | null = null;
 let menuRow: HTMLElement | null = null;
 
+/** Keeps the row tinted as hovered while the pointer is in its menu, which is not inside it, nor `:hover` it. */
+const MENU_OPEN_CLASS = "row--menu-open";
+
 /** Puts the menu away, if it is open: a page left behind takes its menu with it. */
 export function closeRowMenu(): void {
 	closeMenu(false);
@@ -33,15 +36,25 @@ export function closeRowMenu(): void {
 
 function closeMenu(refocus: boolean): void {
 	if (!menu) return;
+	const pointerInMenu = menu.matches(":hover");
 	menu.remove();
 	menu = null;
 	const row = menuRow;
 	menuRow = null;
+	row?.classList.remove(MENU_OPEN_CLASS);
+	// The pointer was kept on the row while it was in the menu; with the menu gone, it has left it.
+	if (pointerInMenu && row && !row.matches(":hover")) leave(row, null);
 	if (refocus && row?.isConnected) row.focus({ preventScroll: true });
 }
 
-function changed(): void {
-	document.dispatchEvent(new CustomEvent(LIBRARY_CHANGE_EVENT));
+/** Tells the row the pointer has left it, past the guard below that keeps it while the pointer is in the menu. */
+function leave(row: HTMLElement, relatedTarget: EventTarget | null): void {
+	row.dispatchEvent(new MouseEvent("mouseleave", { relatedTarget: relatedTarget ?? document.body }));
+}
+
+/** `byPointer` when the menu was used with the mouse, which is still over the page's rows. */
+function changed(byPointer: boolean): void {
+	document.dispatchEvent(new CustomEvent(LIBRARY_CHANGE_EVENT, { detail: { byPointer } }));
 }
 
 function item(action: string, icon: string, label: string, active: boolean, role = "menuitem"): string {
@@ -101,6 +114,7 @@ function place(element: HTMLElement, x: number, y: number): void {
 function openMenu(row: HTMLElement, x: number, y: number): void {
 	closeMenu(false);
 	menuRow = row;
+	row.classList.add(MENU_OPEN_CLASS);
 	const target = targetOf(row);
 	menu = document.createElement("div");
 	menu.className = "row-menu";
@@ -112,6 +126,13 @@ function openMenu(row: HTMLElement, x: number, y: number): void {
 
 	const items = [...menu.querySelectorAll<HTMLButtonElement>(".row-menu-item")];
 	items[0].focus({ preventScroll: true });
+
+	// Out of the menu and anywhere but back onto its row is out of the row too.
+	menu.addEventListener("mouseenter", () => row.classList.add(MENU_OPEN_CLASS));
+	menu.addEventListener("mouseleave", (event) => {
+		row.classList.remove(MENU_OPEN_CLASS);
+		if (!row.contains(event.relatedTarget as Node | null)) leave(row, event.relatedTarget);
+	});
 
 	menu.addEventListener("keydown", (event) => {
 		if (event.key === "Escape" || event.key === "Tab") {
@@ -131,27 +152,29 @@ function openMenu(row: HTMLElement, x: number, y: number): void {
 		const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".row-menu-item");
 		if (!button) return;
 		const action = button.dataset.action;
+		// A click from the keyboard comes with no count of presses.
+		const byPointer = event.detail > 0;
 		closeMenu(action !== "note");
-		if (action === "bookmark" && target.bookmark) bookmark(target.bookmark);
-		else if (action === "own") own(target);
+		if (action === "bookmark" && target.bookmark) bookmark(target.bookmark, byPointer);
+		else if (action === "own") own(target, byPointer);
 		else if (action === "note") editNote(row, target);
 	});
 }
 
-function bookmark({ id, date }: { id: string; date: string }): void {
+function bookmark({ id, date }: { id: string; date: string }, byPointer: boolean): void {
 	toggleBookmark(id)
 		.then(() => {
 			dayCell(date)?.classList.toggle("cell--bookmarked", isDayBookmarked(date));
-			changed();
+			changed(byPointer);
 		})
 		.catch(() => {
 			// IndexedDB unavailable — nothing is kept
 		});
 }
 
-function own({ kind, id }: RowTarget): void {
+function own({ kind, id }: RowTarget, byPointer: boolean): void {
 	updateOwnership(kind, id, (record) => ({ owned: !record.owned }))
-		.then(changed)
+		.then(() => changed(byPointer))
 		.catch(() => {});
 }
 
@@ -183,7 +206,7 @@ function editNote(row: HTMLElement, { kind, id, title }: RowTarget): void {
 		if (row.isConnected) row.focus({ preventScroll: true });
 		if (!save) return;
 		updateOwnership(kind, id, () => ({ note: note.value }))
-			.then(changed)
+			.then(() => changed(false))
 			.catch(() => {});
 	});
 
@@ -251,6 +274,16 @@ export function attachRowMenu(row: HTMLElement): void {
 		event.stopPropagation();
 	});
 }
+
+// The menu is floated on the body, so the pointer going from a row into its menu leaves the row, which
+// would take the light off it and its day. Caught on the way down, before it reaches the row's own listeners.
+document.addEventListener(
+	"mouseleave",
+	(event) => {
+		if (event.target === menuRow && menu?.contains(event.relatedTarget as Node | null)) event.stopPropagation();
+	},
+	true,
+);
 
 // A press anywhere else puts the menu away, as scrolling the page from under it does.
 document.addEventListener(

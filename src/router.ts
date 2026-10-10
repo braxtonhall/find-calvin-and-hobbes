@@ -31,6 +31,7 @@ import { loadDescriptions } from "./details";
 import { renderSettings } from "./views/settings";
 import { renderLibrary, renderLibraryRows } from "./views/library";
 import { LIBRARY_CHANGE_EVENT, closeRowMenu } from "./views/row-menu";
+import { relightRows } from "./views/result-rows";
 import { asksAboutReader } from "./boolean-query";
 import { STRIP_QUERY, collectionQuery } from "./filter-query";
 import { renderCredits } from "./views/credits";
@@ -422,7 +423,7 @@ function showLoadingView(viewElement: HTMLElement, route: Route): void {
  * page's rows are a question about the reader. Only the rows are drawn again, and the grid lit to
  * match, so the page keeps its scroll.
  */
-document.addEventListener(LIBRARY_CHANGE_EVENT, () => {
+document.addEventListener(LIBRARY_CHANGE_EVENT, (event) => {
 	const route = parseRoute();
 	if (route.view === "results" && asksAboutReader(route.q ?? "", STRIP_QUERY)) {
 		renderResults(route.q ?? "", route.sort ?? "rank");
@@ -434,6 +435,7 @@ document.addEventListener(LIBRARY_CHANGE_EVENT, () => {
 		return;
 	}
 	paintGrid(route);
+	relightRows((event as CustomEvent<{ byPointer: boolean }>).detail.byPointer);
 });
 
 export function updateGridState(route: Route): void {

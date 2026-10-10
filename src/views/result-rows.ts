@@ -72,6 +72,28 @@ export function resultsHtml(results: SearchResult[], empty: string): string {
 	return html;
 }
 
+/** Where the mouse last was, so the row under it can be lit again once the rows are redrawn. */
+let pointer: { x: number; y: number } | null = null;
+document.addEventListener("mousemove", (event) => {
+	pointer = { x: event.clientX, y: event.clientY };
+});
+
+/**
+ * After the rows are drawn again, takes the light off the rows and cell that were lit — their row may
+ * be gone — and, when the mouse is what changed them, lights the row now under it, as moving onto it
+ * would have.
+ */
+export function relightRows(byPointer: boolean): void {
+	if (state.hoveredCell) {
+		state.hoveredCell.classList.remove("cell--hover-highlight");
+		state.hoveredCell = null;
+	}
+	clearRowHighlights();
+	if (!byPointer || !pointer) return;
+	state.keyboardNavActive = false;
+	document.elementFromPoint(pointer.x, pointer.y)?.closest(".result-row")?.dispatchEvent(new MouseEvent("mouseenter"));
+}
+
 /**
  * Tabbing onto a row lights it and its cell, as hovering does. Attached once, to a container that
  * outlives its rows, since a delegated listener does not need re-adding on every redraw.
