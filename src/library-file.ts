@@ -87,10 +87,11 @@ export function mergeNotes(old: string | undefined, incoming: string | undefined
 }
 
 function mergeRecord(old: OwnershipRecord, incoming: OwnershipRecord): OwnershipRecord {
-	return record(old.id, old.owned || incoming.owned, mergeNotes(old.note, incoming.note));
+	return ownershipRecord(old.id, old.owned || incoming.owned, mergeNotes(old.note, incoming.note));
 }
 
-function record(id: string, owned: boolean, note: string | undefined): OwnershipRecord {
+/** A record as the library keeps it: with no `note` at all where there is none. */
+export function ownershipRecord(id: string, owned: boolean, note: string | undefined): OwnershipRecord {
 	return note === undefined ? { id, owned } : { id, owned, note };
 }
 
@@ -128,7 +129,7 @@ function readRecord(value: unknown): OwnershipRecord | null {
 	if (typeof id !== "string" || id.trim() === "") return null;
 	if (owned !== undefined && typeof owned !== "boolean") return null;
 	if (note !== undefined && typeof note !== "string") return null;
-	return record(id.trim(), (owned as boolean | undefined) ?? false, cleanNote(note as string | undefined));
+	return ownershipRecord(id.trim(), (owned as boolean | undefined) ?? false, cleanNote(note as string | undefined));
 }
 
 /**

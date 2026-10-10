@@ -1,6 +1,6 @@
 import { BOOKS_STORE_NAME, STORE_NAME, STRIPS_STORE_NAME } from "./constants";
 import { inTransaction } from "./database";
-import { LibraryData, OwnershipRecord, cleanNote } from "./library-file";
+import { LibraryData, OwnershipRecord, cleanNote, ownershipRecord } from "./library-file";
 import { state } from "./state";
 
 export type OwnershipKind = "strip" | "book";
@@ -34,9 +34,7 @@ export function updateOwnership(
 		request.onsuccess = () => {
 			const current: OwnershipRecord = (request.result as OwnershipRecord | undefined) ?? { id, owned: false };
 			const changed = { ...current, ...change(current), id };
-			const note = cleanNote(changed.note);
-			const next: OwnershipRecord =
-				note === undefined ? { id, owned: changed.owned } : { id, owned: changed.owned, note };
+			const next = ownershipRecord(id, changed.owned, cleanNote(changed.note));
 			if (next.owned || next.note !== undefined) store.put(next);
 			else store.delete(id);
 			finish(next);
@@ -62,21 +60,40 @@ export function holdLibrary(data: LibraryData): void {
 	state.notedBooks = new Set(data.books.filter((record) => record.note !== undefined).map((record) => record.id));
 }
 
+const LIBRARY_STORES = [STORE_NAME, STRIPS_STORE_NAME, BOOKS_STORE_NAME];
+
+/** Reads every store in `transaction`, then hands what is in them to `then`. */
+function readStores(transaction: IDBTransaction, then: (data: LibraryData) => void): void {
+	const data: LibraryData = { bookmarks: [], strips: [], books: [] };
+	const bookmarks = transaction.objectStore(STORE_NAME).getAllKeys();
+	bookmarks.onsuccess = () => (data.bookmarks = bookmarks.result.map(String));
+	const strips = transaction.objectStore(STRIPS_STORE_NAME).getAll();
+	strips.onsuccess = () => (data.strips = strips.result as OwnershipRecord[]);
+	const books = transaction.objectStore(BOOKS_STORE_NAME).getAll();
+	// Requests in one transaction succeed in the order they were made, so this one is the last.
+	books.onsuccess = () => {
+		data.books = books.result as OwnershipRecord[];
+		then(data);
+	};
+}
+
+/** Writes `data` over everything in the stores of `transaction`. */
+function writeStores(transaction: IDBTransaction, data: LibraryData): void {
+	const bookmarks = transaction.objectStore(STORE_NAME);
+	const strips = transaction.objectStore(STRIPS_STORE_NAME);
+	const books = transaction.objectStore(BOOKS_STORE_NAME);
+	bookmarks.clear();
+	strips.clear();
+	books.clear();
+	for (const date of data.bookmarks) bookmarks.put({ date });
+	for (const record of data.strips) strips.put(record);
+	for (const record of data.books) books.put(record);
+}
+
 /** Everything in the library, as a file holds it. */
 export function readLibrary(): Promise<LibraryData> {
-	return inTransaction<LibraryData>(
-		[STORE_NAME, STRIPS_STORE_NAME, BOOKS_STORE_NAME],
-		"readonly",
-		(transaction, finish) => {
-			const data: LibraryData = { bookmarks: [], strips: [], books: [] };
-			const bookmarks = transaction.objectStore(STORE_NAME).getAllKeys();
-			bookmarks.onsuccess = () => (data.bookmarks = bookmarks.result.map(String));
-			const strips = transaction.objectStore(STRIPS_STORE_NAME).getAll();
-			strips.onsuccess = () => (data.strips = strips.result as OwnershipRecord[]);
-			const books = transaction.objectStore(BOOKS_STORE_NAME).getAll();
-			books.onsuccess = () => (data.books = books.result as OwnershipRecord[]);
-			finish(data);
-		},
+	return inTransaction<LibraryData>(LIBRARY_STORES, "readonly", (transaction, finish) =>
+		readStores(transaction, finish),
 	);
 }
 
@@ -89,16 +106,22 @@ export async function clearLibrary(): Promise<void> {
 
 /** Replaces everything in the library with `data`, in one transaction: all of it, or none. */
 export function replaceLibrary(data: LibraryData): Promise<void> {
-	return inTransaction<void>([STORE_NAME, STRIPS_STORE_NAME, BOOKS_STORE_NAME], "readwrite", (transaction, finish) => {
-		const bookmarks = transaction.objectStore(STORE_NAME);
-		const strips = transaction.objectStore(STRIPS_STORE_NAME);
-		const books = transaction.objectStore(BOOKS_STORE_NAME);
-		bookmarks.clear();
-		strips.clear();
-		books.clear();
-		for (const date of data.bookmarks) bookmarks.put({ date });
-		for (const record of data.strips) strips.put(record);
-		for (const record of data.books) books.put(record);
+	return inTransaction<void>(LIBRARY_STORES, "readwrite", (transaction, finish) => {
+		writeStores(transaction, data);
 		finish();
+	});
+}
+
+/**
+ * Replaces everything in the library with what `change` makes of it, read and written in one
+ * transaction, so nothing saved meanwhile is written over. Settles with the library as it now stands.
+ */
+export function changeLibrary(change: (current: LibraryData) => LibraryData): Promise<LibraryData> {
+	return inTransaction<LibraryData>(LIBRARY_STORES, "readwrite", (transaction, finish) => {
+		readStores(transaction, (current) => {
+			const data = change(current);
+			writeStores(transaction, data);
+			finish(data);
+		});
 	});
 }

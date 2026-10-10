@@ -3,9 +3,8 @@ import "./row-menu.css";
 import { state } from "../state";
 import { escHtml } from "../utils";
 import { formatLongDate } from "../date-utils";
-import { isDayBookmarked, toggleBookmark } from "../bookmarks";
+import { toggleBookmark } from "../bookmarks";
 import { OwnershipKind, getOwnership, updateOwnership } from "../ownership";
-import { dayCell } from "../grid";
 import { BOOKMARK_ICON_SVG } from "../pages/bookmark-icon";
 import { NOTE_ICON_SVG, OWNED_ICON_SVG } from "../pages/ownership";
 
@@ -161,11 +160,8 @@ function openMenu(row: HTMLElement, x: number, y: number): void {
 }
 
 function bookmark({ id, date }: { id: string; date: string }, byPointer: boolean): void {
-	toggleBookmark(id)
-		.then(() => {
-			dayCell(date)?.classList.toggle("cell--bookmarked", isDayBookmarked(date));
-			changed(byPointer);
-		})
+	toggleBookmark(id, date)
+		.then(() => changed(byPointer))
 		.catch(() => {
 			// IndexedDB unavailable — nothing is kept
 		});

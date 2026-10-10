@@ -1,7 +1,7 @@
 import { OwnershipKind, getOwnership, updateOwnership } from "../ownership";
 import { OwnershipRecord } from "../library-file";
-import { isBookmarked, isDayBookmarked, toggleBookmark } from "../bookmarks";
-import { dayCell } from "../grid";
+import { isBookmarked, toggleBookmark } from "../bookmarks";
+import { state } from "../state";
 
 /** How long the note waits after the last keystroke before it saves. Leaving the box saves at once. */
 const NOTE_SAVE_DELAY = 400;
@@ -26,24 +26,38 @@ function showBookmark(button: HTMLButtonElement, bookmarked: boolean): void {
 
 /**
  * A strip's bookmark button: toggles, and shows the day on the grid as bookmarked while any strip
- * that ran on it is. A box of many days, zoomed out, shows no bookmarks.
+ * that ran on it is. Its state is in `state` once the library has loaded, and asked of IndexedDB
+ * until then.
  */
 function attachBookmarkButton(button: HTMLButtonElement): void {
 	const id = button.dataset.bookmark!;
 	const date = button.dataset.date!;
-	isBookmarked(id)
-		.then((bookmarked) => showBookmark(button, bookmarked))
-		.catch(() => {
-			// IndexedDB unavailable — the button does nothing that lasts
-		});
+	if (state.bookmarksLoaded) {
+		showBookmark(button, state.bookmarkedStrips.has(id));
+	} else {
+		isBookmarked(id)
+			.then((bookmarked) => showBookmark(button, bookmarked))
+			.catch(() => {
+				// IndexedDB unavailable — the button does nothing that lasts
+			});
+	}
 	button.addEventListener("click", () => {
-		toggleBookmark(id)
-			.then((bookmarked) => {
-				showBookmark(button, bookmarked);
-				dayCell(date)?.classList.toggle("cell--bookmarked", isDayBookmarked(date));
-			})
+		toggleBookmark(id, date)
+			.then((bookmarked) => showBookmark(button, bookmarked))
 			.catch(() => {});
 	});
+}
+
+/**
+ * The strip's or book's record, for its buttons. Once the library has loaded, `state` says whether
+ * it is owned and whether there is a note, so IndexedDB is asked only for a note's text.
+ */
+function readRecord(kind: OwnershipKind, id: string): Promise<OwnershipRecord | null> {
+	if (!state.bookmarksLoaded) return getOwnership(kind, id);
+	const owned = (kind === "strip" ? state.ownedStrips : state.ownedBooks).has(id);
+	const noted = (kind === "strip" ? state.notedStrips : state.notedBooks).has(id);
+	if (noted) return getOwnership(kind, id);
+	return Promise.resolve(owned ? { id, owned } : null);
 }
 
 /**
@@ -62,7 +76,7 @@ export function attachOwnershipControls(element: HTMLElement): void {
 		const bookmarkButton = controls.querySelector<HTMLButtonElement>(".ownership-bookmark-btn");
 		if (bookmarkButton) attachBookmarkButton(bookmarkButton);
 
-		getOwnership(kind, id)
+		readRecord(kind, id)
 			.then((record) => {
 				if (!record) return;
 				showRecord(controls, record);

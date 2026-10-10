@@ -1,7 +1,7 @@
 import { basePath } from "../base-path";
 import { handleRoute } from "../router";
 import { escHtml } from "../utils";
-import { holdLibrary, readLibrary, replaceLibrary } from "../ownership";
+import { changeLibrary, holdLibrary, readLibrary } from "../ownership";
 import { flashButton } from "./copy-link";
 import { isLibraryEmpty, libraryFile, libraryFileName, mergeLibraries, parseLibraryFile } from "../library-file";
 
@@ -72,19 +72,18 @@ async function importLibrary(file: File): Promise<{ imported: boolean; message: 
 		if (!sure) return { imported: false, message: "" };
 	}
 
-	const current = await readLibrary();
-	let data = parsed.data;
-	if (!isLibraryEmpty(current)) {
+	let merge = false;
+	if (!isLibraryEmpty(await readLibrary())) {
 		const choice = await ask(
 			"Your library already has bookmarks, owned strips or books, or notes. Overwrite it with this file, or merge the file into it?",
 			[OVERWRITE, MERGE, CANCEL],
 		);
 		if (!choice) return { imported: false, message: "" };
-		if (choice === MERGE) data = mergeLibraries(current, parsed.data);
+		merge = choice === MERGE;
 	}
 
-	await replaceLibrary(data);
-	holdLibrary(data);
+	// Merged into the library as it is once the reader has chosen, not as it was when they were asked.
+	holdLibrary(await changeLibrary((current) => (merge ? mergeLibraries(current, parsed.data) : parsed.data)));
 	const skipped =
 		parsed.skipped > 0 ? `Skipped ${parsed.skipped} entr${parsed.skipped === 1 ? "y" : "ies"} it couldn't read.` : "";
 	return { imported: true, message: skipped };

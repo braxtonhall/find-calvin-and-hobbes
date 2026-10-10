@@ -70,8 +70,12 @@ export function attachTabSearch(element: HTMLElement, tab: CollectionsTab): void
 
 	const search = (immediately: boolean) => {
 		if (debounce !== null) clearTimeout(debounce);
+		const from = window.location.pathname;
 		const run = () => {
 			debounce = null;
+			// The reader has gone elsewhere since they typed — to another tab, or into a book — and the
+			// search would bring them back.
+			if (window.location.pathname !== from) return;
 			replaceSearch(buildTabPath(tab, input.value.trim()));
 		};
 		if (immediately) run();

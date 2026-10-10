@@ -248,9 +248,15 @@ export class Evaluator {
 	/** `@has (…)`, asked of one collection. */
 	crossFromGroup(crossing: Crossing, group: Group): boolean {
 		const rows = this.rowsOf(group, crossing.reruns);
-		const test = (row: StripRow) =>
-			this.remembered(crossing, row.comic, () => this.stripHolds(crossing.clauses, row, { comic: row.comic, group }));
+		const test = (row: StripRow) => this.hasHolds(crossing, row, group);
 		return crossing.only ? rows.length > 0 && rows.every(test) : rows.some(test);
+	}
+
+	/** Whether one of a collection's rows is what a `@has (…)` of it asks for. */
+	hasHolds(crossing: Crossing, row: StripRow, group: Group): boolean {
+		return this.remembered(crossing, row.comic, () =>
+			this.stripHolds(crossing.clauses, row, { comic: row.comic, group }),
+		);
 	}
 
 	/** The strips a `@has` looks through: the collection's own, and the days they ran again where asked. */
@@ -363,7 +369,7 @@ export function searchCollections(query: string, type: CollectionType, compounds
 				} else if (constraint.kind === "cross") {
 					asked = true;
 					for (const row of evaluator.rowsOf(group, constraint.crossing.reruns)) {
-						if (evaluator.stripHolds(constraint.crossing.clauses, row, { comic: row.comic, group })) lit.add(row.comic);
+						if (evaluator.hasHolds(constraint.crossing, row, group)) lit.add(row.comic);
 					}
 				}
 			}

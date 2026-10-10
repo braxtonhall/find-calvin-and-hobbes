@@ -136,11 +136,15 @@ document.addEventListener("DOMContentLoaded", () => {
 			const route = parseRoute();
 			if (route.view === "detail") {
 				event.preventDefault();
-				// Every strip on the page, or, where they all are already, none of them.
+				// Every strip on the page, or, where they all are already, none of them. Which is which
+				// comes from `state`, not from the buttons, which may not have been told yet — so
+				// until the library has loaded there is no telling, and nothing is done.
+				if (!state.bookmarksLoaded) return;
 				const buttons = [...document.querySelectorAll<HTMLButtonElement>("#view-detail .ownership-bookmark-btn")];
-				const all = buttons.every((button) => button.classList.contains("bookmark-btn--active"));
+				const bookmarked = (button: HTMLButtonElement) => state.bookmarkedStrips.has(button.dataset.bookmark!);
+				const all = buttons.every(bookmarked);
 				for (const button of buttons) {
-					if (button.classList.contains("bookmark-btn--active") === all) button.click();
+					if (bookmarked(button) === all) button.click();
 				}
 			}
 		}
