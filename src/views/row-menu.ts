@@ -57,9 +57,8 @@ function changed(byPointer: boolean): void {
 	document.dispatchEvent(new CustomEvent(LIBRARY_CHANGE_EVENT, { detail: { byPointer } }));
 }
 
-function item(action: string, icon: string, label: string, active: boolean, role = "menuitem"): string {
-	const checked = role === "menuitemcheckbox" ? ` aria-checked="${active}"` : "";
-	return `<button type="button" class="row-menu-item${active ? " row-menu-item--active" : ""}" role="${role}"${checked} data-action="${action}" tabindex="-1">${icon}<span>${label}</span></button>`;
+function item(action: string, icon: string, label: string, active: boolean): string {
+	return `<button type="button" class="row-menu-item${active ? " row-menu-item--active" : ""}" role="menuitem" data-action="${action}" tabindex="-1">${icon}<span>${label}</span></button>`;
 }
 
 /**
@@ -91,7 +90,7 @@ function menuHtml(target: RowTarget): string {
 	const owned = (target.kind === "strip" ? state.ownedStrips : state.ownedBooks).has(target.id);
 	const noted = (target.kind === "strip" ? state.notedStrips : state.notedBooks).has(target.id);
 	const items = [
-		item("own", OWNED_ICON_SVG, `I own this ${target.kind}`, owned, "menuitemcheckbox"),
+		item("own", OWNED_ICON_SVG, `${owned ? "Disown" : "Own"} this ${target.kind}`, owned),
 		item("note", NOTE_ICON_SVG, noted ? "Edit note" : "Add note", noted),
 	];
 	if (target.bookmark) {
