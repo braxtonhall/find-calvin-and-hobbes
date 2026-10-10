@@ -9,7 +9,7 @@ import { dateToCompact, formatLongDate } from "../date-utils";
 import { cellForDate } from "../grid";
 import { srcsetAttributes } from "../srcset";
 import { bookmarkId, ownershipId } from "../library-file";
-import { attachStripMenu } from "./strip-menu";
+import { attachRowMenu } from "./row-menu";
 
 /**
  * The rows of strips a page lists — the search results, and an arc's strips — and what they do to
@@ -52,7 +52,7 @@ export function resultsHtml(results: SearchResult[], empty: string): string {
 
 		// An anchor rather than the `tabindex`/`role="button"` div it used to be: the row goes somewhere
 		// with an address, so a cmd-click opens it in a second tab (a right-click opens the strip's own
-		// menu instead — see `strip-menu.ts`), and the
+		// menu instead — see `row-menu.ts`), and the
 		// focus and Enter behaviour that had to be spelled out now comes for free — and announces as a
 		// link, which is the truth. `draggable="false"` because dragging from inside an anchor drags the
 		// link instead of selecting text, and the transcript below is text a reader may want to copy.
@@ -111,7 +111,7 @@ export function attachRowHandlers(list: HTMLElement): void {
 			textElement.scrollTop = Math.max(0, Math.min(scrollTo, maxScroll));
 		}
 
-		if (row.dataset.ownership) attachStripMenu(row);
+		if (row.dataset.ownership) attachRowMenu(row);
 
 		row.addEventListener("mouseenter", () => {
 			if (state.keyboardNavActive) return;

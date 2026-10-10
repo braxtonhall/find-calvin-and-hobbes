@@ -1,18 +1,18 @@
-import "./strip-menu.css";
+import "./row-menu.css";
 
 import { state } from "../state";
 import { escHtml } from "../utils";
 import { formatLongDate } from "../date-utils";
 import { isDayBookmarked, toggleBookmark } from "../bookmarks";
-import { getOwnership, updateOwnership } from "../ownership";
+import { OwnershipKind, getOwnership, updateOwnership } from "../ownership";
 import { dayCell } from "../grid";
 import { BOOKMARK_ICON_SVG } from "../pages/bookmark-icon";
 import { NOTE_ICON_SVG, OWNED_ICON_SVG } from "../pages/ownership";
 
 /**
- * The menu a strip's row opens on a right-click or a long press: bookmark it, own it, or note it,
- * without going to its page. Floated on the body, like the filter bar's menus, and drawn afresh each
- * time from what `state` holds, so it always says what the strip is now.
+ * The menu a strip's or a book's row opens on a right-click or a long press: own it or note it, and
+ * bookmark a strip, without going to its page. Floated on the body, like the filter bar's menus, and
+ * drawn afresh each time from what `state` holds, so it always says what the row is now.
  */
 
 /** How long a finger has to stay down before it is a long press rather than a tap. */
@@ -27,7 +27,7 @@ let menu: HTMLElement | null = null;
 let menuRow: HTMLElement | null = null;
 
 /** Puts the menu away, if it is open: a page left behind takes its menu with it. */
-export function closeStripMenu(): void {
+export function closeRowMenu(): void {
 	closeMenu(false);
 }
 
@@ -46,18 +46,46 @@ function changed(): void {
 
 function item(action: string, icon: string, label: string, active: boolean, role = "menuitem"): string {
 	const checked = role === "menuitemcheckbox" ? ` aria-checked="${active}"` : "";
-	return `<button type="button" class="strip-menu-item${active ? " strip-menu-item--active" : ""}" role="${role}"${checked} data-action="${action}" tabindex="-1">${icon}<span>${label}</span></button>`;
+	return `<button type="button" class="row-menu-item${active ? " row-menu-item--active" : ""}" role="${role}"${checked} data-action="${action}" tabindex="-1">${icon}<span>${label}</span></button>`;
 }
 
-function menuHtml(row: HTMLElement): string {
-	const bookmarked = state.bookmarkedStrips.has(row.dataset.bookmark!);
-	const owned = state.ownedStrips.has(row.dataset.ownership!);
-	const noted = state.notedStrips.has(row.dataset.ownership!);
-	return [
-		item("bookmark", BOOKMARK_ICON_SVG, bookmarked ? "Remove bookmark" : "Add bookmark", bookmarked),
-		item("own", OWNED_ICON_SVG, "I own this strip", owned, "menuitemcheckbox"),
+/**
+ * What a row is: a strip's, by the `data-bookmark` and `data-ownership` that `resultsHtml` writes, or
+ * a book's, by its `data-collection-id`. `title` is its day, or the book's name.
+ */
+interface RowTarget {
+	kind: OwnershipKind;
+	id: string;
+	title: string;
+	bookmark?: { id: string; date: string };
+}
+
+function targetOf(row: HTMLElement): RowTarget {
+	const book = row.dataset.collectionId;
+	if (book) {
+		return { kind: "book", id: book, title: row.querySelector(".collections-name")?.textContent ?? book };
+	}
+	const date = row.dataset.date!;
+	return {
+		kind: "strip",
+		id: row.dataset.ownership!,
+		title: formatLongDate(date),
+		bookmark: { id: row.dataset.bookmark!, date },
+	};
+}
+
+function menuHtml(target: RowTarget): string {
+	const owned = (target.kind === "strip" ? state.ownedStrips : state.ownedBooks).has(target.id);
+	const noted = (target.kind === "strip" ? state.notedStrips : state.notedBooks).has(target.id);
+	const items = [
+		item("own", OWNED_ICON_SVG, `I own this ${target.kind}`, owned, "menuitemcheckbox"),
 		item("note", NOTE_ICON_SVG, noted ? "Edit note" : "Add note", noted),
-	].join("");
+	];
+	if (target.bookmark) {
+		const bookmarked = state.bookmarkedStrips.has(target.bookmark.id);
+		items.unshift(item("bookmark", BOOKMARK_ICON_SVG, bookmarked ? "Remove bookmark" : "Add bookmark", bookmarked));
+	}
+	return items.join("");
 }
 
 /** Keeps the menu inside the window: below and right of the point, or flipped to fit. */
@@ -73,15 +101,16 @@ function place(element: HTMLElement, x: number, y: number): void {
 function openMenu(row: HTMLElement, x: number, y: number): void {
 	closeMenu(false);
 	menuRow = row;
+	const target = targetOf(row);
 	menu = document.createElement("div");
-	menu.className = "strip-menu";
+	menu.className = "row-menu";
 	menu.setAttribute("role", "menu");
-	menu.setAttribute("aria-label", `Strip from ${formatLongDate(row.dataset.date!)}`);
-	menu.innerHTML = menuHtml(row);
+	menu.setAttribute("aria-label", target.kind === "strip" ? `Strip from ${target.title}` : target.title);
+	menu.innerHTML = menuHtml(target);
 	document.body.appendChild(menu);
 	place(menu, x, y);
 
-	const items = [...menu.querySelectorAll<HTMLButtonElement>(".strip-menu-item")];
+	const items = [...menu.querySelectorAll<HTMLButtonElement>(".row-menu-item")];
 	items[0].focus({ preventScroll: true });
 
 	menu.addEventListener("keydown", (event) => {
@@ -99,19 +128,18 @@ function openMenu(row: HTMLElement, x: number, y: number): void {
 	});
 
 	menu.addEventListener("click", (event) => {
-		const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".strip-menu-item");
+		const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".row-menu-item");
 		if (!button) return;
 		const action = button.dataset.action;
 		closeMenu(action !== "note");
-		if (action === "bookmark") bookmark(row);
-		else if (action === "own") own(row);
-		else if (action === "note") editNote(row);
+		if (action === "bookmark" && target.bookmark) bookmark(target.bookmark);
+		else if (action === "own") own(target);
+		else if (action === "note") editNote(row, target);
 	});
 }
 
-function bookmark(row: HTMLElement): void {
-	const date = row.dataset.date!;
-	toggleBookmark(row.dataset.bookmark!)
+function bookmark({ id, date }: { id: string; date: string }): void {
+	toggleBookmark(id)
 		.then(() => {
 			dayCell(date)?.classList.toggle("cell--bookmarked", isDayBookmarked(date));
 			changed();
@@ -121,20 +149,19 @@ function bookmark(row: HTMLElement): void {
 		});
 }
 
-function own(row: HTMLElement): void {
-	updateOwnership("strip", row.dataset.ownership!, (record) => ({ owned: !record.owned }))
+function own({ kind, id }: RowTarget): void {
+	updateOwnership(kind, id, (record) => ({ owned: !record.owned }))
 		.then(changed)
 		.catch(() => {});
 }
 
 /** The note, in a modal over the page: saved by Save, or by Cmd/Ctrl+Enter, and left as it was otherwise. */
-function editNote(row: HTMLElement): void {
-	const id = row.dataset.ownership!;
+function editNote(row: HTMLElement, { kind, id, title }: RowTarget): void {
 	const dialog = document.createElement("dialog");
-	dialog.className = "library-dialog strip-note-dialog";
+	dialog.className = "library-dialog row-note-dialog";
 	dialog.innerHTML = `<form method="dialog">
-			<p class="library-dialog__message">Note on the strip from <strong>${escHtml(formatLongDate(row.dataset.date!))}</strong></p>
-			<textarea class="ownership-note strip-note" rows="5" placeholder="A note on this strip" aria-label="Note"></textarea>
+			<p class="library-dialog__message">Note on ${kind === "strip" ? "the strip from " : ""}<strong>${escHtml(title)}</strong></p>
+			<textarea class="ownership-note row-note" rows="5" placeholder="A note on this ${kind}" aria-label="Note"></textarea>
 			<div class="detail-actions library-dialog__choices">
 				<button class="copy-link-btn" value="save">Save</button>
 				<button class="copy-link-btn" value="cancel">Cancel</button>
@@ -155,14 +182,14 @@ function editNote(row: HTMLElement): void {
 		dialog.remove();
 		if (row.isConnected) row.focus({ preventScroll: true });
 		if (!save) return;
-		updateOwnership("strip", id, () => ({ note: note.value }))
+		updateOwnership(kind, id, () => ({ note: note.value }))
 			.then(changed)
 			.catch(() => {});
 	});
 
 	document.body.appendChild(dialog);
 	dialog.showModal();
-	getOwnership("strip", id)
+	getOwnership(kind, id)
 		.then((record) => {
 			// Unless the reader has started typing while this was being read.
 			if (record?.note !== undefined && note.value === "") note.value = record.note;
@@ -175,11 +202,11 @@ function editNote(row: HTMLElement): void {
 }
 
 /**
- * Opens the menu on `row` from a right-click, the context-menu key, or a long press. Android sends
+ * Opens the menu on a strip's or a book's row (see `targetOf`) from a right-click, the context-menu key, or a long press. Android sends
  * a long press as a `contextmenu` too; iOS does not, so a touch held still is timed here as well,
  * and the tap it ends in is kept from following the link.
  */
-export function attachStripMenu(row: HTMLElement): void {
+export function attachRowMenu(row: HTMLElement): void {
 	row.addEventListener("contextmenu", (event) => {
 		event.preventDefault();
 		if (menuRow === row) return;

@@ -30,7 +30,7 @@ import { renderCreator, renderCreators } from "./views/creators";
 import { loadDescriptions } from "./details";
 import { renderSettings } from "./views/settings";
 import { renderLibrary, renderLibraryRows } from "./views/library";
-import { LIBRARY_CHANGE_EVENT, closeStripMenu } from "./views/strip-menu";
+import { LIBRARY_CHANGE_EVENT, closeRowMenu } from "./views/row-menu";
 import { asksAboutReader } from "./boolean-query";
 import { STRIP_QUERY, collectionQuery } from "./filter-query";
 import { renderCredits } from "./views/credits";
@@ -321,7 +321,7 @@ export function handleRoute(prerendered: Page | null = null): void {
 	// A book's popup the same way, but on every page: any page with covers on it is drawn afresh, and
 	// opens the popup again itself if its book is still selected.
 	closeBookPopup();
-	closeStripMenu();
+	closeRowMenu();
 
 	document.querySelectorAll(".view").forEach((element) => {
 		if (element === viewElement) return;
@@ -418,7 +418,7 @@ function showLoadingView(viewElement: HTMLElement, route: Route): void {
 }
 
 /**
- * A strip bookmarked, owned or noted from a row's menu may come onto the page or leave it, where the
+ * A strip or a book bookmarked, owned or noted from a row's menu may come onto the page or leave it, where the
  * page's rows are a question about the reader. Only the rows are drawn again, and the grid lit to
  * match, so the page keeps its scroll.
  */
@@ -428,6 +428,8 @@ document.addEventListener(LIBRARY_CHANGE_EVENT, () => {
 		renderResults(route.q ?? "", route.sort ?? "rank");
 	} else if (route.view === "bookmarks" || route.view === "bookshelf") {
 		renderLibraryRows(route.view);
+	} else if (route.view === "collections" && route.q && asksAboutReader(route.q, collectionQuery())) {
+		renderCollections(collectionsPageFrom(state, route.q), false, false);
 	} else {
 		return;
 	}

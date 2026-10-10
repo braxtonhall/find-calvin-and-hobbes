@@ -68,6 +68,8 @@ a.collections-tab:hover {
 	padding: 10px 8px;
 	border-bottom: 1px solid var(--neutral);
 	transition: background 0.1s;
+	/* A long press opens the book's own menu (see `row-menu.ts`), not iOS's for the link. */
+	-webkit-touch-callout: none;
 }
 
 .collections-row:hover,

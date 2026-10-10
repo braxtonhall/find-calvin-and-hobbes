@@ -7,6 +7,7 @@ import { buildCollectionsBodyHtml, buildCollectionsHtml } from "../pages/collect
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { clearCollectionSoon, datesOf, highlightCollection } from "./cell-highlight";
 import { attachTabSearch, keepsHeader, narrowTab, updateTabSearch } from "./tab-search";
+import { attachRowMenu } from "./row-menu";
 
 /**
  * Draws the list of books, or — with `adopt` — takes over the one the build drew from the same `page`.
@@ -40,5 +41,6 @@ export function renderCollections(page: CollectionsPage, adopt: boolean = false,
 		row.addEventListener("focus", show);
 		row.addEventListener("mouseleave", clear);
 		row.addEventListener("blur", clear);
+		attachRowMenu(row);
 	});
 }
