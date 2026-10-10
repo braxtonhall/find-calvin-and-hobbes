@@ -122,7 +122,7 @@ export function attachLibraryTransferHandlers(element: HTMLElement): void {
 				// status line and all.
 				handleRoute();
 				const button = document.querySelector<HTMLButtonElement>("#library-import-btn") ?? importButton;
-				if (imported) flashButton(button, "Imported!", "Import");
+				if (imported) flashButton(button);
 				const line = document.querySelector<HTMLElement>(".library-transfer__status") ?? status;
 				line.textContent = message;
 			})

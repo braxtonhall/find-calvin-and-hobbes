@@ -1,4 +1,4 @@
-import { buildBackAndHomeButtons } from "./nav-buttons";
+import { buildBackAndHomeButtons, buildFlashLabels } from "./nav-buttons";
 
 /**
  * The spellings the reader can choose for a word spelt two ways, as the toggle names them: none, so
@@ -30,7 +30,7 @@ export function buildSettingsHtml(canGoBack: boolean): string {
 			<p class="settings-section-text">Your bookmarks, the strips and books you own, and your notes are kept in this browser. Export them to a file to keep or to move to another browser, and import that file there.</p>
 			<div class="detail-actions library-transfer">
 				<button type="button" class="copy-link-btn" id="library-export-btn">Export</button>
-				<button type="button" class="copy-link-btn" id="library-import-btn">Import</button>
+				<button type="button" class="copy-link-btn" id="library-import-btn">${buildFlashLabels("Import", "Imported!")}</button>
 				<span class="library-transfer__status" role="status"></span>
 				<input type="file" id="library-import-file" accept="application/json,.json" hidden />
 			</div>
@@ -45,7 +45,7 @@ export function buildSettingsHtml(canGoBack: boolean): string {
 			<h3 class="settings-section-heading">Clear your data</h3>
 			<p class="settings-section-text">Forget everything this site has kept in this browser: your bookmarks, the strips and books you own, your notes, and your spelling.</p>
 			<div class="detail-actions">
-				<button type="button" class="copy-link-btn" id="settings-clear-btn">Clear all data</button>
+				<button type="button" class="copy-link-btn" id="settings-clear-btn">${buildFlashLabels("Clear all data", "Cleared!")}</button>
 				<span class="library-transfer__status settings-clear-status" role="status"></span>
 			</div>
 		</section>

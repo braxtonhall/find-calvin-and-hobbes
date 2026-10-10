@@ -37,3 +37,12 @@ export function buildBackAndHomeButtons(canGoBack: boolean): string {
 	return `${buildBackButton("detail-back", canGoBack)}
 		${buildHomeButton("detail-home")}`;
 }
+
+/**
+ * A button's label and what it says once its action has gone through, stacked in the one place so
+ * the button is as wide as the longer of the two whichever is showing. `flashButton` crossfades
+ * from one to the other.
+ */
+export function buildFlashLabels(label: string, done: string): string {
+	return `<span class="flash-labels"><span class="flash-labels__label">${label}</span><span class="flash-labels__done" aria-hidden="true">${done}</span></span>`;
+}

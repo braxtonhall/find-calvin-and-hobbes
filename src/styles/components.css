@@ -40,6 +40,9 @@
 	cursor: pointer;
 	margin-left: 12px;
 	vertical-align: middle;
+	transition:
+		color 0.2s ease,
+		border-color 0.2s ease;
 }
 
 .copy-link-btn:hover {
@@ -50,6 +53,26 @@
 .copy-link-btn--copied {
 	color: var(--main);
 	border-color: var(--main);
+}
+
+/* Both labels in one cell, so the button keeps the wider one's width; see `buildFlashLabels`. */
+.flash-labels {
+	display: inline-grid;
+	justify-items: center;
+}
+
+.flash-labels > * {
+	grid-area: 1 / 1;
+	transition: opacity 0.2s ease;
+}
+
+.flash-labels__done,
+.copy-link-btn--copied .flash-labels__label {
+	opacity: 0;
+}
+
+.copy-link-btn--copied .flash-labels__done {
+	opacity: 1;
 }
 
 .bookmark-btn {

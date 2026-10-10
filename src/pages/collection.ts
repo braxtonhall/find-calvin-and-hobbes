@@ -12,7 +12,7 @@ import { buildCollectionPath, buildComicPath, buildSearchPath } from "../routes"
 import { addressOf } from "../base-path";
 import { Arc, Collection } from "../types";
 import { CollectionNeighbour, CollectionPage, PageSource } from "./page";
-import { buildBackAndHomeButtons, buildCollectionsButton } from "./nav-buttons";
+import { buildFlashLabels, buildBackAndHomeButtons, buildCollectionsButton } from "./nav-buttons";
 import { arcListFrom, buildArcListHtml } from "./arc-list";
 import { buildOwnershipControlsHtml } from "./ownership";
 
@@ -236,7 +236,7 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 			</div>
 		</div>
 		<div class="detail-actions collection-actions">
-			<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildCollectionPath(collection.id)))}">Copy link</button>
+			<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildCollectionPath(collection.id)))}">${buildFlashLabels("Copy link", "Copied!")}</button>
 			${buildOwnershipControlsHtml("book", collection.id)}
 			<span class="detail-actions__arrows">${buildNeighbourButton(page.prev, "prev")}${buildNeighbourButton(page.next, "next")}</span>
 		</div>

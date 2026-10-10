@@ -4,7 +4,7 @@ import { addressOf } from "../base-path";
 import { formatLongDate } from "../date-utils";
 import { Appearance, Arc, Comic } from "../types";
 import { ArcNeighbour, ArcPage, ArcStrip, PageSource, arcRange } from "./page";
-import { buildArcsButton, buildBackAndHomeButtons } from "./nav-buttons";
+import { buildFlashLabels, buildArcsButton, buildBackAndHomeButtons } from "./nav-buttons";
 import { buildAppearancesSectionHtml, summarizeCollections } from "./detail";
 import { bookmarkId, ownershipId } from "../library-file";
 
@@ -130,7 +130,7 @@ export function buildArcHtml(page: ArcPage, canGoBack: boolean): string {
 				<p class="arc-description">${escHtml(arc.description)}</p>
 				<p class="collection-meta"><span class="collection-meta--label">Comics:</span> ${count} strip${count !== 1 ? "s" : ""}</p>
 				<div class="detail-actions">
-					<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildArcPath(arc.id)))}">Copy link</button>
+					<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildArcPath(arc.id)))}">${buildFlashLabels("Copy link", "Copied!")}</button>
 					${buildNeighbourButton(page.prev, "prev")}
 					${buildNeighbourButton(page.next, "next")}
 				</div>

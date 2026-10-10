@@ -1,14 +1,24 @@
+const flashTimers = new WeakMap<HTMLButtonElement, ReturnType<typeof setTimeout>>();
+
 /**
- * Shows that a button's action went through: `done` in the button's place, coloured, for a moment,
- * and then its `label` again.
+ * Shows that a button's action went through: its done label, from `buildFlashLabels`, faded in over
+ * its label and coloured, for a moment, and then its label again. Pressed again mid-flash, the
+ * moment starts over.
  */
-export function flashButton(button: HTMLButtonElement, done: string, label: string): void {
-	button.textContent = done;
-	button.classList.add("copy-link-btn--copied");
-	setTimeout(() => {
-		button.textContent = label;
-		button.classList.remove("copy-link-btn--copied");
-	}, 1500);
+export function flashButton(button: HTMLButtonElement): void {
+	const label = button.querySelector(".flash-labels__label");
+	const done = button.querySelector(".flash-labels__done");
+	const show = (flashing: boolean) => {
+		button.classList.toggle("copy-link-btn--copied", flashing);
+		label?.toggleAttribute("aria-hidden", flashing);
+		done?.toggleAttribute("aria-hidden", !flashing);
+	};
+	clearTimeout(flashTimers.get(button));
+	show(true);
+	flashTimers.set(
+		button,
+		setTimeout(() => show(false), 1500),
+	);
 }
 
 /**
@@ -20,6 +30,6 @@ export function attachCopyLinkHandler(element: HTMLElement): void {
 	if (!copyButton) return;
 	copyButton.addEventListener("click", () => {
 		const url = window.location.origin + copyButton.dataset.href;
-		navigator.clipboard.writeText(url).then(() => flashButton(copyButton, "Copied!", "Copy link"));
+		navigator.clipboard.writeText(url).then(() => flashButton(copyButton));
 	});
 }

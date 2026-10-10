@@ -15,7 +15,10 @@ function menuIcon(paths: string): string {
 
 const MENU_ICON = menuIcon(`<path d="M4 6h16M4 12h16M4 18h16" />`);
 const BOOKMARKS_ICON = menuIcon(`<path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" />`);
-const BOOKSHELF_ICON = menuIcon(`<path d="M4 4v16M8 8v12M12 6v14M16 6l4 14" />`);
+// The strip page's "Own" icon, unowned: its spines want the thicker, square-ended stroke drawn there.
+const BOOKSHELF_ICON = menuIcon(
+	`<path d="M6 4v16M12 4v16M17.5 4.9l3.9 15.1" stroke-width="2.5" stroke-linecap="butt" />`,
+);
 const SETTINGS_ICON = menuIcon(
 	`<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" /><circle cx="12" cy="12" r="3" />`,
 );

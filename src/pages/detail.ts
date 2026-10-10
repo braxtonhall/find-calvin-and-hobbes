@@ -5,7 +5,7 @@ import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
 import { buildArcPath, buildCollectionPath, buildComicPath, buildCreatorPath, buildSearchPath } from "../routes";
 import { addressOf } from "../base-path";
 import { BookNeighbours, DetailArc, DetailCollection, DetailCreator, DetailPage, PageSource, arcRange } from "./page";
-import { buildBackAndHomeButtons } from "./nav-buttons";
+import { buildBackAndHomeButtons, buildFlashLabels } from "./nav-buttons";
 import { PAGE_CONFIG } from "../site-config";
 import { StripLinkSubject, stripLinks } from "../strip-links";
 import { bookmarkId, ownershipId } from "../library-file";
@@ -680,7 +680,7 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 		${buildBackAndHomeButtons(canGoBack)}
 		<h2 class="detail-date">${dateFormatted}</h2>
 		<div class="detail-actions">
-			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">Copy link</button>
+			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">${buildFlashLabels("Copy link", "Copied!")}</button>
 			${comics.length > 0 ? buildStripOwnershipHtml(page, comics[0]) : ""}
 			<span class="detail-actions__arrows">${prevButtonHtml}${nextButtonHtml}</span>
 		</div>`;

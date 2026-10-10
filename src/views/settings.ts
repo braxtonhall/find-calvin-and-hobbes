@@ -69,7 +69,7 @@ function attachClearHandler(element: HTMLElement): void {
 			// The page drawn again with the spelling unset, and the grid without the bookmarks.
 			handleRoute();
 			const cleared = document.querySelector<HTMLButtonElement>("#settings-clear-btn");
-			if (cleared) flashButton(cleared, "Cleared!", "Clear all data");
+			if (cleared) flashButton(cleared);
 		} catch {
 			const status = document.querySelector<HTMLElement>(".settings-clear-status");
 			if (status) status.textContent = "Couldn't clear your library from this browser.";
