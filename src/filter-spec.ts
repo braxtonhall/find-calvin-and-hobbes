@@ -63,16 +63,16 @@ export interface FilterSpec {
 	language: Language | "both";
 }
 
-/**
- * The shapes of a count compared, as GitHub writes them: `>5`, `>=5`, `<5`, `<=5`, `5`, or `5..10`
- * for a range with both ends in.
- */
-const COMPARISON: readonly ValueTemplate[] = [
-	{ label: ">N", hint: "more than N" },
-	{ label: "<N", hint: "fewer than N" },
-	{ label: "N..M", hint: "from N to M" },
-	{ label: "N", hint: "exactly N" },
-];
+// /**
+//  * The shapes of a count compared, as GitHub writes them: `>5`, `>=5`, `<5`, `<=5`, `5`, or `5..10`
+//  * for a range with both ends in.
+//  */
+// const COMPARISON: readonly ValueTemplate[] = [
+// 	{ label: ">N", hint: "more than N" },
+// 	{ label: "<N", hint: "fewer than N" },
+// 	{ label: "N..M", hint: "from N to M" },
+// 	{ label: "N", hint: "exactly N" },
+// ];
 
 const YEAR_FIRST: readonly ValueTemplate[] = [
 	{ label: "YYYY", hint: "the whole year" },
@@ -215,12 +215,13 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		language: "collection",
 		templates: [{ label: "id", hint: "a book, arc, creator or character" }],
 	},
-	{
-		name: "strips",
-		hint: "Collections by how many strips they hold",
-		language: "collection",
-		templates: COMPARISON,
-	},
+	// Not user facing yet.
+	// {
+	// 	name: "strips",
+	// 	hint: "Collections by how many strips they hold",
+	// 	language: "collection",
+	// 	templates: COMPARISON,
+	// },
 	{
 		name: "published",
 		hint: "Books by the year they came out, arcs by the years they ran",
