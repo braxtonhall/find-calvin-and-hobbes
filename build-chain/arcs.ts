@@ -52,7 +52,7 @@ export function loadArcs(source: ComicSource, collectionData: CollectionData, co
 		if (!Array.isArray(dates) || dates.length === 0) throw new Error(`Arc "${id}" needs a list of dates.`);
 		const compactDates = dates.map(String);
 		for (const compact of compactDates) {
-			if (!source.dailies[compact]) throw new Error(`Arc "${id}" names ${compact}, which is not a strip.`);
+			if (!source.strips[compact]) throw new Error(`Arc "${id}" names ${compact}, which is not a strip.`);
 		}
 		const sorted = [...compactDates].sort();
 		arcs.push({

@@ -1,0 +1,76 @@
+/* A strip's menu, from its row: floated on the body and drawn as the filter bar's menus are. */
+.strip-menu {
+	position: fixed;
+	z-index: 10000;
+	display: flex;
+	flex-direction: column;
+	padding: 4px;
+	font-family: var(--font);
+	font-size: 13px;
+	background: var(--bg-sidebar);
+	border: 1px solid var(--neutral);
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.strip-menu-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	font: inherit;
+	text-align: left;
+	white-space: nowrap;
+	color: var(--text);
+	background: none;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.strip-menu-item:hover {
+	background: var(--neutral-faded);
+}
+
+/* Inside the box, so the first and last rows' rings are not clipped by the menu's edge. */
+.strip-menu-item:focus-visible {
+	outline-offset: -2px;
+}
+
+.strip-menu-item svg {
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
+	color: var(--text-muted);
+}
+
+/* What the reader keeps of their own is in the bookmark colour, as on a strip's page. */
+.strip-menu-item--active svg {
+	color: var(--bookmark);
+}
+
+.strip-menu-item--active .bookmark-icon path {
+	fill: currentColor;
+	stroke: none;
+}
+
+.strip-menu-item--active .ownership-icon__unowned {
+	display: none;
+}
+
+.strip-menu-item--active .ownership-icon__owned {
+	display: inline;
+}
+
+.strip-note-dialog {
+	width: 420px;
+}
+
+.strip-note {
+	display: block;
+	box-sizing: border-box;
+	width: 100%;
+	margin-bottom: 12px;
+}

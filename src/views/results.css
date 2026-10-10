@@ -120,6 +120,8 @@
 	transition: background 0.1s;
 	position: relative;
 	min-height: 140px;
+	/* A long press opens the strip's own menu (see `strip-menu.ts`), not iOS's for the link. */
+	-webkit-touch-callout: none;
 }
 
 .result-row:hover {

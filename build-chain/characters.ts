@@ -1,5 +1,5 @@
 import { Character } from "../src/types";
-import { DailyEntry } from "./comicSource";
+import { StripEntry } from "./comicSource";
 import { loadCharacterSetting } from "./siteConfig";
 
 /**
@@ -15,7 +15,7 @@ export function loadCharacters(config?: string): Character[] {
  * The characters `comics.yaml` lists for one strip, each checked against the characters' file. None
  * where the strip lists none, and none on a site without characters, whatever the strip lists.
  */
-export function stripCharacters(key: string, entry: DailyEntry, characters: Character[]): string[] {
+export function stripCharacters(key: string, entry: StripEntry, characters: Character[]): string[] {
 	if (characters.length === 0 || entry.characters === undefined || entry.characters === null) return [];
 	if (!Array.isArray(entry.characters)) throw new Error(`Strip ${key} must list its characters as a list of ids.`);
 	const listed = entry.characters.map(String);

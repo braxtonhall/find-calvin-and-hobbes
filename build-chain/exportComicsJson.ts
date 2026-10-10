@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { Appearance, CollectionData } from "./collectionPages";
-import { DailyEntry, loadComicSource } from "./comicSource";
+import { StripEntry, loadComicSource } from "./comicSource";
 import { Arc, Character, Credit } from "../src/types";
 import { stripCharacters } from "./characters";
 import { loadComicImages } from "./siteConfig";
@@ -77,7 +77,7 @@ export function exportComicsJson(
 		if (appearances && appearances.length) entry.appearances = appearances;
 	};
 
-	const attachCharacters = (entry: Entry, key: string, listing: DailyEntry) => {
+	const attachCharacters = (entry: Entry, key: string, listing: StripEntry) => {
 		const featured = stripCharacters(key, listing, characters);
 		if (featured.length) entry.characters = featured;
 		const credits = creators.get(key);
@@ -91,7 +91,7 @@ export function exportComicsJson(
 
 	const entries: Entry[] = [];
 
-	for (const [dateStr, daily] of Object.entries(source.dailies)) {
+	for (const [dateStr, daily] of Object.entries(source.strips)) {
 		const entry: Entry = {
 			date: formatDate(dateStr),
 			transcript: daily.transcript,

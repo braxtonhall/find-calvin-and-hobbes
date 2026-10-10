@@ -11,10 +11,10 @@ function iso(stamp: number): string {
 
 /** The span of `src/archive.ts`, read from the strips — this project's, unless told otherwise. */
 export function loadArchiveSpan(config?: string): ArchiveSpan {
-	const stamps = Object.keys(loadComicSource(config).dailies)
+	const stamps = Object.keys(loadComicSource(config).strips)
 		.map((key) => Date.UTC(Number(key.slice(0, 4)), Number(key.slice(4, 6)) - 1, Number(key.slice(6, 8))))
 		.sort((one, other) => one - other);
-	if (stamps.length === 0) throw new Error("comics has no dailies to take the archive's span from");
+	if (stamps.length === 0) throw new Error("comics has no strips to take the archive's span from");
 
 	const gaps: [string, string][] = [];
 	for (let index = 1; index < stamps.length; index++) {

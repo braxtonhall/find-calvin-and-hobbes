@@ -142,6 +142,8 @@ export interface Route {
 		| "creator"
 		| "creators"
 		| "settings"
+		| "bookmarks"
+		| "bookshelf"
 		| "credits";
 	q?: string;
 	sort?: SortMode;

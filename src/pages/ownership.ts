@@ -4,8 +4,8 @@ import { BOOKMARK_ICON_SVG } from "./bookmark-icon";
 
 // Three books on a shelf: drawn as solid books once owned, and only as their spines until then,
 // since at this size the books' outlines crowd together.
-const OWNED_ICON_SVG = `<svg class="ownership-icon" viewBox="0 0 24 24"><path class="ownership-icon__unowned" d="M6 4v16M12 4v16M17.5 4.9l3.9 15.1" fill="none" stroke="currentColor" stroke-width="2.5"/><path class="ownership-icon__owned" d="M4 4h4v16H4zM10 4h4v16h-4zM15.6 5.4l3.8-1 3.9 15.1-3.8 1z" fill="currentColor"/></svg>`;
-const NOTE_ICON_SVG = `<svg class="ownership-icon" viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zM8.5 11h7M8.5 15h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+export const OWNED_ICON_SVG = `<svg class="ownership-icon" viewBox="0 0 24 24"><path class="ownership-icon__unowned" d="M6 4v16M12 4v16M17.5 4.9l3.9 15.1" fill="none" stroke="currentColor" stroke-width="2.5"/><path class="ownership-icon__owned" d="M4 4h4v16H4zM10 4h4v16h-4zM15.6 5.4l3.8-1 3.9 15.1-3.8 1z" fill="currentColor"/></svg>`;
+export const NOTE_ICON_SVG = `<svg class="ownership-icon" viewBox="0 0 24 24"><path d="M5 3h10l4 4v14H5zM8.5 11h7M8.5 15h4.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
 /**
  * Whether the reader owns a strip or a book, and their note on it: two buttons and the note's box,

@@ -21,7 +21,7 @@ export function loadRealArchive(): Archive {
 	const comics: Comic[] = [];
 	const descriptions = new Map<string, string>();
 
-	for (const [key, daily] of Object.entries(source.dailies)) {
+	for (const [key, daily] of Object.entries(source.strips)) {
 		const date = formatDate(key);
 		const comic: Comic = { date, transcript: daily.transcript };
 		if (daily.alternate) comic.alternate = daily.alternate;

@@ -8,6 +8,8 @@ import { addressOf } from "../base-path";
 import { dateToCompact, formatLongDate } from "../date-utils";
 import { cellForDate } from "../grid";
 import { srcsetAttributes } from "../srcset";
+import { bookmarkId, ownershipId } from "../library-file";
+import { attachStripMenu } from "./strip-menu";
 
 /**
  * The rows of strips a page lists — the search results, and an arc's strips — and what they do to
@@ -49,7 +51,8 @@ export function resultsHtml(results: SearchResult[], empty: string): string {
 		const sourceTag = label ? `<span class="result-source">${label}</span>` : ``;
 
 		// An anchor rather than the `tabindex`/`role="button"` div it used to be: the row goes somewhere
-		// with an address, so the browser can offer to copy it or open it in a second tab, and the
+		// with an address, so a cmd-click opens it in a second tab (a right-click opens the strip's own
+		// menu instead — see `strip-menu.ts`), and the
 		// focus and Enter behaviour that had to be spelled out now comes for free — and announces as a
 		// link, which is the truth. `draggable="false"` because dragging from inside an anchor drags the
 		// link instead of selecting text, and the transcript below is text a reader may want to copy.
@@ -58,7 +61,7 @@ export function resultsHtml(results: SearchResult[], empty: string): string {
 			? srcsetAttributes(comic.image, comic.width, `${Math.max(200, Math.ceil(140 * (comic.aspectRatio ?? 1)))}px`)
 			: "";
 		const comicLink = addressOf(buildComicPath(comic.date, result.matchedAlternate ? [dateToCompact(comic.date)] : []));
-		html += `<a class="result-row${comic.image ? "" : " result-row--no-image"}" href="${comicLink}" draggable="false" data-date="${comic.date}" aria-label="View comic from ${dateFormatted}">
+		html += `<a class="result-row${comic.image ? "" : " result-row--no-image"}" href="${comicLink}" draggable="false" data-date="${comic.date}" data-bookmark="${escHtml(bookmarkId(comic, comic.date))}" data-ownership="${escHtml(ownershipId(comic, comic.date))}" aria-label="View comic from ${dateFormatted}">
 			<div class="result-header">${dateFormatted}${sourceTag}</div>
 			<div class="result-body">
 				<div class="result-text">${highlighted}</div>
@@ -107,6 +110,8 @@ export function attachRowHandlers(list: HTMLElement): void {
 			const scrollTo = mark.offsetTop - textElement.clientHeight / 2;
 			textElement.scrollTop = Math.max(0, Math.min(scrollTo, maxScroll));
 		}
+
+		if (row.dataset.ownership) attachStripMenu(row);
 
 		row.addEventListener("mouseenter", () => {
 			if (state.keyboardNavActive) return;

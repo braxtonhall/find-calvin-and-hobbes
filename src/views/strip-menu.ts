@@ -1,0 +1,249 @@
+import "./strip-menu.css";
+
+import { state } from "../state";
+import { escHtml } from "../utils";
+import { formatLongDate } from "../date-utils";
+import { isDayBookmarked, toggleBookmark } from "../bookmarks";
+import { getOwnership, updateOwnership } from "../ownership";
+import { dayCell } from "../grid";
+import { BOOKMARK_ICON_SVG } from "../pages/bookmark-icon";
+import { NOTE_ICON_SVG, OWNED_ICON_SVG } from "../pages/ownership";
+
+/**
+ * The menu a strip's row opens on a right-click or a long press: bookmark it, own it, or note it,
+ * without going to its page. Floated on the body, like the filter bar's menus, and drawn afresh each
+ * time from what `state` holds, so it always says what the strip is now.
+ */
+
+/** How long a finger has to stay down before it is a long press rather than a tap. */
+const LONG_PRESS_DELAY = 500;
+/** How far it may drift meanwhile, in pixels, before it is a scroll instead. */
+const LONG_PRESS_SLOP = 10;
+
+/** Says something in the library changed from a row, so a page listing the library can draw itself again. */
+export const LIBRARY_CHANGE_EVENT = "librarychange";
+
+let menu: HTMLElement | null = null;
+let menuRow: HTMLElement | null = null;
+
+/** Puts the menu away, if it is open: a page left behind takes its menu with it. */
+export function closeStripMenu(): void {
+	closeMenu(false);
+}
+
+function closeMenu(refocus: boolean): void {
+	if (!menu) return;
+	menu.remove();
+	menu = null;
+	const row = menuRow;
+	menuRow = null;
+	if (refocus && row?.isConnected) row.focus({ preventScroll: true });
+}
+
+function changed(): void {
+	document.dispatchEvent(new CustomEvent(LIBRARY_CHANGE_EVENT));
+}
+
+function item(action: string, icon: string, label: string, active: boolean, role = "menuitem"): string {
+	const checked = role === "menuitemcheckbox" ? ` aria-checked="${active}"` : "";
+	return `<button type="button" class="strip-menu-item${active ? " strip-menu-item--active" : ""}" role="${role}"${checked} data-action="${action}" tabindex="-1">${icon}<span>${label}</span></button>`;
+}
+
+function menuHtml(row: HTMLElement): string {
+	const bookmarked = state.bookmarkedStrips.has(row.dataset.bookmark!);
+	const owned = state.ownedStrips.has(row.dataset.ownership!);
+	const noted = state.notedStrips.has(row.dataset.ownership!);
+	return [
+		item("bookmark", BOOKMARK_ICON_SVG, bookmarked ? "Remove bookmark" : "Add bookmark", bookmarked),
+		item("own", OWNED_ICON_SVG, "I own this strip", owned, "menuitemcheckbox"),
+		item("note", NOTE_ICON_SVG, noted ? "Edit note" : "Add note", noted),
+	].join("");
+}
+
+/** Keeps the menu inside the window: below and right of the point, or flipped to fit. */
+function place(element: HTMLElement, x: number, y: number): void {
+	const { width, height } = element.getBoundingClientRect();
+	const margin = 8;
+	const left = x + width + margin > window.innerWidth ? Math.max(margin, x - width) : x;
+	const top = y + height + margin > window.innerHeight ? Math.max(margin, y - height) : y;
+	element.style.left = `${left}px`;
+	element.style.top = `${top}px`;
+}
+
+function openMenu(row: HTMLElement, x: number, y: number): void {
+	closeMenu(false);
+	menuRow = row;
+	menu = document.createElement("div");
+	menu.className = "strip-menu";
+	menu.setAttribute("role", "menu");
+	menu.setAttribute("aria-label", `Strip from ${formatLongDate(row.dataset.date!)}`);
+	menu.innerHTML = menuHtml(row);
+	document.body.appendChild(menu);
+	place(menu, x, y);
+
+	const items = [...menu.querySelectorAll<HTMLButtonElement>(".strip-menu-item")];
+	items[0].focus({ preventScroll: true });
+
+	menu.addEventListener("keydown", (event) => {
+		if (event.key === "Escape" || event.key === "Tab") {
+			// Escape is kept from the page, where it would also go home.
+			event.preventDefault();
+			event.stopPropagation();
+			closeMenu(true);
+		} else if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+			event.preventDefault();
+			const index = items.indexOf(document.activeElement as HTMLButtonElement);
+			const step = event.key === "ArrowDown" ? 1 : -1;
+			items[(index + step + items.length) % items.length].focus();
+		}
+	});
+
+	menu.addEventListener("click", (event) => {
+		const button = (event.target as HTMLElement).closest<HTMLButtonElement>(".strip-menu-item");
+		if (!button) return;
+		const action = button.dataset.action;
+		closeMenu(action !== "note");
+		if (action === "bookmark") bookmark(row);
+		else if (action === "own") own(row);
+		else if (action === "note") editNote(row);
+	});
+}
+
+function bookmark(row: HTMLElement): void {
+	const date = row.dataset.date!;
+	toggleBookmark(row.dataset.bookmark!)
+		.then(() => {
+			dayCell(date)?.classList.toggle("cell--bookmarked", isDayBookmarked(date));
+			changed();
+		})
+		.catch(() => {
+			// IndexedDB unavailable — nothing is kept
+		});
+}
+
+function own(row: HTMLElement): void {
+	updateOwnership("strip", row.dataset.ownership!, (record) => ({ owned: !record.owned }))
+		.then(changed)
+		.catch(() => {});
+}
+
+/** The note, in a modal over the page: saved by Save, or by Cmd/Ctrl+Enter, and left as it was otherwise. */
+function editNote(row: HTMLElement): void {
+	const id = row.dataset.ownership!;
+	const dialog = document.createElement("dialog");
+	dialog.className = "library-dialog strip-note-dialog";
+	dialog.innerHTML = `<form method="dialog">
+			<p class="library-dialog__message">Note on the strip from <strong>${escHtml(formatLongDate(row.dataset.date!))}</strong></p>
+			<textarea class="ownership-note strip-note" rows="5" placeholder="A note on this strip" aria-label="Note"></textarea>
+			<div class="detail-actions library-dialog__choices">
+				<button class="copy-link-btn" value="save">Save</button>
+				<button class="copy-link-btn" value="cancel">Cancel</button>
+			</div>
+		</form>`;
+	const note = dialog.querySelector<HTMLTextAreaElement>("textarea")!;
+
+	dialog.addEventListener("keydown", (event) => {
+		// Escape closes the dialog, and is kept from the page, where it would also go home.
+		if (event.key === "Escape") event.stopPropagation();
+		if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+			event.preventDefault();
+			dialog.close("save");
+		}
+	});
+	dialog.addEventListener("close", () => {
+		const save = dialog.returnValue === "save";
+		dialog.remove();
+		if (row.isConnected) row.focus({ preventScroll: true });
+		if (!save) return;
+		updateOwnership("strip", id, () => ({ note: note.value }))
+			.then(changed)
+			.catch(() => {});
+	});
+
+	document.body.appendChild(dialog);
+	dialog.showModal();
+	getOwnership("strip", id)
+		.then((record) => {
+			// Unless the reader has started typing while this was being read.
+			if (record?.note !== undefined && note.value === "") note.value = record.note;
+		})
+		.catch(() => {})
+		.finally(() => {
+			note.focus();
+			note.setSelectionRange(note.value.length, note.value.length);
+		});
+}
+
+/**
+ * Opens the menu on `row` from a right-click, the context-menu key, or a long press. Android sends
+ * a long press as a `contextmenu` too; iOS does not, so a touch held still is timed here as well,
+ * and the tap it ends in is kept from following the link.
+ */
+export function attachStripMenu(row: HTMLElement): void {
+	row.addEventListener("contextmenu", (event) => {
+		event.preventDefault();
+		if (menuRow === row) return;
+		// From the keyboard there is no pointer, and the event lands at the row's corner, or nowhere.
+		if (event.clientX === 0 && event.clientY === 0) {
+			const rect = row.getBoundingClientRect();
+			openMenu(row, rect.left + 16, rect.top + 16);
+		} else {
+			openMenu(row, event.clientX, event.clientY);
+		}
+	});
+
+	let timer: number | null = null;
+	let start: { x: number; y: number } | null = null;
+	let pressed = false;
+	const cancel = () => {
+		if (timer !== null) window.clearTimeout(timer);
+		timer = null;
+		start = null;
+	};
+
+	row.addEventListener("pointerdown", (event) => {
+		pressed = false;
+		if (event.pointerType !== "touch") return;
+		cancel();
+		start = { x: event.clientX, y: event.clientY };
+		timer = window.setTimeout(() => {
+			timer = null;
+			pressed = true;
+			if (menuRow !== row && start) openMenu(row, start.x, start.y);
+		}, LONG_PRESS_DELAY);
+	});
+	row.addEventListener("pointermove", (event) => {
+		if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > LONG_PRESS_SLOP) cancel();
+	});
+	row.addEventListener("pointerup", cancel);
+	row.addEventListener("pointercancel", cancel);
+	row.addEventListener("click", (event) => {
+		if (!pressed) return;
+		pressed = false;
+		event.preventDefault();
+		event.stopPropagation();
+	});
+}
+
+// A press anywhere else puts the menu away, as scrolling the page from under it does.
+document.addEventListener(
+	"pointerdown",
+	(event) => {
+		if (menu && !menu.contains(event.target as Node)) closeMenu(false);
+	},
+	true,
+);
+// Captured, because the page scrolls inside `#main` rather than the window. Only a scroll that moves
+// the row: the grid scrolls to the row's day when the row is pressed.
+window.addEventListener(
+	"scroll",
+	(event) => {
+		const scrolled = event.target;
+		if (menuRow && (scrolled === document || (scrolled instanceof Node && scrolled.contains(menuRow)))) {
+			closeMenu(false);
+		}
+	},
+	true,
+);
+window.addEventListener("resize", () => closeMenu(false));
+window.addEventListener("blur", () => closeMenu(false));

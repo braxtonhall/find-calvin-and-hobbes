@@ -129,7 +129,7 @@ export function countCorpus(config?: string): Counts {
 	const words = new Map<string, number>();
 	const bigrams = new Map<string, number>();
 
-	for (const entry of [...Object.values(source.dailies), ...Object.values(source.specials)]) {
+	for (const entry of [...Object.values(source.strips), ...Object.values(source.specials)]) {
 		const tokens = tokenise([entry.transcript, entry.alternate || "", entry.description || ""].join(" "));
 		const seenWords = new Set<string>();
 		const seenBigrams = new Set<string>();

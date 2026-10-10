@@ -1,6 +1,6 @@
 import { loadRequiredPart, configName } from "./siteConfig";
 
-export interface DailyEntry {
+export interface StripEntry {
 	transcript: string;
 	alternate?: string;
 	description?: string;
@@ -10,7 +10,7 @@ export interface DailyEntry {
 	characters?: string[];
 }
 
-export interface SpecialEntry extends DailyEntry {
+export interface SpecialEntry extends StripEntry {
 	date: string;
 	/** What a list of strips calls it, having no date of its own to go by: a creator's page lists their specials by it. */
 	title: string;
@@ -18,12 +18,12 @@ export interface SpecialEntry extends DailyEntry {
 }
 
 export interface ComicSource {
-	dailies: Record<string, DailyEntry>;
+	strips: Record<string, StripEntry>;
 	specials: Record<string, SpecialEntry>;
 }
 
 interface RawSource {
-	dailies?: Record<string, string | DailyEntry>;
+	strips?: Record<string, string | StripEntry>;
 	specials?: Record<string, SpecialEntry>;
 }
 
@@ -34,9 +34,9 @@ export function loadComicSource(config?: string): ComicSource {
 		throw new Error(`comics in ${configName(config)} must be a mapping`);
 	const raw = value as RawSource;
 
-	const dailies: Record<string, DailyEntry> = {};
-	for (const [key, value] of Object.entries(raw.dailies || {})) {
-		dailies[String(key)] = typeof value === "string" ? { transcript: value } : value;
+	const strips: Record<string, StripEntry> = {};
+	for (const [key, value] of Object.entries(raw.strips || {})) {
+		strips[String(key)] = typeof value === "string" ? { transcript: value } : value;
 	}
 
 	const specials: Record<string, SpecialEntry> = {};
@@ -46,5 +46,5 @@ export function loadComicSource(config?: string): ComicSource {
 		specials[String(key)] = { ...value, date: String(value.date), title };
 	}
 
-	return { dailies, specials };
+	return { strips, specials };
 }

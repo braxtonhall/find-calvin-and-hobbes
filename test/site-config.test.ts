@@ -116,7 +116,7 @@ test("config.yaml", async (suite) => {
 
 	await suite.test("reads a part written in place, and imports Markdown as its text", () => {
 		withConfig("name: x\nseries: x\nreruns:\n  '19910505': '19860119'\n", (config) => {
-			const source = { dailies: { "19860119": { transcript: "" } }, specials: {} };
+			const source = { strips: { "19860119": { transcript: "" } }, specials: {} };
 			assert.deepEqual(loadReruns(source, config), { "1991-05-05": "1986-01-19" });
 		});
 		withConfig(
@@ -176,8 +176,8 @@ test("config.yaml", async (suite) => {
 	await suite.test("reads an import's path from the file it is written in", () => {
 		withConfig(
 			"comics: !Import ./strips/index.yaml\n",
-			(config) => assert.deepEqual(loadRequiredPart("comics", config), { dailies: { "19851118": "Hi." } }),
-			{ "strips/index.yaml": "dailies: !Import ../days/dailies.yaml\n", "days/dailies.yaml": "'19851118': Hi.\n" },
+			(config) => assert.deepEqual(loadRequiredPart("comics", config), { strips: { "19851118": "Hi." } }),
+			{ "strips/index.yaml": "strips: !Import ../days/dailies.yaml\n", "days/dailies.yaml": "'19851118': Hi.\n" },
 		);
 	});
 

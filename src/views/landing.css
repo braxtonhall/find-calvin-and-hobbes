@@ -112,3 +112,99 @@
 .landing-links > a:hover {
 	color: var(--main);
 }
+
+/*
+ * The corner menu. The button is the search button's twin — bare, muted, tinted on hover — and the
+ * list is a `filter-menu`, hung from the button's right edge. Top right, well away from the grid
+ * button that has the bottom of a phone.
+ */
+#view-landing.active {
+	position: relative;
+}
+
+.landing-menu {
+	position: absolute;
+	top: 12px;
+	right: 12px;
+	z-index: 10;
+}
+
+.landing-menu-toggle {
+	display: grid;
+	place-items: center;
+	width: 38px;
+	height: 38px;
+	padding: 0;
+	color: var(--text-muted);
+	background: none;
+	border: none;
+	border-radius: 8px;
+	cursor: pointer;
+	transition:
+		color 0.2s,
+		background 0.2s;
+}
+
+.landing-menu-toggle:hover,
+.landing-menu-toggle[aria-expanded="true"] {
+	color: var(--main-text);
+	background: var(--neutral-faded);
+}
+
+.landing-menu-toggle > svg {
+	width: 20px;
+	height: 20px;
+}
+
+.landing-menu-list {
+	position: absolute;
+	top: calc(100% + 4px);
+	right: 0;
+	display: flex;
+	flex-direction: column;
+	min-width: 160px;
+	padding: 4px;
+	font-family: var(--font);
+	font-size: 13px;
+	background: var(--bg-sidebar);
+	border: 1px solid var(--neutral);
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* The class sets a `display`, which would otherwise win over the one `[hidden]` carries. */
+.landing-menu-list[hidden] {
+	display: none;
+}
+
+.landing-menu-item {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 6px 8px;
+	color: var(--text);
+	text-decoration: none;
+	white-space: nowrap;
+	border-radius: 4px;
+}
+
+.landing-menu-item:hover {
+	background: var(--neutral-faded);
+}
+
+.landing-menu-item:focus-visible {
+	outline-offset: -2px;
+}
+
+.landing-menu-icon {
+	width: 14px;
+	height: 14px;
+	flex-shrink: 0;
+	color: var(--text-muted);
+}
+
+.landing-menu-rule {
+	margin: 4px 0;
+	border: none;
+	border-top: 1px solid var(--neutral);
+}

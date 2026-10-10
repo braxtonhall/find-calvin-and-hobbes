@@ -81,6 +81,14 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "settings" };
 	}
 
+	if (path === BOOKMARKS_PATH) {
+		return { view: "bookmarks" };
+	}
+
+	if (path === BOOKSHELF_PATH) {
+		return { view: "bookshelf" };
+	}
+
 	if (path === "/credits") {
 		return { view: "credits" };
 	}
@@ -92,6 +100,19 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 // the way to date order. An older `&sort=rank` link still parses to the same place it always did.
 export function buildSearchPath(query: string, sort: SortMode = "rank"): string {
 	return "/search?q=" + encodeURIComponent(query) + (sort === "date" ? "&sort=date" : "");
+}
+
+/** The pages of the reader's own library, each a search that is always the same one, with no box to change it. */
+export type LibraryView = "bookmarks" | "bookshelf";
+
+export const LIBRARY_QUERIES: Record<LibraryView, string> = {
+	bookmarks: "@i:bookmarked",
+	// The strips they own, and the strips in the books they own.
+	bookshelf: "@i:own @or @in @i:own",
+};
+
+export function isLibraryView(view: string): view is LibraryView {
+	return Object.hasOwn(LIBRARY_QUERIES, view);
 }
 
 /** The tabs of Collections. */
@@ -133,6 +154,8 @@ export const CREATORS_PATH = "/creators";
  */
 export const COLLECTIONS_PATH = "/collections";
 export const SETTINGS_PATH = "/settings";
+export const BOOKMARKS_PATH = "/bookmarks";
+export const BOOKSHELF_PATH = "/bookshelf";
 export const CREDITS_PATH = "/credits";
 export const HOME_PATH = "/";
 

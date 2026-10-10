@@ -1,6 +1,7 @@
 import { Appearance, Arc, Character, Collection, Comic, CollectionIndex, Creator, Day, SortMode } from "../types";
 import { PAGE_CONFIG } from "../site-config";
 import { formatDateRange } from "../date-utils";
+import type { LibraryView } from "../routes";
 
 /**
  * What a page is made of, as plain data.
@@ -30,6 +31,14 @@ export interface ResultsPage {
 /** Moving the reader's library in and out of this browser: nothing on it is the archive's. */
 export interface SettingsPage {
 	view: "settings";
+}
+
+/**
+ * The strips the reader has bookmarked, or the ones on their shelf. Never prerendered past its
+ * heading: the rows are this browser's library, which only the app can read.
+ */
+export interface LibraryPage {
+	view: LibraryView;
 }
 
 /**
@@ -196,6 +205,7 @@ export type Page =
 	| CreditsPage
 	| ResultsPage
 	| SettingsPage
+	| LibraryPage
 	| DetailPage
 	| CollectionPage
 	| CollectionsPage
@@ -252,6 +262,10 @@ export function pageTitle(page: Page): string {
 			return page.q ? `${page.q} — Creators — ${PAGE_CONFIG.name}` : `Creators — ${PAGE_CONFIG.name}`;
 		case "settings":
 			return `Settings — ${PAGE_CONFIG.name}`;
+		case "bookmarks":
+			return `Bookmarks — ${PAGE_CONFIG.name}`;
+		case "bookshelf":
+			return `Bookshelf — ${PAGE_CONFIG.name}`;
 		case "credits":
 			return `Credits — ${PAGE_CONFIG.name}`;
 	}

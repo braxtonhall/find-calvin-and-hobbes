@@ -4,6 +4,8 @@ import {
 	ARCS_PATH,
 	BOOKS_PATH,
 	SETTINGS_PATH,
+	BOOKMARKS_PATH,
+	BOOKSHELF_PATH,
 	buildArcPath,
 	buildTabPath,
 	buildCollectionPath,
@@ -41,6 +43,8 @@ test("routes", async (suite) => {
 		assert.deepEqual(parseRoutePath(BOOKS_PATH, ""), { view: "collections" });
 		assert.deepEqual(parseRoutePath(ARCS_PATH, ""), { view: "arcs" });
 		assert.deepEqual(parseRoutePath(SETTINGS_PATH, ""), { view: "settings" });
+		assert.deepEqual(parseRoutePath(BOOKMARKS_PATH, ""), { view: "bookmarks" });
+		assert.deepEqual(parseRoutePath(BOOKSHELF_PATH, ""), { view: "bookshelf" });
 
 		const [comicPath, comicSearch] = buildComicPath("1986-07-07").split("?");
 		assert.deepEqual(parseRoutePath(comicPath, comicSearch ?? ""), {

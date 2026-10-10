@@ -389,3 +389,31 @@
 .detail-meta__text {
 	min-width: 0;
 }
+
+/* A question or a note, in a modal over the page: an import's, or a strip's note. Drawn as the book popup is. */
+.library-dialog {
+	max-width: min(420px, calc(100vw - 32px));
+	margin: auto;
+	padding: 16px;
+	font-family: var(--font);
+	font-size: 14px;
+	line-height: 1.5;
+	color: var(--text);
+	background: var(--bg-sidebar);
+	border: 1px solid var(--neutral);
+	border-radius: 8px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.library-dialog::backdrop {
+	background: rgba(0, 0, 0, 0.2);
+}
+
+.library-dialog__message {
+	margin: 0 0 12px;
+	overflow-wrap: anywhere;
+}
+
+.library-dialog__choices {
+	margin-bottom: 0;
+}

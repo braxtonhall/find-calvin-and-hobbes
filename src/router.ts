@@ -2,7 +2,14 @@ import { Route } from "./types";
 import { state } from "./state";
 import { scrollCellIntoViewIfNeeded } from "./utils";
 import { stopLife } from "./life";
-import { HOME_PATH, legacyHashPath, normalizePathname, parseRoutePath, redirectedPath } from "./routes";
+import {
+	HOME_PATH,
+	LIBRARY_QUERIES,
+	legacyHashPath,
+	normalizePathname,
+	parseRoutePath,
+	redirectedPath,
+} from "./routes";
 import { addressOf, pathOf } from "./base-path";
 import { Page, pageTitle } from "./pages/page";
 import { PAGE_DATA_ID } from "./pages/shell";
@@ -22,6 +29,8 @@ import { renderArc, renderArcs } from "./views/arcs";
 import { renderCreator, renderCreators } from "./views/creators";
 import { loadDescriptions } from "./details";
 import { renderSettings } from "./views/settings";
+import { renderLibrary, renderLibraryRows } from "./views/library";
+import { LIBRARY_CHANGE_EVENT, closeStripMenu } from "./views/strip-menu";
 import { asksAboutReader } from "./boolean-query";
 import { STRIP_QUERY, collectionQuery } from "./filter-query";
 import { renderCredits } from "./views/credits";
@@ -181,6 +190,10 @@ function pageFor(route: Route): Page | null {
 		case "results":
 			if (!state.dataLoaded || waitsForLibrary(route.q ?? "", "strip")) return null;
 			return { view: "results", q: route.q ?? "", sort: route.sort ?? "rank" };
+		case "bookmarks":
+		case "bookshelf":
+			if (!state.dataLoaded || waitsForLibrary(LIBRARY_QUERIES[route.view], "strip")) return null;
+			return { view: route.view };
 		case "detail":
 			return state.dataLoaded ? detailPageFrom(state, route.date ?? "", route.alternates ?? []) : null;
 		case "collection":
@@ -250,7 +263,10 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		case "arcs":
 		case "creators":
 			return route.q === undefined ? { page: prerendered, adopt: true } : null;
+		// The rows are the reader's library, which the build cannot know.
 		case "results":
+		case "bookmarks":
+		case "bookshelf":
 			return null;
 		case "detail": {
 			if (prerendered.date !== route.date) return null;
@@ -305,6 +321,7 @@ export function handleRoute(prerendered: Page | null = null): void {
 	// A book's popup the same way, but on every page: any page with covers on it is drawn afresh, and
 	// opens the popup again itself if its book is still selected.
 	closeBookPopup();
+	closeStripMenu();
 
 	document.querySelectorAll(".view").forEach((element) => {
 		if (element === viewElement) return;
@@ -368,6 +385,12 @@ export function handleRoute(prerendered: Page | null = null): void {
 			if (arriving) document.getElementById("main")!.scrollTop = 0;
 			break;
 		}
+		case "bookmarks":
+		case "bookshelf": {
+			renderLibrary(page.view);
+			document.getElementById("main")!.scrollTop = 0;
+			break;
+		}
 		case "settings": {
 			renderSettings(adopt);
 			document.getElementById("main")!.scrollTop = 0;
@@ -393,6 +416,23 @@ function showLoadingView(viewElement: HTMLElement, route: Route): void {
 	viewElement.innerHTML = '<div class="spinner"></div>';
 	state.pendingRoute = route;
 }
+
+/**
+ * A strip bookmarked, owned or noted from a row's menu may come onto the page or leave it, where the
+ * page's rows are a question about the reader. Only the rows are drawn again, and the grid lit to
+ * match, so the page keeps its scroll.
+ */
+document.addEventListener(LIBRARY_CHANGE_EVENT, () => {
+	const route = parseRoute();
+	if (route.view === "results" && asksAboutReader(route.q ?? "", STRIP_QUERY)) {
+		renderResults(route.q ?? "", route.sort ?? "rank");
+	} else if (route.view === "bookmarks" || route.view === "bookshelf") {
+		renderLibraryRows(route.view);
+	} else {
+		return;
+	}
+	paintGrid(route);
+});
 
 export function updateGridState(route: Route): void {
 	// Any page drawn, even one whose grid looks the same, ends a game of life — and a book's hover

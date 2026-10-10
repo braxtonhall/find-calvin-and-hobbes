@@ -11,7 +11,7 @@ import { withConfig } from "./helpers/config";
 
 // `goodnight` once, `good night` twice: the rule splits it. `snowman` is never written open, so
 // only a hand-split entry can. `sunset` is written open as often as closed.
-const COMICS = `dailies:
+const COMICS = `strips:
   "20000101": Say goodnight.
   "20000102": Good night, Hobbes.
   "20000103": Good night, Mom.

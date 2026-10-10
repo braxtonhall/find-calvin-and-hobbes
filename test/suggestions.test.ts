@@ -136,7 +136,7 @@ test("today in the strip's run", async (suite) => {
 	});
 
 	await suite.test("is never a day this archive has no strip for", () => {
-		const days = new Set(Object.keys(comicSource.dailies));
+		const days = new Set(Object.keys(comicSource.strips));
 		for (const day of EVERY_DAY) {
 			const featured = featuredDate(day, ARCHIVE_SPAN, RERUNS)!;
 			assert.ok(days.has(featured.replaceAll("-", "")) || Object.hasOwn(RERUNS, featured), featured);

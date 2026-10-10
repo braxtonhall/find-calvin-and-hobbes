@@ -25,7 +25,7 @@ export function loadReruns(source: ComicSource, config?: string): Reruns {
 	}
 
 	const originalDates = new Set([
-		...Object.keys(source.dailies),
+		...Object.keys(source.strips),
 		...Object.values(source.specials).map((special) => special.date),
 	]);
 	const reruns: Reruns = {};

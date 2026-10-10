@@ -7,7 +7,7 @@ import { state } from "./state";
 import { isDayBookmarked } from "./bookmarks";
 import { loadDescriptions } from "./details";
 import { isPlainClick, parseRoute } from "./router";
-import { buildComicPath } from "./routes";
+import { buildComicPath, isLibraryView } from "./routes";
 import { addressOf } from "./base-path";
 import { formatDateRange, formatLongDate } from "./date-utils";
 import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS, RERUNS } from "./bundled-data";
@@ -423,6 +423,7 @@ const TABS = new Set<Route["view"]>(["collections", "arcs", "creators"]);
 function subjectOf(route: Route): { key: string; dates: ReadonlySet<string> } | null {
 	const tiers = state.searchResultTiers;
 	if (route.view === "results" && tiers) return { key: `results:${route.q ?? ""}`, dates: bestMatches(tiers) };
+	if (isLibraryView(route.view) && tiers) return { key: route.view, dates: bestMatches(tiers) };
 	if (TABS.has(route.view) && route.q && state.tabMatchDates) {
 		return { key: `${route.view}:${route.q}`, dates: state.tabMatchDates };
 	}
@@ -451,7 +452,7 @@ export function followRoute(route: Route): void {
 	}
 	const subject = subjectOf(route);
 	if (!subject) {
-		if (!["results", ...TABS, ...LIGHTS_ITS_OWN].includes(route.view)) subjectShown = null;
+		if (!["results", "bookmarks", "bookshelf", ...TABS, ...LIGHTS_ITS_OWN].includes(route.view)) subjectShown = null;
 		return;
 	}
 	if (subject.key === subjectShown) return;
@@ -510,7 +511,7 @@ function lightFor(route: Route): ((date: string) => Light) | undefined {
 	const tiers = state.searchResultTiers;
 	const byTier = tiers ? (date: string) => tiers.get(date) ?? false : undefined;
 
-	if (route.view === "results") return byTier;
+	if (route.view === "results" || isLibraryView(route.view)) return byTier;
 
 	// A tab's search lit and dimmed the way a book's page is, with what it found as the book.
 	const found = state.tabMatchDates;
@@ -826,9 +827,9 @@ export function renderGrid(): void {
 		// A box of many days has many rows; pointing at it is only the tooltip.
 		if (!cell.dataset.date) return;
 		const route = parseRoute();
-		// The two pages whose rows are the grid's cells, lit and dimmed; anywhere else a hover is
-		// only the tooltip.
-		if (route.view !== "results") return;
+		// The pages whose rows are the grid's cells, lit and dimmed; anywhere else a hover is only the
+		// tooltip.
+		if (route.view !== "results" && !isLibraryView(route.view)) return;
 		// A rerun day holds no strip of its own — its strip is filed under the day it first ran — but it
 		// is a row all the same, so it is not the empty day `cell--none` otherwise means.
 		if (cell.classList.contains("cell--none") && !cell.classList.contains("cell--rerun")) return;

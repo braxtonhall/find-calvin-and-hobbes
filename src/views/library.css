@@ -1,0 +1,12 @@
+#view-bookmarks.active,
+#view-bookshelf.active {
+	display: block;
+	padding: 20px;
+}
+
+/* The settings' heading. */
+.library-heading {
+	font-size: 22px;
+	font-weight: 700;
+	margin-bottom: 16px;
+}

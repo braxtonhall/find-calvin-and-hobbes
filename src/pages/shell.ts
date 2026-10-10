@@ -15,6 +15,7 @@ import { buildCreatorsHtml, formatStripCount, formatYears } from "./creators";
 import { arcRange } from "./page";
 import { buildCorrectionLinkHtml } from "./correction";
 import { buildSettingsHtml } from "./settings";
+import { buildLibraryHtml } from "./library";
 
 /**
  * A whole document: the template in `src/index.html` with a page's head and body filled in.
@@ -37,6 +38,8 @@ export const VIEWS = [
 	"creator",
 	"creators",
 	"settings",
+	"bookmarks",
+	"bookshelf",
 	"credits",
 ] as const;
 
@@ -168,6 +171,9 @@ export function buildViewHtml(page: Page, canGoBack: boolean): string {
 			return buildCreatorsHtml(page, canGoBack);
 		case "settings":
 			return buildSettingsHtml(canGoBack);
+		case "bookmarks":
+		case "bookshelf":
+			return buildLibraryHtml(page.view, canGoBack);
 		case "results":
 			// The rows are the app's to draw: they depend on the query, and there is no file per query.
 			return "";
