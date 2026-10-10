@@ -136,8 +136,12 @@ document.addEventListener("DOMContentLoaded", () => {
 			const route = parseRoute();
 			if (route.view === "detail") {
 				event.preventDefault();
-				const bookmarkButton = document.querySelector<HTMLButtonElement>("#bookmark-btn");
-				if (bookmarkButton) bookmarkButton.click();
+				// Every strip on the page, or, where they all are already, none of them.
+				const buttons = [...document.querySelectorAll<HTMLButtonElement>("#view-detail .ownership-bookmark-btn")];
+				const all = buttons.every((button) => button.classList.contains("bookmark-btn--active"));
+				for (const button of buttons) {
+					if (button.classList.contains("bookmark-btn--active") === all) button.click();
+				}
 			}
 		}
 

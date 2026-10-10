@@ -26,8 +26,17 @@ export function ownershipId(comic: { id?: string }, runDate: string): string {
 	return comic.id || runDate.replace(/-/g, "");
 }
 
+/**
+ * The id a strip is bookmarked by: the printing, as `ownershipId`'s is, but with the day it ran
+ * written as a strip's page writes it. Bookmarks were once a whole day's, kept by that date, so each
+ * one kept from then is now the bookmark of the strip that ran on the day — not of a special.
+ */
+export function bookmarkId(comic: { id?: string }, runDate: string): string {
+	return comic.id || runDate;
+}
+
 export interface LibraryData {
-	/** By date, as a strip's page is: `1987-05-24`. */
+	/** By `bookmarkId`: a special's id, or the date it ran, as a strip's page writes it — `1987-05-24`. */
 	bookmarks: string[];
 	strips: OwnershipRecord[];
 	books: OwnershipRecord[];

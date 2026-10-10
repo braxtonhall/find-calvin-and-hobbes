@@ -18,7 +18,8 @@ export interface AppState {
 	charactersById: Map<string, Character>;
 	creatorsById: Map<string, Creator>;
 	keyboardNavActive: boolean;
-	bookmarkedDates: Set<string>;
+	/** The strips the reader bookmarked, by `bookmarkId`. */
+	bookmarkedStrips: Set<string>;
 	/** The strips the reader owns, by `ownershipId`, and the books, by id. */
 	ownedStrips: Set<string>;
 	ownedBooks: Set<string>;
@@ -49,7 +50,7 @@ export const state: AppState = {
 	charactersById: new Map(),
 	creatorsById: new Map(),
 	keyboardNavActive: false,
-	bookmarkedDates: new Set(),
+	bookmarkedStrips: new Set(),
 	ownedStrips: new Set(),
 	ownedBooks: new Set(),
 	notedStrips: new Set(),

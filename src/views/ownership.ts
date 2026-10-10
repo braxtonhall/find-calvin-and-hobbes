@@ -1,5 +1,7 @@
 import { OwnershipKind, getOwnership, updateOwnership } from "../ownership";
 import { OwnershipRecord } from "../library-file";
+import { isBookmarked, isDayBookmarked, toggleBookmark } from "../bookmarks";
+import { dayCell } from "../grid";
 
 /** How long the note waits after the last keystroke before it saves. Leaving the box saves at once. */
 const NOTE_SAVE_DELAY = 400;
@@ -17,10 +19,38 @@ function setNoteOpen(controls: HTMLElement, open: boolean): void {
 	controls.querySelector<HTMLButtonElement>(".ownership-note-btn")!.setAttribute("aria-expanded", String(open));
 }
 
+function showBookmark(button: HTMLButtonElement, bookmarked: boolean): void {
+	button.classList.toggle("bookmark-btn--active", bookmarked);
+	button.setAttribute("aria-pressed", String(bookmarked));
+}
+
+/**
+ * A strip's bookmark button: toggles, and shows the day on the grid as bookmarked while any strip
+ * that ran on it is. A box of many days, zoomed out, shows no bookmarks.
+ */
+function attachBookmarkButton(button: HTMLButtonElement): void {
+	const id = button.dataset.bookmark!;
+	const date = button.dataset.date!;
+	isBookmarked(id)
+		.then((bookmarked) => showBookmark(button, bookmarked))
+		.catch(() => {
+			// IndexedDB unavailable — the button does nothing that lasts
+		});
+	button.addEventListener("click", () => {
+		toggleBookmark(id)
+			.then((bookmarked) => {
+				showBookmark(button, bookmarked);
+				dayCell(date)?.classList.toggle("cell--bookmarked", isDayBookmarked(date));
+			})
+			.catch(() => {});
+	});
+}
+
 /**
  * Wires each strip's or book's ownership buttons under `element` — see `buildOwnershipControlsHtml`.
- * The owned button toggles; the note button opens the note's box, which is open already where there
- * is a note, and saves as it is typed in. Nothing here touches the grid.
+ * A strip's bookmark button and the owned button toggle; the note button opens the note's box,
+ * which is open already where there is a note, and saves as it is typed in. Only the bookmark
+ * touches the grid.
  */
 export function attachOwnershipControls(element: HTMLElement): void {
 	element.querySelectorAll<HTMLElement>(".ownership").forEach((controls) => {
@@ -29,6 +59,8 @@ export function attachOwnershipControls(element: HTMLElement): void {
 		const ownedButton = controls.querySelector<HTMLButtonElement>(".ownership-owned-btn")!;
 		const noteButton = controls.querySelector<HTMLButtonElement>(".ownership-note-btn")!;
 		const note = controls.querySelector<HTMLTextAreaElement>(".ownership-note")!;
+		const bookmarkButton = controls.querySelector<HTMLButtonElement>(".ownership-bookmark-btn");
+		if (bookmarkButton) attachBookmarkButton(bookmarkButton);
 
 		getOwnership(kind, id)
 			.then((record) => {
@@ -41,7 +73,7 @@ export function attachOwnershipControls(element: HTMLElement): void {
 				}
 			})
 			.catch(() => {
-				// IndexedDB unavailable — the buttons do nothing that lasts, as the bookmark button's doesn't
+				// IndexedDB unavailable — the buttons do nothing that lasts
 			});
 
 		ownedButton.addEventListener("click", () => {

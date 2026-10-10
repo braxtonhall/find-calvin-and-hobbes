@@ -4,6 +4,7 @@ import { Day, Route } from "./types";
 import { computeDays } from "./days";
 import { clearRowHighlights, scrollCellIntoViewIfNeeded, visibleBand } from "./utils";
 import { state } from "./state";
+import { isDayBookmarked } from "./bookmarks";
 import { loadDescriptions } from "./details";
 import { isPlainClick, parseRoute } from "./router";
 import { buildComicPath } from "./routes";
@@ -536,7 +537,7 @@ export function paintGrid(route: Route): void {
 		}
 		const date = cell.dataset.date!;
 		cell.classList.remove(...LIT_CLASSES, "cell--selected", "cell--bookmarked");
-		if (state.bookmarkedDates.has(date)) cell.classList.add("cell--bookmarked");
+		if (isDayBookmarked(date)) cell.classList.add("cell--bookmarked");
 		applyLight(cell, lightOf?.(date));
 		if (date === selected) cell.classList.add("cell--selected");
 	});

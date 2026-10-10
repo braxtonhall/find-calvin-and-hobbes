@@ -55,7 +55,7 @@ export function updateOwnership(
 
 /** Takes what is in the library into `state`, where the searches and the grid read it. */
 export function holdLibrary(data: LibraryData): void {
-	state.bookmarkedDates = new Set(data.bookmarks);
+	state.bookmarkedStrips = new Set(data.bookmarks);
 	state.ownedStrips = new Set(data.strips.filter((record) => record.owned).map((record) => record.id));
 	state.ownedBooks = new Set(data.books.filter((record) => record.owned).map((record) => record.id));
 	state.notedStrips = new Set(data.strips.filter((record) => record.note !== undefined).map((record) => record.id));

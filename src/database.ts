@@ -1,7 +1,7 @@
 import { BOOKS_STORE_NAME, DATABASE_NAME, DATABASE_VERSION, STORE_NAME, STRIPS_STORE_NAME } from "./constants";
 
 /**
- * The reader's library, in this browser's IndexedDB: the bookmarks, keyed by date, and what they own
+ * The reader's library, in this browser's IndexedDB: the bookmarks, by `bookmarkId`, and what they own
  * or have noted of strips and books, keyed by id. Each store is made the first time a version that
  * has it opens, so a browser that only ever bookmarked keeps its bookmarks.
  */

@@ -2,7 +2,7 @@ import { dateToString, lastDayOf, weekdayOf } from "./date-utils";
 import { DateExpression, MONTHS, WEEKDAYS, matchesExpression, parseDateExpression } from "./date-query";
 import { CROSSING_SPECS, CollectionType, FILTER_NAMES, Language, filterSpec } from "./filter-spec";
 import { canonical, knows, termFor } from "./filter-vocabulary";
-import { ownershipId } from "./library-file";
+import { bookmarkId, ownershipId } from "./library-file";
 import { state } from "./state";
 import { Comic } from "./types";
 
@@ -463,13 +463,12 @@ function hasTag(subject: string | Comic, date: string, tag: string, run: Run | u
 }
 
 /**
- * Whether the reader has the relationship to the row, from what this browser has saved: a bookmark
- * is a day's, and so is known of a bare date; owning and noting are a printing's, which is the strip
- * and the day it ran.
+ * Whether the reader has the relationship to the row, from what this browser has saved: bookmarking,
+ * owning and noting are each a printing's, which is the strip and the day it ran.
  */
 function isMine(subject: string | Comic, date: string, tag: string): boolean {
-	if (tag === "bookmarked") return state.bookmarkedDates.has(date);
 	if (typeof subject === "string") return false;
+	if (tag === "bookmarked") return state.bookmarkedStrips.has(bookmarkId(subject, date));
 	if (tag === "own") return state.ownedStrips.has(ownershipId(subject, date));
 	if (tag === "noted") return state.notedStrips.has(ownershipId(subject, date));
 	return false;

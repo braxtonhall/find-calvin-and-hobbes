@@ -123,7 +123,7 @@ function setUp(): void {
 	state.arcsById = new Map(ARCS.map((arc) => [arc.id, arc]));
 	state.charactersById = new Map(CHARACTERS.map((character) => [character.id, character]));
 	state.creatorsById = new Map(CREATORS.map((each) => [each.id, each]));
-	state.bookmarkedDates = new Set();
+	state.bookmarkedStrips = new Set();
 	state.ownedStrips = new Set();
 	state.ownedBooks = new Set();
 	state.notedStrips = new Set();
@@ -297,8 +297,11 @@ test("the strip language", async (suite) => {
 		setUp();
 		state.ownedStrips = new Set(["19950104"]);
 		assert.deepEqual(strips("@i:own"), ["1995-01-04 rerun"]);
-		state.bookmarkedDates = new Set(["1995-01-04", "1988-01-03"]);
+		state.bookmarkedStrips = new Set(["1995-01-04", "1988-01-03"]);
 		assert.deepEqual(strips("@i:bookmarked"), ["1988-01-03", "1995-01-04 rerun"]);
+		// A special is bookmarked apart from the strip that ran on its day.
+		state.bookmarkedStrips = new Set(["special1"]);
+		assert.deepEqual(strips("@i:bookmarked"), ["special1"]);
 		state.notedStrips = new Set(["special1"]);
 		assert.deepEqual(strips("@i:noted"), ["special1"]);
 	});

@@ -8,8 +8,7 @@ import { BookNeighbours, DetailArc, DetailCollection, DetailCreator, DetailPage,
 import { buildBackAndHomeButtons } from "./nav-buttons";
 import { PAGE_CONFIG } from "../site-config";
 import { StripLinkSubject, stripLinks } from "../strip-links";
-import { ownershipId } from "../library-file";
-import { BOOKMARK_ICON_SVG } from "./bookmark-icon";
+import { bookmarkId, ownershipId } from "../library-file";
 import { buildOwnershipControlsHtml } from "./ownership";
 
 export function getAdjacentComicDate(
@@ -500,7 +499,7 @@ function linkSubject(page: DetailPage, comic: Comic): StripLinkSubject {
 
 /**
  * The strip's Read and License links, as `config.yaml` writes them, and after them the buttons for
- * owning it and noting it — which a strip has even where the config writes no links.
+ * bookmarking it, owning it and noting it — which a strip has even where the config writes no links.
  */
 function buildStripLinksHtml(page: DetailPage, comic: Comic): string {
 	const subject = linkSubject(page, comic);
@@ -511,7 +510,7 @@ function buildStripLinksHtml(page: DetailPage, comic: Comic): string {
 				`<a class="detail-read-link" href="${escHtml(href)}" target="_blank" rel="noopener">${label} ${LINK_ICON_SVG}</a>`,
 		)
 		.join("");
-	return `<div class="detail-links">${anchors}${buildOwnershipControlsHtml("strip", ownershipId(comic, page.date))}</div>`;
+	return `<div class="detail-links">${anchors}${buildOwnershipControlsHtml("strip", ownershipId(comic, page.date), { id: bookmarkId(comic, page.date), date: page.date })}</div>`;
 }
 
 function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: string, isSunday: boolean): string {
@@ -672,7 +671,7 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 		${buildBackAndHomeButtons(canGoBack)}
 		<h2 class="detail-date">${dateFormatted}</h2>
 		<div class="detail-actions">
-			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark">${BOOKMARK_ICON_SVG}</button> ${prevButtonHtml} ${nextButtonHtml}
+			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">Copy link</button> ${prevButtonHtml} ${nextButtonHtml}
 		</div>`;
 
 	const rerunBannerHtml = rerunOf ? buildRerunBannerHtml(rerunOf) : "";
