@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { Completion, Row, completionsAt, describeInvalid, filterSpans } from "../src/completion";
 import { CROSSING_SPECS, FILTER_SPECS } from "../src/filter-spec";
 import { registerVocabulary } from "../src/filter-vocabulary";
-import { passesFilter, scanFilters } from "../src/filter-query";
+import { collectionQuery, passesFilter, scanFilters } from "../src/filter-query";
 import { RANGE_END, RANGE_START } from "../src/constants";
 import { isSabbatical } from "../src/date-utils";
 import { MONTH_NAMES, WEEKDAY_NAMES, YEARS } from "../src/vocabulary";
@@ -143,7 +143,7 @@ test("naming a filter", async (suite) => {
 		assert.deepEqual(names("@y|"), ["year"]);
 		assert.deepEqual(names("@d|"), ["during", "day", "date", "during"]);
 		assert.deepEqual(names("@da|"), ["day", "date"]);
-		assert.deepEqual(names("@i|"), ["in", "is", "in"]);
+		assert.deepEqual(names("@i|"), ["in", "is", "i", "in"]);
 		assert.deepEqual(names("@dat|"), ["date"]);
 	});
 
@@ -202,22 +202,17 @@ test("offering the values", async (suite) => {
 	});
 
 	await suite.test("@is: offers every tag, and each commits", () => {
-		assert.deepEqual(values("@is:|"), [
-			"sunday",
-			"daily",
-			"reused",
-			"rerun",
-			"altered",
-			"empty",
-			"standalone",
-			"owned",
-			"bookmarked",
-			"noted",
-		]);
+		assert.deepEqual(values("@is:|"), ["sunday", "daily", "reused", "rerun", "altered", "empty", "standalone"]);
 		assert.deepEqual(values("@is:r|"), ["reused", "rerun"]);
 		assert.deepEqual(values("@is:rer|"), ["rerun"]);
 		assert.deepEqual(completions("@is:s|"), ["@is:sunday ", "@is:standalone "]);
 		assert.equal(at("@is:x|"), null);
+	});
+
+	await suite.test("@i: offers the reader's own tags, apart from @is:", () => {
+		assert.deepEqual(values("@i:|"), ["own", "bookmarked", "noted"]);
+		assert.deepEqual(completions("@i:o|"), ["@i:own "]);
+		assert.equal(at("@i:sunday|"), null);
 	});
 
 	await suite.test("a colon after a name that is not a filter has nothing to offer", () => {
@@ -361,8 +356,8 @@ test("the values the archive can offer", async (suite) => {
 		let checked = 0;
 		for (const value of everyValueOffered()) {
 			if (value.written === value.typed) continue;
-			// A tag is not a day, and most tags are not answerable from one — see `hasTag`.
-			if (value.name === "is") continue;
+			// A tag is not a day, and most tags are not answerable from one — see `hasTag` and `isMine`.
+			if (value.name === "is" || value.name === "i") continue;
 			assert.ok(namesRealStrips(value.name, value.written), `@${value.name}:${value.written}`);
 			checked++;
 		}
@@ -868,4 +863,49 @@ test("quotation marks", async (suite) => {
 			["match", "@year:1988"],
 		]);
 	});
+});
+
+test("@published offers the years books came out in, as @year: offers its own", async (suite) => {
+	const offered = (marked: string, type?: "book" | "arc") => {
+		const caret = marked.indexOf("|");
+		const text = marked.slice(0, caret) + marked.slice(caret + 1);
+		return (completionsAt(text, caret, collectionQuery(type))?.rows ?? []).map((row) => [row.value, row.hint]);
+	};
+	const valuesOffered = (marked: string, type?: "book" | "arc") => offered(marked, type).map(([value]) => value);
+	const year = (value: string) => ({ value, hint: "" });
+	registerVocabulary("published", () => [year("1987"), year("1990"), year("1996"), year("2005")]);
+	registerVocabulary("published:arc", () => [year("1987"), year("1988")]);
+	try {
+		await suite.test("every year, said to be a year as @year: says it", () => {
+			assert.deepEqual(offered("@published:|"), [
+				["1987", "a four-digit year"],
+				["1990", ""],
+				["1996", ""],
+				["2005", ""],
+			]);
+		});
+
+		await suite.test("narrowed by the digits typed, two of them beginning a year as in @year:", () => {
+			assert.deepEqual(valuesOffered("@published:19|"), ["1987", "1990", "1996"]);
+			assert.deepEqual(valuesOffered("@published:9|"), ["1990", "1996"]);
+		});
+
+		await suite.test("a year no book came out in is still a year", () => {
+			assert.deepEqual(valuesOffered("@published:2001|"), ["2001"]);
+		});
+
+		await suite.test("no comparisons, and still nothing for @strips", () => {
+			assert.equal(at("@published:>|"), null);
+			assert.deepEqual(offered("@published:x|"), []);
+			assert.deepEqual(offered("@strips:|"), []);
+		});
+
+		await suite.test("a tab its own kind's years", () => {
+			assert.deepEqual(valuesOffered("@published:|", "arc"), ["1987", "1988"]);
+			assert.deepEqual(valuesOffered("@published:|", "book"), ["1987", "1990", "1996", "2005"]);
+		});
+	} finally {
+		registerVocabulary("published", () => []);
+		registerVocabulary("published:arc", () => []);
+	}
 });

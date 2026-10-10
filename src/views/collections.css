@@ -21,33 +21,24 @@
 	margin-bottom: 4px;
 }
 
-/*
- * The tabs, and at the far end of their row the search button, which is the results bar's sort
- * button: up here and away from the buttons a phone keeps at the foot of the screen.
- */
-.collections-toolbar {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
-	margin-bottom: 12px;
-}
-
-.collections-toolbar .collections-search-toggle {
-	margin-left: auto;
-}
-
 /* Books · Arcs, in the home page's idiom: the tab showing in bold, the other a quiet link. */
 .collections-tabs {
 	margin-left: -6px;
+	margin-bottom: 8px;
 	font-size: 13px;
 	color: var(--text-muted);
 }
 
-/* Open, the button says so in the colour a focused box is outlined in. */
-.collections-search-toggle[aria-pressed="true"] {
-	color: var(--main-text);
-	border-color: var(--main);
+/*
+ * Arriving from another tab, the header is already on screen as it was, so the view comes in at
+ * once and only the list under it fades in. Set by `handleRoute`.
+ */
+.view.view--tab-switch.active {
+	animation: none;
+}
+
+.view--tab-switch .collections-body {
+	animation: viewFadeIn 0.5s ease;
 }
 
 /* Padded rather than spaced, so each tab's tap target reaches the dot beside it. */

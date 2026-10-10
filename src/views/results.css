@@ -67,6 +67,12 @@
 	flex-shrink: 0;
 }
 
+/* As a disabled nav button looks. */
+.results-clear:disabled {
+	opacity: 0.25;
+	cursor: default;
+}
+
 .results-clear:hover:not(:disabled) {
 	color: var(--text);
 	background: var(--neutral);

@@ -1,8 +1,8 @@
 /**
  * The values of a filter whose vocabulary arrives with the archive.
  *
- * `@year:` and `@month:` know their values from a constant; `@in:` cannot. `@is:` could, but its
- * tags are a list of words to offer and check like the books are, so it lives here too. The books are loaded
+ * `@year:` and `@month:` know their values from a constant; `@in:` cannot. `@is:` and `@i:` could,
+ * but their tags are a list of words to offer and check like the books are, so they live here too. The books are loaded
  * data, and three separate places need to agree about them: the parser in `filter-query.ts`, which
  * decides whether `@in:snowman` is a mistake; the completion menu, which offers the ids and their
  * titles; and the filter bar, which fills a dropdown with them. None of the three may fetch
@@ -35,11 +35,6 @@ export interface Term {
 	/** What the value is, for the row that offers it — a book id is not a book title. */
 	hint: string;
 	/**
-	 * About this reader rather than the archive: read from what this browser has saved, so a query
-	 * that holds one finds different things in different browsers, and waits for them to be read.
-	 */
-	personal?: true;
-	/**
 	 * The American spelling, where the term is spelt two ways: `color` beside `colour`. Either is
 	 * the term, and the menu offers whichever the reader is likelier to write. See `spelling.ts`.
 	 */
@@ -58,8 +53,8 @@ export type Vocabulary = () => readonly Term[];
  * which is why repeating `@is:` asks for all of them rather than any.
  *
  * The ones about reruns and arcs are left out of a site that has none, and `sunday` and `daily` out
- * of one whose Sundays were not a format of their own, which `config.yaml` says. The last three are
- * the reader's own: what they own, bookmarked or wrote a note on.
+ * of one whose Sundays were not a format of their own, which `config.yaml` says. What the reader
+ * owns, bookmarked or noted is not a fact about the strip, so it is not here but in `MINE`.
  */
 export const TAGS: readonly Term[] = [
 	...(PAGE_CONFIG.colourSundays
@@ -77,15 +72,12 @@ export const TAGS: readonly Term[] = [
 	{ value: "altered", hint: "A strip a book printed with changes" },
 	{ value: "empty", hint: "A strip with an empty transcript" },
 	...(PAGE_CONFIG.arcs ? [{ value: "standalone", hint: "A strip that belongs to no story arc" }] : []),
-	{ value: "owned", hint: "A printing you own", personal: true },
-	{ value: "bookmarked", hint: "A strip you bookmarked", personal: true },
-	{ value: "noted", hint: "A strip you wrote a note on", personal: true },
 ];
 
 /**
  * A collection's tags: which kind it is, and what can be true of one kind or another. Every kind has
  * every tag, so a query means the same on every tab, and a tag that cannot be true of a kind — an arc
- * is never owned — is simply false of it. See `query-eval.ts`.
+ * is never a writer — is simply false of it. See `query-eval.ts`.
  */
 export const COLLECTION_TAGS: readonly Term[] = [
 	{ value: "book", hint: "A book" },
@@ -101,8 +93,24 @@ export const COLLECTION_TAGS: readonly Term[] = [
 				{ value: "artist", hint: "A creator who drew strips" },
 			]
 		: []),
-	{ value: "owned", hint: "A book you own", personal: true },
-	{ value: "noted", hint: "A book you wrote a note on", personal: true },
+];
+
+/**
+ * `@i:`'s tags: the reader's own relationship to a strip, where `@is:` is a fact about it. Read from
+ * what this browser has saved, so a query that holds one finds different things in different
+ * browsers, and waits for them to be read. Written as the reader would say it — `@i:own`,
+ * `@i:bookmarked` — so the hints are in the first person too. Like `@is:`, repeating it asks for all.
+ */
+export const MINE: readonly Term[] = [
+	{ value: "own", hint: "A printing I own" },
+	{ value: "bookmarked", hint: "A strip I bookmarked" },
+	{ value: "noted", hint: "A strip I wrote a note on" },
+];
+
+/** A collection's `@i:` tags. Only a book can be owned or noted, so they are false of any other kind. */
+export const COLLECTION_MINE: readonly Term[] = [
+	{ value: "own", hint: "A book I own" },
+	{ value: "noted", hint: "A book I wrote a note on" },
 ];
 
 /**
@@ -114,12 +122,14 @@ export const HERE_TAGS: readonly Term[] = [{ value: "altered", hint: "Printed wi
 const REGISTRY = new Map<string, Vocabulary>([
 	["is", () => TAGS],
 	["collection:is", () => COLLECTION_TAGS],
+	["i", () => MINE],
+	["collection:i", () => COLLECTION_MINE],
 	["here", () => HERE_TAGS],
 ]);
 
-/** Where a filter's values are kept: by its name, but for the collection language's own `@is:`. */
+/** Where a filter's values are kept: by its name, but for the collection language's own `@is:` and `@i:`. */
 function key(name: string, language: Language): string {
-	return language === "collection" && name === "is" ? "collection:is" : name;
+	return language === "collection" && (name === "is" || name === "i") ? `collection:${name}` : name;
 }
 
 /** Teach a filter its values, for a vocabulary that arrives with the archive. */

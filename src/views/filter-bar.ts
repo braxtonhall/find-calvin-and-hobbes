@@ -119,7 +119,7 @@ interface Bar {
 	element: HTMLElement;
 	dropdowns: Dropdown[];
 	count: HTMLElement;
-	/** Bookmarks only, on and off: `@is:bookmarked`. A button rather than a dropdown, at the end of the row. */
+	/** Bookmarks only, on and off: `@i:bookmarked`. A button rather than a dropdown, at the end of the row. */
 	bookmarks: HTMLButtonElement;
 	selected: Set<string>;
 }

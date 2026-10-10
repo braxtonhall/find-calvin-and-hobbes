@@ -1,6 +1,7 @@
 import { Constraint, Crossing, compileQuery } from "./boolean-query";
 import { CollectionType, crossingSpec } from "./filter-spec";
 import { Filter, Run, collectionQuery, compares, passesFilter } from "./filter-query";
+import { matchesExpression } from "./date-query";
 import type { Compounds } from "./search";
 import { stripContains, textContains } from "./search";
 import { state } from "./state";
@@ -135,10 +136,6 @@ function hasCollectionTag(group: Group, tag: string): boolean {
 		case "creator":
 		case "character":
 			return group.type === tag;
-		case "owned":
-			return group.type === "book" && state.ownedBooks.has(group.id);
-		case "noted":
-			return group.type === "book" && state.notedBooks.has(group.id);
 		case "colour":
 			return group.book?.colour === true;
 		case "writer":
@@ -147,6 +144,14 @@ function hasCollectionTag(group: Group, tag: string): boolean {
 		default:
 			return false;
 	}
+}
+
+/** The reader's own relationship to a collection: `@i:`. Only a book can be owned or noted. */
+function isMine(group: Group, tag: string): boolean {
+	if (group.type !== "book") return false;
+	if (tag === "own") return state.ownedBooks.has(group.id);
+	if (tag === "noted") return state.notedBooks.has(group.id);
+	return false;
 }
 
 /** How this strip appears in this collection: `@here:`. A tag that cannot be true of the link's kind is false. */
@@ -171,10 +176,14 @@ function passesCollectionFilter(group: Group, filter: Filter, link: Link | null)
 			return group.id === filter.id;
 		case "tag":
 			return hasCollectionTag(group, filter.tag);
+		case "i":
+			return isMine(group, filter.tag);
 		case "strips":
 			return compares(filter.comparison, group.strips.length);
+		// A book by the year it came out; an arc by any year one of its strips ran.
 		case "published":
-			return group.book !== undefined && compares(filter.comparison, group.book.pub_year);
+			if (group.book !== undefined) return matchesExpression(filter.expression, String(group.book.pub_year));
+			return group.type === "arc" && group.strips.some((comic) => matchesExpression(filter.expression, comic.date));
 		default:
 			// A strip's filter, which the parser never lets stand here.
 			return false;

@@ -159,9 +159,9 @@ function readings(text: string, root = STRIP_QUERY): string[] {
 
 test("reading a query where it stands", async (suite) => {
 	await suite.test("a crossing operator changes the language of the atom it takes", () => {
-		assert.deepEqual(readings("@is:owned @in @is:owned"), ["@is:owned strip", "@is:owned collection"]);
-		assert.deepEqual(readings("@in (@is:owned @strips:<1000) @is:sunday"), [
-			"@is:owned collection",
+		assert.deepEqual(readings("@i:own @in @i:own"), ["@i:own strip", "@i:own collection"]);
+		assert.deepEqual(readings("@in (@i:own @strips:<1000) @is:sunday"), [
+			"@i:own collection",
 			"@strips:<1000 collection",
 			"@is:sunday strip",
 		]);
@@ -171,21 +171,21 @@ test("reading a query where it stands", async (suite) => {
 			"@strips:>5 collection",
 		]);
 		// Nested, and back out again at the parenthesis.
-		assert.deepEqual(readings("@in (@has (@is:sunday) @is:owned) @year:1988"), [
+		assert.deepEqual(readings("@in (@has (@is:sunday) @i:own) @year:1988"), [
 			"@is:sunday strip",
-			"@is:owned collection",
+			"@i:own collection",
 			"@year:1988 strip",
 		]);
 	});
 
 	await suite.test("@not and @only pass the language on to what they take", () => {
-		assert.deepEqual(readings("@not @in @is:owned"), ["@is:owned collection"]);
-		assert.deepEqual(readings("@only @in @is:owned"), ["@is:owned collection"]);
+		assert.deepEqual(readings("@not @in @i:own"), ["@i:own collection"]);
+		assert.deepEqual(readings("@only @in @i:own"), ["@i:own collection"]);
 		assert.deepEqual(readings("@has @not @is:sunday", collectionQuery()), ["@is:sunday strip"]);
 	});
 
 	await suite.test("@or ends what a crossing operator was waiting to take", () => {
-		assert.deepEqual(readings("@in @is:owned @or @is:owned"), ["@is:owned collection", "@is:owned strip"]);
+		assert.deepEqual(readings("@in @i:own @or @i:own"), ["@i:own collection", "@i:own strip"]);
 	});
 
 	await suite.test("bare, @in is the operator; with a colon, the filter", () => {
@@ -212,6 +212,15 @@ test("reading a query where it stands", async (suite) => {
 		assert.match(tag.reason!, /Did you mean @in @is:colour/);
 	});
 
+	await suite.test("the reader's own tags under @is: point to @i:", () => {
+		const [owned] = scanQuery("@is:owned", STRIP_QUERY).filters;
+		assert.equal(owned.valid, false);
+		assert.equal(owned.reason, "Did you mean @i:own?");
+		assert.equal(scanQuery("@is:noted", collectionQuery("book")).filters[0].reason, "Did you mean @i:noted?");
+		const [bookmarked] = scanQuery("@i:bookmarked", collectionQuery("book")).filters;
+		assert.equal(bookmarked.reason, "Did you mean @has @i:bookmarked?");
+	});
+
 	await suite.test("@here: needs a link to describe", () => {
 		assert.equal(scanQuery("@here:altered", STRIP_QUERY).filters[0].valid, false);
 		assert.match(scanQuery("@here:altered", STRIP_QUERY).filters[0].reason!, /inside @in/);
@@ -223,7 +232,7 @@ test("reading a query where it stands", async (suite) => {
 	await suite.test(
 		"a crossing operator in the wrong language, or @only before nothing that crosses, is a mistake",
 		() => {
-			const onTab = scanQuery("@in @is:owned", collectionQuery("book")).operators;
+			const onTab = scanQuery("@in @i:own", collectionQuery("book")).operators;
 			assert.match(onTab[0].reason!, /Did you mean @has @in/);
 			const inSearch = scanQuery("@has @is:sunday", STRIP_QUERY).operators;
 			assert.match(inSearch[0].reason!, /@has goes from a collection/);
@@ -239,7 +248,7 @@ test("reading a query where it stands", async (suite) => {
 	await suite.test("the context at a point is what an atom typed there would be read in", () => {
 		assert.equal(contextAt("@in (", 5, STRIP_QUERY).language, "collection");
 		assert.equal(contextAt("@in (", 5, STRIP_QUERY).type, "book");
-		assert.equal(contextAt("@in (@is:owned) ", 16, STRIP_QUERY).language, "strip");
+		assert.equal(contextAt("@in (@i:own) ", 16, STRIP_QUERY).language, "strip");
 		assert.equal(contextAt("@during ", 8, STRIP_QUERY).type, "arc");
 		assert.equal(contextAt("@has ", 5, collectionQuery("book")).language, "strip");
 		assert.equal(contextAt("@has ", 5, collectionQuery("book")).link, true);
@@ -270,35 +279,35 @@ test("reading a query where it stands", async (suite) => {
 test("the strip language", async (suite) => {
 	setUp();
 
-	await suite.test("@is:owned is the printing, and @in @is:owned a book of it", () => {
+	await suite.test("@i:own is the printing, and @in @i:own a book of it", () => {
 		setUp();
 		state.ownedStrips = new Set(["19880105"]);
 		state.ownedBooks = new Set(["snowbook"]);
-		assert.deepEqual(strips("@is:owned"), ["1988-01-05"]);
-		assert.deepEqual(strips("@in @is:owned"), ["1988-01-03", "1988-01-04"]);
+		assert.deepEqual(strips("@i:own"), ["1988-01-05"]);
+		assert.deepEqual(strips("@in @i:own"), ["1988-01-03", "1988-01-04"]);
 		// The rerun of 1988-01-04 is in an owned book, but nothing here asked for the days strips ran again.
-		assert.deepEqual(strips("@is:owned @or @in @is:owned"), ["1988-01-03", "1988-01-04", "1988-01-05"]);
+		assert.deepEqual(strips("@i:own @or @in @i:own"), ["1988-01-03", "1988-01-04", "1988-01-05"]);
 		// Only a tag asked for brings in the days a strip ran again, so not one asked against.
-		assert.deepEqual(strips("@not @is:owned @not @in @is:owned"), ["special1", "1990-02-04"]);
+		assert.deepEqual(strips("@not @i:own @not @in @i:own"), ["special1", "1990-02-04"]);
 		// And a day a strip ran again is kept only by the clause that asked for it.
-		assert.deepEqual(strips("@is:owned @or (@in @is:owned @is:rerun)"), ["1988-01-05", "1995-01-04 rerun"]);
+		assert.deepEqual(strips("@i:own @or (@in @i:own @is:rerun)"), ["1988-01-05", "1995-01-04 rerun"]);
 	});
 
 	await suite.test("a personal tag brings in the days a strip ran again, judged as their own printing", () => {
 		setUp();
 		state.ownedStrips = new Set(["19950104"]);
-		assert.deepEqual(strips("@is:owned"), ["1995-01-04 rerun"]);
+		assert.deepEqual(strips("@i:own"), ["1995-01-04 rerun"]);
 		state.bookmarkedDates = new Set(["1995-01-04", "1988-01-03"]);
-		assert.deepEqual(strips("@is:bookmarked"), ["1988-01-03", "1995-01-04 rerun"]);
+		assert.deepEqual(strips("@i:bookmarked"), ["1988-01-03", "1995-01-04 rerun"]);
 		state.notedStrips = new Set(["special1"]);
-		assert.deepEqual(strips("@is:noted"), ["special1"]);
+		assert.deepEqual(strips("@i:noted"), ["special1"]);
 	});
 
 	await suite.test("@only is at least one, and all of them", () => {
 		setUp();
 		state.ownedBooks = new Set(["snowbook"]);
 		// 1988-01-03 is in an unowned book too; 1990-02-04 is in none, so not "only" in anything.
-		assert.deepEqual(strips("@only @in @is:owned"), ["1988-01-04"]);
+		assert.deepEqual(strips("@only @in @i:own"), ["1988-01-04"]);
 		assert.deepEqual(strips("@only @in:snowbook"), ["1988-01-04"]);
 		assert.deepEqual(strips("@not @in @strips:>0"), ["special1", "1990-02-04"]);
 	});
@@ -336,8 +345,8 @@ test("the strip language", async (suite) => {
 		const found = strips("susie");
 		assert.deepEqual(found, ["1988-01-05"]);
 		state.ownedBooks = new Set(["plainbook"]);
-		assert.deepEqual(strips("susie @in @is:owned"), found);
-		assert.deepEqual(strips("susie @not @in @is:owned"), []);
+		assert.deepEqual(strips("susie @in @i:own"), found);
+		assert.deepEqual(strips("susie @not @in @i:own"), []);
 	});
 });
 
@@ -346,11 +355,11 @@ test("the collection language", async (suite) => {
 		setUp();
 		state.ownedBooks = new Set(["plainbook"]);
 		state.notedBooks = new Set(["emptybook"]);
-		assert.deepEqual(listed("@is:owned", "book"), ["plainbook"]);
-		assert.deepEqual(listed("@not @is:owned", "book"), ["snowbook", "emptybook"]);
-		assert.deepEqual(listed("@is:noted", "book"), ["emptybook"]);
-		assert.deepEqual(listed("@is:owned", "arc"), []);
-		assert.deepEqual(listed("@not @is:owned", "arc"), ["snowarc", "schoolarc"]);
+		assert.deepEqual(listed("@i:own", "book"), ["plainbook"]);
+		assert.deepEqual(listed("@not @i:own", "book"), ["snowbook", "emptybook"]);
+		assert.deepEqual(listed("@i:noted", "book"), ["emptybook"]);
+		assert.deepEqual(listed("@i:own", "arc"), []);
+		assert.deepEqual(listed("@not @i:own", "arc"), ["snowarc", "schoolarc"]);
 		assert.deepEqual(listed("@is:book", "book"), ["snowbook", "plainbook", "emptybook"]);
 		assert.deepEqual(listed("@is:book", "arc"), []);
 		assert.deepEqual(listed("@is:colour", "book"), ["snowbook"]);
@@ -366,8 +375,14 @@ test("the collection language", async (suite) => {
 		assert.deepEqual(listed("@strips:0", "book"), ["emptybook"]);
 		assert.deepEqual(listed("@strips:1..1", "arc"), ["schoolarc"]);
 		assert.deepEqual(listed("@published:1988", "book"), ["snowbook"]);
-		assert.deepEqual(listed("@published:>1988", "book"), ["plainbook", "emptybook"]);
-		assert.deepEqual(listed("@published:1988", "arc"), [], "only a book is published");
+		assert.deepEqual(listed("@published:90", "book"), ["plainbook"], "two digits, as @year: takes them");
+		assert.deepEqual(listed("@published:>1988", "book"), [], "a comparison is not a year");
+		assert.deepEqual(listed("@published:1988", "arc"), ["snowarc", "schoolarc"], "an arc by the years it ran");
+		assert.deepEqual(listed("@published:1989", "arc"), []);
+		assert.deepEqual(listed("@published:1988 @published:1991", "book"), ["snowbook", "emptybook"], "years widen");
+		assert.deepEqual(listed("@published:1988 @and @published:1991", "book"), []);
+		assert.deepEqual(listed("@published:1988 @published:1990", "arc"), ["snowarc", "schoolarc"]);
+		assert.deepEqual(listed("@published:1988", "creator"), [], "a creator has no year");
 		assert.deepEqual(listed("@id:plainbook @id:snowbook", "book"), ["snowbook", "plainbook"], "ids widen");
 	});
 
@@ -401,7 +416,7 @@ test("the collection language", async (suite) => {
 		assert.deepEqual(listed("@not @has @not @is:daily", "book"), ["emptybook"]);
 		assert.deepEqual(listed("@has @here:altered", "book"), ["snowbook"]);
 		assert.deepEqual(listed("@has @here:altered", "arc"), [], "only a book alters a strip");
-		assert.deepEqual(listed("@has @in @is:owned", "arc"), []);
+		assert.deepEqual(listed("@has @in @i:own", "arc"), []);
 	});
 
 	await suite.test("@has leaves the days a strip ran again out, unless it asks for them", () => {
@@ -409,7 +424,7 @@ test("the collection language", async (suite) => {
 		assert.deepEqual(listed("@has @year:1995", "book"), []);
 		assert.deepEqual(listed("@has (@is:rerun @year:1995)", "book"), ["snowbook"]);
 		state.ownedStrips = new Set(["19950104"]);
-		assert.deepEqual(listed("@has @is:owned", "arc"), ["snowarc"]);
+		assert.deepEqual(listed("@has @i:own", "arc"), ["snowarc"]);
 	});
 
 	await suite.test("a strip query pasted onto a tab: plain words carry over, strip filters ask for @has", () => {
@@ -456,11 +471,13 @@ test("the search box", async (suite) => {
 		const inHas = menu("@has (@", collectionQuery("arc"));
 		assert.ok(inHas.includes("@year:") && inHas.includes("@here:") && inHas.includes("@in "));
 		// Back out of the parenthesis, back in the box's own.
-		assert.ok(menu("@in (@is:owned) @").includes("@year:"));
+		assert.ok(menu("@in (@i:own) @").includes("@year:"));
 	});
 
 	await suite.test("@is: offers each language's own tags", () => {
-		assert.ok(menu("@is:", collectionQuery("book")).includes("@is:owned "));
+		assert.ok(menu("@i:", collectionQuery("book")).includes("@i:own "));
+		assert.ok(!menu("@i:", collectionQuery("book")).includes("@i:bookmarked "));
+		assert.ok(menu("@i:").includes("@i:bookmarked "));
 		assert.ok(menu("@is:b", collectionQuery("book")).includes("@is:book "));
 		assert.ok(!menu("@is:", collectionQuery("book")).includes("@is:sunday "));
 		assert.ok(menu("@in @is:").includes("@is:book "));
@@ -511,7 +528,7 @@ test("the search box", async (suite) => {
 	});
 
 	await suite.test("the reader's own tags are painted as any filter is, and the mistakes say why", () => {
-		const spans = filterSpans("@is:owned @in @is:owned @is:sunday", null);
+		const spans = filterSpans("@i:own @in @i:own @is:sunday", null);
 		assert.deepEqual(
 			spans.map((span) => span.kind),
 			["match", "match", "match", "match"],
@@ -534,18 +551,18 @@ test("the search box", async (suite) => {
 });
 
 test("the Collections page's search box", async (suite) => {
-	await suite.test("closed, there is only its button; the build writes every tab that way", () => {
+	await suite.test("it is always there; empty, its × is disabled, and the build writes every tab that way", () => {
 		const html = buildCollectionsHeaderHtml("books", false);
-		assert.match(html, /collections-search-toggle[^>]*aria-pressed="false"/);
-		assert.doesNotMatch(html, /collections-search-input/);
+		assert.match(html, /class="results-input collections-search-input"[^>]*value=""/s);
+		assert.match(html, /collections-search-clear"[^>]*disabled/);
 		assert.match(html, /href="\/arcs"/);
+		assert.match(buildCollectionsHeaderHtml("books", false, ""), /href="\/arcs"/);
 	});
 
-	await suite.test("open, it holds the query, and every other tab keeps it open on the same one", () => {
+	await suite.test("it holds the query, and every other tab keeps the same one", () => {
 		const html = buildCollectionsHeaderHtml("arcs", false, 'snow "fort"');
-		assert.match(html, /aria-pressed="true"/);
 		assert.match(html, /class="results-input collections-search-input"[^>]*value="snow &quot;fort&quot;"/s);
+		assert.doesNotMatch(html, /collections-search-clear"[^>]*disabled/);
 		assert.match(html, /href="\/books\?q=snow%20%22fort%22"/);
-		assert.match(buildCollectionsHeaderHtml("books", false, ""), /href="\/arcs\?q="/);
 	});
 });

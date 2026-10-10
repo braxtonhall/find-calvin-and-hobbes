@@ -107,12 +107,12 @@ function spellingsOf(term: Term): string[] {
 /**
  * The values a vocabulary filter takes where it is written. `@is:` takes a strip's tags or a
  * collection's, by the language; `@id:` takes one kind's ids where something says which kind, and
- * every kind's where nothing does.
+ * every kind's where nothing does, and `@published:` one kind's years the same way.
  */
 function valuesOf(spec: FilterSpec, context: QueryContext = STRIP_QUERY): readonly Term[] {
 	const language = spec.language === "both" ? context.language : spec.language;
-	if (spec.name === "id" && context.type !== undefined) {
-		const typed = terms(`id:${context.type}`, "collection");
+	if ((spec.name === "id" || spec.name === "published") && context.type !== undefined) {
+		const typed = terms(`${spec.name}:${context.type}`, "collection");
 		if (typed.length > 0) return typed;
 	}
 	return terms(spec.name, language);
@@ -169,8 +169,9 @@ function beginsADate(value: string, fields: number): boolean {
  */
 function begins(spec: FilterSpec, template: ValueTemplate, value: string): boolean {
 	if (spec.vocabulary === true) return beginsATerm(spec, value);
-	if (spec.name === "strips" || spec.name === "published") return beginsAComparison(value);
-	if (spec.name === "year") return open(value, template.label === "YYYY" ? YEAR_LONG : YEAR_SHORT);
+	if (spec.name === "strips") return beginsAComparison(value);
+	if (spec.name === "year" || spec.name === "published")
+		return open(value, template.label === "YYYY" ? YEAR_LONG : YEAR_SHORT);
 	if (spec.name === "month") return template.label === "MM" ? open(value, MONTH) : beginsAName(MONTHS, value);
 	if (spec.name === "day") return template.label === "DD" ? open(value, MONTH_DAY) : beginsAName(WEEKDAYS, value);
 	return beginsADate(value, template.label.split("/").length);
@@ -199,12 +200,12 @@ function fills(spec: FilterSpec, template: ValueTemplate, value: string): boolea
 	// because the list is the whole of what the vocabulary is — and an empty value is on no list.
 	if (spec.vocabulary === true) return valuesOf(spec).some((term) => spellingsOf(term).includes(value));
 	if (value === "") return false;
-	if (spec.name === "strips" || spec.name === "published") return false;
+	if (spec.name === "strips") return false;
 	// A trailing separator has begun a field that has not been filled. The parser reads `1988/` as
 	// the year 1988 and the pill says so, but there is nothing finished here to offer to accept.
 	if (SEPARATOR.test(value.slice(-1))) return false;
 
-	if (spec.name === "year") {
+	if (spec.name === "year" || spec.name === "published") {
 		return template.label === "YYYY" ? /^\d{4}$/.test(value) : /^\d{2}$/.test(value);
 	}
 	if (spec.name === "month") {
@@ -578,10 +579,12 @@ function valueRows(spec: FilterSpec, value: string, parses: boolean, context: Qu
 		return rowsFor(spec, offers);
 	}
 
-	// A count, or a book's year, which nothing in the archive lists: the shape in the name's row is the help.
-	if (spec.name === "strips" || spec.name === "published") return [];
+	// A count, which nothing in the archive lists: the shape in the name's row is the help.
+	if (spec.name === "strips") return [];
 
-	const candidates = CANDIDATES.get(spec.name);
+	// `@published:` lists the years books came out and arcs ran in, which arrive with the archive.
+	const candidates =
+		spec.name === "published" ? valuesOf(spec, context).map((term) => term.value) : CANDIDATES.get(spec.name);
 	if (candidates !== undefined) {
 		const offers = listedOffers(spec, candidates, value);
 		// Nothing on the list fits, which is usually a value nothing would fit — but not always,

@@ -49,9 +49,9 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "collection", id: collectionMatch[1] };
 	}
 
-	// A tab's search is open wherever the address has a `?q=`, even an empty one. See `buildTabPath`.
+	// An empty `?q=` asks nothing, the same as none. See `buildTabPath`.
 	const q = params.get("q");
-	const searched = q === null ? {} : { q };
+	const searched = q ? { q } : {};
 
 	if (path === BOOKS_PATH || path === COLLECTIONS_PATH) {
 		return { view: "collections", ...searched };
@@ -99,12 +99,9 @@ export type CollectionsTab = "books" | "arcs" | "creators";
 
 const TAB_PATHS: Record<CollectionsTab, string> = { books: "/books", arcs: "/arcs", creators: "/creators" };
 
-/**
- * A tab of Collections, with its search box open on `query` — or, given none, closed. An open box
- * with nothing typed in it yet is `?q=` alone, so that it stays open on the way to another tab.
- */
+/** A tab of Collections, with `query` in its search box — or, given none or an empty one, the whole tab. */
 export function buildTabPath(tab: CollectionsTab, query?: string): string {
-	return TAB_PATHS[tab] + (query === undefined ? "" : "?q=" + encodeURIComponent(query));
+	return TAB_PATHS[tab] + (query ? "?q=" + encodeURIComponent(query) : "");
 }
 
 export function buildComicPath(date: string, alternates: string[] = []): string {

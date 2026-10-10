@@ -46,21 +46,16 @@ function buildRowHtml(collection: CollectionSummary): string {
 
 export type { CollectionsTab };
 
-// Drawn in the same idiom as the results-bar icons: 16px, stroked in `currentColor`, no fill.
-const SEARCH_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
-	<circle cx="6.8" cy="6.8" r="4.3" /><path d="M10 10l3.5 3.5" />
-</svg>`;
-
-/** What a tab's search box holds: nothing while it is closed, which is how every page is built. */
+/** What a tab's search box holds: nothing, which is how the build writes every tab. */
 export type TabQuery = string | undefined;
 
 /** The noun a tab lists, for its search box and for a search that finds none of them. */
 export const TAB_NOUNS: Record<CollectionsTab, string> = { books: "books", arcs: "arcs", creators: "creators" };
 
 /**
- * The search box, open — see `views/tab-search.ts` for what it does. Built as the search page's is,
- * with its × to close it, and with no sort and no filter bar: a tab keeps its own order, and the
- * menu is how its filters are found.
+ * The search box — see `views/tab-search.ts` for what it does. Built as the search page's is, with
+ * its × to empty it, and with no sort and no filter bar: a tab keeps its own order, and the menu is
+ * how its filters are found. The × has nothing to do while the box is empty.
  */
 function buildTabSearchHtml(current: CollectionsTab, query: string): string {
 	return `<div class="results-sticky collections-search">
@@ -73,7 +68,7 @@ function buildTabSearchHtml(current: CollectionsTab, query: string): string {
 				enterkeyhint="search"
 				value="${escHtml(query)}"
 			/>
-			<button class="results-clear collections-search-close" aria-label="Close search">&times;</button>
+			<button class="results-clear collections-search-clear" aria-label="Clear search"${query ? "" : " disabled"}>&times;</button>
 		</div>
 	</div>`;
 }
@@ -82,10 +77,10 @@ function buildTabSearchHtml(current: CollectionsTab, query: string): string {
  * Collections is books, arcs and creators, each a collection of strips, and each tab has an address
  * of its own. The tab showing is plain bold text; the others are links, quiet the way the home
  * page's are. A site without arcs or creators has only the tabs it has, and with only the books, no
- * tabs at all — but the search button all the same, at the end of the row the tabs would be in.
+ * tabs at all — but the search box all the same.
  *
- * With the search open, each tab's link keeps it open on the same query, so switching tabs asks the
- * same question of another kind of collection.
+ * Each tab's link carries the query, so switching tabs asks the same question of another kind of
+ * collection.
  */
 export function buildCollectionsHeaderHtml(current: CollectionsTab, canGoBack: boolean, query?: TabQuery): string {
 	const tab = (name: CollectionsTab, label: string) =>
@@ -99,14 +94,9 @@ export function buildCollectionsHeaderHtml(current: CollectionsTab, canGoBack: b
 		...(PAGE_CONFIG.arcs ? [tab("arcs", "Arcs")] : []),
 		...(PAGE_CONFIG.creators ? [tab("creators", "Creators")] : []),
 	];
-	const open = query !== undefined;
-	const toggle = `<button class="results-sort collections-search-toggle" title="Search ${TAB_NOUNS[current]}" aria-label="Search ${TAB_NOUNS[current]}" aria-pressed="${open}">${SEARCH_ICON}</button>`;
 	return `${heading}
-		<div class="collections-toolbar">
-			${tabs.length > 1 ? `<nav class="collections-tabs" aria-label="Collections">${tabs.join(`\n\t\t\t<span aria-hidden="true">·</span>\n\t\t\t`)}</nav>` : ""}
-			${toggle}
-		</div>
-		${open ? buildTabSearchHtml(current, query) : ""}`;
+		${tabs.length > 1 ? `<nav class="collections-tabs" aria-label="Collections">${tabs.join(`\n\t\t\t<span aria-hidden="true">·</span>\n\t\t\t`)}</nav>` : ""}
+		${buildTabSearchHtml(current, query ?? "")}`;
 }
 
 /** What a search that finds none of a tab's collections says, in place of the list. */

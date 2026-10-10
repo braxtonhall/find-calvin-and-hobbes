@@ -447,21 +447,21 @@ test("insert: an open quotation is closed before a token is appended", () => {
 });
 
 test("the bookmark button", async (suite) => {
-	await suite.test("pressed, it puts @is:bookmarked on the end; pressed again, it takes it out", () => {
-		assert.equal(toggleBookmarks(""), "@is:bookmarked");
-		assert.equal(toggleBookmarks("snow @year:1988"), "snow @year:1988 @is:bookmarked");
-		assert.equal(toggleBookmarks('"snow goons'), '"snow goons" @is:bookmarked');
-		assert.equal(toggleBookmarks("snow @is:bookmarked @year:1988"), "snow @year:1988");
-		assert.equal(toggleBookmarks("@is:bookmarked @or @is:sunday"), "@is:sunday");
+	await suite.test("pressed, it puts @i:bookmarked on the end; pressed again, it takes it out", () => {
+		assert.equal(toggleBookmarks(""), "@i:bookmarked");
+		assert.equal(toggleBookmarks("snow @year:1988"), "snow @year:1988 @i:bookmarked");
+		assert.equal(toggleBookmarks('"snow goons'), '"snow goons" @i:bookmarked');
+		assert.equal(toggleBookmarks("snow @i:bookmarked @year:1988"), "snow @year:1988");
+		assert.equal(toggleBookmarks("@i:bookmarked @or @is:sunday"), "@is:sunday");
 	});
 
 	await suite.test("it shows pressed only for bookmarks the bar can see", () => {
-		assert.equal(asksForBookmarks("snow @is:bookmarked"), true);
+		assert.equal(asksForBookmarks("snow @i:bookmarked"), true);
 		assert.equal(asksForBookmarks("snow"), false);
-		assert.equal(asksForBookmarks("@not @is:bookmarked"), false);
-		assert.equal(asksForBookmarks("@in (@has @is:bookmarked)"), false);
+		assert.equal(asksForBookmarks("@not @i:bookmarked"), false);
+		assert.equal(asksForBookmarks("@in (@has @i:bookmarked)"), false);
 		// Unpressed, so pressing it adds one; it never touches the one it cannot see.
-		assert.equal(toggleBookmarks("@not @is:bookmarked"), "@not @is:bookmarked @is:bookmarked");
+		assert.equal(toggleBookmarks("@not @i:bookmarked"), "@not @i:bookmarked @i:bookmarked");
 	});
 
 	await suite.test("pressing twice gives back the query", () => {

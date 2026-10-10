@@ -13,7 +13,7 @@
  * to know about both.
  */
 
-import { COLLECTION_TAGS, TAGS } from "./filter-vocabulary";
+import { COLLECTION_MINE, COLLECTION_TAGS, MINE, TAGS } from "./filter-vocabulary";
 import { PAGE_CONFIG } from "./site-config";
 
 /**
@@ -45,8 +45,8 @@ export interface ValueTemplate {
 }
 
 /**
- * Every filter takes a value, and a property a strip either has or lacks is an `@is:` tag rather
- * than a filter of its own. That leaves a bare `@word` free to mean an operator.
+ * Every filter takes a value, and a property a strip either has or lacks is an `@is:` tag — or, where
+ * it is the reader's relationship to the strip, an `@i:` tag — rather than a filter of its own. That leaves a bare `@word` free to mean an operator.
  */
 export interface FilterSpec {
 	name: string;
@@ -87,8 +87,9 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
  * the menu only ever shows one language's at a time.
  *
  * Repeating a filter ORs where a strip can have only one value for it — one year, one month — and
- * for the books, the arcs and the creators, which mostly share no strips; and ANDs for the tags and
- * the characters, which a strip carries several of. See `WIDENING` in `boolean-query.ts`.
+ * for the books, the arcs and the creators, which mostly share no strips; and ANDs for the tags, both
+ * `@is:` and `@i:`, and the characters, which a strip carries several of. See `WIDENING` in
+ * `boolean-query.ts`.
  *
  * `@featuring:` only where `config.yaml` has characters for it, `@by:` only where it has creators,
  * and `@during:` only where it has arcs.
@@ -107,6 +108,13 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		vocabulary: true,
 		language: "strip",
 		templates: [{ label: "tag", hint: orList(TAGS.map((tag) => tag.value)) }],
+	},
+	{
+		name: "i",
+		hint: "Strips I own, bookmarked or noted",
+		vocabulary: true,
+		language: "strip",
+		templates: [{ label: "own", hint: orList(MINE.map((tag) => tag.value)) }],
 	},
 	...(PAGE_CONFIG.arcs
 		? [
@@ -194,6 +202,13 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		templates: [{ label: "tag", hint: orList(COLLECTION_TAGS.map((tag) => tag.value)) }],
 	},
 	{
+		name: "i",
+		hint: "Books I own or noted",
+		vocabulary: true,
+		language: "collection",
+		templates: [{ label: "own", hint: orList(COLLECTION_MINE.map((tag) => tag.value)) }],
+	},
+	{
 		name: "id",
 		hint: "One collection, by its id",
 		vocabulary: true,
@@ -208,9 +223,12 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 	},
 	{
 		name: "published",
-		hint: "Books by the year they came out",
+		hint: "Books by the year they came out, arcs by the years they ran",
 		language: "collection",
-		templates: [{ label: "YYYY", hint: "a year, or >YYYY, <YYYY, YYYY..YYYY" }],
+		templates: [
+			{ label: "YYYY", hint: "a four-digit year" },
+			{ label: "YY", hint: "any year ending in those two digits" },
+		],
 	},
 	{
 		name: "here",
@@ -292,7 +310,7 @@ export function crossingSpec(name: string): CrossingSpec | undefined {
 
 /**
  * The filter of that name in that language. `@is:` is two filters under one name, a strip's tags and
- * a collection's; every other name is one filter, so a language that does not speak it still finds
+ * a collection's, and so is `@i:`; every other name is one filter, so a language that does not speak it still finds
  * it here when `strict` is off, for the sake of saying why it is the wrong one.
  */
 export function filterSpec(name: string, language: Language = "strip", strict = true): FilterSpec | undefined {

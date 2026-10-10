@@ -47,6 +47,24 @@ function initialize(): void {
 	for (const [type, values] of Object.entries(ids)) registerVocabulary(`id:${type}`, () => values);
 	registerVocabulary("id", () => Object.values(ids).flat());
 
+	// `@published:` takes any year, but the menu offers the ones a book came out in or an arc ran in
+	// — on a tab, its own kind's. A year of 0 is a book with no year to give.
+	const yearTerms = (years: number[]): Term[] =>
+		[...new Set(years)]
+			.filter((year) => year > 0)
+			.sort((a, b) => a - b)
+			.map((year) => ({ value: String(year), hint: "" }));
+	const bookYears = COLLECTION_INDEX.collections.map((collection) => collection.pub_year);
+	const arcYears = ARCS.flatMap((arc) => arc.dates.map((date) => Number(date.slice(0, 4))));
+	const published = {
+		book: yearTerms(bookYears),
+		arc: yearTerms(arcYears),
+		all: yearTerms([...bookYears, ...arcYears]),
+	};
+	registerVocabulary("published:book", () => published.book);
+	registerVocabulary("published:arc", () => published.arc);
+	registerVocabulary("published", () => published.all);
+
 	// First, so the requests are on the wire while the grid is drawn. Nothing it does after they
 	// answer can run before this function returns, so the grid and the route are in place by then.
 	loadComicData();

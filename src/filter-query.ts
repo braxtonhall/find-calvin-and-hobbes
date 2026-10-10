@@ -20,7 +20,7 @@ import { Comic } from "./types";
  * under `@not` — is `boolean-query.ts`: different fields intersect, and repeating a field widens
  * where a strip has only one value for it (`@year:1988 @year:1989` is either year), and for the
  * books (`@in:book1 @in:book3` is either book), and narrows for the tags (`@is:sunday @is:rerun` is
- * the Sundays that ran again) and the characters (`@featuring:susie @featuring:rosalyn` is the
+ * the Sundays that ran again, and `@i:own @i:noted` the printings owned and noted) and the characters (`@featuring:susie @featuring:rosalyn` is the
  * strips with both). The creators widen, as the books do (`@by:a @by:b` is either one's strips).
  */
 
@@ -38,6 +38,7 @@ export type Filter =
 	| { kind: "weekday"; weekday: number }
 	| { kind: "in"; collection: string }
 	| { kind: "is"; tag: string }
+	| { kind: "i"; tag: string }
 	| { kind: "featuring"; character: string }
 	| { kind: "by"; creator: string }
 	| { kind: "date"; expression: DateExpression }
@@ -48,7 +49,7 @@ export type Filter =
 	| { kind: "id"; id: string }
 	| { kind: "tag"; tag: string }
 	| { kind: "strips"; comparison: Comparison }
-	| { kind: "published"; comparison: Comparison };
+	| { kind: "published"; expression: DateExpression };
 
 /** A number compared, as both ends of a range, each one in: `>5` is 6 to infinity. */
 export interface Comparison {
@@ -237,10 +238,12 @@ export function judgeFilter(
 		return { filter: null, reason: `${written} describes a collection, not a strip. Did you mean @in (${written})?` };
 	}
 
-	if (name === "is") {
-		if (knows("is", value, language)) return { filter: tagFilter(value, language) };
+	if (name === "is" || name === "i") {
+		if (knows(name, value, language)) return { filter: tagFilter(name, value, language) };
+		const mine = name === "is" ? FORMERLY_IS[value] : undefined;
+		if (mine !== undefined && knows("i", mine, language)) return { filter: null, reason: `Did you mean @i:${mine}?` };
 		const other: Language = language === "strip" ? "collection" : "strip";
-		if (termFor("is", value, other) === undefined) return { filter: null };
+		if (termFor(name, value, other) === undefined) return { filter: null };
 		return language === "collection"
 			? { filter: null, reason: `Did you mean @has ${written}?` }
 			: { filter: null, reason: `${written} describes a collection, not a strip. Did you mean @in ${written}?` };
@@ -249,7 +252,11 @@ export function judgeFilter(
 	return { filter: readValue(name, value) };
 }
 
-function tagFilter(value: string, language: Language): Filter {
+/** The reader's own tags, as `@is:` once took them, and the `@i:` tag each is now. */
+const FORMERLY_IS: Partial<Record<string, string>> = { owned: "own", bookmarked: "bookmarked", noted: "noted" };
+
+function tagFilter(name: "is" | "i", value: string, language: Language): Filter {
+	if (name === "i") return { kind: "i", tag: value };
 	return language === "collection"
 		? { kind: "tag", tag: canonical("is", value, language) }
 		: { kind: "is", tag: value };
@@ -257,16 +264,16 @@ function tagFilter(value: string, language: Language): Filter {
 
 /** A filter that its name already says the language of, read from its value alone. */
 function readValue(name: string, value: string): Filter | null {
-	if (name === "year") {
+	if (name === "year" || name === "published") {
 		// A year is read by the date parser, as `@date:` reads one, so the two agree about what a
 		// year is: four digits, or two that are every year ending in them — `@year:88` is 1988 here
 		// and would be 1888 as well in an archive that reached it. Only a year, though: `@year:` is
-		// not a second spelling of `@date:1988/8`.
+		// not a second spelling of `@date:1988/8`. `@published:` is the same year, asked of a collection.
 		const expression = parseDateExpression(value, "filter");
 		if (expression === null || expression.candidates.length !== 1) return null;
 		const { month, day, weekday } = expression.candidates[0];
 		if (month !== undefined || day !== undefined || weekday !== undefined) return null;
-		return { kind: "year", expression };
+		return name === "year" ? { kind: "year", expression } : { kind: "published", expression };
 	}
 
 	if (name === "month") {
@@ -303,10 +310,6 @@ function readValue(name: string, value: string): Filter | null {
 		const comparison = parseComparison(value);
 		return comparison === null ? null : { kind: "strips", comparison };
 	}
-	if (name === "published") {
-		const comparison = parseComparison(value);
-		return comparison === null ? null : { kind: "published", comparison };
-	}
 
 	// `@date`, `@before` and `@after` all read a date the same way: year first, and with no
 	// requirement that the year be one the archive holds. See `DateSource` for both reasons.
@@ -336,7 +339,7 @@ export interface FilterMatch {
 	reason?: string;
 	/** Where it was written, which is what it was read as. */
 	context: QueryContext;
-	/** About the reader rather than the archive — see `Term.personal`. */
+	/** About the reader rather than the archive: an `@i:` tag — see `MINE`. */
 	personal?: true;
 }
 
@@ -371,10 +374,7 @@ export function scanFilters(text: string, context: QueryContext = STRIP_QUERY): 
 /** The raw filter, read where it stands. */
 export function readMatch(raw: RawFilter, context: QueryContext): FilterMatch {
 	const { filter, reason } = judgeFilter(raw.name, raw.value, context);
-	const personal =
-		filter !== null &&
-		(filter.kind === "is" || filter.kind === "tag") &&
-		termFor("is", filter.tag, context.language)?.personal === true;
+	const personal = filter?.kind === "i";
 	return {
 		...raw,
 		filter,
@@ -455,15 +455,23 @@ function hasTag(subject: string | Comic, date: string, tag: string, run: Run | u
 	if (tag === "sunday") return weekdayOf(date) === 0;
 	if (tag === "daily") return weekdayOf(date) !== 0;
 	if (tag === "reused" || tag === "rerun") return run === tag;
-	// The reader's own, from what this browser has saved: a bookmark is a day's, and so is known of a
-	// bare date; owning and noting are a printing's, which is the strip and the day it ran.
-	if (tag === "bookmarked") return state.bookmarkedDates.has(date);
 	if (typeof subject === "string") return false;
-	if (tag === "owned") return state.ownedStrips.has(ownershipId(subject, date));
-	if (tag === "noted") return state.notedStrips.has(ownershipId(subject, date));
 	if (tag === "altered") return (subject.appearances ?? []).some((appearance) => appearance.altered === true);
 	if (tag === "empty") return subject.transcript === "";
 	if (tag === "standalone") return (subject.arcs ?? []).length === 0;
+	return false;
+}
+
+/**
+ * Whether the reader has the relationship to the row, from what this browser has saved: a bookmark
+ * is a day's, and so is known of a bare date; owning and noting are a printing's, which is the strip
+ * and the day it ran.
+ */
+function isMine(subject: string | Comic, date: string, tag: string): boolean {
+	if (tag === "bookmarked") return state.bookmarkedDates.has(date);
+	if (typeof subject === "string") return false;
+	if (tag === "own") return state.ownedStrips.has(ownershipId(subject, date));
+	if (tag === "noted") return state.notedStrips.has(ownershipId(subject, date));
 	return false;
 }
 
@@ -490,6 +498,8 @@ export function passesFilter(subject: string | Comic, filter: Filter, run?: Run)
 			return printedIn(subject, filter.collection);
 		case "is":
 			return hasTag(subject, date, filter.tag, run);
+		case "i":
+			return isMine(subject, date, filter.tag);
 		case "featuring":
 			return features(subject, filter.character);
 		case "by":

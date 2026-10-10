@@ -13,7 +13,6 @@ import {
 	readMatch,
 } from "./filter-query";
 import { CrossingOperator, crossingSpec } from "./filter-spec";
-import { termFor } from "./filter-vocabulary";
 import { Comic } from "./types";
 
 /**
@@ -32,19 +31,20 @@ import { Comic } from "./types";
  *   either instead: `@year:1988 @year:1989` is both years, and `@day:saturday @day:sunday` is the
  *   weekend. Books widen too, though a strip is printed in many: two books mostly share no strips,
  *   so `@in:book1 @in:book3` asking for both would mostly be asking for nothing. Tags are a strip's
- *   own properties and are asked for together, so `@is:` stays AND. An `@or` of one such field is
- *   more of the same, so `@year:1988 @or @year:1989 @year:1990` is any of the three. See `WIDENING`.
+ *   own properties and are asked for together, so `@is:` stays AND, and `@i:` with it. An `@or` of
+ *   one such field is more of the same, so `@year:1988 @or @year:1989 @year:1990` is any of the
+ *   three. See `WIDENING`.
  * - `@and` is AND without the exception, for the reader who means it: `@year:1988 @and
  *   @year:1989` is nothing.
  *
  * The operators that cross between a strip and its collections bind as tightly as `@not`, and like
- * it take the one atom after them, which is usually a group: `@in (@is:owned @strips:<1000)` is a
+ * it take the one atom after them, which is usually a group: `@in (@i:own @strips:<1000)` is a
  * strip in a book that is both. `@in` goes up from a strip to its books, `@by` to its creators,
  * `@featuring` to its characters and `@during` to its arcs; `@has` goes down from a collection to
  * its strips. Each is "some": `@in X` is in at least one book that is X. `@only` before one of them
- * makes it "at least one, and all of them": `@only @in @is:owned` is printed only in books the reader
+ * makes it "at least one, and all of them": `@only @in @i:own` is printed only in books the reader
  * owns. What stands inside one is written in the language on the other side of it — see
- * `QueryContext` — so `@is:owned` inside `@in (…)` is a book the reader owns, and outside it a
+ * `QueryContext` — so `@i:own` inside `@in (…)` is a book the reader owns, and outside it a
  * printing.
  *
  * The parse is lenient, because it runs on every keystroke and a reader halfway through typing is
@@ -163,7 +163,8 @@ const OPERATOR_PATTERN = /@([a-zA-Z]+)(?![a-zA-Z:])/g;
  * and either are the same, or one took over from the other, where both is nothing. Only the strips
  * of a handover tell the two apart, and `@and` is there for them.
  *
- * And a collection's id, of which it has one.
+ * And a collection's id, of which it has one; and its year, which a book has one of. An arc can run
+ * across several, but `@published:` widens on every kind, so the two tabs read a query the same way.
  */
 const WIDENING = new Set<Filter["kind"]>([
 	"year",
@@ -177,6 +178,7 @@ const WIDENING = new Set<Filter["kind"]>([
 	"by",
 	"during",
 	"id",
+	"published",
 ]);
 
 /** A query of more clauses than this is refused rather than searched. See `normalise`. */
@@ -798,7 +800,7 @@ export function scanQuery(text: string, root: QueryContext): { filters: FilterMa
 				next === undefined ||
 				next.kind === "cross" ||
 				(next.kind === "filter" && next.match.filter !== null && relationshipOf(next.match.filter) !== null);
-			if (!crossing) found.reason = "@only goes before @has, @in or another operator like them: @only @in @is:owned";
+			if (!crossing) found.reason = "@only goes before @has, @in or another operator like them: @only @in @i:own";
 		}
 		operators.push(found);
 	}
@@ -830,7 +832,7 @@ export function admits(
 
 /**
  * Whether some clause asks for the days a strip ran again — see `search`. `@is:rerun` does, and so
- * does each of the reader's own tags, since a clipping of a rerun is a printing like any other, and
+ * does each of the reader's own `@i:` tags, since a clipping of a rerun is a printing like any other, and
  * could otherwise never be found.
  */
 export function clausesAskForReruns(clauses: Constraint[][]): boolean {
@@ -839,8 +841,7 @@ export function clausesAskForReruns(clauses: Constraint[][]): boolean {
 			(constraint) =>
 				constraint.kind === "filter" &&
 				!constraint.negated &&
-				constraint.filter.kind === "is" &&
-				(constraint.filter.tag === "rerun" || termFor("is", constraint.filter.tag)?.personal === true),
+				((constraint.filter.kind === "is" && constraint.filter.tag === "rerun") || constraint.filter.kind === "i"),
 		),
 	);
 }

@@ -945,7 +945,7 @@ function searchBranch(branch: Branch, tuning: Tuning, compounds: Compounds): Sea
 	// they own, a clipping of a rerun being a printing like any other — or, below, named its exact date.
 	const rerunDays = asksForReruns(branch) ? new Set(state.reruns.keys()) : null;
 	// And a rerun day brought in that way is kept only by a clause that asked for it: in
-	// `@is:owned @or @in @is:owned`, a rerun of a strip in an owned book is no clipping the reader owns.
+	// `@i:own @or @in @i:own`, a rerun of a strip in an owned book is no clipping the reader owns.
 	const asking: Branch = {
 		segments: branch.segments,
 		clauses: branch.clauses.filter((clause) => clausesAskForReruns([clause])),

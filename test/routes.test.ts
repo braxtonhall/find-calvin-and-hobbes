@@ -85,13 +85,12 @@ test("routes", async (suite) => {
 		assert.deepEqual(parseRoutePath("/settings.html", ""), { view: "settings" });
 	});
 
-	// Open with nothing typed is `?q=` alone, so that the box stays open on the way to another tab.
-	await suite.test("a tab's search is open wherever its address has a query, even an empty one", () => {
+	await suite.test("a tab's address holds its query, and an empty one is no query at all", () => {
 		assert.equal(buildTabPath("books"), BOOKS_PATH);
-		assert.equal(buildTabPath("arcs", ""), ARCS_PATH + "?q=");
+		assert.equal(buildTabPath("arcs", ""), ARCS_PATH);
 		const [path, search] = buildTabPath("arcs", "snow @has @is:sunday").split("?");
 		assert.deepEqual(parseRoutePath(path, "?" + search), { view: "arcs", q: "snow @has @is:sunday" });
-		assert.deepEqual(parseRoutePath(BOOKS_PATH, "?q="), { view: "collections", q: "" });
+		assert.deepEqual(parseRoutePath(BOOKS_PATH, "?q="), { view: "collections" });
 		assert.deepEqual(parseRoutePath(COLLECTIONS_PATH, "?q=owned"), { view: "collections", q: "owned" });
 		assert.equal(parseRoutePath("/library", ""), null, "the Library page is gone");
 	});

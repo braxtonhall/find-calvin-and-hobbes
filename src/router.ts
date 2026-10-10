@@ -31,6 +31,9 @@ import { updateCorrectionLink } from "./views/correction";
 import { cancelCollectionClear } from "./views/cell-highlight";
 import { cellForDate, followRoute, paintGrid } from "./grid";
 
+/** The views that are tabs of Collections, which share their header. */
+const TAB_VIEWS: ReadonlySet<string> = new Set(["collections", "arcs", "creators"]);
+
 export function parseRoute(): Route {
 	let path = pathOf(location.pathname);
 	// An address that has moved is shown as where it lives now, wherever the reader came to it from.
@@ -287,6 +290,13 @@ export function handleRoute(prerendered: Page | null = null): void {
 	const viewElement = document.getElementById(`view-${route.view}`)!;
 	// Rather than typing on, or re-sorting, the page that was already showing.
 	const arriving = !viewElement.classList.contains("active");
+	// From one tab of Collections to another, the header is the same, so only the list under it fades
+	// in. See `.view--tab-switch`.
+	if (arriving) {
+		const leaving = document.querySelector(".view.active");
+		const switching = TAB_VIEWS.has(route.view) && leaving !== null && TAB_VIEWS.has(leaving.id.replace(/^view-/, ""));
+		viewElement.classList.toggle("view--tab-switch", switching);
+	}
 
 	// The filter dropdowns float on the body, so hiding the view they hang from does not hide them.
 	// Arriving at any view leaves them behind; staying on one with a search bar keeps whichever one
