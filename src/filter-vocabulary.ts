@@ -10,8 +10,8 @@
  * reasoning `filter-spec.ts` gives for being the single table of filter names.
  *
  * Free of the parser, and for the same reason that file is: `filter-query.ts` imports it, so
- * anything here that reached back into the parser would be a cycle. It reads `config.yaml`, for
- * which tags the site has, and nothing else.
+ * anything here that reached back into the parser would be a cycle. It reads `config.yaml`, and the
+ * books bundled into the script, for which tags the site has, and nothing else.
  *
  * One rule runs through it:
  *
@@ -25,8 +25,17 @@
  * nothing registered at all.
  */
 
+import { COLLECTION_INDEX } from "./bundled-data";
 import type { Language } from "./filter-spec";
 import { PAGE_CONFIG } from "./site-config";
+
+/**
+ * Whether any book printed a strip with changes: whether there are `@is:altered` and `@here:`. Read
+ * off the books in the script, not `comics.json`, so it is known from the first keystroke.
+ */
+export const ALTERATIONS = COLLECTION_INDEX.collections.some(
+	(collection) => Object.keys(collection.alterations ?? {}).length > 0,
+);
 
 /** One value a data-driven filter takes: what a reader types, and what it names. */
 export interface Term {
@@ -52,7 +61,7 @@ export type Vocabulary = () => readonly Term[];
  * start and never empty. Each is independent of the others — a strip can be a Sunday and altered —
  * which is why repeating `@is:` asks for all of them rather than any.
  *
- * The ones about reruns and arcs are left out of a site that has none, and `sunday` and `daily` out
+ * The ones about reruns, arcs and alterations are left out of a site that has none, and `sunday` and `daily` out
  * of one whose Sundays were not a format of their own, which `config.yaml` says. What the reader
  * owns, bookmarked or noted is not a fact about the strip, so it is not here but in `MINE`.
  */
@@ -69,7 +78,7 @@ export const TAGS: readonly Term[] = [
 				{ value: "rerun", hint: "A strip on the date it ran again" },
 			]
 		: []),
-	{ value: "altered", hint: "A strip a book printed with changes" },
+	...(ALTERATIONS ? [{ value: "altered", hint: "A strip a book printed with changes" }] : []),
 	{ value: "empty", hint: "A strip with an empty transcript" },
 	...(PAGE_CONFIG.arcs ? [{ value: "standalone", hint: "A strip that belongs to no story arc" }] : []),
 ];

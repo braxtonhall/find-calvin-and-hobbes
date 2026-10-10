@@ -13,7 +13,7 @@
  * to know about both.
  */
 
-import { COLLECTION_MINE, COLLECTION_TAGS, MINE, TAGS } from "./filter-vocabulary";
+import { ALTERATIONS, COLLECTION_MINE, COLLECTION_TAGS, MINE, TAGS } from "./filter-vocabulary";
 import { PAGE_CONFIG } from "./site-config";
 
 /**
@@ -92,7 +92,7 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
  * `boolean-query.ts`.
  *
  * `@featuring:` only where `config.yaml` has characters for it, `@by:` only where it has creators,
- * and `@during:` only where it has arcs.
+ * `@during:` only where it has arcs, and `@here:` only where a book printed a strip with changes.
  */
 export const FILTER_SPECS: readonly FilterSpec[] = [
 	{
@@ -231,13 +231,17 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 			{ label: "YY", hint: "any year ending in those two digits" },
 		],
 	},
-	{
-		name: "here",
-		hint: "How this strip appears in this collection",
-		vocabulary: true,
-		language: "both",
-		templates: [{ label: "tag", hint: "altered" }],
-	},
+	...(ALTERATIONS
+		? [
+				{
+					name: "here",
+					hint: "How this strip appears in this collection",
+					vocabulary: true,
+					language: "both",
+					templates: [{ label: "tag", hint: "altered" }],
+				} satisfies FilterSpec,
+			]
+		: []),
 ];
 
 /** Whether the filter can be written in this language. */
