@@ -21,7 +21,9 @@ import { renderCollections } from "./views/collections";
 import { renderArc, renderArcs } from "./views/arcs";
 import { renderCreator, renderCreators } from "./views/creators";
 import { loadDescriptions } from "./details";
-import { renderLibrary } from "./views/library";
+import { renderSettings } from "./views/settings";
+import { asksAboutReader } from "./boolean-query";
+import { STRIP_QUERY, collectionQuery } from "./filter-query";
 import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
 import { closeBookPopup } from "./views/books";
@@ -34,7 +36,7 @@ export function parseRoute(): Route {
 	// An address that has moved is shown as where it lives now, wherever the reader came to it from.
 	const moved = path === null ? null : redirectedPath(normalizePathname(path));
 	if (moved !== null) {
-		replaceRoute(moved);
+		replaceRoute(moved + location.search);
 		path = moved;
 	}
 	const route = path === null ? null : parseRoutePath(path, location.search);
@@ -139,8 +141,31 @@ export function replaceSearch(path: string): void {
 }
 
 /**
+ * Whether a query about the reader — what they own, bookmarked or noted — has to wait for this
+ * browser's library before it can be answered. Drawn before IndexedDB answers, it would find nothing.
+ */
+function waitsForLibrary(query: string, language: "strip" | "collection"): boolean {
+	return !state.bookmarksLoaded && asksAboutReader(query, language === "strip" ? STRIP_QUERY : collectionQuery());
+}
+
+/**
+ * Whether a Collections tab has what its search needs: the archive, for which strips each collection
+ * holds; their descriptions, which its words are found in too; and, for a query about the reader,
+ * their library. A closed or empty search needs none of it.
+ */
+function tabReady(query: string | undefined): boolean {
+	if (query === undefined || query.trim() === "") return true;
+	if (!state.dataLoaded || waitsForLibrary(query, "collection")) return false;
+	if (!state.descriptions) {
+		void loadDescriptions().then(resumeRoute);
+		return false;
+	}
+	return true;
+}
+
+/**
  * The page the app has the data to draw for a route, or `null` while that data is still loading.
- * The landing and credits pages are made of nothing that has to be fetched.
+ * The landing, credits and settings pages are made of nothing that has to be fetched.
  */
 function pageFor(route: Route): Page | null {
 	switch (route.view) {
@@ -148,19 +173,23 @@ function pageFor(route: Route): Page | null {
 			return { view: "landing" };
 		case "credits":
 			return { view: "credits" };
+		case "settings":
+			return { view: "settings" };
 		case "results":
-			return state.dataLoaded ? { view: "results", q: route.q ?? "", sort: route.sort ?? "rank" } : null;
+			if (!state.dataLoaded || waitsForLibrary(route.q ?? "", "strip")) return null;
+			return { view: "results", q: route.q ?? "", sort: route.sort ?? "rank" };
 		case "detail":
 			return state.dataLoaded ? detailPageFrom(state, route.date ?? "", route.alternates ?? []) : null;
 		case "collection":
 			return state.dataLoaded ? collectionPageFrom(state, route.id ?? "") : null;
 		case "collections":
-			return state.dataLoaded ? collectionsPageFrom(state) : null;
+			return state.dataLoaded && tabReady(route.q) ? collectionsPageFrom(state, route.q) : null;
 		case "arcs":
-			return state.dataLoaded ? arcsPageFrom(state) : null;
-		// The creators ship inside the script, so their pages need nothing fetched.
+			return state.dataLoaded && tabReady(route.q) ? arcsPageFrom(state, route.q) : null;
+		// The creators ship inside the script, so their pages need nothing fetched — but a search of
+		// them is a search of their strips.
 		case "creators":
-			return creatorsPageFrom(state);
+			return tabReady(route.q) ? creatorsPageFrom(state, route.q) : null;
 		case "creator":
 			return creatorPageFrom(state, route.id ?? "");
 		case "arc":
@@ -172,11 +201,6 @@ function pageFor(route: Route): Page | null {
 				return null;
 			}
 			return arcPageFrom(state, route.id ?? "");
-		case "library":
-			// Both, because a page drawn before IndexedDB answers would say there are no bookmarks.
-			return state.dataLoaded && state.bookmarksLoaded
-				? { view: "library", q: route.q ?? "", sort: route.sort ?? "rank" }
-				: null;
 	}
 }
 
@@ -216,12 +240,14 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 	switch (prerendered.view) {
 		case "landing":
 		case "credits":
+		case "settings":
+			return { page: prerendered, adopt: true };
+		// The build writes each tab with its search closed.
 		case "collections":
 		case "arcs":
 		case "creators":
-			return { page: prerendered, adopt: true };
+			return route.q === undefined ? { page: prerendered, adopt: true } : null;
 		case "results":
-		case "library":
 			return null;
 		case "detail": {
 			if (prerendered.date !== route.date) return null;
@@ -265,7 +291,7 @@ export function handleRoute(prerendered: Page | null = null): void {
 	// The filter dropdowns float on the body, so hiding the view they hang from does not hide them.
 	// Arriving at any view leaves them behind; staying on one with a search bar keeps whichever one
 	// is open, because a search re-rendered on a keystroke comes through here too.
-	if (arriving || (route.view !== "results" && route.view !== "library")) closeFilterMenu();
+	if (arriving || route.view !== "results") closeFilterMenu();
 	// A book's popup the same way, but on every page: any page with covers on it is drawn afresh, and
 	// opens the popup again itself if its book is still selected.
 	closeBookPopup();
@@ -308,8 +334,8 @@ export function handleRoute(prerendered: Page | null = null): void {
 			break;
 		}
 		case "collections": {
-			renderCollections(page, adopt);
-			document.getElementById("main")!.scrollTop = 0;
+			renderCollections(page, adopt, arriving);
+			if (arriving) document.getElementById("main")!.scrollTop = 0;
 			break;
 		}
 		case "arc": {
@@ -318,8 +344,8 @@ export function handleRoute(prerendered: Page | null = null): void {
 			break;
 		}
 		case "arcs": {
-			renderArcs(page, adopt);
-			document.getElementById("main")!.scrollTop = 0;
+			renderArcs(page, adopt, arriving);
+			if (arriving) document.getElementById("main")!.scrollTop = 0;
 			break;
 		}
 		case "creator": {
@@ -328,12 +354,12 @@ export function handleRoute(prerendered: Page | null = null): void {
 			break;
 		}
 		case "creators": {
-			renderCreators(page, adopt);
-			document.getElementById("main")!.scrollTop = 0;
+			renderCreators(page, adopt, arriving);
+			if (arriving) document.getElementById("main")!.scrollTop = 0;
 			break;
 		}
-		case "library": {
-			renderLibrary(page.q, page.sort, arriving);
+		case "settings": {
+			renderSettings(adopt);
 			document.getElementById("main")!.scrollTop = 0;
 			break;
 		}

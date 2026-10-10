@@ -1,7 +1,7 @@
 /**
- * The library as a file: what the Library page exports, and reads back on import. Pure, so the
+ * The library as a file: what the Settings page exports, and reads back on import. Pure, so the
  * rules for reading a file and merging it into what is already here can be tested without a
- * browser. `library-store.ts` moves it in and out of IndexedDB.
+ * browser. `ownership.ts` moves it in and out of IndexedDB.
  */
 
 export const LIBRARY_FILE_VERSION = 1;
@@ -24,47 +24,6 @@ export interface OwnershipRecord {
  */
 export function ownershipId(comic: { id?: string }, runDate: string): string {
 	return comic.id || runDate.replace(/-/g, "");
-}
-
-/**
- * Whether the Library page lists one printing: one on a bookmarked page; one owned itself, by its
- * own id, so a special owned is not its day's daily; or one first printed in an owned book — not
- * its reruns, which the book did not print.
- */
-export function inLibrary(
-	library: { bookmarks: ReadonlySet<string>; strips: ReadonlySet<string>; books: ReadonlySet<string> },
-	comic: { date: string; id?: string; appearances?: { collection: string }[] },
-	rerun: boolean,
-): boolean {
-	if (library.bookmarks.has(comic.date)) return true;
-	if (library.strips.has(ownershipId(comic, comic.date))) return true;
-	return !rerun && (comic.appearances ?? []).some((appearance) => library.books.has(appearance.collection));
-}
-
-/**
- * The days the reader owns a printing of, which the Library page searches within before
- * `inLibrary` keeps only the printings themselves: each owned strip by the
- * day it ran — a special by the day its page is — and every strip in an owned book by the day it
- * first ran. An id the archive no longer has is skipped, but kept in the library.
- */
-export function ownedDates(
-	strips: Iterable<string>,
-	books: ReadonlySet<string>,
-	comics: { date: string; id?: string; appearances?: { collection: string }[] }[],
-): Set<string> {
-	const dates = new Set<string>();
-	const specials = new Map(comics.filter((comic) => comic.id).map((comic) => [comic.id!, comic.date]));
-	for (const id of strips) {
-		const ran = /^(\d{4})(\d{2})(\d{2})$/.exec(id);
-		const date = ran ? `${ran[1]}-${ran[2]}-${ran[3]}` : specials.get(id);
-		if (date) dates.add(date);
-	}
-	if (books.size > 0) {
-		for (const comic of comics) {
-			if ((comic.appearances ?? []).some((appearance) => books.has(appearance.collection))) dates.add(comic.date);
-		}
-	}
-	return dates;
 }
 
 export interface LibraryData {

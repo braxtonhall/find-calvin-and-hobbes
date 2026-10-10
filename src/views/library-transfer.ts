@@ -10,20 +10,11 @@ function thisSite(): string {
 	return window.location.origin + basePath();
 }
 
-export function buildLibraryTransferHtml(): string {
-	return `<div class="detail-actions library-transfer">
-		<span class="library-transfer__status" role="status"></span>
-		<button type="button" class="copy-link-btn" id="library-export-btn">Export</button>
-		<button type="button" class="copy-link-btn" id="library-import-btn">Import</button>
-		<input type="file" id="library-import-file" accept="application/json,.json" hidden />
-	</div>`;
-}
-
 /**
  * Asks the reader to choose, in a modal over the page: the label of the button they chose, or
  * `null` when they backed out of it — with Escape, or the last button, which is always the way out.
  */
-function ask(message: string, choices: string[]): Promise<string | null> {
+export function ask(message: string, choices: string[]): Promise<string | null> {
 	const dialog = document.createElement("dialog");
 	dialog.className = "library-dialog";
 	dialog.innerHTML = `<p class="library-dialog__message">${message}</p>
@@ -99,7 +90,7 @@ async function importLibrary(file: File): Promise<{ imported: boolean; message: 
 	return { imported: true, message: skipped };
 }
 
-/** Wires the Library page's Export and Import buttons — see `buildLibraryTransferHtml`. */
+/** Wires the Settings page's Export and Import buttons — see `buildSettingsHtml`. */
 export function attachLibraryTransferHandlers(element: HTMLElement): void {
 	const status = element.querySelector<HTMLElement>(".library-transfer__status")!;
 	const input = element.querySelector<HTMLInputElement>("#library-import-file")!;
@@ -127,11 +118,13 @@ export function attachLibraryTransferHandlers(element: HTMLElement): void {
 		status.textContent = "";
 		importLibrary(file)
 			.then(({ imported, message }) => {
-				// Drawn again with the bookmarks as they now are, the grid too. The buttons and the
-				// status line are part of the page that stays, so they are changed after.
+				// The grid drawn again with the bookmarks as they now are. The page itself stays, buttons,
+				// status line and all.
 				handleRoute();
-				if (imported) flashButton(importButton, "Imported!", "Import");
-				status.textContent = message;
+				const button = document.querySelector<HTMLButtonElement>("#library-import-btn") ?? importButton;
+				if (imported) flashButton(button, "Imported!", "Import");
+				const line = document.querySelector<HTMLElement>(".library-transfer__status") ?? status;
+				line.textContent = message;
 			})
 			.catch(() => {
 				status.textContent = "Couldn't save the file to your library in this browser.";

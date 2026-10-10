@@ -1,7 +1,6 @@
 import { BOOKS_STORE_NAME, STORE_NAME, STRIPS_STORE_NAME } from "./constants";
 import { inTransaction } from "./database";
-import { LibraryData, OwnershipRecord, cleanNote, inLibrary, ownedDates } from "./library-file";
-import type { SearchResult } from "./search";
+import { LibraryData, OwnershipRecord, cleanNote } from "./library-file";
 import { state } from "./state";
 
 export type OwnershipKind = "strip" | "book";
@@ -43,32 +42,24 @@ export function updateOwnership(
 			finish(next);
 		};
 	}).then((record) => {
-		// Once it is saved, so the Library page never lists what the browser did not keep.
+		// Once it is saved, so a search never finds what the browser did not keep.
 		const owned = kind === "strip" ? state.ownedStrips : state.ownedBooks;
+		const noted = kind === "strip" ? state.notedStrips : state.notedBooks;
 		if (record.owned) owned.add(id);
 		else owned.delete(id);
+		if (record.note !== undefined) noted.add(id);
+		else noted.delete(id);
 		return record;
 	});
 }
 
-/** Takes what is in the library into `state`, where the pages and the grid read it. */
+/** Takes what is in the library into `state`, where the searches and the grid read it. */
 export function holdLibrary(data: LibraryData): void {
 	state.bookmarkedDates = new Set(data.bookmarks);
 	state.ownedStrips = new Set(data.strips.filter((record) => record.owned).map((record) => record.id));
 	state.ownedBooks = new Set(data.books.filter((record) => record.owned).map((record) => record.id));
-}
-
-/** The days the Library page lists: the bookmarks, and every strip the reader owns. */
-export function libraryDates(): Set<string> {
-	const dates = ownedDates(state.ownedStrips, state.ownedBooks, state.comics);
-	for (const date of state.bookmarkedDates) dates.add(date);
-	return dates;
-}
-
-/** Whether a row of the Library page's search is a printing in the library — see `inLibrary`. */
-export function isLibraryResult(result: SearchResult): boolean {
-	const library = { bookmarks: state.bookmarkedDates, strips: state.ownedStrips, books: state.ownedBooks };
-	return inLibrary(library, result.comic, result.rerun === true);
+	state.notedStrips = new Set(data.strips.filter((record) => record.note !== undefined).map((record) => record.id));
+	state.notedBooks = new Set(data.books.filter((record) => record.note !== undefined).map((record) => record.id));
 }
 
 /** Everything in the library, as a file holds it. */
@@ -87,6 +78,13 @@ export function readLibrary(): Promise<LibraryData> {
 			finish(data);
 		},
 	);
+}
+
+/** Forgets everything in the library: every bookmark, everything owned, every note. */
+export async function clearLibrary(): Promise<void> {
+	const empty: LibraryData = { bookmarks: [], strips: [], books: [] };
+	await replaceLibrary(empty);
+	holdLibrary(empty);
 }
 
 /** Replaces everything in the library with `data`, in one transaction: all of it, or none. */

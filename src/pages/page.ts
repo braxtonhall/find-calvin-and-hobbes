@@ -27,14 +27,9 @@ export interface ResultsPage {
 	sort: SortMode;
 }
 
-/**
- * Never prerendered either: the bookmarks live in this browser's IndexedDB, so the build has no
- * rows to write, and the page is empty until the app has read them.
- */
-export interface LibraryPage {
-	view: "library";
-	q: string;
-	sort: SortMode;
+/** Moving the reader's library in and out of this browser: nothing on it is the archive's. */
+export interface SettingsPage {
+	view: "settings";
 }
 
 /**
@@ -119,6 +114,8 @@ export interface ArcsPage {
 	view: "arcs";
 	/** Every arc, oldest first. */
 	list: ArcList;
+	/** The search box's query, where it is open. Never on a page the build writes. */
+	q?: string;
 }
 
 /** A strip as an arc's page lists it: its date, and what happens in it. */
@@ -175,12 +172,16 @@ export interface CollectionsPage {
 	view: "collections";
 	/** In publication order. */
 	collections: CollectionSummary[];
+	/** The search box's query, where it is open. Never on a page the build writes. */
+	q?: string;
 }
 
 export interface CreatorsPage {
 	view: "creators";
 	/** In the order the creators' file lists them. */
 	creators: Creator[];
+	/** The search box's query, where it is open. Never on a page the build writes. */
+	q?: string;
 }
 
 export interface CreatorPage {
@@ -194,7 +195,7 @@ export type Page =
 	| LandingPage
 	| CreditsPage
 	| ResultsPage
-	| LibraryPage
+	| SettingsPage
 	| DetailPage
 	| CollectionPage
 	| CollectionsPage
@@ -240,17 +241,17 @@ export function pageTitle(page: Page): string {
 		case "collection":
 			return `${page.collection?.name ?? "Collection not found"} — ${PAGE_CONFIG.name}`;
 		case "collections":
-			return `Books — ${PAGE_CONFIG.name}`;
+			return page.q ? `${page.q} — Books — ${PAGE_CONFIG.name}` : `Books — ${PAGE_CONFIG.name}`;
 		case "arc":
 			return `${page.arc ? arcRange(page.arc) : "Arc not found"} — ${PAGE_CONFIG.name}`;
 		case "arcs":
-			return `Arcs — ${PAGE_CONFIG.name}`;
+			return page.q ? `${page.q} — Arcs — ${PAGE_CONFIG.name}` : `Arcs — ${PAGE_CONFIG.name}`;
 		case "creator":
 			return `${page.creator?.name ?? "Creator not found"} — ${PAGE_CONFIG.name}`;
 		case "creators":
-			return `Creators — ${PAGE_CONFIG.name}`;
-		case "library":
-			return page.q ? `${page.q} — Library — ${PAGE_CONFIG.name}` : `Library — ${PAGE_CONFIG.name}`;
+			return page.q ? `${page.q} — Creators — ${PAGE_CONFIG.name}` : `Creators — ${PAGE_CONFIG.name}`;
+		case "settings":
+			return `Settings — ${PAGE_CONFIG.name}`;
 		case "credits":
 			return `Credits — ${PAGE_CONFIG.name}`;
 	}

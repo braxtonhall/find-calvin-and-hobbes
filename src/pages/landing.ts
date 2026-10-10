@@ -1,4 +1,4 @@
-import { BOOKS_PATH, CREDITS_PATH, LIBRARY_PATH } from "../routes";
+import { BOOKS_PATH, CREDITS_PATH } from "../routes";
 import { addressOf } from "../base-path";
 import { PAGE_CONFIG } from "../site-config";
 import { escHtml } from "../utils";
@@ -36,8 +36,6 @@ export function buildLandingHtml(): string {
 			</div>
 		</form>
 		<nav class="landing-links">
-			<a href="${addressOf(LIBRARY_PATH)}">Library</a>
-			<span aria-hidden="true">·</span>
 			<a href="${addressOf(BOOKS_PATH)}">Collections</a>
 			<span aria-hidden="true">·</span>
 			<a href="${addressOf(CREDITS_PATH)}">Credits</a>

@@ -7,7 +7,6 @@ import { state } from "./state";
 import { loadDescriptions } from "./details";
 import { isPlainClick, parseRoute } from "./router";
 import { buildComicPath } from "./routes";
-import { libraryDates } from "./ownership";
 import { addressOf } from "./base-path";
 import { formatDateRange, formatLongDate } from "./date-utils";
 import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS, RERUNS } from "./bundled-data";
@@ -412,17 +411,19 @@ function bestMatches(tiers: ReadonlyMap<string, number>): Set<string> {
 /** The pages that light a set of strips of their own, in `state.collectionDateSet`: a book's, an arc's, a creator's. */
 const LIGHTS_ITS_OWN = new Set<Route["view"]>(["collection", "arc", "creator"]);
 
+/** The tabs of Collections, which light the strips their search found, in `state.tabMatchDates`. */
+const TABS = new Set<Route["view"]>(["collections", "arcs", "creators"]);
+
 /**
  * What the page showing is about, and the days the grid should turn to for it: a search's best
- * matches, a book's or an arc's strips, the bookmarks. `null` where the page is about no days, or
- * they are not known yet.
+ * matches, a book's or an arc's strips, what a tab's search found. `null` where the page is about no
+ * days, or they are not known yet.
  */
 function subjectOf(route: Route): { key: string; dates: ReadonlySet<string> } | null {
 	const tiers = state.searchResultTiers;
 	if (route.view === "results" && tiers) return { key: `results:${route.q ?? ""}`, dates: bestMatches(tiers) };
-	if (route.view === "library" && state.bookmarksLoaded) {
-		const key = `library:${route.q ?? ""}`;
-		return { key, dates: tiers ? bestMatches(tiers) : libraryDates() };
+	if (TABS.has(route.view) && route.q && state.tabMatchDates) {
+		return { key: `${route.view}:${route.q}`, dates: state.tabMatchDates };
 	}
 	if (LIGHTS_ITS_OWN.has(route.view) && state.collectionDateSet) {
 		return { key: `${route.view}:${route.id ?? ""}`, dates: state.collectionDateSet };
@@ -449,7 +450,7 @@ export function followRoute(route: Route): void {
 	}
 	const subject = subjectOf(route);
 	if (!subject) {
-		if (!["results", "library", ...LIGHTS_ITS_OWN].includes(route.view)) subjectShown = null;
+		if (!["results", ...TABS, ...LIGHTS_ITS_OWN].includes(route.view)) subjectShown = null;
 		return;
 	}
 	if (subject.key === subjectShown) return;
@@ -510,15 +511,9 @@ function lightFor(route: Route): ((date: string) => Light) | undefined {
 
 	if (route.view === "results") return byTier;
 
-	// Lit and dimmed the way a book's page is, with the library as the book — once it is known;
-	// until then an empty set would dim the whole grid, only to light it back up a moment later. A
-	// search of them is lit as any search is.
-	if (route.view === "library") {
-		if (!state.bookmarksLoaded) return undefined;
-		if (byTier) return byTier;
-		const dates = libraryDates();
-		return (date) => dates.has(date);
-	}
+	// A tab's search lit and dimmed the way a book's page is, with what it found as the book.
+	const found = state.tabMatchDates;
+	if (TABS.has(route.view)) return found ? (date) => found.has(date) : undefined;
 
 	// A book's strips, an arc's or a creator's: whichever the page showing set out to light.
 	const dates = state.collectionDateSet;
@@ -832,7 +827,7 @@ export function renderGrid(): void {
 		const route = parseRoute();
 		// The two pages whose rows are the grid's cells, lit and dimmed; anywhere else a hover is
 		// only the tooltip.
-		if (route.view !== "results" && route.view !== "library") return;
+		if (route.view !== "results") return;
 		// A rerun day holds no strip of its own — its strip is filed under the day it first ran — but it
 		// is a row all the same, so it is not the empty day `cell--none` otherwise means.
 		if (cell.classList.contains("cell--none") && !cell.classList.contains("cell--rerun")) return;

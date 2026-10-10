@@ -18,12 +18,15 @@ Type words to search transcripts. Type `@` in the search box for the list of fil
 | `@is:`        | `@is:sunday`, `@is:rerun`      | strips with that tag                                      |
 | `@featuring:` | `@featuring:susie`             | strips featuring that character                           |
 | `@by:`        | `@by:watterson`                | strips by that creator                                    |
+| `@during:`    | `@during:goonarmy`             | strips in that story arc                                  |
 
 The tags are `sunday` and `daily` (the colour Sundays and the black-and-white dailies), `reused`
 (a strip on the day it first ran, where it was later rerun), `rerun` (a strip on a day it ran
-again), `altered` (a strip some book printed with changes) and `empty` (a strip with an empty
-transcript). Reruns only appear in results when the search asks for `@is:rerun`, or names the exact
-date one ran.
+again), `altered` (a strip some book printed with changes), `empty` (a strip with an empty
+transcript) and `standalone` (a strip in no arc). Three more are your own, kept in your browser:
+`owned` (a printing you own), `bookmarked` and `noted` (a strip you wrote a note
+on). Reruns only appear in results when the search asks for `@is:rerun` or one of your own tags, or
+names the exact date one ran.
 
 Different filters narrow. Repeating a filter widens where a strip can have only one value for it —
 `@day:saturday @day:sunday` is the weekend, and `@year:1988 @year:1989` is either year — and for
@@ -61,6 +64,36 @@ searched for.
 and the menu lists every book the archive indexes with its title beside it, so `@in:book3` is _Yukon
 Ho!_ and `@in:complete` is the whole Complete. A book that is not on that list matches nothing and
 says so.
+
+### Strips and their collections
+
+Books, story arcs, creators and characters are each a collection of strips, and one operator crosses
+from a strip to each kind: `@in` to its books, `@during` to its arcs, `@by` to its creators and
+`@featuring` to its characters. Each takes the one word, filter or `(group)` after it, which is about
+the collection rather than the strip — `@in:book3` is short for `@in (@id:book3)`:
+
+| Example                                 | Meaning                                               |
+| --------------------------------------- | ----------------------------------------------------- |
+| `@in @is:owned`                         | in a book you own                                     |
+| `@is:owned @or @in @is:owned`           | a printing you own, or in a book you own              |
+| `@in (@is:owned @strips:<1000)`         | in an owned book that isn't one of the huge Completes |
+| `@not @in @strips:>0`                   | in no book at all                                     |
+| `@only @in @is:owned`                   | in at least one book, and only in books you own       |
+| `@during (@strips:>20 @has @is:sunday)` | in a long arc that has a Sunday                       |
+| `@in (@id:book1 @here:altered)`         | altered in Book 1                                     |
+
+`@only` before any of these is "at least one, and all of them". `@here:altered`, inside one, is
+about how that collection prints that strip, where `@is:altered` is altered in any book.
+
+The Collections page has a search too: its button opens a box, and the tab you are on says which
+kind of collection it finds. A collection's words are its own — a book's title, an arc's description
+— and every word of its strips, so `susie mom` finds the arcs where both appear, in one strip or
+two. Anything about its strips goes in `@has`, which crosses back down: `@has @is:sunday` is an arc
+with a Sunday, `@not @has @is:sunday` one without, and `@only @has @year:1988` one entirely in 1988.
+A collection's own filters are `@is:` (`book`, `arc`, `creator`, `character`, `owned`, `noted`,
+`colour`, `writer`, `artist` — a tag that cannot be true of a kind is false), `@id:`,
+`@strips:` (`>5`, `>=5`, `<5`, `<=5`, `5`, `5..10`) and `@published:` (a book's year, compared the
+same way).
 
 Filter values are read year first — `@date:1988/9/3` is September 3rd, never March 9th — and take
 no spaces. A bare date typed on its own is understood without any `@`, as long as it starts from

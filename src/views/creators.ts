@@ -6,16 +6,31 @@ import { state } from "../state";
 import { canGoBack } from "../router";
 import { CreatorPage, CreatorsPage } from "../pages/page";
 import { buildCreatorHtml } from "../pages/creator";
-import { buildCreatorsHtml } from "../pages/creators";
+import { buildCreatorsBodyHtml, buildCreatorsHtml } from "../pages/creators";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
 import { attachCellHighlightLink, clearCollectionSoon, creatorDates, highlightCollection } from "./cell-highlight";
+import { attachTabSearch, keepsHeader, narrowTab, updateTabSearch } from "./tab-search";
 
-/** Draws the list of creators, or — with `adopt` — takes over the one the build drew from the same `page`. */
-export function renderCreators(page: CreatorsPage, adopt: boolean = false): void {
+/**
+ * Draws the list of creators, or — with `adopt` — takes over the one the build drew from the same
+ * `page`. With the search open, only the creators it finds, as the list of books does.
+ */
+export function renderCreators(page: CreatorsPage, adopt: boolean = false, arriving: boolean = true): void {
 	const element = document.getElementById("view-creators")!;
-	if (!adopt) element.innerHTML = buildCreatorsHtml(page, canGoBack());
-	attachBackAndHomeHandlers(element);
+	const results = narrowTab("creators", page.q);
+	const ids = results?.ids ?? null;
+	if (adopt) {
+		attachBackAndHomeHandlers(element);
+		attachTabSearch(element, "creators");
+	} else if (keepsHeader(element, page.q, arriving)) {
+		element.querySelector(".collections-body")!.innerHTML = buildCreatorsBodyHtml(page, ids);
+		updateTabSearch(element, page.q);
+	} else {
+		element.innerHTML = buildCreatorsHtml(page, canGoBack(), ids);
+		attachBackAndHomeHandlers(element);
+		attachTabSearch(element, "creators");
+	}
 
 	const byId = new Map(page.creators.map((creator) => [creator.id, creator]));
 	element.querySelectorAll<HTMLElement>(".creator-row").forEach((row) => {
@@ -23,7 +38,7 @@ export function renderCreators(page: CreatorsPage, adopt: boolean = false): void
 		if (!creator) return;
 		// As the list of books does: only while the list is showing may it touch the grid.
 		const show = () => element.classList.contains("active") && highlightCollection(creatorDates(creator));
-		const clear = () => element.classList.contains("active") && clearCollectionSoon();
+		const clear = () => element.classList.contains("active") && clearCollectionSoon(state.tabMatchDates);
 		row.addEventListener("mouseenter", show);
 		row.addEventListener("focus", show);
 		row.addEventListener("mouseleave", clear);

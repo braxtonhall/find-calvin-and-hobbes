@@ -9,6 +9,7 @@ import { buildBackAndHomeButtons } from "./nav-buttons";
 import { PAGE_CONFIG } from "../site-config";
 import { StripLinkSubject, stripLinks } from "../strip-links";
 import { ownershipId } from "../library-file";
+import { BOOKMARK_ICON_SVG } from "./bookmark-icon";
 import { buildOwnershipControlsHtml } from "./ownership";
 
 export function getAdjacentComicDate(
@@ -671,7 +672,7 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 		${buildBackAndHomeButtons(canGoBack)}
 		<h2 class="detail-date">${dateFormatted}</h2>
 		<div class="detail-actions">
-			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark"><svg class="bookmark-icon" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-4 7 4V5a2 2 0 0 0-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></button> ${prevButtonHtml} ${nextButtonHtml}
+			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">Copy link</button><button class="bookmark-btn" id="bookmark-btn" data-date="${date}" title="Bookmark">${BOOKMARK_ICON_SVG}</button> ${prevButtonHtml} ${nextButtonHtml}
 		</div>`;
 
 	const rerunBannerHtml = rerunOf ? buildRerunBannerHtml(rerunOf) : "";

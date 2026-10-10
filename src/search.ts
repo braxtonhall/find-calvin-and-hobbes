@@ -3,7 +3,8 @@ import { state } from "./state";
 import { stem } from "./stem";
 import { DateExpression, DatePrecision, matchesExpression, parseDateExpression } from "./date-query";
 import { Run, quotedSpans } from "./filter-query";
-import { Branch, admits, asksForReruns, constrains, parseQuery } from "./boolean-query";
+import { Branch, admits, asksForReruns, clausesAskForReruns, constrains, parseQuery } from "./boolean-query";
+import { Evaluator } from "./query-eval";
 
 export type HighlightRange = [number, number, boolean];
 
@@ -903,17 +904,7 @@ function literalSearch(loweredQuery: string): SearchResult[] {
 	return results;
 }
 
-/**
- * `within`, when given, is the only dates a result may carry — the bookmarks page's search, which
- * is the same search over fewer strips. See `searchBookmarks`.
- */
-export function search(
-	query: string,
-	sort: SortMode,
-	tuning: Tuning,
-	compounds: Compounds,
-	within: Set<string> | null = null,
-): SearchResult[] {
+export function search(query: string, sort: SortMode, tuning: Tuning, compounds: Compounds): SearchResult[] {
 	const trimmed = query.trim();
 	if (!trimmed) return [];
 
@@ -923,13 +914,13 @@ export function search(
 		cachedTuning = tuning;
 	}
 
+	// Fresh for each search, because what it remembers includes what the reader owns, which changes.
+	evaluator = new Evaluator(compounds);
 	const branches = parseQuery(trimmed.toLowerCase());
-	let results = union(
-		branches.map((branch) => searchBranch(branch, tuning, compounds, within)),
+	const results = union(
+		branches.map((branch) => searchBranch(branch, tuning, compounds)),
 		tuning,
 	);
-
-	if (within !== null) results = results.filter((result) => within.has(result.comic.date));
 
 	// Date order is purely chronological: the score decided which strips are here, not where they
 	// sit. Rank order puts the score first and falls back to the same chronology for ties.
@@ -942,20 +933,23 @@ export function search(
 	return results;
 }
 
+/** What answers the crossing operators of the search under way. See `query-eval.ts`. */
+let evaluator: Evaluator | null = null;
+
 /**
  * One plain query — see `Branch` — searched as every query was before `@or` existed.
  */
-function searchBranch(
-	branch: Branch,
-	tuning: Tuning,
-	compounds: Compounds,
-	within: Set<string> | null,
-): SearchResult[] {
+function searchBranch(branch: Branch, tuning: Tuning, compounds: Compounds): SearchResult[] {
 	const residual = branch.segments.join(" ");
-	// The rerun days a search may show. The library's search is over rows it holds, rerun days
-	// among them; the archive's shows a rerun day only where the reader asked about reruns — or,
-	// below, named its exact date.
-	const rerunDays = within ?? (asksForReruns(branch) ? new Set(state.reruns.keys()) : null);
+	// The rerun days a search may show: only where the reader asked about reruns — or about what
+	// they own, a clipping of a rerun being a printing like any other — or, below, named its exact date.
+	const rerunDays = asksForReruns(branch) ? new Set(state.reruns.keys()) : null;
+	// And a rerun day brought in that way is kept only by a clause that asked for it: in
+	// `@is:owned @or @in @is:owned`, a rerun of a strip in an owned book is no clipping the reader owns.
+	const asking: Branch = {
+		segments: branch.segments,
+		clauses: branch.clauses.filter((clause) => clausesAskForReruns([clause])),
+	};
 
 	if (residual === "") {
 		// Filters with nothing left to search: the filter is the whole query, so everything that
@@ -964,7 +958,7 @@ function searchBranch(
 		// words nor anything to judge by would be the whole archive, which nobody asked for.
 		if (!constrains(branch)) return [];
 		const results = filterOnlyResults(branch, compounds);
-		if (rerunDays !== null) results.push(...filteredReruns(branch, rerunDays, compounds));
+		if (rerunDays !== null) results.push(...filteredReruns(asking, rerunDays, compounds));
 		return results;
 	}
 
@@ -981,8 +975,14 @@ function searchBranch(
 	// through that the reader had explicitly excluded.
 	if (constrains(branch)) {
 		const originals = rerunOriginals();
+		// A rerun day the reader named by its date was not brought in by asking, and any clause may keep it.
 		results = results.filter((result) =>
-			admitsRow(branch, result.comic, runOf(result.comic, result.rerun === true, originals), compounds),
+			admitsRow(
+				result.rerun && result.source !== "date" ? asking : branch,
+				result.comic,
+				runOf(result.comic, result.rerun === true, originals),
+				compounds,
+			),
 		);
 	}
 	return results;
@@ -1055,7 +1055,43 @@ function containsPhrase(indexed: IndexedComic | undefined, phrase: string, compo
 }
 
 function admitsRow(branch: Branch, comic: Comic, run: Run | undefined, compounds: Compounds): boolean {
-	return admits(branch, comic, run, (text) => containsText(indexedFor(comic), text, compounds));
+	return admits(
+		branch,
+		comic,
+		run,
+		(text) => containsText(indexedFor(comic), text, compounds),
+		(crossing) => (evaluator ?? new Evaluator(compounds)).crossFromStrip(crossing, { comic, run }),
+	);
+}
+
+/**
+ * Whether the strip says the text, as a word under `@not` asks it — see `containsText`. For a row
+ * of a rerun day, the strip it reran.
+ */
+export function stripContains(comic: Comic, text: string, compounds: Compounds): boolean {
+	ensureIndex(compounds);
+	return containsText(indexedFor(comic), text, compounds);
+}
+
+/** Each text `textContains` has been asked about, indexed as a strip's field is. */
+const indexedTexts = new Map<string, IndexedComic>();
+
+/**
+ * Whether a text that is not a strip's — a book's title, an arc's description — says the words, as a
+ * strip's fields are asked: in any inflection, or a quoted phrase word for word.
+ */
+export function textContains(text: string, query: string, compounds: Compounds): boolean {
+	const key = `${text}\0${compounds.size}`;
+	let indexed = indexedTexts.get(key);
+	if (indexed === undefined) {
+		indexed = {
+			comic: { date: "", transcript: text },
+			transcripts: [indexField(text, new Map(), compounds)],
+			description: null,
+		};
+		indexedTexts.set(key, indexed);
+	}
+	return containsText(indexed, query, compounds);
 }
 
 /**
@@ -1211,45 +1247,6 @@ function filterOnlyResults(branch: Branch, compounds: Compounds): SearchResult[]
 		});
 	}
 	return results;
-}
-
-/**
- * The bookmarked strips as rows, oldest first — the only order there is, since a bookmark keeps no
- * record of when it was made. Every strip on a bookmarked date is a row, as it would be in a search
- * for that date, and a bookmarked rerun day shows the strip that ran again. A date with neither is
- * left out rather than drawn as an empty row.
- *
- * `filter` is the source because it carries no badge: every row here is here for the same reason,
- * and the heading already says what it is.
- */
-export function bookmarkResults(dates: Set<string>): SearchResult[] {
-	ensureIndex();
-	const results: SearchResult[] = [];
-	for (const indexed of indexedComics) {
-		if (!dates.has(indexed.comic.date)) continue;
-		results.push({ comic: indexed.comic, text: dateText(indexed), ranges: [], score: 0, source: "filter" });
-	}
-	for (const [rerunDate, originalDate] of state.reruns) {
-		if (!dates.has(rerunDate)) continue;
-		const rerun = rerunResult(rerunDate, originalDate, 0, "filter");
-		if (rerun) results.push(rerun);
-	}
-	return results.sort(compareChronologically);
-}
-
-/**
- * The bookmarks that match a query, or all of them when there is no query. Searched as the archive
- * is, and then narrowed to the bookmarked dates — except that a bookmarked rerun day is found by its
- * strip's words too, which a search of the archive alone would only find under the original date.
- */
-export function searchBookmarks(
-	query: string,
-	sort: SortMode,
-	tuning: Tuning,
-	compounds: Compounds,
-	dates: Set<string>,
-): SearchResult[] {
-	return query.trim() ? search(query, sort, tuning, compounds, dates) : bookmarkResults(dates);
 }
 
 /**

@@ -72,12 +72,6 @@
 	background: var(--neutral);
 }
 
-/* Nothing to clear: an empty box on the bookmarks page is every bookmark, not a way home. */
-.results-clear:disabled {
-	opacity: 0.4;
-	cursor: default;
-}
-
 .results-sort {
 	width: 32px;
 	height: 32px;

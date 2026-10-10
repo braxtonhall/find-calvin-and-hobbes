@@ -22,7 +22,7 @@ export const CORRECTION_PAGES = [
 	"arcs",
 	"creator",
 	"creators",
-	"library",
+	"settings",
 	"credits",
 ] as const;
 

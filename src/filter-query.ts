@@ -1,7 +1,9 @@
 import { dateToString, lastDayOf, weekdayOf } from "./date-utils";
 import { DateExpression, MONTHS, WEEKDAYS, matchesExpression, parseDateExpression } from "./date-query";
-import { FILTER_SPECS } from "./filter-spec";
-import { knows } from "./filter-vocabulary";
+import { CROSSING_SPECS, CollectionType, FILTER_NAMES, Language, filterSpec } from "./filter-spec";
+import { canonical, knows, termFor } from "./filter-vocabulary";
+import { ownershipId } from "./library-file";
+import { state } from "./state";
 import { Comic } from "./types";
 
 /**
@@ -40,7 +42,39 @@ export type Filter =
 	| { kind: "by"; creator: string }
 	| { kind: "date"; expression: DateExpression }
 	| { kind: "after"; bound: string }
-	| { kind: "before"; bound: string };
+	| { kind: "before"; bound: string }
+	| { kind: "during"; arc: string }
+	| { kind: "here"; tag: string }
+	| { kind: "id"; id: string }
+	| { kind: "tag"; tag: string }
+	| { kind: "strips"; comparison: Comparison }
+	| { kind: "published"; comparison: Comparison };
+
+/** A number compared, as both ends of a range, each one in: `>5` is 6 to infinity. */
+export interface Comparison {
+	low: number;
+	high: number;
+}
+
+/**
+ * Where in a query a filter stands, which decides what it can mean: which language, which kind of
+ * collection where the language is the collection one and something says which, and whether a
+ * crossing operator stands between it and the top — a link between a strip and a collection, which
+ * `@here:` describes.
+ */
+export interface QueryContext {
+	language: Language;
+	type?: CollectionType;
+	link: boolean;
+}
+
+/** The main search box. */
+export const STRIP_QUERY: QueryContext = { language: "strip", link: false };
+
+/** A tab of the Collections page. */
+export function collectionQuery(type?: CollectionType): QueryContext {
+	return type === undefined ? { language: "collection", link: false } : { language: "collection", type, link: false };
+}
 
 /**
  * Which showing of a rerun strip a row is: the day it first ran, or a day it ran again. Neither for
@@ -49,9 +83,18 @@ export type Filter =
  */
 export type Run = "reused" | "rerun";
 
-// Derived from `FILTER_SPECS` rather than written out again, so the parser and the autocomplete
-// menu cannot disagree about which names exist.
-const FILTERS = new Set(FILTER_SPECS.map((spec) => spec.name));
+/**
+ * The bare words that are operators rather than filters: the logical ones, `@only`, and the crossing
+ * operators this site has. `@in` is both — bare, it is the operator, and with a colon the filter —
+ * and so are `@by`, `@featuring` and `@during`.
+ */
+export const OPERATOR_WORDS: ReadonlySet<string> = new Set([
+	"and",
+	"or",
+	"not",
+	"only",
+	...CROSSING_SPECS.map((spec) => spec.name),
+]);
 // A value stops at a parenthesis, so `(@in:book1 @or @in:book3)` closes its group rather than
 // asking for a book called `book3)`, and at a quotation mark, so `@year:1988"snow"` leaves the
 // phrase where it was written. No value of any filter can contain either.
@@ -117,15 +160,103 @@ function windowBounds(expression: DateExpression): { from: string; to: string } 
 	return { from: exact, to: exact };
 }
 
+/** `>5`, `>=5`, `<5`, `<=5`, `5`, `=5` or `5..10`, as the inclusive range it names. */
+export function parseComparison(value: string): Comparison | null {
+	const range = /^(\d+)\.\.(\d+)$/.exec(value);
+	if (range) {
+		const [low, high] = [Number(range[1]), Number(range[2])];
+		return low <= high ? { low, high } : null;
+	}
+	const bound = /^(>=|<=|>|<|=)?(\d+)$/.exec(value);
+	if (!bound) return null;
+	const number = Number(bound[2]);
+	switch (bound[1]) {
+		case ">":
+			return { low: number + 1, high: Infinity };
+		case ">=":
+			return { low: number, high: Infinity };
+		case "<":
+			return { low: -Infinity, high: number - 1 };
+		case "<=":
+			return { low: -Infinity, high: number };
+		default:
+			return { low: number, high: number };
+	}
+}
+
+export function compares(comparison: Comparison, value: number): boolean {
+	return value >= comparison.low && value <= comparison.high;
+}
+
 /**
  * The filter a name and value make, or null where the value is unusable.
  *
  * Null is a statement about the reader rather than the archive: `@month:13` is a mistake, and
  * `boolean-query.ts` lets nothing through a clause that holds one, negated or not.
+ *
+ * Read in the language of the place it was written: a strip's filters in the main search and inside
+ * `@has (…)`, a collection's on the Collections page and inside `@in (…)` and its kin. A filter of
+ * the other language is a mistake there, and so is `@here:` with no link to describe — see
+ * `judgeFilter` for what the reader is told about each.
  */
-export function readFilter(name: string, value: string | undefined): Filter | null {
-	if (value === undefined) return null;
+export function readFilter(
+	name: string,
+	value: string | undefined,
+	context: QueryContext = STRIP_QUERY,
+): Filter | null {
+	return judgeFilter(name, value, context).filter;
+}
 
+/**
+ * The filter, read as `readFilter` reads it, and where it cannot be, why — in the words the tooltip
+ * on its pill says it in. Without a reason, the menu's own account of the filter's shapes is given.
+ */
+export function judgeFilter(
+	name: string,
+	value: string | undefined,
+	context: QueryContext,
+): { filter: Filter | null; reason?: string } {
+	const { language } = context;
+	const written = `@${name}${value === undefined ? "" : `:${value}`}`;
+	if (value === undefined) return { filter: null };
+
+	// `@here:` is written in either language, but only inside an operator that crosses between them.
+	if (name === "here") {
+		if (!context.link) {
+			return {
+				filter: null,
+				reason: `${written} describes a strip in a collection: use it inside @in (…) or @has (…)`,
+			};
+		}
+		return knows("here", value, language) ? { filter: { kind: "here", tag: value } } : { filter: null };
+	}
+
+	if (filterSpec(name, language) === undefined) {
+		// The other language's filter: said so, with what the reader most likely meant.
+		if (language === "collection") return { filter: null, reason: `Did you mean @has ${written}?` };
+		return { filter: null, reason: `${written} describes a collection, not a strip. Did you mean @in (${written})?` };
+	}
+
+	if (name === "is") {
+		if (knows("is", value, language)) return { filter: tagFilter(value, language) };
+		const other: Language = language === "strip" ? "collection" : "strip";
+		if (termFor("is", value, other) === undefined) return { filter: null };
+		return language === "collection"
+			? { filter: null, reason: `Did you mean @has ${written}?` }
+			: { filter: null, reason: `${written} describes a collection, not a strip. Did you mean @in ${written}?` };
+	}
+
+	return { filter: readValue(name, value) };
+}
+
+function tagFilter(value: string, language: Language): Filter {
+	return language === "collection"
+		? { kind: "tag", tag: canonical("is", value, language) }
+		: { kind: "is", tag: value };
+}
+
+/** A filter that its name already says the language of, read from its value alone. */
+function readValue(name: string, value: string): Filter | null {
 	if (name === "year") {
 		// A year is read by the date parser, as `@date:` reads one, so the two agree about what a
 		// year is: four digits, or two that are every year ending in them — `@year:88` is 1988 here
@@ -161,11 +292,21 @@ export function readFilter(name: string, value: string | undefined): Filter | nu
 		return knows("in", value) ? { kind: "in", collection: value } : null;
 	}
 
-	if (name === "is") return knows("is", value) ? { kind: "is", tag: value } : null;
-
 	// A closed vocabulary of proper nouns, like the books.
 	if (name === "featuring") return knows("featuring", value) ? { kind: "featuring", character: value } : null;
 	if (name === "by") return knows("by", value) ? { kind: "by", creator: value } : null;
+	if (name === "during") return knows("during", value) ? { kind: "during", arc: value } : null;
+	// Any kind's: which kind is the subject's business, and an id of another kind is only false.
+	if (name === "id") return knows("id", value, "collection") ? { kind: "id", id: value } : null;
+
+	if (name === "strips") {
+		const comparison = parseComparison(value);
+		return comparison === null ? null : { kind: "strips", comparison };
+	}
+	if (name === "published") {
+		const comparison = parseComparison(value);
+		return comparison === null ? null : { kind: "published", comparison };
+	}
 
 	// `@date`, `@before` and `@after` all read a date the same way: year first, and with no
 	// requirement that the year be one the archive holds. See `DateSource` for both reasons.
@@ -191,6 +332,20 @@ export interface FilterMatch {
 	filter: Filter | null;
 	/** A recognised name whose value `readFilter` could actually use. */
 	valid: boolean;
+	/** Why it could not be used, where there is more to say than its shapes. */
+	reason?: string;
+	/** Where it was written, which is what it was read as. */
+	context: QueryContext;
+	/** About the reader rather than the archive — see `Term.personal`. */
+	personal?: true;
+}
+
+/** A filter as the scanner finds it, before anything has said which language it is in. */
+export interface RawFilter {
+	name: string;
+	value?: string;
+	start: number;
+	end: number;
 }
 
 /**
@@ -209,28 +364,48 @@ export interface FilterMatch {
  *
  * Nothing between quotation marks is a filter — see `quotedSpans`.
  */
-export function scanFilters(text: string): FilterMatch[] {
-	const matches: FilterMatch[] = [];
+export function scanFilters(text: string, context: QueryContext = STRIP_QUERY): FilterMatch[] {
+	return lexFilters(text).map((raw) => readMatch(raw, context));
+}
+
+/** The raw filter, read where it stands. */
+export function readMatch(raw: RawFilter, context: QueryContext): FilterMatch {
+	const { filter, reason } = judgeFilter(raw.name, raw.value, context);
+	const personal =
+		filter !== null &&
+		(filter.kind === "is" || filter.kind === "tag") &&
+		termFor("is", filter.tag, context.language)?.personal === true;
+	return {
+		...raw,
+		filter,
+		valid: filter !== null,
+		context,
+		...(reason === undefined ? {} : { reason }),
+		...(personal ? { personal: true as const } : {}),
+	};
+}
+
+/**
+ * Every recognised filter in the text, in order, unread. A bare name that is also an operator —
+ * `@in`, with no colon after it — is the operator, and left to `boolean-query.ts`; with a colon, even
+ * one with nothing after it yet, it is the filter being written.
+ */
+export function lexFilters(text: string): RawFilter[] {
+	const found: RawFilter[] = [];
 	const quotes = quotedSpans(text);
 
 	FILTER_PATTERN.lastIndex = 0;
 	for (let match = FILTER_PATTERN.exec(text); match !== null; match = FILTER_PATTERN.exec(text)) {
 		if (quoted(quotes, match.index)) continue;
 		const name = match[1].toLowerCase();
-		if (!FILTERS.has(name)) continue;
+		if (!FILTER_NAMES.has(name)) continue;
 		const value = match[2]?.toLowerCase();
-		const filter = readFilter(name, value);
-		matches.push({
-			name,
-			value,
-			start: match.index,
-			end: match.index + match[0].length,
-			filter,
-			valid: filter !== null,
-		});
+		const end = match.index + match[0].length;
+		if (value === undefined && text[end] !== ":" && OPERATOR_WORDS.has(name)) continue;
+		found.push({ name, ...(value === undefined ? {} : { value }), start: match.index, end });
 	}
 
-	return matches;
+	return found;
 }
 
 /**
@@ -280,7 +455,12 @@ function hasTag(subject: string | Comic, date: string, tag: string, run: Run | u
 	if (tag === "sunday") return weekdayOf(date) === 0;
 	if (tag === "daily") return weekdayOf(date) !== 0;
 	if (tag === "reused" || tag === "rerun") return run === tag;
+	// The reader's own, from what this browser has saved: a bookmark is a day's, and so is known of a
+	// bare date; owning and noting are a printing's, which is the strip and the day it ran.
+	if (tag === "bookmarked") return state.bookmarkedDates.has(date);
 	if (typeof subject === "string") return false;
+	if (tag === "owned") return state.ownedStrips.has(ownershipId(subject, date));
+	if (tag === "noted") return state.notedStrips.has(ownershipId(subject, date));
 	if (tag === "altered") return (subject.appearances ?? []).some((appearance) => appearance.altered === true);
 	if (tag === "empty") return subject.transcript === "";
 	if (tag === "standalone") return (subject.arcs ?? []).length === 0;
@@ -318,5 +498,15 @@ export function passesFilter(subject: string | Comic, filter: Filter, run?: Run)
 			return date > filter.bound;
 		case "before":
 			return date < filter.bound;
+		case "during":
+			return typeof subject !== "string" && (subject.arcs ?? []).includes(filter.arc);
+		// A collection's filters, and `@here:`, which needs a link: neither is a strip's to answer,
+		// and `query-eval.ts` answers both where they can be.
+		case "here":
+		case "id":
+		case "tag":
+		case "strips":
+		case "published":
+			return false;
 	}
 }

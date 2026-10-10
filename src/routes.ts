@@ -49,8 +49,12 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "collection", id: collectionMatch[1] };
 	}
 
+	// A tab's search is open wherever the address has a `?q=`, even an empty one. See `buildTabPath`.
+	const q = params.get("q");
+	const searched = q === null ? {} : { q };
+
 	if (path === BOOKS_PATH || path === COLLECTIONS_PATH) {
-		return { view: "collections" };
+		return { view: "collections", ...searched };
 	}
 
 	// A site without arcs has none of their addresses, so they go home like any other.
@@ -60,7 +64,7 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 	}
 
 	if (path === ARCS_PATH && PAGE_CONFIG.arcs) {
-		return { view: "arcs" };
+		return { view: "arcs", ...searched };
 	}
 
 	// Creators the same way, on a site without them.
@@ -70,13 +74,11 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 	}
 
 	if (path === CREATORS_PATH && PAGE_CONFIG.creators) {
-		return { view: "creators" };
+		return { view: "creators", ...searched };
 	}
 
-	// The same query a search takes, over the bookmarks only. Unlike `/search`, no query is a page
-	// of its own — every bookmark — so an empty `?q=` is not written; see `buildLibraryPath`.
-	if (path === LIBRARY_PATH) {
-		return { view: "library", q: params.get("q") ?? "", sort };
+	if (path === SETTINGS_PATH) {
+		return { view: "settings" };
 	}
 
 	if (path === "/credits") {
@@ -92,13 +94,17 @@ export function buildSearchPath(query: string, sort: SortMode = "rank"): string 
 	return "/search?q=" + encodeURIComponent(query) + (sort === "date" ? "&sort=date" : "");
 }
 
+/** The tabs of Collections. */
+export type CollectionsTab = "books" | "arcs" | "creators";
+
+const TAB_PATHS: Record<CollectionsTab, string> = { books: "/books", arcs: "/arcs", creators: "/creators" };
+
 /**
- * The sort is kept without a query, so that a reader who picks date order before typing gets it
- * when they do. The query is not: `?q=` alone says nothing `/library` does not.
+ * A tab of Collections, with its search box open on `query` — or, given none, closed. An open box
+ * with nothing typed in it yet is `?q=` alone, so that it stays open on the way to another tab.
  */
-export function buildLibraryPath(query: string = "", sort: SortMode = "rank"): string {
-	const params = [query ? "q=" + encodeURIComponent(query) : "", sort === "date" ? "sort=date" : ""].filter(Boolean);
-	return LIBRARY_PATH + (params.length > 0 ? "?" + params.join("&") : "");
+export function buildTabPath(tab: CollectionsTab, query?: string): string {
+	return TAB_PATHS[tab] + (query === undefined ? "" : "?q=" + encodeURIComponent(query));
 }
 
 export function buildComicPath(date: string, alternates: string[] = []): string {
@@ -129,7 +135,7 @@ export const CREATORS_PATH = "/creators";
  * books' own address in the bar.
  */
 export const COLLECTIONS_PATH = "/collections";
-export const LIBRARY_PATH = "/library";
+export const SETTINGS_PATH = "/settings";
 export const CREDITS_PATH = "/credits";
 export const HOME_PATH = "/";
 

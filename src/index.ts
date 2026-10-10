@@ -2,8 +2,9 @@ import "./styles/theme.css";
 import "./styles/base.css";
 import "./styles/components.css";
 
-import { CHARACTERS, CREATORS } from "./bundled-data";
-import { registerVocabulary } from "./filter-vocabulary";
+import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS } from "./bundled-data";
+import { Term, registerVocabulary } from "./filter-vocabulary";
+import { arcRange } from "./pages/page";
 import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
 import {
@@ -31,6 +32,20 @@ function initialize(): void {
 	registerVocabulary("featuring", () => CHARACTERS.map((character) => ({ value: character.id, hint: character.name })));
 	// And without creators, where there is no `@by:`.
 	registerVocabulary("by", () => CREATORS.map((creator) => ({ value: creator.id, hint: creator.name })));
+	// And without arcs, where there is no `@during:`. An arc has no name, so it is offered by its dates.
+	const arcs: Term[] = ARCS.map((arc) => ({ value: arc.id, hint: `${arcRange(arc)}: ${arc.description}` }));
+	registerVocabulary("during", () => arcs);
+
+	// `@id:` takes any collection's, and inside an operator or on a tab that says which kind, that
+	// kind's alone is offered. See `completion.ts`.
+	const ids: Record<string, Term[]> = {
+		book: COLLECTION_INDEX.collections.map((collection) => ({ value: collection.id, hint: collection.name })),
+		arc: arcs,
+		creator: CREATORS.map((creator) => ({ value: creator.id, hint: creator.name })),
+		character: CHARACTERS.map((character) => ({ value: character.id, hint: character.name })),
+	};
+	for (const [type, values] of Object.entries(ids)) registerVocabulary(`id:${type}`, () => values);
+	registerVocabulary("id", () => Object.values(ids).flat());
 
 	// First, so the requests are on the wire while the grid is drawn. Nothing it does after they
 	// answer can run before this function returns, so the grid and the route are in place by then.
@@ -43,13 +58,13 @@ function initialize(): void {
 	handleRoute(readPrerenderedPage());
 
 	// After the first paint, not before it: opening IndexedDB can take longer than drawing a
-	// prerendered page, and what waits on the answer is the grid's bookmark highlights and the
-	// Library page, which shows a spinner until it lands.
+	// prerendered page, and what waits on the answer is the grid's bookmark highlights and any search
+	// about the reader's own library, which shows a spinner until it lands.
 	// The bookmark and ownership buttons on a page ask for their own separately.
 	readLibrary()
 		.then(holdLibrary)
 		.catch(() => {
-			// IndexedDB unavailable — the library won't work, and the Library page says it is empty
+			// IndexedDB unavailable — the library won't work, and a search of it finds nothing
 		})
 		.finally(() => {
 			state.bookmarksLoaded = true;
@@ -111,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (event.key === "/" && !isInput) {
 			event.preventDefault();
 			const landingInput = document.getElementById("landing-input") as HTMLInputElement | null;
-			// The search page's box, or the bookmarks page's, whichever is showing.
+			// The search page's box, or a Collections tab's search, whichever is showing.
 			const resultsInput = document.querySelector<HTMLInputElement>(".view.active .results-input");
 			if (resultsInput) {
 				resultsInput.focus();

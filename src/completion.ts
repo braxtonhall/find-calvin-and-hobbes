@@ -23,11 +23,12 @@
 
 import { RANGE_END, RANGE_START } from "./constants";
 import { MONTHS, WEEKDAYS, parseDateExpression } from "./date-query";
-import { FilterMatch, quoted, quotedSpans, scanFilters } from "./filter-query";
-import { scanOperators } from "./boolean-query";
+import { FilterMatch, QueryContext, STRIP_QUERY, quoted, quotedSpans, readMatch } from "./filter-query";
+import { contextAt, scanQuery } from "./boolean-query";
 import { dateToString, isSabbatical, lastDayOf } from "./date-utils";
-import { FILTER_SPECS, FilterSpec, ValueTemplate, filterSpec } from "./filter-spec";
-import { terms } from "./filter-vocabulary";
+import { CROSSING_SPECS, FILTER_SPECS, FilterSpec, ValueTemplate, filterSpec, speaks } from "./filter-spec";
+import { Term, terms } from "./filter-vocabulary";
+import { preferredSpelling } from "./spelling";
 import { MONTH_NAMES, WEEKDAY_NAMES, YEARS } from "./vocabulary";
 
 /** One row of the menu. */
@@ -93,7 +94,33 @@ function open(digits: string, field: Field): boolean {
  */
 function beginsATerm(spec: FilterSpec, value: string): boolean {
 	if (value === "") return true;
-	return terms(spec.name).some((term) => term.value.length > value.length && term.value.startsWith(value));
+	return valuesOf(spec).some((term) =>
+		spellingsOf(term).some((spelling) => spelling.length > value.length && spelling.startsWith(value)),
+	);
+}
+
+/** A term's spellings: the one the filter keeps, and an American one where it has one. */
+function spellingsOf(term: Term): string[] {
+	return term.american === undefined ? [term.value] : [term.value, term.american];
+}
+
+/**
+ * The values a vocabulary filter takes where it is written. `@is:` takes a strip's tags or a
+ * collection's, by the language; `@id:` takes one kind's ids where something says which kind, and
+ * every kind's where nothing does.
+ */
+function valuesOf(spec: FilterSpec, context: QueryContext = STRIP_QUERY): readonly Term[] {
+	const language = spec.language === "both" ? context.language : spec.language;
+	if (spec.name === "id" && context.type !== undefined) {
+		const typed = terms(`id:${context.type}`, "collection");
+		if (typed.length > 0) return typed;
+	}
+	return terms(spec.name, language);
+}
+
+/** Whether the value could still be typed out into a comparison: `>`, `>=1`, `5.`, `5..1`. */
+function beginsAComparison(value: string): boolean {
+	return /^(?:(?:>=?|<=?|=)?\d*|\d+\.\.?\d*)$/.test(value);
 }
 
 /** Whether a name slot could still be typed out into one of the names it takes. */
@@ -142,6 +169,7 @@ function beginsADate(value: string, fields: number): boolean {
  */
 function begins(spec: FilterSpec, template: ValueTemplate, value: string): boolean {
 	if (spec.vocabulary === true) return beginsATerm(spec, value);
+	if (spec.name === "strips" || spec.name === "published") return beginsAComparison(value);
 	if (spec.name === "year") return open(value, template.label === "YYYY" ? YEAR_LONG : YEAR_SHORT);
 	if (spec.name === "month") return template.label === "MM" ? open(value, MONTH) : beginsAName(MONTHS, value);
 	if (spec.name === "day") return template.label === "DD" ? open(value, MONTH_DAY) : beginsAName(WEEKDAYS, value);
@@ -169,8 +197,9 @@ function inRange(value: string, low: number, high: number): boolean {
 function fills(spec: FilterSpec, template: ValueTemplate, value: string): boolean {
 	// A listed value is filled by being on the list. There is no shape to measure it against,
 	// because the list is the whole of what the vocabulary is — and an empty value is on no list.
-	if (spec.vocabulary === true) return terms(spec.name).some((term) => term.value === value);
+	if (spec.vocabulary === true) return valuesOf(spec).some((term) => spellingsOf(term).includes(value));
 	if (value === "") return false;
+	if (spec.name === "strips" || spec.name === "published") return false;
 	// A trailing separator has begun a field that has not been filled. The parser reads `1988/` as
 	// the year 1988 and the pill says so, but there is nothing finished here to offer to accept.
 	if (SEPARATOR.test(value.slice(-1))) return false;
@@ -514,6 +543,20 @@ function builtOffers(spec: FilterSpec, value: string, parses: boolean): Offer[] 
 }
 
 /**
+ * The one spelling of a term to offer for what has been typed, or null where neither fits. While
+ * both still could, the reader's own — see `spelling.ts`; once the typing has ruled one out, the
+ * other, so that `@is:colou` offers `colour` and `@is:color` offers `color` wherever the reader is.
+ */
+function spellingFor(term: Term, typed: string): string | null {
+	if (term.american === undefined) return term.value.startsWith(typed) ? term.value : null;
+	const [first, second] =
+		preferredSpelling() === "american" ? [term.american, term.value] : [term.value, term.american];
+	if (first.startsWith(typed)) return first;
+	if (second.startsWith(typed)) return second;
+	return null;
+}
+
+/**
  * The rows past the colon.
  *
  * Two derivations, one row kind: a filter with a list of values offers them, and the date filters
@@ -521,19 +564,22 @@ function builtOffers(spec: FilterSpec, value: string, parses: boolean): Offer[] 
  * a row, so where neither derivation has anything the menu closes rather than showing the shapes
  * back to someone who can do nothing with them.
  */
-function valueRows(spec: FilterSpec, value: string, parses: boolean): Row[] {
+function valueRows(spec: FilterSpec, value: string, parses: boolean, context: QueryContext): Row[] {
 	if (spec.vocabulary === true) {
 		// Every value is a leaf and every one is real, so there is no shape to carry and nothing to
 		// fall back on: a value on no list gets no row at all, and the menu closes. That is the right
 		// answer for `@in:snowman` and the same news the red pill carries — and it is the opposite of
 		// what `@year:2001` gets, because a year outside the archive is still a year.
-		return rowsFor(
-			spec,
-			terms(spec.name)
-				.filter((term) => term.value.startsWith(value))
-				.map((term) => ({ value: term.value, hint: term.hint, commits: true })),
-		);
+		const offers: Offer[] = [];
+		for (const term of valuesOf(spec, context)) {
+			const spelling = spellingFor(term, value);
+			if (spelling !== null) offers.push({ value: spelling, hint: term.hint, commits: true });
+		}
+		return rowsFor(spec, offers);
 	}
+
+	// A count, or a book's year, which nothing in the archive lists: the shape in the name's row is the help.
+	if (spec.name === "strips" || spec.name === "published") return [];
 
 	const candidates = CANDIDATES.get(spec.name);
 	if (candidates !== undefined) {
@@ -596,7 +642,21 @@ const OPERATOR_ROWS: readonly Row[] = [
 	{ name: "and", hint: "Both sides, strictly", insert: "@and " },
 	{ name: "or", hint: "Either side", insert: "@or " },
 	{ name: "not", hint: "Without what follows", insert: "@not " },
+	{ name: "only", hint: "At least one, and all of them", insert: "@only " },
 ];
+
+/**
+ * The crossing operators that go out of this language, as rows, last of all: under the logical
+ * operators, and well away from the filters that share their names. Bare, as they are written —
+ * `@in`, with nothing after it to fill in.
+ */
+function crossingRows(context: QueryContext): Row[] {
+	return CROSSING_SPECS.filter((spec) => spec.from === context.language).map((spec) => ({
+		name: spec.name,
+		hint: spec.hint,
+		insert: `@${spec.name} `,
+	}));
+}
 
 /**
  * The menu for a caret position, or null when there should be no menu.
@@ -605,8 +665,13 @@ const OPERATOR_ROWS: readonly Row[] = [
  * `shapeRows` for what accepting one writes. A date filter offers one row per shape still in
  * play, so `@date:` offers all three and `@date:1988/` has ruled the bare year out and offers
  * two; `@year:abc` offers nothing at all, which is the same news the red pill carries.
+ *
+ * Only what can be written where the caret is: the strip language's filters in the main search and
+ * inside `@has (…)`, and the collection language's on the Collections page and inside `@in (…)` and
+ * its kin — `root` is the box's. `@here:` only inside an operator, where there is a link for it to
+ * describe.
  */
-export function completionsAt(text: string, caret: number): Completion | null {
+export function completionsAt(text: string, caret: number, root: QueryContext = STRIP_QUERY): Completion | null {
 	const token = tokenAt(text, caret);
 	if (token === null) return null;
 
@@ -615,24 +680,31 @@ export function completionsAt(text: string, caret: number): Completion | null {
 
 	const name = parts[1].toLowerCase();
 	const value = parts[2]?.toLowerCase();
+	const context = contextAt(text, token.start, root);
 
 	if (value === undefined) {
 		const rows = [
-			...FILTER_SPECS.filter((spec) => spec.name.startsWith(name)).map(nameRow),
+			...FILTER_SPECS.filter(
+				(spec) =>
+					speaks(spec, context.language) && (spec.name !== "here" || context.link) && spec.name.startsWith(name),
+			).map(nameRow),
 			...OPERATOR_ROWS.filter((row) => row.name.startsWith(name)),
+			...crossingRows(context).filter((row) => row.name.startsWith(name)),
 		];
 		return rows.length === 0 ? null : { start: token.start, end: token.end, rows };
 	}
 
-	const spec = filterSpec(name);
-	// A colon after a name that is not a filter at all has no completion to offer.
-	if (spec === undefined) return null;
+	const spec = filterSpec(name, context.language);
+	// A colon after a name that is not a filter here has no completion to offer — nor `@here:` where
+	// there is no link for it to describe.
+	if (spec === undefined || (spec.name === "here" && !context.link)) return null;
 
 	// Whether the filter works is the parser's business rather than a fourth opinion here, so no
 	// shape may claim to be filled inside a filter that would not run.
-	const parses = scanFilters(token.body)[0]?.valid === true;
+	const raw = { name, value, start: 0, end: token.body.length };
+	const parses = value !== "" && readMatch(raw, context).valid;
 
-	const rows = valueRows(spec, value, parses);
+	const rows = valueRows(spec, value, parses, context);
 	return rows.length === 0 ? null : { start: token.start, end: token.end, rows };
 }
 
@@ -666,17 +738,20 @@ export interface FilterSpan {
  * an error under the caret that just typed the colon is calling it too early. Move the caret away
  * — a space, a return, a click elsewhere — and it becomes the mistake it looks like. A value that
  * could never work, though, is wrong the moment it is typed: nothing about waiting rescues
- * `@month:13`, so it goes red where it stands.
+ * `@month:13`, so it goes red where it stands — and so does a filter of the other language, which
+ * no value can make right where it is written.
  *
  * The operators are painted here too, by the same rules: `@and` and `@or` with nothing before them
  * are wrong where they stand, and any operator with nothing after it is only unfinished while it is
- * the last thing in a query still being written.
+ * the last thing in a query still being written. A crossing operator in the wrong language, and an
+ * `@only` before what is not a crossing, are wrong where they stand.
  */
-export function filterSpans(text: string, caret: number | null): FilterSpan[] {
+export function filterSpans(text: string, caret: number | null, root: QueryContext = STRIP_QUERY): FilterSpan[] {
 	const spans: FilterSpan[] = [];
+	const { filters, operators } = scanQuery(text, root);
 
-	for (const match of scanFilters(text)) {
-		const spec = filterSpec(match.name);
+	for (const match of filters) {
+		const spec = filterSpec(match.name, match.context.language, false);
 		if (spec === undefined) continue;
 
 		// `FILTER_PATTERN` needs a non-empty value before it will take the colon, so a trailing one
@@ -692,7 +767,11 @@ export function filterSpans(text: string, caret: number | null): FilterSpan[] {
 		}
 
 		const typing = caret !== null && caret >= match.start && caret <= end;
-		const onItsWay = spec.templates.some((template) => begins(spec, template, match.value ?? ""));
+		const here = filterSpec(match.name, match.context.language);
+		const onItsWay =
+			match.reason === undefined &&
+			here !== undefined &&
+			here.templates.some((template) => begins(here, template, match.value ?? ""));
 		if (typing && onItsWay) {
 			spans.push({ start: match.start, end: nameEnd, kind: "name" });
 			// Nothing after the name yet, on a filter that is still only a name.
@@ -703,19 +782,23 @@ export function filterSpans(text: string, caret: number | null): FilterSpan[] {
 		spans.push({ start: match.start, end, kind: "invalid", reason: describeInvalid(match) });
 	}
 
-	for (const operator of scanOperators(text)) {
+	for (const operator of operators) {
 		const { start, end } = operator;
 		const name = `@${operator.operator}`;
-		const joins = operator.operator !== "not";
+		if (operator.reason !== undefined) {
+			spans.push({ start, end, kind: "invalid", reason: operator.reason });
+			continue;
+		}
+		const joins = operator.operator === "and" || operator.operator === "or";
 		if (joins && !operator.before) {
 			spans.push({ start, end, kind: "invalid", reason: `${name} needs something before it` });
 			continue;
 		}
 		// The same benefit of the doubt `@year:` gets, for as long as the query is being written and
 		// nothing has been put after the operator yet — not only while the caret is touching it,
-		// because the space that comes after an operator is part of typing it.
-		const last = text.slice(operator.end).trim() === "";
-		if (operator.after || (caret !== null && last)) spans.push({ start, end, kind: "match" });
+		// because the space that comes after an operator is part of typing it. Nor anything but more
+		// operators waiting on the same atom: `@in @has` is on its way to `@in @has @is:sunday`.
+		if (operator.after || (caret !== null && operator.unfinished)) spans.push({ start, end, kind: "match" });
 		else spans.push({ start, end, kind: "invalid", reason: `${name} needs something after it` });
 	}
 
@@ -724,7 +807,8 @@ export function filterSpans(text: string, caret: number | null): FilterSpan[] {
 
 /** Why a filter the parser rejected was rejected, in one line, for the tooltip on it. */
 export function describeInvalid(match: FilterMatch): string {
-	const spec = filterSpec(match.name);
+	if (match.reason !== undefined) return match.reason;
+	const spec = filterSpec(match.name, match.context?.language ?? "strip", false);
 	if (spec === undefined) return `@${match.name} is not a filter`;
 
 	const shapes = spec.templates.map((template) => template.label).join(" or ");

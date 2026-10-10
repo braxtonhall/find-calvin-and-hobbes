@@ -6,12 +6,13 @@ import { state } from "../state";
 import { canGoBack } from "../router";
 import { ArcList, ArcPage, ArcsPage } from "../pages/page";
 import { buildArcHtml } from "../pages/arc";
-import { buildArcsHtml } from "../pages/arcs";
+import { buildArcsBodyHtml, buildArcsHtml } from "../pages/arcs";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
 import { clearCollectionSoon, highlightCollection } from "./cell-highlight";
 import { attachRowFocusHandler, attachRowHandlers } from "./result-rows";
 import { attachBookHandlers } from "./books";
+import { attachTabSearch, keepsHeader, narrowTab, updateTabSearch } from "./tab-search";
 
 /**
  * Hovering a row of an arc list lights that arc in the grid; leaving it goes back to `back`, what the
@@ -39,12 +40,26 @@ export function attachArcListHandlers(
 	});
 }
 
-/** Draws every arc, or — with `adopt` — takes over the list the build drew from the same `page`. */
-export function renderArcs(page: ArcsPage, adopt: boolean = false): void {
+/**
+ * Draws every arc, or — with `adopt` — takes over the list the build drew from the same `page`. With
+ * the search open, only the arcs it finds, as the list of books does.
+ */
+export function renderArcs(page: ArcsPage, adopt: boolean = false, arriving: boolean = true): void {
 	const element = document.getElementById("view-arcs")!;
-	if (!adopt) element.innerHTML = buildArcsHtml(page, canGoBack());
-	attachBackAndHomeHandlers(element);
-	attachArcListHandlers(element, page.list, null, () => element.classList.contains("active"));
+	const results = narrowTab("arcs", page.q);
+	const ids = results?.ids ?? null;
+	if (adopt) {
+		attachBackAndHomeHandlers(element);
+		attachTabSearch(element, "arcs");
+	} else if (keepsHeader(element, page.q, arriving)) {
+		element.querySelector(".collections-body")!.innerHTML = buildArcsBodyHtml(page, ids);
+		updateTabSearch(element, page.q);
+	} else {
+		element.innerHTML = buildArcsHtml(page, canGoBack(), ids);
+		attachBackAndHomeHandlers(element);
+		attachTabSearch(element, "arcs");
+	}
+	attachArcListHandlers(element, page.list, state.tabMatchDates, () => element.classList.contains("active"));
 }
 
 let rowFocusAttached = false;

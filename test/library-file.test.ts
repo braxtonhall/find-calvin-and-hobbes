@@ -6,8 +6,6 @@ import {
 	libraryFileName,
 	mergeLibraries,
 	mergeNotes,
-	inLibrary,
-	ownedDates,
 	ownershipId,
 	parseLibraryFile,
 } from "../src/library-file";
@@ -18,31 +16,6 @@ test("library file", async (suite) => {
 	await suite.test("a strip is owned by its printing: a special by its id, anything else by the day it ran", () => {
 		assert.equal(ownershipId({}, "1990-08-12"), "19900812");
 		assert.equal(ownershipId({ id: "198511281" }, "1985-11-28"), "198511281");
-	});
-
-	await suite.test("owned strips list by the day they ran, and an owned book's by the days they first ran", () => {
-		const comics = [
-			{ date: "1985-11-18", appearances: [{ collection: "calvin" }] },
-			{ date: "1985-11-19", appearances: [{ collection: "other" }] },
-			{ date: "1985-11-28", id: "198511281" },
-		];
-		const dates = ownedDates(["19900812", "198511281", "unknown"], new Set(["calvin"]), comics);
-		assert.deepEqual([...dates].sort(), ["1985-11-18", "1985-11-28", "1990-08-12"]);
-	});
-
-	await suite.test("an owned special is listed without its day's daily, and an owned book without its reruns", () => {
-		const library = { bookmarks: new Set<string>(), strips: new Set(["198511281"]), books: new Set(["calvin"]) };
-		assert.equal(inLibrary(library, { date: "1985-11-28", id: "198511281" }, false), true);
-		assert.equal(inLibrary(library, { date: "1985-11-28" }, false), false);
-		const inBook = { date: "1985-11-18", appearances: [{ collection: "calvin" }] };
-		assert.equal(inLibrary(library, inBook, false), true);
-		assert.equal(inLibrary(library, { ...inBook, date: "1995-11-18" }, true), false);
-	});
-
-	await suite.test("a bookmark lists everything on its page", () => {
-		const library = { bookmarks: new Set(["1985-11-28"]), strips: new Set<string>(), books: new Set<string>() };
-		assert.equal(inLibrary(library, { date: "1985-11-28" }, false), true);
-		assert.equal(inLibrary(library, { date: "1985-11-28", id: "198511281" }, false), true);
 	});
 
 	await suite.test("an export reads back as what was exported", () => {

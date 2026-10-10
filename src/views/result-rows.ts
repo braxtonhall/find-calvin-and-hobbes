@@ -10,9 +10,8 @@ import { cellForDate } from "../grid";
 import { srcsetAttributes } from "../srcset";
 
 /**
- * The rows of strips a page lists — the search results, and the bookmarks — and what they do to the
- * grid while they are hovered or stepped through. Both pages draw them the same way; the bookmarks
- * are rows no query found, so they arrive here as `SearchResult`s too. See `bookmarkResults`.
+ * The rows of strips a page lists — the search results, and an arc's strips — and what they do to
+ * the grid while they are hovered or stepped through.
  */
 
 // A transcript match carries no label, as it always has: it is the default, and naming it would

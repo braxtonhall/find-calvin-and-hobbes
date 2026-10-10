@@ -447,7 +447,8 @@ test("filters", async (suite) => {
 			// A book that is not one of the archive's is a typo rather than a place to look — unlike
 			// `@year:2001`, which is a real coordinate that honestly holds nothing.
 			"@year",
-			"@in",
+			// Bare, `@in` is the operator; with its colon, it is the filter, with no book named.
+			"@in:",
 			"@in:snowman",
 			"@is",
 			"@is:monday",
@@ -500,7 +501,7 @@ test("scanning filters", async (suite) => {
 			"@day:funday",
 			"@before:august-3",
 			"@year",
-			"@in",
+			"@in:",
 			"@in:snowman",
 			"@is",
 			"@is:monday",
