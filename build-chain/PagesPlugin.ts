@@ -8,6 +8,8 @@ import {
 	BOOKS_PATH,
 	SETTINGS_PATH,
 	BOOKMARKS_PATH,
+	BOOKSHELF_BOOKS_PATH,
+	BOOKSHELF_CLIPPINGS_PATH,
 	BOOKSHELF_PATH,
 	buildArcPath,
 	buildCollectionPath,
@@ -128,6 +130,8 @@ class PagesPlugin {
 					emitPage(SETTINGS_PATH, { view: "settings" });
 					emitPage(BOOKMARKS_PATH, { view: "bookmarks" });
 					emitPage(BOOKSHELF_PATH, { view: "bookshelf" });
+					emitPage(BOOKSHELF_CLIPPINGS_PATH, { view: "bookshelf-clippings" });
+					emitPage(BOOKSHELF_BOOKS_PATH, { view: "bookshelf-books" });
 
 					const books = collectionsPageFrom(source);
 					emitPage(BOOKS_PATH, books);

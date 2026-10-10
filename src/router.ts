@@ -3,8 +3,11 @@ import { state } from "./state";
 import { scrollCellIntoViewIfNeeded } from "./utils";
 import { stopLife } from "./life";
 import {
+	BOOKSHELF_BOOKS_QUERY,
 	HOME_PATH,
 	LIBRARY_QUERIES,
+	isBookshelfView,
+	isLibraryView,
 	legacyHashPath,
 	normalizePathname,
 	parseRoutePath,
@@ -41,8 +44,15 @@ import { updateCorrectionLink } from "./views/correction";
 import { cancelCollectionClear } from "./views/cell-highlight";
 import { cellForDate, followRoute, paintGrid } from "./grid";
 
-/** The views that are tabs of Collections, which share their header. */
-const TAB_VIEWS: ReadonlySet<string> = new Set(["collections", "arcs", "creators"]);
+/** The views that are tabs of one page, which share its header: Collections', and the Bookshelf's. */
+const TAB_GROUPS: ReadonlySet<string>[] = [
+	new Set(["collections", "arcs", "creators"]),
+	new Set(["bookshelf", "bookshelf-clippings", "bookshelf-books"]),
+];
+
+function sameTabs(from: string, to: string): boolean {
+	return TAB_GROUPS.some((group) => group.has(from) && group.has(to));
+}
 
 export function parseRoute(): Route {
 	let path = pathOf(location.pathname);
@@ -193,7 +203,11 @@ function pageFor(route: Route): Page | null {
 			return { view: "results", q: route.q ?? "", sort: route.sort ?? "rank" };
 		case "bookmarks":
 		case "bookshelf":
+		case "bookshelf-clippings":
 			if (!state.dataLoaded || waitsForLibrary(LIBRARY_QUERIES[route.view], "strip")) return null;
+			return { view: route.view };
+		case "bookshelf-books":
+			if (!state.dataLoaded || waitsForLibrary(BOOKSHELF_BOOKS_QUERY, "collection")) return null;
 			return { view: route.view };
 		case "detail":
 			return state.dataLoaded ? detailPageFrom(state, route.date ?? "", route.alternates ?? []) : null;
@@ -268,6 +282,8 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		case "results":
 		case "bookmarks":
 		case "bookshelf":
+		case "bookshelf-clippings":
+		case "bookshelf-books":
 			return null;
 		case "detail": {
 			if (prerendered.date !== route.date) return null;
@@ -307,11 +323,11 @@ export function handleRoute(prerendered: Page | null = null): void {
 	const viewElement = document.getElementById(`view-${route.view}`)!;
 	// Rather than typing on, or re-sorting, the page that was already showing.
 	const arriving = !viewElement.classList.contains("active");
-	// From one tab of Collections to another, the header is the same, so only the list under it fades
-	// in. See `.view--tab-switch`.
+	// From one tab of a page to another, the header is the same, so only the list under it fades in.
+	// See `.view--tab-switch`.
 	if (arriving) {
 		const leaving = document.querySelector(".view.active");
-		const switching = TAB_VIEWS.has(route.view) && leaving !== null && TAB_VIEWS.has(leaving.id.replace(/^view-/, ""));
+		const switching = leaving !== null && sameTabs(leaving.id.replace(/^view-/, ""), route.view);
 		viewElement.classList.toggle("view--tab-switch", switching);
 	}
 
@@ -387,7 +403,9 @@ export function handleRoute(prerendered: Page | null = null): void {
 			break;
 		}
 		case "bookmarks":
-		case "bookshelf": {
+		case "bookshelf":
+		case "bookshelf-clippings":
+		case "bookshelf-books": {
 			renderLibrary(page.view);
 			document.getElementById("main")!.scrollTop = 0;
 			break;
@@ -427,7 +445,7 @@ document.addEventListener(LIBRARY_CHANGE_EVENT, (event) => {
 	const route = parseRoute();
 	if (route.view === "results" && asksAboutReader(route.q ?? "", STRIP_QUERY)) {
 		renderResults(route.q ?? "", route.sort ?? "rank");
-	} else if (route.view === "bookmarks" || route.view === "bookshelf") {
+	} else if (isLibraryView(route.view) || isBookshelfView(route.view)) {
 		renderLibraryRows(route.view);
 	} else if (route.view === "collections" && route.q && asksAboutReader(route.q, collectionQuery())) {
 		renderCollections(collectionsPageFrom(state, route.q), false, false);

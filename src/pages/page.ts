@@ -1,7 +1,7 @@
 import { Appearance, Arc, Character, Collection, Comic, CollectionIndex, Creator, Day, SortMode } from "../types";
 import { PAGE_CONFIG } from "../site-config";
 import { formatDateRange } from "../date-utils";
-import type { LibraryView } from "../routes";
+import type { BookshelfView, LibraryView } from "../routes";
 
 /**
  * What a page is made of, as plain data.
@@ -34,11 +34,11 @@ export interface SettingsPage {
 }
 
 /**
- * The strips the reader has bookmarked, or the ones on their shelf. Never prerendered past its
- * heading: the rows are this browser's library, which only the app can read.
+ * The strips the reader has bookmarked, or a tab of their shelf. Never prerendered past its heading:
+ * the rows are this browser's library, which only the app can read.
  */
 export interface LibraryPage {
-	view: LibraryView;
+	view: LibraryView | BookshelfView;
 }
 
 /**
@@ -266,6 +266,10 @@ export function pageTitle(page: Page): string {
 			return `Bookmarks — ${PAGE_CONFIG.name}`;
 		case "bookshelf":
 			return `Bookshelf — ${PAGE_CONFIG.name}`;
+		case "bookshelf-clippings":
+			return `Clippings — Bookshelf — ${PAGE_CONFIG.name}`;
+		case "bookshelf-books":
+			return `Books — Bookshelf — ${PAGE_CONFIG.name}`;
 		case "credits":
 			return `Credits — ${PAGE_CONFIG.name}`;
 	}

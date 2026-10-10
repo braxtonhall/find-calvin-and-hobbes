@@ -339,24 +339,6 @@ export function insertToken(text: string, token: string): string {
 	return `${text.slice(0, anchor)}${glue}${token}${text.slice(anchor)}`;
 }
 
-/** The bookmark button's one filter: the strips the reader bookmarked. */
-export const BOOKMARKED = "@i:bookmarked";
-
-/** Whether the query asks for the bookmarks, as the bar sees it — not under `@not`, nor inside an operator. */
-export function asksForBookmarks(text: string): boolean {
-	return positives(text).some((match) => tokenOf(match) === BOOKMARKED);
-}
-
-/**
- * The bookmark button, pressed: `@i:bookmarked` on the end of the query, or taken out of it by the
- * same rules a dropdown's row is, wherever and however often it was written.
- */
-export function toggleBookmarks(text: string): string {
-	if (asksForBookmarks(text)) return removeTokens(text, [BOOKMARKED]);
-	const head = closeQuote(text.replace(/\s+$/, ""));
-	return head === "" ? BOOKMARKED : `${head} ${BOOKMARKED}`;
-}
-
 /**
  * The token as the field's only selection: written in beside the one it replaces, and every other
  * row of the field taken out. Picking the row that is already the only one is not an edit.

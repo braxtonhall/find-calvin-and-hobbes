@@ -144,6 +144,8 @@ export interface Route {
 		| "settings"
 		| "bookmarks"
 		| "bookshelf"
+		| "bookshelf-clippings"
+		| "bookshelf-books"
 		| "credits";
 	q?: string;
 	sort?: SortMode;

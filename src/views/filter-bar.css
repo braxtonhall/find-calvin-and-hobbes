@@ -58,14 +58,6 @@
 	cursor: pointer;
 }
 
-/* The strip page's bookmark button, at the end of the row and the height of a dropdown. */
-.filter-bookmarks {
-	flex-shrink: 0;
-	width: 24px;
-	height: 24px;
-	margin-left: 0;
-}
-
 /* The `display` above beats the attribute's own `display: none`, so it is said again here. */
 .filter-drop[hidden] {
 	display: none;

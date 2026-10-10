@@ -6,13 +6,18 @@ import { TUNING } from "../tuning";
 import { COMPOUND_CANONICAL_FORMS } from "../compounds";
 import { assignTiers } from "../tiers";
 import { canGoBack } from "../router";
-import { LIBRARY_QUERIES, LibraryView } from "../routes";
+import { BOOKSHELF_BOOKS_QUERY, BookshelfView, LIBRARY_QUERIES, LibraryView, isLibraryView } from "../routes";
 import { buildLibraryHtml } from "../pages/library";
+import { buildCollectionRowHtml, collectionsPageFrom } from "../pages/collections";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachRowFocusHandler, attachRowHandlers, resultsHtml } from "./result-rows";
+import { attachCollectionRowHandlers } from "./collections";
+import { narrowTab } from "./tab-search";
 
-const EMPTY: Record<LibraryView, string> = {
+const EMPTY: Record<LibraryView | BookshelfView, string> = {
 	bookmarks: "No bookmarks yet",
+	"bookshelf-clippings": "No clippings yet",
+	"bookshelf-books": "No books yet",
 	bookshelf: "Nothing owned yet",
 };
 
@@ -20,14 +25,15 @@ const EMPTY: Record<LibraryView, string> = {
 const focusAttached = new WeakSet<HTMLElement>();
 
 /**
- * Draws the reader's bookmarks or bookshelf: the search its query is, in date order, with no box to
- * change it. Drawn afresh on every visit, since the library may have changed since the last.
+ * Draws the reader's bookmarks or a tab of their bookshelf: the search its query is, with no box to
+ * change it — strips in date order, or books in the order Collections lists them. Drawn afresh on
+ * every visit, since the library may have changed since the last.
  */
-export function renderLibrary(view: LibraryView): void {
+export function renderLibrary(view: LibraryView | BookshelfView): void {
 	const element = document.getElementById(`view-${view}`)!;
 	element.innerHTML = buildLibraryHtml(view, canGoBack());
 	attachBackAndHomeHandlers(element);
-	if (!focusAttached.has(element)) {
+	if (isLibraryView(view) && !focusAttached.has(element)) {
 		attachRowFocusHandler(element);
 		focusAttached.add(element);
 	}
@@ -36,11 +42,27 @@ export function renderLibrary(view: LibraryView): void {
 }
 
 /** Draws the page's rows again, and only them: what is in the library has changed while it is open. */
-export function renderLibraryRows(view: LibraryView): void {
+export function renderLibraryRows(view: LibraryView | BookshelfView): void {
 	const element = document.getElementById(`view-${view}`)!;
-	const results = search(LIBRARY_QUERIES[view], "date", TUNING, COMPOUND_CANONICAL_FORMS);
 	const list = element.querySelector<HTMLElement>(".library-list")!;
+	if (!isLibraryView(view)) {
+		renderShelvedBooks(element, list);
+		return;
+	}
+	const results = search(LIBRARY_QUERIES[view], "date", TUNING, COMPOUND_CANONICAL_FORMS);
 	list.innerHTML = resultsHtml(results, EMPTY[view]);
 	state.searchResultTiers = assignTiers(results);
 	attachRowHandlers(list);
+}
+
+/** The books the reader owns, as Collections' rows, with their strips lit in the grid as a tab's search lights them. */
+function renderShelvedBooks(element: HTMLElement, list: HTMLElement): void {
+	const ids = narrowTab("books", BOOKSHELF_BOOKS_QUERY)?.ids ?? new Set<string>();
+	const { collections } = collectionsPageFrom(state);
+	const shown = collections.filter((collection) => ids.has(collection.id));
+	list.innerHTML =
+		shown.length === 0
+			? `<div class="results-empty">${EMPTY["bookshelf-books"]}</div>`
+			: `<div class="collections-list">${shown.map(buildCollectionRowHtml).join("")}</div>`;
+	attachCollectionRowHandlers(element, shown);
 }

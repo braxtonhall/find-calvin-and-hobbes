@@ -1,5 +1,7 @@
 #view-bookmarks.active,
-#view-bookshelf.active {
+#view-bookshelf.active,
+#view-bookshelf-clippings.active,
+#view-bookshelf-books.active {
 	display: block;
 	padding: 20px;
 }
@@ -9,4 +11,14 @@
 	font-size: 22px;
 	font-weight: 700;
 	margin-bottom: 16px;
+}
+
+/* With the Bookshelf's tabs under it, spaced as Collections' heading is from its own. */
+.library-heading--tabbed {
+	margin-bottom: 4px;
+}
+
+/* From one of the Bookshelf's tabs to another, only the list fades in: see `.view--tab-switch`. */
+.view--tab-switch .library-list {
+	animation: viewFadeIn 0.5s ease;
 }

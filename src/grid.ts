@@ -424,6 +424,7 @@ function subjectOf(route: Route): { key: string; dates: ReadonlySet<string> } | 
 	const tiers = state.searchResultTiers;
 	if (route.view === "results" && tiers) return { key: `results:${route.q ?? ""}`, dates: bestMatches(tiers) };
 	if (isLibraryView(route.view) && tiers) return { key: route.view, dates: bestMatches(tiers) };
+	if (route.view === "bookshelf-books" && state.tabMatchDates) return { key: route.view, dates: state.tabMatchDates };
 	if (TABS.has(route.view) && route.q && state.tabMatchDates) {
 		return { key: `${route.view}:${route.q}`, dates: state.tabMatchDates };
 	}
@@ -452,7 +453,12 @@ export function followRoute(route: Route): void {
 	}
 	const subject = subjectOf(route);
 	if (!subject) {
-		if (!["results", "bookmarks", "bookshelf", ...TABS, ...LIGHTS_ITS_OWN].includes(route.view)) subjectShown = null;
+		if (
+			!isLibraryView(route.view) &&
+			!["results", "bookshelf-books", ...TABS, ...LIGHTS_ITS_OWN].includes(route.view)
+		) {
+			subjectShown = null;
+		}
 		return;
 	}
 	if (subject.key === subjectShown) return;
@@ -513,9 +519,10 @@ function lightFor(route: Route): ((date: string) => Light) | undefined {
 
 	if (route.view === "results" || isLibraryView(route.view)) return byTier;
 
-	// A tab's search lit and dimmed the way a book's page is, with what it found as the book.
+	// A tab's search lit and dimmed the way a book's page is, with what it found as the book — and the
+	// books on the reader's shelf the same way, as all of theirs.
 	const found = state.tabMatchDates;
-	if (TABS.has(route.view)) return found ? (date) => found.has(date) : undefined;
+	if (TABS.has(route.view) || route.view === "bookshelf-books") return found ? (date) => found.has(date) : undefined;
 
 	// A book's strips, an arc's or a creator's: whichever the page showing set out to light.
 	const dates = state.collectionDateSet;

@@ -29,7 +29,7 @@ export function collectionsPageFrom(source: PageSource, q?: string): Collections
 }
 
 /** `data-collection-id` is what the view reads to light up the book's strips while the row is hovered. */
-function buildRowHtml(collection: CollectionSummary): string {
+export function buildCollectionRowHtml(collection: CollectionSummary): string {
 	// Fitted inside a box fifty-six pixels square, as `.collections-cover` is.
 	const width = Math.ceil(Math.min(56, 56 * (collection.aspectRatio ?? 1)));
 	const srcset = srcsetAttributes(collection.image, collection.width, `${width}px`);
@@ -109,7 +109,7 @@ export function buildCollectionsBodyHtml(page: CollectionsPage, ids: ReadonlySet
 	const shown = ids === null ? page.collections : page.collections.filter((collection) => ids.has(collection.id));
 	if (shown.length === 0 && ids !== null) return buildNoMatchesHtml("books");
 	return `<div class="collections-list">
-			${shown.map(buildRowHtml).join("")}
+			${shown.map(buildCollectionRowHtml).join("")}
 		</div>`;
 }
 

@@ -89,6 +89,14 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "bookshelf" };
 	}
 
+	if (path === BOOKSHELF_CLIPPINGS_PATH) {
+		return { view: "bookshelf-clippings" };
+	}
+
+	if (path === BOOKSHELF_BOOKS_PATH) {
+		return { view: "bookshelf-books" };
+	}
+
 	if (path === "/credits") {
 		return { view: "credits" };
 	}
@@ -102,17 +110,43 @@ export function buildSearchPath(query: string, sort: SortMode = "rank"): string 
 	return "/search?q=" + encodeURIComponent(query) + (sort === "date" ? "&sort=date" : "");
 }
 
-/** The pages of the reader's own library, each a search that is always the same one, with no box to change it. */
-export type LibraryView = "bookmarks" | "bookshelf";
+/**
+ * The pages of the reader's own library that list strips, each a search that is always the same one,
+ * with no box to change it.
+ */
+export type LibraryView = "bookmarks" | "bookshelf" | "bookshelf-clippings";
 
 export const LIBRARY_QUERIES: Record<LibraryView, string> = {
 	bookmarks: "@i:bookmarked",
 	// The strips they own, and the strips in the books they own.
 	bookshelf: "@i:own @or @in @i:own",
+	// The strips they own on their own, cut from a paper.
+	"bookshelf-clippings": "@i:own",
 };
 
 export function isLibraryView(view: string): view is LibraryView {
 	return Object.hasOwn(LIBRARY_QUERIES, view);
+}
+
+/** The books on the reader's shelf: a search of the books, as a Collections tab's is. */
+export const BOOKSHELF_BOOKS_QUERY = "@i:own";
+
+/**
+ * The tabs of the Bookshelf, in the order they are shown, each a page of its own. All — every strip
+ * they own, in a clipping or a book — is the Bookshelf's own address, and the one it opens on.
+ */
+export type BookshelfTab = "all" | "clippings" | "books";
+
+export type BookshelfView = "bookshelf" | "bookshelf-clippings" | "bookshelf-books";
+
+export const BOOKSHELF_TABS: Record<BookshelfTab, { view: BookshelfView; path: string }> = {
+	all: { view: "bookshelf", path: "/bookshelf" },
+	clippings: { view: "bookshelf-clippings", path: "/bookshelf/clippings" },
+	books: { view: "bookshelf-books", path: "/bookshelf/books" },
+};
+
+export function isBookshelfView(view: string): view is BookshelfView {
+	return Object.values(BOOKSHELF_TABS).some((tab) => tab.view === view);
 }
 
 /** The tabs of Collections. */
@@ -155,7 +189,9 @@ export const CREATORS_PATH = "/creators";
 export const COLLECTIONS_PATH = "/collections";
 export const SETTINGS_PATH = "/settings";
 export const BOOKMARKS_PATH = "/bookmarks";
-export const BOOKSHELF_PATH = "/bookshelf";
+export const BOOKSHELF_PATH = BOOKSHELF_TABS.all.path;
+export const BOOKSHELF_CLIPPINGS_PATH = BOOKSHELF_TABS.clippings.path;
+export const BOOKSHELF_BOOKS_PATH = BOOKSHELF_TABS.books.path;
 export const CREDITS_PATH = "/credits";
 export const HOME_PATH = "/";
 

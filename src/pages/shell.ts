@@ -40,6 +40,8 @@ export const VIEWS = [
 	"settings",
 	"bookmarks",
 	"bookshelf",
+	"bookshelf-clippings",
+	"bookshelf-books",
 	"credits",
 ] as const;
 
@@ -173,6 +175,8 @@ export function buildViewHtml(page: Page, canGoBack: boolean): string {
 			return buildSettingsHtml(canGoBack);
 		case "bookmarks":
 		case "bookshelf":
+		case "bookshelf-clippings":
+		case "bookshelf-books":
 			return buildLibraryHtml(page.view, canGoBack);
 		case "results":
 			// The rows are the app's to draw: they depend on the query, and there is no file per query.

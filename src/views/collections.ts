@@ -2,7 +2,7 @@ import "./collections.css";
 
 import { state } from "../state";
 import { canGoBack } from "../router";
-import { CollectionsPage } from "../pages/page";
+import { CollectionSummary, CollectionsPage } from "../pages/page";
 import { buildCollectionsBodyHtml, buildCollectionsHtml } from "../pages/collections";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { clearCollectionSoon, datesOf, highlightCollection } from "./cell-highlight";
@@ -30,7 +30,15 @@ export function renderCollections(page: CollectionsPage, adopt: boolean = false,
 		attachTabSearch(element, "books");
 	}
 
-	const byId = new Map(page.collections.map((collection) => [collection.id, collection]));
+	attachCollectionRowHandlers(element, page.collections);
+}
+
+/**
+ * Hovering or focusing a book's row lights its strips in the grid, and letting go goes back to what
+ * the page lights, in `state.tabMatchDates`. Each row has the book's menu too.
+ */
+export function attachCollectionRowHandlers(element: HTMLElement, collections: CollectionSummary[]): void {
+	const byId = new Map(collections.map((collection) => [collection.id, collection]));
 	element.querySelectorAll<HTMLElement>(".collections-row").forEach((row) => {
 		const collection = byId.get(row.dataset.collectionId ?? "") ?? null;
 		// A row followed to its book is left focused, and hidden, which blurs it; by then the grid is

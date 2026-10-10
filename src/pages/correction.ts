@@ -27,6 +27,8 @@ export function correctionPage(view: Page["view"], rerun: boolean): CorrectionPa
 			return "books";
 		case "bookmarks":
 		case "bookshelf":
+		case "bookshelf-clippings":
+		case "bookshelf-books":
 			return null;
 		default:
 			return view;
