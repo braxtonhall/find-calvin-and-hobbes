@@ -497,10 +497,15 @@ function linkSubject(page: DetailPage, comic: Comic): StripLinkSubject {
 	return { kind: "daily", date: page.date };
 }
 
-/**
- * The strip's Read and License links, as `config.yaml` writes them, and after them the buttons for
- * bookmarking it, owning it and noting it — which a strip has even where the config writes no links.
- */
+/** The buttons for bookmarking a strip, owning it and noting it. */
+function buildStripOwnershipHtml(page: DetailPage, comic: Comic): string {
+	return buildOwnershipControlsHtml("strip", ownershipId(comic, page.date), {
+		id: bookmarkId(comic, page.date),
+		date: page.date,
+	});
+}
+
+/** The strip's Read and License links, as `config.yaml` writes them, if it writes any. */
 function buildStripLinksHtml(page: DetailPage, comic: Comic): string {
 	const subject = linkSubject(page, comic);
 	const links = stripLinks(PAGE_CONFIG.details[subject.kind], subject);
@@ -510,7 +515,7 @@ function buildStripLinksHtml(page: DetailPage, comic: Comic): string {
 				`<a class="detail-read-link" href="${escHtml(href)}" target="_blank" rel="noopener">${label} ${LINK_ICON_SVG}</a>`,
 		)
 		.join("");
-	return `<div class="detail-links">${anchors}${buildOwnershipControlsHtml("strip", ownershipId(comic, page.date), { id: bookmarkId(comic, page.date), date: page.date })}</div>`;
+	return anchors ? `<div class="detail-links">${anchors}</div>` : "";
 }
 
 function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: string, isSunday: boolean): string {
@@ -519,7 +524,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 	const descriptionsResolved = page.descriptions !== null;
 
 	let bodies = "";
-	for (const comic of comics) {
+	for (const [index, comic] of comics.entries()) {
 		const description = getPageDescription(page, comic);
 
 		const transcriptHtml = buildTranscriptHtml(comic, date, alternates);
@@ -533,6 +538,9 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 			? srcsetAttributes(comic.image, comic.width, "(max-width: 768px) calc(100vw - 40px), 800px")
 			: "";
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
+		// The first strip's buttons are in the day's own row of actions; any other has a row of its own.
+		const actionsHtml =
+			index > 0 ? `<div class="detail-actions detail-comic-actions">${buildStripOwnershipHtml(page, comic)}</div>` : "";
 		const runsHtml = buildRunsHtml(page, date, comic);
 		const collectionsHtml = buildPrintingsSectionHtml(
 			buildPrintings(comic.appearances || [], collectionsById, (appearance) => printingKey(comic, appearance)),
@@ -542,6 +550,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 		);
 
 		bodies += `<div class="detail-comic${illustratedClass}" data-comic-key="${escHtml(comic.id || date)}">
+				${actionsHtml}
 				${comic.image ? `<div class="detail-image-wrapper"${ratio}><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}"${srcset} alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
 			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
 			${transcriptHtml}
@@ -671,7 +680,9 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 		${buildBackAndHomeButtons(canGoBack)}
 		<h2 class="detail-date">${dateFormatted}</h2>
 		<div class="detail-actions">
-			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">Copy link</button> ${prevButtonHtml} ${nextButtonHtml}
+			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">Copy link</button>
+			${comics.length > 0 ? buildStripOwnershipHtml(page, comics[0]) : ""}
+			<span class="detail-actions__arrows">${prevButtonHtml}${nextButtonHtml}</span>
 		</div>`;
 
 	const rerunBannerHtml = rerunOf ? buildRerunBannerHtml(rerunOf) : "";

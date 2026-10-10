@@ -66,13 +66,25 @@
 	margin: 12px 0 0;
 }
 
-.collection-note {
-	font-size: 13px;
-	color: var(--text-muted);
-	font-style: italic;
-	line-height: 1.5;
-	margin-top: 8px;
+/* A book's row of actions runs the width of the page, under its cover and its details. */
+.collection-header--book {
 	margin-bottom: 16px;
+}
+
+.collection-actions {
+	margin-bottom: 24px;
+}
+
+/* What there is to say about the book, under its row of actions, as a strip's transcript is under its image. */
+.collection-note {
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--text-muted);
+	margin-bottom: 24px;
+}
+
+.collection-note:empty {
+	display: none;
 }
 
 .collection-section-heading {
@@ -159,13 +171,4 @@ summary.collection-section-heading:hover {
 	font-style: italic;
 	color: var(--text-muted);
 	font-size: 13px;
-}
-
-/* Owning the book and a note on it, at the foot of the page as a strip's are at the foot of the strip. */
-.collection-ownership {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 12px;
-	margin-top: 20px;
 }

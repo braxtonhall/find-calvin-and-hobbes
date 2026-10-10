@@ -13,7 +13,7 @@ import { attachRowFocusHandler, attachRowHandlers, resultsHtml } from "./result-
 
 const EMPTY: Record<LibraryView, string> = {
 	bookmarks: "No bookmarks yet",
-	bookshelf: "Nothing on your bookshelf yet",
+	bookshelf: "Nothing owned yet",
 };
 
 /** The views whose focus handler is attached already: it is delegated, and the view outlives its rows. */

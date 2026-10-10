@@ -223,7 +223,7 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 
 	return `<div class="collection-container">
 		${buildNavButtons(canGoBack)}
-		<div class="collection-header">
+		<div class="collection-header collection-header--book">
 			<div class="collection-cover"${collection.aspectRatio ? ` style="aspect-ratio: ${collection.aspectRatio}"` : ""}>
 				<img src="${imageUrl}"${srcset} alt="${escHtml(collection.name)} cover" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />
 			</div>
@@ -233,14 +233,14 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 				<p class="collection-meta"><span class="collection-meta--label">Published:</span> ${pubDateFormatted}</p>
 				<p class="collection-meta"><span class="collection-meta--label">Coverage:</span> ${coverage.join(" · ")}</p>
 				${comicsSummary}
-				${collection.notes && collection.notes.length > 0 ? `<p class="collection-note">${escHtml(collection.notes[0])}</p>` : ""}
-				<div class="detail-actions">
-					<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildCollectionPath(collection.id)))}">Copy link</button>
-					${buildNeighbourButton(page.prev, "prev")}
-					${buildNeighbourButton(page.next, "next")}
-				</div>
 			</div>
 		</div>
+		<div class="detail-actions collection-actions">
+			<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildCollectionPath(collection.id)))}">Copy link</button>
+			${buildOwnershipControlsHtml("book", collection.id)}
+			<span class="detail-actions__arrows">${buildNeighbourButton(page.prev, "prev")}${buildNeighbourButton(page.next, "next")}</span>
+		</div>
+		${collection.notes && collection.notes.length > 0 ? `<p class="collection-note">${escHtml(collection.notes[0])}</p>` : ""}
 		<details class="collection-section" open>
 			<summary class="collection-section-heading">Date Ranges</summary>
 			<div class="collection-ranges">${rangesHtml}</div>
@@ -249,6 +249,5 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 		${buildAlterationsHtml(collection.alterations ?? {})}
 		${extrasHtml}
 		${collection.links && collection.links.length > 0 ? `<p class="collection-section-heading">Links</p><div class="collection-links">${collection.links.map((link) => `<a class="collection-link" href="${escHtml(link.href)}" target="_blank" rel="noopener">${escHtml(link.title)}</a>`).join("")}</div>` : ``}
-		<div class="collection-ownership">${buildOwnershipControlsHtml("book", collection.id)}</div>
 	</div>`;
 }

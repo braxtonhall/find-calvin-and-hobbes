@@ -94,14 +94,35 @@
 	display: contents;
 }
 
-/* The two buttons keep together, whatever the row they are in spaces its own items by. */
+/* The buttons keep together, whatever the row they are in spaces its own items by. */
 .ownership-buttons {
 	display: inline-flex;
 	gap: 6px;
 }
 
-.ownership-buttons > .bookmark-btn {
+/* Named, as the copy link button is, rather than icons alone. */
+.ownership-buttons > .ownership-btn {
+	width: auto;
+	gap: 4px;
+	padding: 4px 8px;
 	margin-left: 0;
+	font-size: 12px;
+}
+
+/* Only the icon and the border take on the colour; the word says the rest. */
+.ownership-label {
+	color: var(--text-muted);
+}
+
+.ownership-label--on,
+.ownership-btn--active .ownership-label--off,
+.bookmark-btn--active .ownership-label--off {
+	display: none;
+}
+
+.ownership-btn--active .ownership-label--on,
+.bookmark-btn--active .ownership-label--on {
+	display: inline;
 }
 
 .ownership-btn--active {
@@ -369,8 +390,15 @@
 }
 
 .detail-actions > .copy-link-btn,
-.detail-actions > .nav-btn {
+.detail-actions > .nav-btn,
+.detail-actions__arrows > .nav-btn {
 	margin-left: 0;
+}
+
+/* The two arrows wrap onto a new line together, never one without the other. */
+.detail-actions__arrows {
+	display: inline-flex;
+	gap: 6px;
 }
 
 /* A line about a strip, on its page or an arc's, after its icon. The text wraps clear of the icon, which sits on its first line. */
