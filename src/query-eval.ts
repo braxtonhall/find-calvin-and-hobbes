@@ -13,8 +13,10 @@ import { Collection, Comic } from "./types";
  *
  * A collection is a set of strips — a book's, an arc's, a creator's or a character's — with a few
  * words of its own and a few facts about itself. Every kind is judged by the same filters (see
- * `COLLECTION_TAGS`): one that cannot be true of a kind is false of it. Its text is its own words
- * and every word of its strips, so the words of a query may be found in different strips of it.
+ * `COLLECTION_TAGS`): one that cannot be true of a kind is false of it. Its text is its own words,
+ * and an arc's is every word of its strips too, so the words of a query may be found in different
+ * strips of it. Books, creators and characters are known by name, which their strips' words would
+ * drown: those are found with `@has`.
  *
  * Crossing from a strip to its collections, or from a collection to its strips, judges the query
  * inside against each one on the other side. Each answer is kept for the length of one search, so a
@@ -28,6 +30,8 @@ export interface Group {
 	id: string;
 	/** Its own words: a book's name and subtitle, an arc's description, a person's name. */
 	words: string;
+	/** Whether its strips' words are its words too: an arc's, which is told by them. */
+	stripWords: boolean;
 	/** Its strips, as the archive holds them, in its order. Never a day a strip ran again. */
 	strips: Comic[];
 	/** The book, for a book's facts. */
@@ -87,17 +91,19 @@ export function groups(type: CollectionType): Groups {
 	if (type === "book") {
 		for (const book of state.collectionIndex?.collections ?? []) {
 			const words = book.subtitle ? `${book.name} ${book.subtitle}` : book.name;
-			list.push({ type, id: book.id, words, strips: [], book });
+			list.push({ type, id: book.id, words, stripWords: false, strips: [], book });
 		}
 	} else if (type === "arc") {
-		for (const arc of state.arcs ?? []) list.push({ type, id: arc.id, words: arc.description, strips: [] });
+		for (const arc of state.arcs ?? []) {
+			list.push({ type, id: arc.id, words: arc.description, stripWords: true, strips: [] });
+		}
 	} else if (type === "creator") {
 		for (const creator of state.creatorsById.values()) {
-			list.push({ type, id: creator.id, words: creator.name, strips: [] });
+			list.push({ type, id: creator.id, words: creator.name, stripWords: false, strips: [] });
 		}
 	} else {
 		for (const character of state.charactersById.values()) {
-			list.push({ type, id: character.id, words: character.name, strips: [] });
+			list.push({ type, id: character.id, words: character.name, stripWords: false, strips: [] });
 		}
 	}
 
@@ -284,9 +290,10 @@ export class Evaluator {
 		return found;
 	}
 
-	/** Whether the collection says the text: in its own words, or in any of its strips. */
+	/** Whether the collection says the text: in its own words, or an arc in any of its strips. */
 	groupContains(group: Group, text: string): boolean {
 		if (textContains(group.words, text, this.compounds)) return true;
+		if (!group.stripWords) return false;
 		const saying = this.stripsSaying(text);
 		return group.strips.some((comic) => saying.has(comic));
 	}
@@ -364,6 +371,7 @@ export function searchCollections(query: string, type: CollectionType, compounds
 				if (constraint.negated) continue;
 				if (constraint.kind === "text") {
 					asked = true;
+					if (!group.stripWords) continue;
 					const saying = evaluator.stripsSaying(constraint.text);
 					for (const comic of group.strips) if (saying.has(comic)) lit.add(comic);
 				} else if (constraint.kind === "cross") {

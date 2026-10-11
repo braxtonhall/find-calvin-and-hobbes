@@ -337,10 +337,11 @@ test("the strip language", async (suite) => {
 		assert.deepEqual(strips("@in (@has @featuring:mom)"), ["1988-01-03", "1988-01-04"]);
 	});
 
-	await suite.test("inside an operator a collection's text is its own words and its strips'", () => {
+	await suite.test("inside an operator a collection's text is its own words, and an arc's strips'", () => {
 		setUp();
-		// The Snow Book's title says snow; the Plain Book's strips do.
-		assert.deepEqual(strips("@in (snow)"), ["1988-01-03", "1988-01-04", "1988-01-05"]);
+		// The Snow Book's title says snow; the Plain Book's strips do, which a book's text leaves out.
+		assert.deepEqual(strips("@in (snow)"), ["1988-01-03", "1988-01-04"]);
+		assert.deepEqual(strips("@during (snowball)"), ["1988-01-05"]);
 		assert.deepEqual(strips("@in (@has snowball)"), ["1988-01-03", "1988-01-05"]);
 	});
 
@@ -406,6 +407,16 @@ test("the collection language", async (suite) => {
 		assert.deepEqual(listed("susie", "character"), ["susie"]);
 	});
 
+	await suite.test("a book, a creator or a character is found by name, not by its strips' words", () => {
+		setUp();
+		assert.deepEqual(listed("snowball", "book"), []);
+		assert.deepEqual(listed("@has snowball", "book"), ["plainbook"]);
+		assert.deepEqual(listed("snow", "character"), []);
+		assert.deepEqual(listed("@has snow", "character"), ["susie"]);
+		assert.deepEqual(listed("fort", "creator"), []);
+		assert.deepEqual(listed("watterson", "creator"), ["bill"]);
+	});
+
 	await suite.test("@has looks through the strips, and grouping says whether one strip must do it all", () => {
 		setUp();
 		assert.deepEqual(listed("@has @is:sunday", "arc"), ["snowarc"]);
@@ -433,15 +444,15 @@ test("the collection language", async (suite) => {
 
 	await suite.test("a strip query pasted onto a tab: plain words carry over, strip filters ask for @has", () => {
 		setUp();
-		assert.deepEqual(listed("snowball", "book"), ["plainbook"]);
-		assert.deepEqual(listed("snowball @is:sunday", "book"), []);
+		assert.deepEqual(listed("snowball", "arc"), ["schoolarc"]);
+		assert.deepEqual(listed("snowball @is:sunday", "arc"), []);
 	});
 
 	await suite.test("the grid lights the strips that are why each collection is listed", () => {
 		setUp();
 		const dates = (query: string, type: "book" | "arc") =>
 			[...searchCollections(query, type, NO_COMPOUNDS)!.dates].sort();
-		assert.deepEqual(dates("snowball", "book"), ["1988-01-05"]);
+		assert.deepEqual(dates("snowball", "arc"), ["1988-01-05"]);
 		assert.deepEqual(dates("@has @is:sunday", "arc"), ["1988-01-03"]);
 		// // Nothing about any strip in particular, so every strip of each.
 		// assert.deepEqual(dates("@strips:>=2", "arc"), ["1988-01-03", "1988-01-04"]);
