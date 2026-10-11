@@ -180,7 +180,7 @@ corrections:
 #               file as `!Path ./cover.png`, relative to the file it is written in, which the build
 #               publishes under `static/`. Its shape, which its pages hold the space for while it
 #               loads, is read from the file; a URL's is only its `aspect-ratio`, its width over its
-#               height, which a file's can be given too, to override it. An edition's cover is the same
+#               height, which a file's can be given too, to override it
 #   tuning      how the search scores a match, fitted to the strips, with notes on each value
 #   credits     the credits page, in Markdown
 #

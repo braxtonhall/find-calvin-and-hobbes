@@ -64,8 +64,8 @@ searched for.
 
 `@in:` takes a book's id rather than its title, because a filter value takes no spaces. Type `@in:`
 and the menu lists every book the archive indexes with its title beside it, so `@in:book3` is _Yukon
-Ho!_ and `@in:complete` is the whole Complete. A book that is not on that list matches nothing and
-says so.
+Ho!_, `@in:complete` is the hardcover Complete and `@in:complete2012` the paperback. A book that is
+not on that list matches nothing and says so.
 
 ### Strips and their collections
 

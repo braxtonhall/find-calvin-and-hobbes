@@ -19,8 +19,7 @@ import { buildOwnershipControlsHtml } from "./ownership";
 /**
  * The arcs a book prints in full, in the order it prints them: by volume, then page, of each arc's
  * first strip in the book. That is mostly date order, and where it is not, the list shows it — a
- * check by eye on the data as much as a list. One edition answers for the book, since its editions
- * hold the same strips; ties keep date order.
+ * check by eye on the data as much as a list. Ties keep date order.
  */
 function arcsInPrintOrder(source: PageSource, collectionId: string): Arc[] {
 	const held = (source.arcs ?? []).filter((arc) => arc.collections.includes(collectionId));
@@ -32,10 +31,10 @@ function arcsInPrintOrder(source: PageSource, collectionId: string): Arc[] {
 					?.find((comic) => !comic.id)
 					?.appearances?.filter((appearance) => appearance.collection === collectionId) ?? [],
 		);
-		const edition = appearances[0]?.edition;
-		const places = appearances
-			.filter((appearance) => appearance.edition === edition)
-			.map((appearance): [number, number] => [appearance.volume ?? 0, appearance.pages[0] ?? 0]);
+		const places = appearances.map((appearance): [number, number] => [
+			appearance.volume ?? 0,
+			appearance.pages[0] ?? 0,
+		]);
 		return places.reduce((first, place) =>
 			place[0] < first[0] || (place[0] === first[0] && place[1] < first[1]) ? place : first,
 		);

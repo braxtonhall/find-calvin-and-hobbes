@@ -48,7 +48,7 @@ export interface LibraryPage {
  */
 export type DetailCollection = Pick<
 	Collection,
-	"id" | "name" | "pub_year" | "image" | "colour" | "aspectRatio" | "width" | "editions" | "alterations"
+	"id" | "name" | "pub_year" | "image" | "colour" | "aspectRatio" | "width" | "alterations"
 >;
 
 export interface BookNeighbours {
@@ -148,7 +148,7 @@ export interface ArcPage {
 	strips: ArcStrip[];
 	/**
 	 * Where each book that holds the whole arc prints it: one appearance per volume, with the pages of
-	 * all the arc's strips together. A book with several editions is shown in one of them.
+	 * all the arc's strips together.
 	 */
 	appearances: Appearance[];
 	collections: DetailCollection[];

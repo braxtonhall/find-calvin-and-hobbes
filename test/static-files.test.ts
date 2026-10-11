@@ -64,23 +64,14 @@ test("reads a cover's shape from its file, unless its aspect-ratio says otherwis
 		"  - {id: b, image: !Path ./wide.gif, aspect-ratio: 0.75}\n" +
 		"  - {id: c, image: 'https://example.test/c.png', aspect-ratio: 0.8}\n" +
 		"  - {id: d, image: 'https://example.test/d.png'}\n" +
-		"  - id: e\n" +
-		"    image: !Path ./wide.gif\n" +
-		"    editions:\n" +
-		"      own: {label: Own, image: !Path ./tall.gif}\n" +
-		"      remote: {label: Remote, image: 'https://example.test/e.png', aspect-ratio: 0.5}\n" +
-		"      bare: {label: Bare}\n";
+		"  - {id: e, image: !Path ./tall.gif}\n";
 	withConfig(
 		yaml,
 		(config) => {
 			const sources = loadCollectionData(config).sources;
 			const ratios = Object.fromEntries(sources.map((source) => [source.id, source.aspectRatio]));
-			assert.deepEqual(ratios, { a: 1.5, b: 0.75, c: 0.8, d: undefined, e: 1.5 });
+			assert.deepEqual(ratios, { a: 1.5, b: 0.75, c: 0.8, d: undefined, e: 0.3333 });
 			assert.equal("aspect-ratio" in sources[0], false);
-			const editions = sources.find((source) => source.id === "e")!.editions!;
-			assert.equal(editions.own.aspectRatio, 0.3333);
-			assert.equal(editions.remote.aspectRatio, 0.5);
-			assert.equal(editions.bare.aspectRatio, undefined);
 		},
 		{ "wide.gif": sampleGif(3, 2), "tall.gif": sampleGif(1, 3) },
 	);

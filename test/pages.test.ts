@@ -235,7 +235,7 @@ test("a prerendered document", async (suite) => {
 				page.collections.map((collection) => collection.id),
 				arc.collections,
 			);
-			// One cover per book, however many editions it has.
+			// One cover per book.
 			const covers = buildViewHtml(page, false).match(/class="collection-book[ "]/g) ?? [];
 			assert.equal(covers.length, arc.collections.length, `${arc.id} shows each book once`);
 			assert.equal(page.prev?.id ?? null, arcs[index - 1]?.id ?? null);

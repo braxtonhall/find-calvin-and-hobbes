@@ -20,23 +20,9 @@ export interface Comic {
 
 export interface Appearance {
 	collection: string;
-	edition?: string;
 	volume?: number;
 	pages: number[];
 	altered?: true;
-}
-
-export interface Edition {
-	label: string;
-	isbn?: string[];
-	/** When the edition came out later than the collection it belongs to. */
-	pub_year?: number;
-	/** Its own cover, when it has one; otherwise it wears the collection's. */
-	image?: string;
-	/** Its own cover's width over its height: `aspect-ratio` in its book's file, else read from the file. */
-	aspectRatio?: number;
-	/** Its own cover's width in pixels, where the build makes smaller copies of it. See `srcset.ts`. */
-	width?: number;
 }
 
 export interface Collection {
@@ -60,7 +46,6 @@ export interface Collection {
 	aspectRatio?: number;
 	/** The cover's width in pixels, where the build makes smaller copies of it. See `srcset.ts`. */
 	width?: number;
-	editions?: Record<string, Edition>;
 }
 
 export interface CollectionIndex {
@@ -77,7 +62,7 @@ export interface Arc {
 	description: string;
 	/** Its strips' dates, in order. */
 	dates: string[];
-	/** The books that print every strip of it, once per book however many editions it has, in publication order. */
+	/** The books that print every strip of it, in publication order. */
 	collections: string[];
 }
 

@@ -35,7 +35,7 @@ export function generateCollectionIndex(collectionData: CollectionData, basePath
 		// is no second place for a stale key to survive in.
 		if (!printed.has(source.id)) continue;
 
-		const { extras, pages: _pages, editions, dailies: _dailies, specials: _specials, ...rest } = source;
+		const { extras, pages: _pages, volumes: _volumes, dailies: _dailies, specials: _specials, ...rest } = source;
 
 		if (extras && extras.length) {
 			collectionExtras[source.id] = extras;
@@ -50,15 +50,6 @@ export function generateCollectionIndex(collectionData: CollectionData, basePath
 				Object.entries((source.alterations as Record<string, unknown>) || {}).map(([k, v]) => [String(k), v]),
 			),
 		};
-
-		if (editions) {
-			collection.editions = Object.fromEntries(
-				Object.entries(editions).map(([name, { volumes: _volumes, ...meta }]) => [
-					name,
-					meta.image ? { ...meta, image: publicUrl(meta.image, basePath) } : meta,
-				]),
-			);
-		}
 
 		collections.push(collection);
 	}

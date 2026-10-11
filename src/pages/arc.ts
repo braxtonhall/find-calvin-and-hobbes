@@ -15,9 +15,7 @@ function stripOn(source: PageSource, date: string): Comic | undefined {
 
 /**
  * Where each book that holds the whole arc prints it, the arc's pages gathered into one appearance
- * per volume. A book's editions hold the same strips, so it is shown in one of them — the one its
- * strips list first — rather than once per edition. Pages are in the order of the arc's strips, so
- * the first is where the arc begins.
+ * per volume. Pages are in the order of the arc's strips, so the first is where the arc begins.
  */
 function arcAppearances(strips: (Comic | undefined)[], arc: Arc): Appearance[] {
 	const appearances: Appearance[] = [];
@@ -25,10 +23,8 @@ function arcAppearances(strips: (Comic | undefined)[], arc: Arc): Appearance[] {
 		const inBook = strips.flatMap((comic) =>
 			(comic?.appearances ?? []).filter((appearance) => appearance.collection === collection),
 		);
-		const edition = inBook[0]?.edition;
 		const pagesByVolume = new Map<number | undefined, Set<number>>();
 		for (const appearance of inBook) {
-			if (appearance.edition !== edition) continue;
 			if (!pagesByVolume.has(appearance.volume)) pagesByVolume.set(appearance.volume, new Set());
 			for (const page of appearance.pages) pagesByVolume.get(appearance.volume)!.add(page);
 		}
@@ -36,7 +32,6 @@ function arcAppearances(strips: (Comic | undefined)[], arc: Arc): Appearance[] {
 		for (const [volume, pages] of volumes) {
 			appearances.push({
 				collection,
-				...(edition !== undefined ? { edition } : {}),
 				...(volume !== undefined ? { volume } : {}),
 				pages: [...pages],
 			});

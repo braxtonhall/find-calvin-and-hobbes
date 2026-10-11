@@ -13,8 +13,7 @@ function compactToIsoDate(value: string): string {
  * The books that print every strip of the arc, in the order the index holds them.
  *
  * Read off the same appearances `comics.json` carries, so a book is listed here exactly when each of
- * the arc's strips names it. A book with several editions is still one book: its editions hold the
- * same strips, so asking of the book is asking of each of them.
+ * the arc's strips names it.
  */
 function collectionsHolding(compactDates: string[], collectionData: CollectionData): string[] {
 	const holders = (compact: string) =>
