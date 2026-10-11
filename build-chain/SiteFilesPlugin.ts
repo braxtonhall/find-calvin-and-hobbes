@@ -2,13 +2,22 @@ import fs from "fs";
 import path from "path";
 import type { Compiler, Compilation } from "webpack";
 import { sources } from "webpack";
-import { watchConfigIn, loadLandingFile, loadSiteConfig } from "./siteConfig";
+import { buildManifest, emitFavicon } from "./favicon";
+import {
+	watchConfigIn,
+	loadFaviconFile,
+	loadLandingFile,
+	loadPageConfig,
+	loadSiteConfig,
+	loadTheme,
+} from "./siteConfig";
 
 const PLUGIN_NAME = "SiteFilesPlugin";
 
 /**
  * Emits the site's static files that depend on `SITE_URL`: `robots.txt` and the `CNAME` file for a
- * GitHub Pages custom domain. And the home page's banner, where `config.yaml` names it by its path. Reads `config.yaml` and `.env` fresh on every compilation and watches
+ * GitHub Pages custom domain. And the home page's banner, where `config.yaml` names it by its path,
+ * and the web app manifest, with the icons drawn from the favicon where it names that by its path. Reads `config.yaml` and `.env` fresh on every compilation and watches
  * them, so `--watch` rebuilds when the configured URL changes. When no `SITE_URL` is set, the sitemap reference and
  * `CNAME` are omitted and the site deploys to the default `*.github.io`. The sitemap itself is
  * `PagesPlugin`'s, since it is a list of the pages that plugin writes.
@@ -25,12 +34,12 @@ class SiteFilesPlugin {
 		compiler.hooks.thisCompilation.tap(PLUGIN_NAME, (compilation: Compilation) => {
 			watchConfigIn(compilation);
 
-			compilation.hooks.processAssets.tap(
+			compilation.hooks.processAssets.tapPromise(
 				{
 					name: PLUGIN_NAME,
 					stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONAL,
 				},
-				() => {
+				async () => {
 					const config = loadSiteConfig();
 					const siteUrl = config?.siteUrl ?? "";
 					const basePath = config?.basePath ?? "/";
@@ -54,6 +63,15 @@ class SiteFilesPlugin {
 						compilation.fileDependencies.add(landing.file);
 						compilation.emitAsset(landing.published, new sources.RawSource(fs.readFileSync(landing.file)));
 					}
+
+					const favicon = loadFaviconFile();
+					if (favicon) {
+						compilation.fileDependencies.add(favicon.file);
+						await emitFavicon(compilation, favicon);
+					}
+					const { name, description } = loadPageConfig();
+					const manifest = buildManifest({ name, description, basePath, theme: loadTheme(), favicon });
+					compilation.emitAsset("manifest.webmanifest", new sources.RawSource(manifest));
 				},
 			);
 		});

@@ -12,9 +12,9 @@
 
 **Story arc data** from the [Calvin and Hobbes Fandom Wiki](https://calvinandhobbes.fandom.com/wiki/Story_arcs) and [TV Tropes](https://tvtropes.org/pmwiki/pmwiki.php/Recap/CalvinAndHobbes).
 
-**Favicon** from the [Calvin and Hobbes Miraheze Wiki](https://calvinandhobbes.miraheze.org/wiki/Main_Page).
-
 **Alterations data** from the [Calvin and Hobbes Fandom Wiki](https://calvinandhobbes.fandom.com/).
+
+**Icon** from the [Calvin and Hobbes Miraheze Wiki](https://calvinandhobbes.miraheze.org/wiki/Main_Page).
 
 **Logo** from [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:Calvin_and_Hobbes_title.png).
 

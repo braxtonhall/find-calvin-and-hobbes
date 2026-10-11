@@ -15,7 +15,7 @@ import { StripKind, StripLinkSubject, stripLinks } from "../src/strip-links";
 import { CORRECTION_PAGES, correctionUrl } from "../src/correction-links";
 import { SUGGESTION_FIELDS, SuggestionFields, fillSuggestion } from "../src/suggestion-templates";
 import { imageSize } from "./imageSize";
-import { isUrl, staticPath } from "./staticFiles";
+import { iconPath, isUrl, staticPath } from "./staticFiles";
 
 export interface SiteConfig {
 	/** The site's address with no trailing slash — `https://example.com`, or `https://example.com/prefix` — which every page's path is appended to. */
@@ -615,6 +615,70 @@ function loadLandingSize(landing: RawConfig["landing"]): PageConfig["landingSize
 	return file ? imageSize(file) : null;
 }
 
+/** What the build can draw a favicon's icons from, by their extensions. */
+const ICON_SOURCES = new Set([".gif", ".jpg", ".jpeg", ".png", ".webp"]);
+
+/**
+ * The favicon's file, where `config.yaml` names one with `!Path` rather than giving a URL, or `null`.
+ * A value that is neither, or a file the build cannot draw icons from, stops the build.
+ */
+function faviconFile(favicon: unknown): string | null {
+	const image = stringSetting(favicon, "favicon");
+	if (!image || isUrl(image)) return null;
+	if (!path.isAbsolute(image))
+		throw new ConfigError((file) => `favicon in ${file} must be a URL, or a file as !Path ./favicon.png`);
+	if (!ICON_SOURCES.has(path.extname(image).toLowerCase()))
+		throw new ConfigError((file) => `favicon in ${file} must be a PNG, JPEG, GIF or WebP, to draw its icons from`);
+	return image;
+}
+
+/** The sizes the build draws a favicon's file at: the tab's, an iPhone's home screen's, and the manifest's. */
+export const ICON_SIZES = { tab: 32, touch: 180, app: [192, 512] } as const;
+
+/** The icons the build draws from a favicon's file, and where it publishes each, from the mount. */
+export interface FaviconFile {
+	file: string;
+	/**
+	 * What the home screen's icons are drawn on: the theme's background. The tab's keeps the file's
+	 * own transparency, but an iPhone fills a home screen icon's with black.
+	 */
+	background: string;
+	tab: string;
+	touch: string;
+	app: { size: number; published: string }[];
+}
+
+function faviconIcons(file: string, background: string): FaviconFile {
+	return {
+		file,
+		background,
+		tab: iconPath(file, ICON_SIZES.tab),
+		touch: iconPath(file, ICON_SIZES.touch, background),
+		app: ICON_SIZES.app.map((size) => ({ size, published: iconPath(file, size, background) })),
+	};
+}
+
+/** The favicon's file and the icons drawn from it; `null` for a favicon that is a URL, or none. */
+export function loadFaviconFile(config?: string): FaviconFile | null {
+	const raw = readConfig(config);
+	return naming(config, () => {
+		const file = faviconFile(raw.favicon);
+		return file ? faviconIcons(file, loadThemeSettings(raw.theme).background) : null;
+	});
+}
+
+/**
+ * The tab's icon and an iPhone's home screen's, as the pages link to them: a URL as it is, for the
+ * tab alone, and the icons drawn from a file from the mount.
+ */
+function loadFavicon(raw: RawConfig, config?: string): Pick<PageConfig, "favicon" | "touchIcon"> {
+	const file = faviconFile(raw.favicon);
+	if (!file) return { favicon: stringSetting(raw.favicon, "favicon") || null, touchIcon: null };
+	const basePath = loadSiteConfig(config)?.basePath ?? "/";
+	const icons = faviconIcons(file, loadThemeSettings(raw.theme).background);
+	return { favicon: `${basePath}${icons.tab}`, touchIcon: `${basePath}${icons.touch}` };
+}
+
 /** The colours `config.yaml` names, by their role on the page. See `theme.ts`, which draws the rest from them. */
 export interface Theme {
 	background: string;
@@ -809,7 +873,7 @@ function pageConfig(raw: RawConfig, config?: string): PageConfig {
 		name,
 		series,
 		description: stringSetting(raw.description, "description") || null,
-		favicon: stringSetting(raw.favicon, "favicon") || null,
+		...loadFavicon(raw, config),
 		landingImage: loadLandingImage(raw.landing, config),
 		landingAlt: stringSetting(raw.landing?.alt, "landing.alt") || name,
 		landingSize: loadLandingSize(raw.landing),

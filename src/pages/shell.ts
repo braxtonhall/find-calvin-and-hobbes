@@ -191,6 +191,17 @@ function buildViewsHtml(page: Page): string {
 	}).join("\n\t\t\t");
 }
 
+/** The tab's icon and an iPhone's home screen's, where the site has them. See `build-chain/favicon.ts`. */
+function buildFaviconHtml(): string {
+	const { favicon, touchIcon } = PAGE_CONFIG;
+	return [
+		favicon ? `<link rel="icon" href="${escHtml(favicon)}" />` : "",
+		touchIcon ? `<link rel="apple-touch-icon" href="${escHtml(touchIcon)}" />` : "",
+	]
+		.filter(Boolean)
+		.join("\n\t\t");
+}
+
 export function buildDocumentHtml(template: string, page: Page, options: DocumentOptions): string {
 	const fields: Record<string, string> = {
 		title: escHtml(pageTitle(page)),
@@ -199,7 +210,8 @@ export function buildDocumentHtml(template: string, page: Page, options: Documen
 		base: escHtml(basePath()),
 		series: escHtml(PAGE_CONFIG.series),
 		themeColor: escHtml(PAGE_CONFIG.themeColor),
-		favicon: PAGE_CONFIG.favicon ? `<link rel="icon" href="${escHtml(PAGE_CONFIG.favicon)}" />` : "",
+		name: escHtml(PAGE_CONFIG.name),
+		favicon: buildFaviconHtml(),
 		correction: buildCorrectionLinkHtml({
 			view: page.view,
 			// Without a `SITE_URL` the build has no origin to write; the app fills the real one in.

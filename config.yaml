@@ -17,8 +17,14 @@ series: Calvin and Hobbes
 # such a page has no description.
 description: Search the complete Calvin and Hobbes archive. Browse every comic strip from 1985 to 1995.
 
-# The icon in the browser's tab. Without one, the browser shows its own.
-favicon: https://static.wikitide.net/calvinandhobbeswiki/f/f3/CalvinAndHobbes.png
+# The icon in the browser's tab, and on a phone's home screen: a URL, or a file as `!Path ./icon.png`,
+# relative to this file, a PNG, JPEG, GIF or WebP at least 512 pixels across, centred on a square
+# where it is not one. From a file the build draws the icons every browser and phone asks for, the
+# home screen's on the theme's background, and the site opens from a phone's home screen in a
+# window of its own, like an app. A URL is the tab's alone, as it is, since the build never fetches
+# it, and a phone adds the site to its home screen as a bookmark. Without one, the browser shows its
+# own.
+favicon: !Path ./calvin-and-hobbes/icon.png
 
 landing:
   # The banner over the home page's search box, and the link preview's image for a page with none of

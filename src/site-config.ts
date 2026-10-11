@@ -52,6 +52,8 @@ export interface PageConfig {
 	description: string | null;
 	/** The icon in the browser's tab, or `null` to leave it to the browser. */
 	favicon: string | null;
+	/** The icon on an iPhone's home screen, drawn from a favicon given as a file; `null` for one given as a URL. */
+	touchIcon: string | null;
 	/** The home page's banner, and the preview image of a page with none of its own; `null` for neither. */
 	landingImage: string | null;
 	/** The banner's alt text: what it says, or the name where `config.yaml` doesn't give it. */

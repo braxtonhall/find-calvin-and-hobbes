@@ -2,7 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "fs";
 import path from "path";
-import { configDependencies, loadLandingFile, loadPageConfig, loadRequiredPart } from "../build-chain/siteConfig";
+import {
+	configDependencies,
+	loadFaviconFile,
+	loadLandingFile,
+	loadPageConfig,
+	loadRequiredPart,
+} from "../build-chain/siteConfig";
+import { buildManifest } from "../build-chain/favicon";
 import { sampleGif, withConfig } from "./helpers/config";
 import { loadArcs } from "../build-chain/arcs";
 import { loadCharacters, stripCharacters } from "../build-chain/characters";
@@ -39,7 +46,8 @@ test("config.yaml", async (suite) => {
 	await suite.test("names the site, gives its icon, and says what its banner says", () => {
 		assert.equal(PAGE_CONFIG.name, "Find Calvin and Hobbes");
 		assert.equal(PAGE_CONFIG.landingAlt, "Calvin and Hobbes");
-		assert.equal(PAGE_CONFIG.favicon, "https://static.wikitide.net/calvinandhobbeswiki/f/f3/CalvinAndHobbes.png");
+		assert.match(PAGE_CONFIG.favicon!, /^\/static\/[0-9a-f]{16}-32\.png$/);
+		assert.match(PAGE_CONFIG.touchIcon!, /^\/static\/[0-9a-f]{16}-180\.png$/);
 		assert.deepEqual(PAGE_CONFIG.landingSize, { width: 722, height: 103 });
 	});
 
@@ -235,6 +243,49 @@ test("config.yaml", async (suite) => {
 		);
 	});
 
+	await suite.test(
+		"draws the icons from a favicon named with !Path, on the theme's background for a home screen",
+		() => {
+			const files = { "icon.png": sampleGif(512, 512) };
+			withConfig(
+				"name: x\nseries: x\nfavicon: !Path ./icon.png\nurl: https://x.test/repo\n",
+				(config) => {
+					const page = loadPageConfig(config);
+					const favicon = loadFaviconFile(config)!;
+					assert.equal(favicon.background, "#ffffff");
+					assert.match(favicon.tab, /^static\/[0-9a-f]{16}-32\.png$/);
+					assert.equal(page.favicon, `/repo/${favicon.tab}`);
+					assert.equal(page.touchIcon, `/repo/${favicon.touch}`);
+					// The tab's is drawn on nothing, and so is named apart from the ones drawn on the background.
+					assert.notEqual(favicon.tab.split("-")[0], favicon.touch.split("-")[0]);
+					assert.equal(favicon.touch.split("-")[0], favicon.app[0].published.split("-")[0]);
+					assert.deepEqual(
+						favicon.app.map(({ size }) => size),
+						[192, 512],
+					);
+				},
+				files,
+			);
+			assert.throws(
+				() => withConfig("name: x\nseries: x\nfavicon: icon.png\n", loadPageConfig),
+				/favicon in site\.yaml must be a URL, or a file as !Path/,
+			);
+			assert.throws(
+				() => withConfig("name: x\nseries: x\nfavicon: !Path ./icon.svg\n", loadPageConfig, { "icon.svg": "<svg/>" }),
+				/favicon in site\.yaml must be a PNG, JPEG, GIF or WebP/,
+			);
+		},
+	);
+
+	await suite.test("keeps a favicon given as a URL for the tab alone", () => {
+		withConfig("name: x\nseries: x\nfavicon: https://x.test/icon.png\n", (config) => {
+			const page = loadPageConfig(config);
+			assert.equal(page.favicon, "https://x.test/icon.png");
+			assert.equal(page.touchIcon, null);
+			assert.equal(loadFaviconFile(config), null);
+		});
+	});
+
 	await suite.test("has colour Sundays only when they are turned on", () => {
 		assert.equal(withConfig("name: x\nseries: x\n", loadPageConfig).colourSundays, false);
 		assert.equal(withConfig("name: x\nseries: x\ncolourSundays: true\n", loadPageConfig).colourSundays, true);
@@ -399,9 +450,51 @@ test("link previews", async (suite) => {
 		assert.match(html, /<meta property="og:title" content="Find Calvin and Hobbes" \/>/);
 	});
 
+	await suite.test("link the manifest and the icons drawn from the favicon", () => {
+		const html = landing();
+		assert.match(html, /<link rel="manifest" href="\/manifest\.webmanifest" \/>/);
+		assert.match(html, /<meta name="apple-mobile-web-app-title" content="Find Calvin and Hobbes" \/>/);
+		assert.match(html, /<link rel="apple-touch-icon" href="\/static\/[0-9a-f]{16}-180\.png" \/>/);
+		const hotlinked = configured({ favicon: "https://x.test/icon.png", touchIcon: null }, landing);
+		assert.match(hotlinked, /<link rel="icon" href="https:\/\/x\.test\/icon\.png" \/>/);
+		assert.doesNotMatch(hotlinked, /apple-touch-icon/);
+	});
+
 	await suite.test("write the series into the page", () => {
 		const html = configured({ series: "Peanuts" }, landing);
 		assert.match(html, /Searching and browsing the Peanuts archive requires JavaScript\./);
+	});
+});
+
+test("the web app manifest", async (suite) => {
+	const theme = { main: "#f6b213", background: "#fbf6f0" } as Parameters<typeof buildManifest>[0]["theme"];
+
+	await suite.test("opens the site on its own from where it is mounted, with the icons drawn from a file", () => {
+		const favicon = {
+			file: "icon.png",
+			background: "#fbf6f0",
+			tab: "static/a-32.png",
+			touch: "static/b-180.png",
+			app: [
+				{ size: 192, published: "static/b-192.png" },
+				{ size: 512, published: "static/b-512.png" },
+			],
+		};
+		const manifest = JSON.parse(buildManifest({ name: "x", description: null, basePath: "/repo/", theme, favicon }));
+		assert.equal(manifest.display, "standalone");
+		assert.equal(manifest.start_url, "/repo/");
+		assert.equal(manifest.scope, "/repo/");
+		assert.equal("description" in manifest, false);
+		assert.deepEqual(manifest.icons, [
+			{ src: "/repo/static/b-192.png", sizes: "192x192", type: "image/png" },
+			{ src: "/repo/static/b-512.png", sizes: "512x512", type: "image/png" },
+		]);
+	});
+
+	await suite.test("has no icons for a favicon given as a URL", () => {
+		const manifest = JSON.parse(buildManifest({ name: "x", description: "y", basePath: "/", theme, favicon: null }));
+		assert.deepEqual(manifest.icons, []);
+		assert.equal(manifest.description, "y");
 	});
 });
 

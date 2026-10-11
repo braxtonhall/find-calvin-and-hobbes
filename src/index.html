@@ -8,6 +8,11 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content" />
 		<title>{{title}}</title>
 		{{favicon}}
+		<!-- What makes the site open in a window of its own from a phone's home screen; see
+		`build-chain/favicon.ts`. The title is the icon's name there, for an iPhone, which would
+		otherwise name it for the page it was added from. -->
+		<link rel="manifest" href="{{base}}manifest.webmanifest" />
+		<meta name="apple-mobile-web-app-title" content="{{name}}" />
 		<meta name="theme-color" content="{{themeColor}}" />
 		<!-- Filled per page by `src/pages/shell.ts`: the description and preview tags, and the page's
 		own data, which the app reads on a cold load instead of fetching the archive first. -->
