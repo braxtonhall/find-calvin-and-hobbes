@@ -49,8 +49,9 @@ Three operators combine words and filters, tightest first:
 | `@and`   | `@year:1988 @and @month:8`      | both — a space, without the widening above     |
 
 Quotation marks ask for exact words: `"snow goons"` is those two words, in that order, side by
-side, with no other spelling, inflection or near miss of either — though punctuation between them
-and a compound written the other way (`"snow man"` for `snowman`) still count. Everything inside is
+side, with no other spelling, inflection or near miss of either — though punctuation between them,
+a compound written the other way (`"snow man"` for `snowman`) and a known misspelling (`"suzie"` for
+`susie`) still count. Everything inside is
 text, so `"rosalyn @or baby"` is a phrase rather than a choice; it is never read as a date either,
 so `"1988"` finds the strips that say it. A quotation left open closes at the end, and curly quotes
 work too. A quotation is one atom to the operators above, so `@not "baby sitter"` is anything that

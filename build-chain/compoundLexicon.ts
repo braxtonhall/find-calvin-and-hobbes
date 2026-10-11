@@ -25,6 +25,7 @@ import type { LoaderContext } from "webpack";
 import type { CompoundRelation } from "../src/compounds";
 import { loadComicSource } from "./comicSource";
 import { watchConfig, loadOptionalPart, configName } from "./siteConfig";
+import { readMisspellingsFile } from "./misspellings";
 
 const WORD_PATTERN = /[\p{L}\p{N}']+/gu;
 
@@ -174,16 +175,33 @@ export function loadCompoundRelations(config?: string): [string, CompoundRelatio
 }
 
 /**
+ * The words the search reads as others, by the word as written, in alphabetical order: each
+ * compound as its parts, and each misspelling `config.yaml` gives as its word — or, where that word
+ * is a compound, its parts. A compound's parts are read the same way, so a misspelled part is
+ * corrected too.
+ */
+export function loadCanonicalForms(
+	config?: string,
+	relations: [string, CompoundRelation][] = loadCompoundRelations(config),
+): [string, string[]][] {
+	const misspellings = readMisspellingsFile(config);
+	const correct = (word: string) => misspellings.get(word) ?? word;
+	const forms = new Map(relations.map(([whole, relation]) => [whole, relation.parts.map(correct)]));
+	for (const [misspelling, word] of misspellings) forms.set(misspelling, forms.get(word) ?? [word]);
+	return [...forms].sort(([a], [b]) => a.localeCompare(b));
+}
+
+/**
  * Stands in for `src/compounds.ts` in the bundle, as `archiveSpan.ts` does for `src/archive.ts`:
- * the lexicon as a literal, rebuilt under `--watch` when the archive or `compounds.yaml` changes.
+ * the lexicon as a literal, rebuilt under `--watch` when the archive, `compounds.yaml` or
+ * `misspellings.yaml` changes.
  */
 export default function compoundLexiconLoader(this: LoaderContext<unknown>): string {
 	watchConfig(this);
-	const entries = JSON.stringify(loadCompoundRelations());
+	const relations = loadCompoundRelations();
 	return [
-		`const entries = ${entries};`,
-		`export const COMPOUND_RELATIONS = new Map(entries);`,
-		`export const COMPOUND_CANONICAL_FORMS = new Map(entries.map(([whole, relation]) => [whole, relation.parts]));`,
+		`export const COMPOUND_RELATIONS = new Map(${JSON.stringify(relations)});`,
+		`export const CANONICAL_FORMS = new Map(${JSON.stringify(loadCanonicalForms(undefined, relations))});`,
 		"",
 	].join("\n");
 }

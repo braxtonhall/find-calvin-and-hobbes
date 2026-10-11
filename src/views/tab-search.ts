@@ -5,7 +5,7 @@ import { addressOf } from "../base-path";
 import { CollectionType } from "../filter-spec";
 import { collectionQuery } from "../filter-query";
 import { CollectionResults, searchCollections } from "../query-eval";
-import { COMPOUND_CANONICAL_FORMS } from "../compounds";
+import { CANONICAL_FORMS } from "../compounds";
 import { attachQueryInput, syncQueryInput } from "./query-input";
 import { isTouchDevice } from "../utils";
 
@@ -29,7 +29,7 @@ let debounce: number | null = null;
  * the grid lights is set here too, so that it agrees with the list.
  */
 export function narrowTab(tab: CollectionsTab, query: string | undefined): CollectionResults | null {
-	const results = query === undefined ? null : searchCollections(query, TAB_TYPES[tab], COMPOUND_CANONICAL_FORMS);
+	const results = query === undefined ? null : searchCollections(query, TAB_TYPES[tab], CANONICAL_FORMS);
 	state.tabMatchDates = results?.dates ?? null;
 	return results;
 }

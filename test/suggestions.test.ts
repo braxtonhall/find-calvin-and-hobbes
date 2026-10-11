@@ -6,7 +6,7 @@ import { scanFilters } from "../src/filter-query";
 import { registerVocabulary } from "../src/filter-vocabulary";
 import { search } from "../src/search";
 import { TUNING } from "../src/tuning";
-import { COMPOUND_CANONICAL_FORMS } from "../src/compounds";
+import { CANONICAL_FORMS } from "../src/compounds";
 import { state } from "../src/state";
 import { ARCHIVE_SPAN } from "../src/archive";
 import { RERUNS } from "../src/bundled-data";
@@ -67,7 +67,7 @@ test("this archive's suggestions", async (suite) => {
 		installSiteArchive();
 		const queries = new Set(EVERY_DAY.flatMap((day) => suggestedQueries(day)));
 		for (const query of queries)
-			assert.ok(search(query, "rank", TUNING, COMPOUND_CANONICAL_FORMS).length > 0, `"${query}" finds nothing`);
+			assert.ok(search(query, "rank", TUNING, CANONICAL_FORMS).length > 0, `"${query}" finds nothing`);
 	});
 
 	// Half the point of the pool is that the app is seen using the filter language, so this is a

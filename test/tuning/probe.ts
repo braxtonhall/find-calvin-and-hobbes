@@ -10,7 +10,7 @@
  */
 import { search } from "../../src/search";
 import { TUNING } from "../../src/tuning";
-import { COMPOUND_CANONICAL_FORMS } from "../../src/compounds";
+import { CANONICAL_FORMS } from "../../src/compounds";
 import { install, loadRealArchive } from "./helpers/archive";
 
 const argv = process.argv.slice(2);
@@ -26,7 +26,7 @@ if (!query) {
 const archive = loadRealArchive();
 install(archive);
 
-const results = search(query, "rank", TUNING, COMPOUND_CANONICAL_FORMS);
+const results = search(query, "rank", TUNING, CANONICAL_FORMS);
 console.log(`"${query}" -> ${results.length} results\n`);
 
 for (const [position, result] of results.slice(0, limit).entries()) {

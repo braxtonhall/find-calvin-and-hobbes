@@ -2,7 +2,7 @@ import { state } from "../state";
 import { SortMode } from "../types";
 import { search } from "../search";
 import { TUNING } from "../tuning";
-import { COMPOUND_CANONICAL_FORMS } from "../compounds";
+import { CANONICAL_FORMS } from "../compounds";
 import { assignTiers } from "../tiers";
 import { navigate } from "../router";
 import { HOME_PATH, buildSearchPath } from "../routes";
@@ -37,7 +37,7 @@ export function renderResults(query: string, sort: SortMode): void {
 		});
 	}
 
-	const results = search(query, sort, TUNING, COMPOUND_CANONICAL_FORMS);
+	const results = search(query, sort, TUNING, CANONICAL_FORMS);
 	bar.update(query, sort, results.length);
 	bar.list.innerHTML = resultsHtml(results, EMPTY);
 	state.searchResultTiers = assignTiers(results);

@@ -191,6 +191,8 @@ corrections:
 #   reruns      days the paper ran an earlier strip again: each such day's page and cell in the grid,
 #               a strip's list of the days it reran, and @is:reused and @is:rerun
 #   compounds   the compound words the search keeps whole or splits beyond what it finds itself
+#   misspellings words the search takes as others, as if they were written right: a mapping of each
+#               word to a list of its misspellings, like `susie: [suzie]`
 #   characters  each character's name by id, for @featuring: and the Featuring line under a strip
 #   creators    who made the strips: the Creators tab of Collections and each creator's page, the By
 #               line under a strip, and @by:. A mapping of `people`, each by id with a `name`, and
@@ -217,6 +219,7 @@ credits: !Import ./calvin-and-hobbes/credits.md
 arcs: !Import ./calvin-and-hobbes/arcs.yaml
 reruns: !Import ./calvin-and-hobbes/reruns.yaml
 compounds: !Import ./calvin-and-hobbes/compounds.yaml
+misspellings: !Import ./calvin-and-hobbes/misspellings.yaml
 characters: false
 creators: false
 comicImages: ./calvin-and-hobbes/comics

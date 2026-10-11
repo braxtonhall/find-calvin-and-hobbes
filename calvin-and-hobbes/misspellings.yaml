@@ -1,0 +1,52 @@
+# Misspellings: words a reader writes wrong so often, or so reasonably, that the search should take
+# them as the word itself. `suzie` would otherwise find Susie only as a guess at a spelling, weaker
+# than the word and lost inside quotation marks; listed here, it is indexed and searched as `susie`,
+# an exact match either way.
+#
+# Each word as the archive spells it, with a list of the ways it is misspelled: lowercase, one word
+# each, and every misspelling listed once. A word cannot itself be another's misspelling.
+#
+# Optional. Without this file, the search still forgives a near miss, just not as the word itself.
+
+# Names.
+susie: [suzie]
+rosalyn: [roslyn, rosalin]
+tyrannosaurus: [tyranosaurus]
+
+# British spellings of the words the archive writes American.
+color: [colour]
+colors: [colours]
+colored: [coloured]
+coloring: [colouring]
+favorite: [favourite]
+favor: [favour]
+gray: [grey]
+neighbors: [neighbours]
+neighborhood: [neighbourhood]
+honor: [honour]
+humor: [humour]
+behavior: [behaviour]
+flavor: [flavour]
+flavors: [flavours]
+center: [centre]
+centers: [centres]
+theater: [theatre]
+fiber: [fibre]
+realize: [realise]
+realized: [realised]
+organized: [organised]
+recognize: [recognise]
+apologize: [apologise]
+civilization: [civilisation]
+civilized: [civilised]
+memorize: [memorise]
+criticize: [criticise]
+traveled: [travelled]
+traveling: [travelling]
+defense: [defence]
+offense: [offence]
+rumor: [rumour]
+armor: [armour]
+labor: [labour]
+pajamas: [pyjamas]
+jewelry: [jewellery]

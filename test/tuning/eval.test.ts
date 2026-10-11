@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { search } from "../../src/search";
 import { TUNING } from "../../src/tuning";
-import { COMPOUND_CANONICAL_FORMS } from "../../src/compounds";
+import { CANONICAL_FORMS } from "../../src/compounds";
 import { DESCRIBED, RECITED } from "./fixtures/golden";
 import { describeMisses, evaluate } from "./helpers/metrics";
 import { install, loadRealArchive } from "./helpers/archive";
@@ -47,7 +47,7 @@ test("real archive behaviour", async (suite) => {
 	install(loadRealArchive());
 
 	await suite.test("a name that fills the descriptions returns only transcript matches", () => {
-		const results = search("calvin", "rank", TUNING, COMPOUND_CANONICAL_FORMS);
+		const results = search("calvin", "rank", TUNING, CANONICAL_FORMS);
 		assert.ok(results.length > 0);
 		assert.ok(
 			results.every((result) => result.source === "transcript"),
@@ -56,7 +56,7 @@ test("real archive behaviour", async (suite) => {
 	});
 
 	await suite.test("a rare keyword returns a short, description-led result set", () => {
-		const results = search("transmogrifier", "rank", TUNING, COMPOUND_CANONICAL_FORMS);
+		const results = search("transmogrifier", "rank", TUNING, CANONICAL_FORMS);
 		assert.ok(results.length <= 40, `expected a tight result set, got ${results.length}`);
 		assert.ok(results.some((result) => result.source === "description"));
 	});
@@ -71,7 +71,7 @@ test("real archive behaviour", async (suite) => {
 				})
 				.map((comic) => comic.date),
 		);
-		const strays = search("calvin transmogrifier", "rank", TUNING, COMPOUND_CANONICAL_FORMS).filter(
+		const strays = search("calvin transmogrifier", "rank", TUNING, CANONICAL_FORMS).filter(
 			(result) => !mentions.has(result.comic.date),
 		);
 		assert.deepEqual(
@@ -94,8 +94,8 @@ test("real archive behaviour", async (suite) => {
 			["good night", "calvin good night"],
 		];
 		for (const [shorter, longer] of pairs) {
-			const before = search(shorter, "rank", TUNING, COMPOUND_CANONICAL_FORMS).length;
-			const after = search(longer, "rank", TUNING, COMPOUND_CANONICAL_FORMS).length;
+			const before = search(shorter, "rank", TUNING, CANONICAL_FORMS).length;
+			const after = search(longer, "rank", TUNING, CANONICAL_FORMS).length;
 			assert.ok(after <= before, `"${longer}" returned ${after} results against ${before} for "${shorter}"`);
 		}
 	});
@@ -107,7 +107,7 @@ test("real archive behaviour", async (suite) => {
 	// `snow` from 129 description results to none, and nothing else in this project notices.
 	await suite.test("a single keyword still returns description-led results", () => {
 		for (const probe of ["snow", "snowman", "wagon", "rosalyn", "bicycle", "doctor"]) {
-			const sourced = search(probe, "rank", TUNING, COMPOUND_CANONICAL_FORMS).filter(
+			const sourced = search(probe, "rank", TUNING, CANONICAL_FORMS).filter(
 				(result) => result.source === "description",
 			);
 			assert.ok(sourced.length > 0, `"${probe}" returned no description-sourced results at all`);
@@ -115,9 +115,9 @@ test("real archive behaviour", async (suite) => {
 	});
 
 	await suite.test("a single query stays well under a frame budget", () => {
-		search("warm up", "rank", TUNING, COMPOUND_CANONICAL_FORMS);
+		search("warm up", "rank", TUNING, CANONICAL_FORMS);
 		const started = process.hrtime.bigint();
-		search("calvin clean your room right now young man", "rank", TUNING, COMPOUND_CANONICAL_FORMS);
+		search("calvin clean your room right now young man", "rank", TUNING, CANONICAL_FORMS);
 		const elapsed = Number(process.hrtime.bigint() - started) / 1e6;
 		assert.ok(elapsed < 250, `query took ${elapsed.toFixed(1)}ms`);
 	});
@@ -147,7 +147,7 @@ test("emphasis pairs put both strips in the results", async (suite) => {
 	await suite.test("both the target and the decoy are admitted", () => {
 		const untested = claimed
 			.map((row) => {
-				const results = search(row.query, "rank", TUNING, COMPOUND_CANONICAL_FORMS);
+				const results = search(row.query, "rank", TUNING, CANONICAL_FORMS);
 				const target = results.findIndex((result) => result.comic.date === row.date);
 				const decoy = results.findIndex((result) => result.comic.date === row.decoy);
 				return { row, target, decoy };

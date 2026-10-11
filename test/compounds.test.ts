@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { loadCompoundRelations, readCompoundsFile } from "../build-chain/compoundLexicon";
-import { COMPOUND_CANONICAL_FORMS, COMPOUND_RELATIONS } from "../src/compounds";
+import { CANONICAL_FORMS, COMPOUND_RELATIONS } from "../src/compounds";
 import { withConfig } from "./helpers/config";
 
 /**
@@ -87,5 +87,5 @@ test("this archive's relations keep their preference beside the parts the search
 		parts: ["snow", "ball"],
 		preference: "closed",
 	});
-	assert.deepEqual(COMPOUND_CANONICAL_FORMS.get("snowball"), ["snow", "ball"]);
+	assert.deepEqual(CANONICAL_FORMS.get("snowball"), ["snow", "ball"]);
 });

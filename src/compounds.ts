@@ -1,8 +1,11 @@
 /**
  * The compound words the search treats as their parts, so `goodnight` and `good night` find each
- * other: read from the archive and `compounds.yaml` by `build-chain/compoundLexicon.ts`.
+ * other: read from the archive and `compounds.yaml` by `build-chain/compoundLexicon.ts`. Beside
+ * them, the misspellings `misspellings.yaml` gives, which the search treats as their words, so
+ * `suzie` is `susie`.
  *
- * Relations preserve whole-form identity; canonical forms are a derived matching/indexing view.
+ * Relations preserve whole-form identity; canonical forms are a derived matching/indexing view,
+ * with the misspellings folded in.
  *
  * Like `archive.ts`, this is the Node version, which reads the files from disk; the bundle never
  * runs it, because `build-chain/compoundLexicon.ts` replaces the module with the same values as a
@@ -16,14 +19,13 @@ export interface CompoundRelation {
 }
 
 declare function require(id: string): unknown;
-const { loadCompoundRelations } = require("../build-chain/compoundLexicon") as {
+const { loadCompoundRelations, loadCanonicalForms } = require("../build-chain/compoundLexicon") as {
 	loadCompoundRelations(): [string, CompoundRelation][];
+	loadCanonicalForms(config: undefined, relations: [string, CompoundRelation][]): [string, string[]][];
 };
 
 const entries = loadCompoundRelations();
 
 export const COMPOUND_RELATIONS: Map<string, CompoundRelation> = new Map(entries);
 
-export const COMPOUND_CANONICAL_FORMS: Map<string, string[]> = new Map(
-	entries.map(([whole, relation]) => [whole, relation.parts]),
-);
+export const CANONICAL_FORMS: Map<string, string[]> = new Map(loadCanonicalForms(undefined, entries));

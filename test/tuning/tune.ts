@@ -3,7 +3,7 @@ import path from "path";
 import { search, Tuning } from "../../src/search";
 import { TUNING } from "../../src/tuning";
 import { stem } from "../../src/stem";
-import { COMPOUND_CANONICAL_FORMS } from "../../src/compounds";
+import { CANONICAL_FORMS } from "../../src/compounds";
 import {
 	describeMisses,
 	evaluate,
@@ -157,9 +157,7 @@ const WORD_PATTERN = /[\p{L}\p{N}']+/gu;
 // Both sides go through the index's own decomposition, since `goodnight` is `good night` to the
 // scorer and a guard that disagreed would be asking about a vocabulary the engine does not have.
 const words = (text: string) =>
-	[...text.toLowerCase().matchAll(WORD_PATTERN)].flatMap(
-		(match) => COMPOUND_CANONICAL_FORMS.get(match[0]) || [match[0]],
-	);
+	[...text.toLowerCase().matchAll(WORD_PATTERN)].flatMap((match) => CANONICAL_FORMS.get(match[0]) || [match[0]]);
 
 // Whether the field holds any query word as written, extended, or in another inflection — the
 // engine's three literal routes. `stem` is imported for the same reason the decomposition is: what
@@ -180,7 +178,7 @@ function literal(text: string, terms: string[], stems: Set<string>): boolean {
 function bare(probe: string, tuning: Tuning): string[] {
 	const terms = words(probe);
 	const stems = new Set(terms.map(stem));
-	return search(probe, "rank", tuning, COMPOUND_CANONICAL_FORMS)
+	return search(probe, "rank", tuning, CANONICAL_FORMS)
 		.filter((result) => !literal(result.text, terms, stems))
 		.map((result) => result.comic.date);
 }
@@ -198,15 +196,13 @@ function corrections(tuning: Tuning): string[] {
 const COLLAPSE_SHARE = 0.5;
 
 function descriptionResults(probe: string, tuning: Tuning): number {
-	return search(probe, "rank", tuning, COMPOUND_CANONICAL_FORMS).filter((result) => result.source === "description")
-		.length;
+	return search(probe, "rank", tuning, CANONICAL_FORMS).filter((result) => result.source === "description").length;
 }
 
 function violations(tuning: Tuning): string[] {
 	return MONOTONICITY_PROBES.filter(([shorter, longer]) => {
 		return (
-			search(longer, "rank", tuning, COMPOUND_CANONICAL_FORMS).length >
-			search(shorter, "rank", tuning, COMPOUND_CANONICAL_FORMS).length
+			search(longer, "rank", tuning, CANONICAL_FORMS).length > search(shorter, "rank", tuning, CANONICAL_FORMS).length
 		);
 	}).map(([shorter, longer]) => `"${longer}" widens "${shorter}"`);
 }
@@ -238,8 +234,7 @@ function hollowResults(tuning: Tuning): number {
 	const rows = select(generated, { classes: ["D"] });
 	if (rows.length === 0) return 0;
 	return (
-		rows.reduce((total, row) => total + search(row.query, "rank", tuning, COMPOUND_CANONICAL_FORMS).length, 0) /
-		rows.length
+		rows.reduce((total, row) => total + search(row.query, "rank", tuning, CANONICAL_FORMS).length, 0) / rows.length
 	);
 }
 

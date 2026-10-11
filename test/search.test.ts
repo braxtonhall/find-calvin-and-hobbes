@@ -1055,6 +1055,47 @@ test("a quoted phrase finds a compound spelled the other way", () => {
 	assert.deepEqual(dates('"snowman"'), ["2000-01-01"]);
 });
 
+/** The misspellings the tests below are about, read as their words, as an archive would install them. */
+const MISSPELLINGS: Compounds = new Map([
+	["suzie", ["susie"]],
+	["colour", ["color"]],
+]);
+
+const SUSIE: Entry[] = [
+	{ date: "2000-01-01", transcript: "Susie, want to play house?" },
+	{ date: "2000-01-02", transcript: "What colour is a tiger?" },
+	{ date: "2000-01-03", transcript: "Calvin, you're a sozzled mess." },
+];
+
+test("a known misspelling is the word itself, quoted or not", () => {
+	install(buildArchive(SUSIE));
+	assert.deepEqual(ranked("suzie", ENGINE_TUNING, MISSPELLINGS), ["2000-01-01"]);
+	assert.equal(
+		scoreOf("suzie", "2000-01-01", ENGINE_TUNING, MISSPELLINGS),
+		scoreOf("susie", "2000-01-01", ENGINE_TUNING, MISSPELLINGS),
+	);
+	assert.deepEqual(ranked('"suzie"', ENGINE_TUNING, MISSPELLINGS), ["2000-01-01"]);
+	const [result] = search("suzie", "rank", ENGINE_TUNING, MISSPELLINGS);
+	assert.equal(highlightRanges(result.text, result.ranges), "<mark>Susie</mark>, want to play house?");
+});
+
+test("a strip that writes the misspelling is found by the word, highlighted as written", () => {
+	install(buildArchive(SUSIE));
+	assert.deepEqual(ranked('"color"', ENGINE_TUNING, MISSPELLINGS), ["2000-01-02"]);
+	const [result] = search("color", "rank", ENGINE_TUNING, MISSPELLINGS);
+	assert.equal(highlightRanges(result.text, result.ranges), "What <mark>colour</mark> is a tiger?");
+});
+
+test("a misspelling under @not is the word too", () => {
+	install(buildArchive(SUSIE));
+	const dates = (query: string) =>
+		search(query, "date", ENGINE_TUNING, MISSPELLINGS)
+			.map((result) => result.comic.date)
+			.filter((date) => date.startsWith("2000"));
+	assert.deepEqual(dates("@not suzie"), ["2000-01-02", "2000-01-03"]);
+	assert.deepEqual(dates("@not color"), ["2000-01-01", "2000-01-03"]);
+});
+
 test("only the phrase is highlighted, common words and all", () => {
 	install(buildArchive(DATED));
 	const [result] = search('"on the march"', "rank", ENGINE_TUNING, NO_COMPOUNDS);

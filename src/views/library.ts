@@ -3,7 +3,7 @@ import "./library.css";
 import { state } from "../state";
 import { search } from "../search";
 import { TUNING } from "../tuning";
-import { COMPOUND_CANONICAL_FORMS } from "../compounds";
+import { CANONICAL_FORMS } from "../compounds";
 import { assignTiers } from "../tiers";
 import { canGoBack } from "../router";
 import { BOOKSHELF_BOOKS_QUERY, BookshelfView, LIBRARY_QUERIES, LibraryView, isLibraryView } from "../routes";
@@ -49,7 +49,7 @@ export function renderLibraryRows(view: LibraryView | BookshelfView): void {
 		renderShelvedBooks(element, list);
 		return;
 	}
-	const results = search(LIBRARY_QUERIES[view], "date", TUNING, COMPOUND_CANONICAL_FORMS);
+	const results = search(LIBRARY_QUERIES[view], "date", TUNING, CANONICAL_FORMS);
 	list.innerHTML = resultsHtml(results, EMPTY[view]);
 	state.searchResultTiers = assignTiers(results);
 	attachRowHandlers(list);

@@ -29,8 +29,9 @@ export interface SearchResult {
 }
 
 /**
- * The compound words an archive reads as their parts — `goodnight` as `good night` — by their
- * closed form. The archive's, like its tuning, handed to `search` by whatever searches.
+ * The words an archive reads as others, by the word as written: a compound as its parts —
+ * `goodnight` as `good night` — and a misspelling as its word, `suzie` as `susie`. The archive's,
+ * like its tuning, handed to `search` by whatever searches.
  */
 export type Compounds = ReadonlyMap<string, string[]>;
 
@@ -252,7 +253,8 @@ function indexInflections(corpus: Corpus): void {
 /**
  * A closed compound the corpus usually writes open becomes its parts, so that `goodnight`
  * and `good night` are the same thing to the scorer. The split replaces the compound rather
- * than sitting beside it: keeping both would count the token's mass twice in `summarise`.
+ * than sitting beside it: keeping both would count the token's mass twice in `summarise`. A
+ * known misspelling becomes its word the same way.
  *
  * Which compounds those are is the archive's business, passed in with the search.
  */
@@ -1032,7 +1034,13 @@ function indexedFor(comic: Comic): IndexedComic | undefined {
 function containsText(indexed: IndexedComic | undefined, text: string, compounds: Compounds): boolean {
 	const [quote] = quotedSpans(text);
 	if (quote !== undefined) return containsPhrase(indexed, quote.inner, compounds);
-	const words = [...text.matchAll(WORD_PATTERN)].map((match) => stem(match[0].toLowerCase()));
+	// A misspelling is read as its word, which is what the index holds; a compound is kept whole,
+	// since its parts anywhere in the strip are not the compound.
+	const words = [...text.matchAll(WORD_PATTERN)].map((match) => {
+		const word = match[0].toLowerCase();
+		const forms = decompose(word, compounds);
+		return stem(forms.length === 1 ? forms[0] : word);
+	});
 	if (indexed === undefined || words.length === 0) return false;
 	if (indexed.stems === undefined) {
 		indexed.stems = new Set();

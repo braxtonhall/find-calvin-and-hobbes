@@ -115,6 +115,7 @@ interface RawConfig {
 	arcs?: unknown;
 	reruns?: unknown;
 	compounds?: unknown;
+	misspellings?: unknown;
 	characters?: unknown;
 	creators?: unknown;
 	comicImages?: unknown;
@@ -383,7 +384,7 @@ function flagSetting(value: unknown, name: string, fallback: boolean): boolean {
 /** The parts of the archive every site has. */
 export type RequiredPart = "comics" | "collections" | "tuning" | "credits";
 /** The parts a site can go without, with `false`. */
-export type OptionalPart = "arcs" | "reruns" | "compounds" | "characters" | "creators";
+export type OptionalPart = "arcs" | "reruns" | "compounds" | "misspellings" | "characters" | "creators";
 
 /** Whether nothing was given for the part at all. */
 function missing(value: unknown): boolean {
