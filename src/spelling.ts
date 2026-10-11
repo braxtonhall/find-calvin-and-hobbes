@@ -110,3 +110,40 @@ export function rememberSpelling(text: string): void {
 	if (spelt === null) return;
 	chooseSpelling(/colour/i.test(spelt[0]) ? "british" : "american");
 }
+
+/**
+ * The words the site's own text spells two ways, as it writes them, with the American spelling of
+ * each. Only what the code writes: a book's notes and an arc's description are left as their data
+ * files spell them, and a transcript is the strip's own words.
+ */
+const AMERICAN: Readonly<Record<string, string>> = {
+	colour: "color",
+	spelt: "spelled",
+};
+
+/** A word in the reader's spelling, capitalised as it was given. */
+export function spell(word: string, spelling: Spelling = preferredSpelling()): string {
+	const american = spelling === "american" ? AMERICAN[word.toLowerCase()] : undefined;
+	if (american === undefined) return word;
+	return word[0] === word[0].toUpperCase() ? american[0].toUpperCase() + american.slice(1) : american;
+}
+
+/** Each word of a sentence the site writes, in the reader's spelling. */
+export function spellText(text: string, spelling: Spelling = preferredSpelling()): string {
+	return text.replace(/[A-Za-z]+/g, (word) => spell(word, spelling));
+}
+
+/**
+ * A word for a page the build draws, which cannot know the reader: written as the site spells it,
+ * and marked for `respell` to put in the reader's spelling once the page is in the browser.
+ */
+export function spellable(word: string): string {
+	return `<span data-spell="${word}">${word}</span>`;
+}
+
+/** Every word under `root` that `spellable` marked, in the reader's spelling, or the one given. */
+export function respell(root: ParentNode, spelling: Spelling = preferredSpelling()): void {
+	for (const element of root.querySelectorAll<HTMLElement>("[data-spell]")) {
+		element.textContent = spell(element.dataset.spell!, spelling);
+	}
+}

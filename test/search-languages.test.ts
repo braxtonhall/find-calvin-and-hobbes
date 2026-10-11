@@ -6,12 +6,13 @@ import assert from "node:assert/strict";
 import { compileQuery, contextAt, parseQuery, scanQuery } from "../src/boolean-query";
 import { completionsAt, filterSpans } from "../src/completion";
 import { STRIP_QUERY, collectionQuery, parseComparison } from "../src/filter-query";
-import { registerVocabulary } from "../src/filter-vocabulary";
+import { COLLECTION_TAGS, TAGS, registerVocabulary } from "../src/filter-vocabulary";
 import { Compounds, search } from "../src/search";
 import { searchCollections } from "../src/query-eval";
 import { selectedTokens } from "../src/query-edit";
 import { buildCollectionsHeaderHtml } from "../src/pages/collections";
-import { guessSpelling, setSpelling } from "../src/spelling";
+import { guessSpelling, setSpelling, spell, spellText, spellable } from "../src/spelling";
+import { getCollectionCoverage } from "../src/date-utils";
 import { state } from "../src/state";
 import { Arc, Character, Collection, Comic, Creator } from "../src/types";
 import { install } from "./helpers/archive";
@@ -530,6 +531,32 @@ test("the search box", async (suite) => {
 		assert.equal(guessSpelling("en-US", "Europe/London"), "british");
 		assert.equal(guessSpelling("en", "America/New_York"), "british");
 		assert.equal(guessSpelling("en-GB", "America/New_York"), "british");
+	});
+
+	await suite.test("the site's own words follow the reader's spelling, capitals kept", () => {
+		assert.equal(spell("colour", "american"), "color");
+		assert.equal(spell("Colour", "american"), "Color");
+		assert.equal(spell("spelt", "american"), "spelled");
+		assert.equal(spell("colour", "british"), "colour");
+		assert.equal(spellText("Colours, colourful: colour.", "american"), "Colours, colourful: color.");
+	});
+
+	await suite.test("the tags' hints are spelt as the reader spells, read as they are shown", () => {
+		const hint = (terms: typeof TAGS, value: string) => terms.find((term) => term.value === value)!.hint;
+		try {
+			setSpelling("american");
+			assert.equal(hint(TAGS, "sunday"), "A color Sunday strip");
+			assert.equal(hint(COLLECTION_TAGS, "colour"), "A book that printed its Sundays in color");
+			setSpelling("british");
+			assert.equal(hint(TAGS, "sunday"), "A colour Sunday strip");
+		} finally {
+			setSpelling(null);
+		}
+	});
+
+	await suite.test("a book's coverage marks its colour for the browser to respell", () => {
+		const coverage = getCollectionCoverage({ ...book("x", "X", 1990, true), dailies: ["1990-01-01"] });
+		assert.ok(coverage.includes(`Sundays in ${spellable("colour")}`));
 	});
 
 	await suite.test("the reader's own tags are painted as any filter is, and the mistakes say why", () => {

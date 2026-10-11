@@ -1,3 +1,4 @@
+import { spellable } from "../spelling";
 import { buildBackAndHomeButtons, buildFlashLabels } from "./nav-buttons";
 
 /**
@@ -14,7 +15,7 @@ export const SPELLING_CHOICES = [
 /**
  * The reader's own settings: moving their library — the bookmarks, what they own, and their notes,
  * all of which live in this browser — out to a file and back in, or forgetting it; and how the
- * search's menu spells a word with two spellings. Drawn the same for everyone, since what this
+ * site spells a word with two spellings. Drawn the same for everyone, since what this
  * browser has kept is only known to the app, which fills it in — see `views/settings.ts`.
  */
 export function buildSettingsHtml(canGoBack: boolean): string {
@@ -37,7 +38,7 @@ export function buildSettingsHtml(canGoBack: boolean): string {
 		</section>
 		<section class="settings-section">
 			<h3 class="settings-section-heading">Spelling</h3>
-			<p class="settings-section-text">How the search's suggestions spell a word that is spelt two ways. Inferred, they follow your browser's language and time zone, and then whichever you last wrote out in full.</p>
+			<p class="settings-section-text">How this site spells a word that is ${spellable("spelt")} two ways, in its own text and in the search's suggestions. Inferred, it follows your browser's language and time zone, and then whichever you last wrote out in full.</p>
 			<div class="settings-choices" role="radiogroup" aria-label="Spelling">${choices}</div>
 			<p class="settings-preview">Suggests <code class="settings-preview-word">@is:colour</code> <span class="settings-preview-note"></span></p>
 		</section>

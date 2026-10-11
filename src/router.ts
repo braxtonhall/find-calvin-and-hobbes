@@ -43,6 +43,7 @@ import { closeBookPopup } from "./views/books";
 import { updateCorrectionLink } from "./views/correction";
 import { cancelCollectionClear } from "./views/cell-highlight";
 import { cellForDate, followRoute, paintGrid } from "./grid";
+import { respell } from "./spelling";
 
 /** The views that are tabs of one page, which share its header: Collections', and the Bookshelf's. */
 const TAB_GROUPS: ReadonlySet<string>[] = [
@@ -422,6 +423,8 @@ export function handleRoute(prerendered: Page | null = null): void {
 		}
 	}
 
+	// The words a page spells two ways, in the reader's spelling. See `spelling.ts`.
+	respell(viewElement);
 	document.title = pageTitle(page);
 	updateGridState(route);
 }

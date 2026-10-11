@@ -1429,7 +1429,7 @@ mathnightmare:
     ]
 
 schoolweather:
-  description: Calvin complains about school on both gray and sunny days.
+  description: Calvin complains about school on both grey and sunny days.
   dates: ["19950116", "19950117"]
 
 loosetooth:

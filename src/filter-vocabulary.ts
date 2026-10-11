@@ -28,6 +28,7 @@
 import { COLLECTION_INDEX } from "./bundled-data";
 import type { Language } from "./filter-spec";
 import { PAGE_CONFIG } from "./site-config";
+import { spellText } from "./spelling";
 
 /**
  * Whether any book printed a strip with changes: whether there are `@is:altered` and `@here:`. Read
@@ -51,6 +52,21 @@ export interface Term {
 }
 
 /**
+ * A term whose hint the site wrote, read in the reader's spelling each time it is shown, so a choice
+ * made on the Settings page holds without a reload. Only for hints written here: one drawn from the
+ * archive's data is left as the data spells it.
+ */
+function spelt(term: Term): Term {
+	const { hint } = term;
+	return {
+		...term,
+		get hint() {
+			return spellText(hint);
+		},
+	};
+}
+
+/**
  * A thunk rather than an array, so a vocabulary can be registered before its data has arrived and
  * answer with the real values once it has. Nothing has to notice the moment it lands.
  */
@@ -67,10 +83,7 @@ export type Vocabulary = () => readonly Term[];
  */
 export const TAGS: readonly Term[] = [
 	...(PAGE_CONFIG.colourSundays
-		? [
-				{ value: "sunday", hint: "A colour Sunday strip" },
-				{ value: "daily", hint: "A black-and-white daily" },
-			]
+		? [spelt({ value: "sunday", hint: "A colour Sunday strip" }), { value: "daily", hint: "A black-and-white daily" }]
 		: []),
 	...(PAGE_CONFIG.reruns
 		? [
@@ -94,7 +107,7 @@ export const COLLECTION_TAGS: readonly Term[] = [
 	...(PAGE_CONFIG.creators ? [{ value: "creator", hint: "A creator" }] : []),
 	...(PAGE_CONFIG.characters ? [{ value: "character", hint: "A character" }] : []),
 	...(PAGE_CONFIG.colourSundays
-		? [{ value: "colour", hint: "A book that printed its Sundays in colour", american: "color" }]
+		? [spelt({ value: "colour", hint: "A book that printed its Sundays in colour", american: "color" })]
 		: []),
 	...(PAGE_CONFIG.creators
 		? [

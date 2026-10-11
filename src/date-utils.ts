@@ -1,6 +1,7 @@
 import { Collection } from "./types";
 import { SABBATICALS } from "./constants";
 import { PAGE_CONFIG } from "./site-config";
+import { spellable } from "./spelling";
 
 export function compactToDate(compact: string): Date {
 	const year = parseInt(compact.slice(0, 4), 10);
@@ -42,6 +43,7 @@ export function isDateInCollection(dateStr: string, collection: Pick<Collection,
 	return false;
 }
 
+/** What a book holds, as HTML: its words spelt two ways are marked for `respell`. */
 export function getCollectionCoverage(collection: Collection): string[] {
 	const coverage: string[] = [];
 	if (!collection.dailies || collection.dailies.length === 0) return coverage;
@@ -50,7 +52,8 @@ export function getCollectionCoverage(collection: Collection): string[] {
 	} else {
 		coverage.push("Dailies & Sundays");
 	}
-	if (PAGE_CONFIG.colourSundays) coverage.push(collection.colour ? "Sundays in colour" : "Sundays in black & white");
+	if (PAGE_CONFIG.colourSundays)
+		coverage.push(collection.colour ? `Sundays in ${spellable("colour")}` : "Sundays in black & white");
 	return coverage;
 }
 

@@ -3,7 +3,7 @@ import "./settings.css";
 import { canGoBack, handleRoute } from "../router";
 import { buildSettingsHtml } from "../pages/settings";
 import { clearLibrary } from "../ownership";
-import { Spelling, chooseSpelling, guessedSpelling, rememberedSpelling } from "../spelling";
+import { Spelling, chooseSpelling, guessedSpelling, rememberedSpelling, respell } from "../spelling";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { ask, attachLibraryTransferHandlers } from "./library-transfer";
 import { flashButton } from "./copy-link";
@@ -19,8 +19,8 @@ export function renderSettings(adopt: boolean = false): void {
 }
 
 /**
- * The spelling toggle, and the word it spells under it — which follows the pointer across the
- * choices before one is made, and the choice once it is.
+ * The spelling toggle, and the word it spells under it — which, with the page's own words spelt two
+ * ways, follows the pointer across the choices before one is made, and the choice once it is.
  */
 function attachSpellingHandlers(element: HTMLElement): void {
 	const choices = [...element.querySelectorAll<HTMLButtonElement>(".settings-choice")];
@@ -31,6 +31,7 @@ function attachSpellingHandlers(element: HTMLElement): void {
 	const preview = (spelling: Spelling | null) => {
 		const shown = spelling ?? guessedSpelling();
 		word.textContent = `@is:${shown === "american" ? "color" : "colour"}`;
+		respell(element, shown);
 		note.textContent = spelling === null ? "(guessed from your browser)" : "";
 	};
 	const show = () => {
