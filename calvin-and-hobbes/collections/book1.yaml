@@ -134,7 +134,8 @@ pages:
   126: [19860814, 19860815, 19860816]
   127: [19860817]
 alterations:
-  19851215: 10th and 11th panels reversed in first edition.
+  # TODO not sure if this is true about all editions, but it is at least true of my 20th edition
+  19851215: 10th and 11th panels reversed.
 extras:
   - Front cover art
   - Back cover art
