@@ -187,3 +187,6 @@ extras:
   - Front cover art
   - Back cover art
 image: !Path ./covers/book8.png
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/the-days-are-just-packed-a-calvin-and-hobbes-collection/

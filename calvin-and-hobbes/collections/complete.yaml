@@ -1391,3 +1391,6 @@ extras:
   - "Front and reverse cover: The Calvin and Hobbes Tenth Anniversary Book"
   - Original colour endpaper illustrations in each volume
 image: !Path ./covers/complete.jpg
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/the-complete-calvin-and-hobbes/

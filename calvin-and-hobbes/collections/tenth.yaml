@@ -202,3 +202,6 @@ extras:
   - Dedication page art
   - Extensive commentary and annotations by Watterson
 image: !Path ./covers/tenth.gif
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/the-calvin-and-hobbes-tenth-anniversary-book/

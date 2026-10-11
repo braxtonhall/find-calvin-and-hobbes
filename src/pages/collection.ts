@@ -15,6 +15,7 @@ import { CollectionNeighbour, CollectionPage, PageSource } from "./page";
 import { buildFlashLabels, buildBackAndHomeButtons, buildCollectionsButton } from "./nav-buttons";
 import { arcListFrom, buildArcListHtml } from "./arc-list";
 import { buildOwnershipControlsHtml } from "./ownership";
+import { LINK_ICON_SVG } from "./detail";
 
 /**
  * The arcs a book prints in full, in the order it prints them: by volume, then page, of each arc's
@@ -99,6 +100,17 @@ export function formatPublicationDate(collection: Pick<Collection, "pub_year" | 
 	return collection.pub_day
 		? `${monthName} ${collection.pub_day}, ${collection.pub_year}`
 		: `${monthName} ${collection.pub_year}`;
+}
+
+/** The book's links out, last on its page, drawn as a strip's Read and License are. */
+function buildLinksHtml(links: { title: string; href: string }[]): string {
+	const anchors = links
+		.map(
+			(link) =>
+				`<a class="detail-read-link" href="${escHtml(link.href)}" target="_blank" rel="noopener">${escHtml(link.title)} ${LINK_ICON_SVG}</a>`,
+		)
+		.join("");
+	return anchors ? `<p class="collection-section-heading">Links</p><div class="detail-links">${anchors}</div>` : "";
 }
 
 function buildNavButtons(canGoBack: boolean): string {
@@ -247,6 +259,6 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 		${arcsHtml}
 		${buildAlterationsHtml(collection.alterations ?? {})}
 		${extrasHtml}
-		${collection.links && collection.links.length > 0 ? `<p class="collection-section-heading">Links</p><div class="collection-links">${collection.links.map((link) => `<a class="collection-link" href="${escHtml(link.href)}" target="_blank" rel="noopener">${escHtml(link.title)}</a>`).join("")}</div>` : ``}
+		${buildLinksHtml(collection.links ?? [])}
 	</div>`;
 }

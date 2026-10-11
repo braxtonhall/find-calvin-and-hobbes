@@ -87,6 +87,11 @@
 	display: none;
 }
 
+/* Under their heading, as close as any other section's contents are. */
+.collection-container .detail-links {
+	margin-top: 0;
+}
+
 .collection-section-heading {
 	font-size: 12px;
 	color: var(--text-muted);
@@ -113,28 +118,6 @@ summary.collection-section-heading:hover {
 
 .collection-extras li {
 	margin-bottom: 2px;
-}
-
-.collection-links {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-}
-
-.collection-link {
-	display: inline-flex;
-	align-items: center;
-	font-size: 13px;
-	color: var(--text);
-	text-decoration: none;
-	padding: 4px 12px;
-	border: 1px solid var(--selected);
-	border-radius: 4px;
-}
-
-.collection-link:hover {
-	border-color: var(--main);
-	color: var(--main);
 }
 
 .collection-ranges {

@@ -176,3 +176,6 @@ extras:
   - Front cover art
   - Back cover art — Calvin and Hobbes hugging
 image: !Path ./covers/book11.png
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/its-a-magical-world-a-calvin-and-hobbes-collection/

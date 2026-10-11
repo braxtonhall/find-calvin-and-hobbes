@@ -15,3 +15,6 @@ extras:
   - Two 144-page paperback books in archival slipcase
   - Cover art selected by Bill Watterson
 image: !Path ./covers/compendium5.jpg
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/the-calvin-and-hobbes-portable-compendium-set-5/

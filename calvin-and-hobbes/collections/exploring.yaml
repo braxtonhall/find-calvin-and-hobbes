@@ -12,3 +12,6 @@ alterations: {}
 extras:
   - Original art and commentary by Watterson; interview by curator Jenny Robb
 image: !Path ./covers/exploring.jpg
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/exploring-calvin-and-hobbes-bill-watterson/

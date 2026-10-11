@@ -86,3 +86,6 @@ alterations: {}
 extras:
   - 36 Sunday strips chosen by Watterson with original sketches and commentary
 image: !Path ./covers/sundaypages.jpg
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/calvin-and-hobbes-sunday-pages-1985-1995/

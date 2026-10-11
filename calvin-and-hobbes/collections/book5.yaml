@@ -138,3 +138,6 @@ extras:
   - Back cover art
   - Page 2 & 128 art
 image: !Path ./covers/book5.jpg
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/the-revenge-of-the-baby-sat/

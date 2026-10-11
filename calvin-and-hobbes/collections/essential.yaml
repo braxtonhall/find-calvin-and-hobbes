@@ -6,6 +6,7 @@ pub_month: 9
 isbn:
   - 0-8362-1809-4
   - 0-8362-1805-1
+  - 978-1-4494-7233-7
 colour: true
 notes:
   - Treasury of Books 1+2. Foreword by Charles M. Schulz. Includes 'A Nauseous Nocturne'.
@@ -254,3 +255,6 @@ extras:
   - Foreword by Charles M. Schulz
   - A Nauseous Nocturne (illustrated poem)
 image: !Path ./covers/essential.png
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/the-essential-calvin-and-hobbes-a-calvin-and-hobbes-treasury/

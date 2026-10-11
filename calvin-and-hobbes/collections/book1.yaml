@@ -142,3 +142,6 @@ extras:
   - Filler B&W vignettes
   - Foreword by Garry Trudeau
 image: !Path ./covers/book1.png
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/calvin-and-hobbes/

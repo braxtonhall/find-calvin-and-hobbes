@@ -141,3 +141,6 @@ extras:
   - Back cover art
   - Title page & page 128 art
 image: !Path ./covers/book6.gif
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/scientific-progress-goes-boink/

@@ -131,3 +131,6 @@ extras:
   - "Spaceman Spiff: Interplanetary Explorer Extraordinaire! — 10-page story"
   - Afterword by Bill Watterson
 image: !Path ./covers/lazysunday.gif
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/the-calvin-and-hobbes-lazy-sunday-book-a-collection-of-sunday-calvin-and-hobbes-cartoons/

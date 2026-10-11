@@ -143,3 +143,6 @@ extras:
   - Back cover art
   - Filler B&W vignettes
 image: !Path ./covers/book4.jpg
+links:
+  - title: Andrews McMeel Publishing
+    href: https://publishing.andrewsmcmeel.com/book/weirdos-from-another-planet/
