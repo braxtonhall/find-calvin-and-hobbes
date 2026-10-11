@@ -20,9 +20,9 @@
 
 /* Shared by every Home button, whichever view builds it. */
 .home-icon {
-	display: inline-block;
-	position: relative;
-	top: -1px;
+	width: 13px;
+	height: 13px;
+	vertical-align: -1px;
 }
 
 .copy-link-btn {

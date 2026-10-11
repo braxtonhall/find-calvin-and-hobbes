@@ -13,9 +13,13 @@ export function buildBackButton(className: string, canGoBack: boolean): string {
 		: `<button class="${className} ${className}--disabled" disabled title="Nowhere to go back to">&larr; Back</button>`;
 }
 
+// Drawn rather than the ⌂ character, which some browsers set in a fallback font tall enough to
+// stretch the button.
+const HOME_ICON = `<svg class="home-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.2a1.5 1.5 0 0 1 .55-1.16l6.5-5.3a1.5 1.5 0 0 1 1.9 0l6.5 5.3A1.5 1.5 0 0 1 20 10.2V19a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/></svg>`;
+
 // A link, because home has an address.
 export function buildHomeButton(className: string): string {
-	return `<a class="${className}" href="${addressOf(HOME_PATH)}"><span class="home-icon">&#8962;</span> Home</a>`;
+	return `<a class="${className}" href="${addressOf(HOME_PATH)}">${HOME_ICON} Home</a>`;
 }
 
 // The way up from a book to the shelf it sits on.
