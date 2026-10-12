@@ -50,7 +50,12 @@ export type { CollectionsTab };
 export type TabQuery = string | undefined;
 
 /** The noun a tab lists, for its search box and for a search that finds none of them. */
-export const TAB_NOUNS: Record<CollectionsTab, string> = { books: "books", arcs: "arcs", creators: "creators" };
+export const TAB_NOUNS: Record<CollectionsTab, string> = {
+	books: "books",
+	arcs: "arcs",
+	creators: "creators",
+	subjects: "subjects",
+};
 
 /**
  * The search box — see `views/tab-search.ts` for what it does. Built as the search page's is, with
@@ -74,9 +79,9 @@ function buildTabSearchHtml(current: CollectionsTab, query: string): string {
 }
 
 /**
- * Collections is books, arcs and creators, each a collection of strips, and each tab has an address
- * of its own. The tab showing is plain bold text; the others are links, quiet the way the home
- * page's are. A site without arcs or creators has only the tabs it has, and with only the books, no
+ * Collections is books, arcs, creators and subjects, each a collection of strips, and each tab has an
+ * address of its own. The tab showing is plain bold text; the others are links, quiet the way the home
+ * page's are. A site without arcs, creators or subjects has only the tabs it has, and with only the books, no
  * tabs at all — but the search box all the same.
  *
  * Each tab's link carries the query, so switching tabs asks the same question of another kind of
@@ -93,6 +98,7 @@ export function buildCollectionsHeaderHtml(current: CollectionsTab, canGoBack: b
 		tab("books", "Books"),
 		...(PAGE_CONFIG.arcs ? [tab("arcs", "Arcs")] : []),
 		...(PAGE_CONFIG.creators ? [tab("creators", "Creators")] : []),
+		...(PAGE_CONFIG.subjects ? [tab("subjects", "Subjects")] : []),
 	];
 	return `${heading}
 		${tabs.length > 1 ? `<nav class="collections-tabs" aria-label="Collections">${tabs.join(`\n\t\t\t<span aria-hidden="true">·</span>\n\t\t\t`)}</nav>` : ""}

@@ -7,6 +7,7 @@ import { exportCreatorsJson, loadCreators } from "./creators";
 import { generateCollectionIndex } from "./generateCollectionIndex";
 import { exportRerunsJson } from "./reruns";
 import { watchConfig, loadSiteConfig } from "./siteConfig";
+import { exportSubjectsJson, loadSubjects } from "./subjects";
 
 /**
  * The small parts of the archive, as JSON: the same text `YamlToJsonPlugin` hands the page build,
@@ -18,6 +19,7 @@ export interface BundledJson {
 	arcs: string;
 	characters: string;
 	creators: string;
+	subjects: string;
 }
 
 export function loadBundledJson(config?: string): BundledJson {
@@ -31,6 +33,7 @@ export function loadBundledJson(config?: string): BundledJson {
 		arcs: exportArcsJson(loadArcs(source, collectionData, config)),
 		characters: exportCharactersJson(loadCharacters(config)),
 		creators: exportCreatorsJson(loadCreators(source, basePath, config).creators),
+		subjects: exportSubjectsJson(loadSubjects(source, config).subjects),
 	};
 }
 
@@ -41,6 +44,7 @@ export function loadBundledData(): {
 	ARCS: unknown;
 	CHARACTERS: unknown;
 	CREATORS: unknown;
+	SUBJECTS: unknown;
 } {
 	const json = loadBundledJson();
 	return {
@@ -49,6 +53,7 @@ export function loadBundledData(): {
 		ARCS: JSON.parse(json.arcs),
 		CHARACTERS: JSON.parse(json.characters),
 		CREATORS: JSON.parse(json.creators),
+		SUBJECTS: JSON.parse(json.subjects),
 	};
 }
 
@@ -68,6 +73,7 @@ export default function bundledDataLoader(this: LoaderContext<unknown>): string 
 		`export const ARCS = ${parsed(json.arcs)};`,
 		`export const CHARACTERS = ${parsed(json.characters)};`,
 		`export const CREATORS = ${parsed(json.creators)};`,
+		`export const SUBJECTS = ${parsed(json.subjects)};`,
 		"",
 	].join("\n");
 }

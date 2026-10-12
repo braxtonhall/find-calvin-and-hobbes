@@ -23,6 +23,8 @@ import { arcPageFrom } from "./pages/arc";
 import { arcsPageFrom } from "./pages/arcs";
 import { creatorPageFrom } from "./pages/creator";
 import { creatorsPageFrom } from "./pages/creators";
+import { subjectPageFrom } from "./pages/subject";
+import { subjectsPageFrom } from "./pages/subjects";
 import { renderLanding } from "./views/landing";
 import { renderResults } from "./views/results";
 import { renderDetail } from "./views/detail";
@@ -30,6 +32,7 @@ import { renderCollection } from "./views/collection";
 import { renderCollections } from "./views/collections";
 import { renderArc, renderArcs } from "./views/arcs";
 import { renderCreator, renderCreators } from "./views/creators";
+import { renderSubject, renderSubjects } from "./views/subjects";
 import { loadDescriptions } from "./details";
 import { renderSettings } from "./views/settings";
 import { renderLibrary, renderLibraryRows } from "./views/library";
@@ -47,7 +50,7 @@ import { respell } from "./spelling";
 
 /** The views that are tabs of one page, which share its header: Collections', and the Bookshelf's. */
 const TAB_GROUPS: ReadonlySet<string>[] = [
-	new Set(["collections", "arcs", "creators"]),
+	new Set(["collections", "arcs", "creators", "subjects"]),
 	new Set(["bookshelf", "bookshelf-clippings", "bookshelf-books"]),
 ];
 
@@ -224,6 +227,17 @@ function pageFor(route: Route): Page | null {
 			return tabReady(route.q) ? creatorsPageFrom(state, route.q) : null;
 		case "creator":
 			return creatorPageFrom(state, route.id ?? "");
+		// The subjects ship inside the script too, but a search of them is a search of their strips.
+		case "subjects":
+			return tabReady(route.q) ? subjectsPageFrom(state, route.q) : null;
+		// Its rows are its strips' descriptions, as an arc's are, and wait for them the same way.
+		case "subject":
+			if (!state.dataLoaded) return null;
+			if (!state.descriptions) {
+				void loadDescriptions().then(resumeRoute);
+				return null;
+			}
+			return subjectPageFrom(state, route.id ?? "");
 		case "arc":
 			if (!state.dataLoaded) return null;
 			// The rows are the strips' descriptions, which arrive on their own; the spinner waits for
@@ -278,6 +292,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		case "collections":
 		case "arcs":
 		case "creators":
+		case "subjects":
 			return route.q === undefined ? { page: prerendered, adopt: true } : null;
 		// The rows are the reader's library, which the build cannot know.
 		case "results":
@@ -297,6 +312,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		case "collection":
 		case "arc":
 		case "creator":
+		case "subject":
 			return prerendered.id === route.id ? { page: prerendered, adopt: true } : null;
 	}
 }
@@ -400,6 +416,16 @@ export function handleRoute(prerendered: Page | null = null): void {
 		}
 		case "creators": {
 			renderCreators(page, adopt, arriving);
+			if (arriving) document.getElementById("main")!.scrollTop = 0;
+			break;
+		}
+		case "subject": {
+			renderSubject(page, adopt);
+			document.getElementById("main")!.scrollTop = 0;
+			break;
+		}
+		case "subjects": {
+			renderSubjects(page, adopt, arriving);
 			if (arriving) document.getElementById("main")!.scrollTop = 0;
 			break;
 		}

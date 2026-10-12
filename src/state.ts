@@ -1,4 +1,4 @@
-import { Arc, Character, Comic, CollectionIndex, Collection, Creator, Day, Route } from "./types";
+import { Arc, Character, Comic, CollectionIndex, Collection, Creator, Day, Route, Subject } from "./types";
 
 export interface AppState {
 	comics: Comic[];
@@ -17,6 +17,8 @@ export interface AppState {
 	arcsById: Map<string, Arc> | null;
 	charactersById: Map<string, Character>;
 	creatorsById: Map<string, Creator>;
+	/** Oldest first, by the first strip about each. */
+	subjectsById: Map<string, Subject>;
 	keyboardNavActive: boolean;
 	/** The strips the reader bookmarked, by `bookmarkId`. */
 	bookmarkedStrips: Set<string>;
@@ -49,6 +51,7 @@ export const state: AppState = {
 	arcsById: null,
 	charactersById: new Map(),
 	creatorsById: new Map(),
+	subjectsById: new Map(),
 	keyboardNavActive: false,
 	bookmarkedStrips: new Set(),
 	ownedStrips: new Set(),

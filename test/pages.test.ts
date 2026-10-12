@@ -63,6 +63,7 @@ function loadSource(): PageSource {
 		arcsById: new Map(arcs.map((arc) => [arc.id, arc])),
 		charactersById: new Map(),
 		creatorsById: new Map(),
+		subjectsById: new Map(),
 	};
 }
 

@@ -11,12 +11,13 @@ import { Collection, Comic } from "./types";
  * Judging a query that is not ranked: the collection language, and both sides of every crossing
  * operator.
  *
- * A collection is a set of strips — a book's, an arc's, a creator's or a character's — with a few
+ * A collection is a set of strips — a book's, an arc's, a creator's, a character's or a subject's — with a few
  * words of its own and a few facts about itself. Every kind is judged by the same filters (see
  * `COLLECTION_TAGS`): one that cannot be true of a kind is false of it. Its text is its own words,
  * and an arc's is every word of its strips too, so the words of a query may be found in different
- * strips of it. Books, creators and characters are known by name, which their strips' words would
- * drown: those are found with `@has`.
+ * strips of it. Books, creators, characters and subjects are known by name, which their strips' words
+ * would drown: those are found with `@has`. A subject is known by its keywords and its description
+ * too, which are there to be searched for it by.
  *
  * Crossing from a strip to its collections, or from a collection to its strips, judges the query
  * inside against each one on the other side. Each answer is kept for the length of one search, so a
@@ -28,7 +29,7 @@ import { Collection, Comic } from "./types";
 export interface Group {
 	type: CollectionType;
 	id: string;
-	/** Its own words: a book's name and subtitle, an arc's description, a person's name. */
+	/** Its own words: a book's name and subtitle, an arc's description, a person's name, a subject's name, keywords and description. */
 	words: string;
 	/** Whether its strips' words are its words too: an arc's, which is told by them. */
 	stripWords: boolean;
@@ -60,7 +61,14 @@ let builtFrom: unknown[] = [];
 let built = new Map<CollectionType, Groups>();
 
 function sources(): unknown[] {
-	return [state.comics, state.collectionIndex, state.arcs, state.creatorsById, state.charactersById];
+	return [
+		state.comics,
+		state.collectionIndex,
+		state.arcs,
+		state.creatorsById,
+		state.charactersById,
+		state.subjectsById,
+	];
 }
 
 /** The ids of the collections of one kind a strip belongs to. A rerun day's row belongs where its strip does. */
@@ -74,6 +82,8 @@ export function groupIdsOf(comic: Comic, type: CollectionType): string[] {
 			return (comic.creators ?? []).map((credit) => credit.id);
 		case "character":
 			return comic.characters ?? [];
+		case "subject":
+			return comic.subjects ?? [];
 	}
 }
 
@@ -100,6 +110,11 @@ export function groups(type: CollectionType): Groups {
 	} else if (type === "creator") {
 		for (const creator of state.creatorsById.values()) {
 			list.push({ type, id: creator.id, words: creator.name, stripWords: false, strips: [] });
+		}
+	} else if (type === "subject") {
+		for (const subject of state.subjectsById.values()) {
+			const words = [subject.name, ...subject.keywords, subject.description ?? ""].join(" ");
+			list.push({ type, id: subject.id, words, stripWords: false, strips: [] });
 		}
 	} else {
 		for (const character of state.charactersById.values()) {
@@ -141,6 +156,7 @@ function hasCollectionTag(group: Group, tag: string): boolean {
 		case "arc":
 		case "creator":
 		case "character":
+		case "subject":
 			return group.type === tag;
 		case "colour":
 			return group.book?.colour === true;
@@ -186,10 +202,13 @@ function passesCollectionFilter(group: Group, filter: Filter, link: Link | null)
 			return isMine(group, filter.tag);
 		case "strips":
 			return compares(filter.comparison, group.strips.length);
-		// A book by the year it came out; an arc by any year one of its strips ran.
+		// A book by the year it came out; an arc or a subject by any year one of its strips ran.
 		case "published":
 			if (group.book !== undefined) return matchesExpression(filter.expression, String(group.book.pub_year));
-			return group.type === "arc" && group.strips.some((comic) => matchesExpression(filter.expression, comic.date));
+			return (
+				(group.type === "arc" || group.type === "subject") &&
+				group.strips.some((comic) => matchesExpression(filter.expression, comic.date))
+			);
 		default:
 			// A strip's filter, which the parser never lets stand here.
 			return false;
@@ -238,7 +257,7 @@ export class Evaluator {
 		);
 	}
 
-	/** `@in (…)`, `@by (…)`, `@featuring (…)` or `@during (…)`, asked of one strip. */
+	/** `@in (…)`, `@by (…)`, `@featuring (…)`, `@about (…)` or `@during (…)`, asked of one strip. */
 	crossFromStrip(crossing: Crossing, row: StripRow): boolean {
 		const type = crossingSpec(crossing.operator)?.type;
 		if (type === undefined) return false;

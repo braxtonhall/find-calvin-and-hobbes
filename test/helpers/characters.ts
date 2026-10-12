@@ -1,7 +1,8 @@
 import { PAGE_CONFIG } from "../../src/site-config";
 
 /**
- * Turns the characters and the creators on for a test file about `@featuring:` and `@by:`,
+ * Turns the characters, the creators and the subjects on for a test file about `@featuring:`, `@by:`
+ * and `@about:`,
  * whatever `config.yaml` says, so the test does not depend on the archive having any.
  *
  * Imported for its effect, and first: `FILTER_SPECS` reads the flag once, when it loads, so it must
@@ -10,3 +11,4 @@ import { PAGE_CONFIG } from "../../src/site-config";
  */
 PAGE_CONFIG.characters = true;
 PAGE_CONFIG.creators = true;
+PAGE_CONFIG.subjects = true;

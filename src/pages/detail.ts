@@ -2,9 +2,25 @@ import { Appearance, Character, Comic } from "../types";
 import { escHtml } from "../utils";
 import { srcsetAttributes } from "../srcset";
 import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
-import { buildArcPath, buildCollectionPath, buildComicPath, buildCreatorPath, buildSearchPath } from "../routes";
+import {
+	buildArcPath,
+	buildCollectionPath,
+	buildComicPath,
+	buildCreatorPath,
+	buildSearchPath,
+	buildSubjectPath,
+} from "../routes";
 import { addressOf } from "../base-path";
-import { BookNeighbours, DetailArc, DetailCollection, DetailCreator, DetailPage, PageSource, arcRange } from "./page";
+import {
+	BookNeighbours,
+	DetailArc,
+	DetailCollection,
+	DetailCreator,
+	DetailPage,
+	DetailSubject,
+	PageSource,
+	arcRange,
+} from "./page";
 import { buildBackAndHomeButtons, buildFlashLabels } from "./nav-buttons";
 import { PAGE_CONFIG } from "../site-config";
 import { StripLinkSubject, stripLinks } from "../strip-links";
@@ -216,6 +232,14 @@ function creatorsOf(source: PageSource, comics: Comic[]): DetailCreator[] {
 		.map((creator) => ({ id: creator.id, name: creator.name }));
 }
 
+/** Every subject the page's strips are about, each once, oldest first, as the list of them is. */
+function subjectsOf(source: PageSource, comics: Comic[]): DetailSubject[] {
+	const about = new Set(comics.flatMap((comic) => comic.subjects ?? []));
+	return [...source.subjectsById.values()]
+		.filter((subject) => about.has(subject.id))
+		.map((subject) => ({ id: subject.id, name: subject.name }));
+}
+
 /** The page for a date, from whatever holds the archive — the app's state or the build's data. */
 export function detailPageFrom(source: PageSource, date: string, alternates: string[] = []): DetailPage {
 	const rerunOf = source.reruns.get(date) ?? null;
@@ -236,6 +260,7 @@ export function detailPageFrom(source: PageSource, date: string, alternates: str
 		arcs: arcsOf(source, comics),
 		characters: charactersOf(source, comics),
 		creators: creatorsOf(source, comics),
+		subjects: subjectsOf(source, comics),
 	};
 }
 
@@ -301,6 +326,9 @@ const META_ICONS = {
 	),
 	arc: metaIcon(
 		`<circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/>`,
+	),
+	about: metaIcon(
+		`<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><path d="M7 7h.01"/>`,
 	),
 	rerun: metaIcon(`<path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/>`),
 	collected: metaIcon(`<path d="M16 6l4 14M12 6v14M8 8v12M4 4v16"/>`),
@@ -615,9 +643,26 @@ function buildByLineHtml(page: DetailPage, comic: Comic): string {
 }
 
 /**
- * Who made the strip, who it features, the arcs it is part of, and when else the paper ran it on an
+ * `About The pounce and Snowmen`, in the order the list of subjects has them: oldest first. Each name
+ * is the way to that subject's page; `data-subject-id` is what the view reads to light up its strips
+ * while it is hovered.
+ */
+function buildAboutLineHtml(page: DetailPage, comic: Comic): string {
+	const links = page.subjects
+		.filter((subject) => comic.subjects?.includes(subject.id))
+		.map(
+			(subject) =>
+				`<a class="detail-rerun-link detail-subject-link" href="${escHtml(addressOf(buildSubjectPath(subject.id)))}" data-subject-id="${escHtml(subject.id)}">${escHtml(subject.name)}</a>`,
+		);
+	return links.length > 0
+		? `<li class="detail-run detail-meta">${metaContents("about", `About ${andList(links)}`)}</li>`
+		: "";
+}
+
+/**
+ * Who made the strip, who it features, what it is about, the arcs it is part of, and when else the paper ran it on an
  * original day, together under the strip. Only the day's own strip ran in the paper, so a special
- * has only the first two: it never reran, and is in no arc. A rerun day's reruns are empty; where its strip is from is
+ * has only the first two: it never reran, is in no arc, and is about no subject. A rerun day's reruns are empty; where its strip is from is
  * said above it instead.
  */
 function buildRunsHtml(page: DetailPage, date: string, comic: Comic): string {
@@ -628,7 +673,8 @@ function buildRunsHtml(page: DetailPage, date: string, comic: Comic): string {
 		reruns.length > 0
 			? `<li class="detail-run detail-meta">${metaContents("rerun", `Reran ${joinRerunLinks(reruns)}`)}</li>`
 			: "";
-	const lines = people + page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("") + rerun;
+	const lines =
+		people + buildAboutLineHtml(page, comic) + page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("") + rerun;
 	return lines ? `<ul class="detail-runs">${lines}</ul>` : "";
 }
 

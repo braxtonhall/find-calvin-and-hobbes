@@ -1,0 +1,19 @@
+#view-subject.active,
+#view-subjects.active {
+	display: block;
+	/* The corrections link floats over the bottom of the page; the last line clears it. */
+	padding: 20px 20px 56px;
+}
+
+@media (max-width: 768px) {
+	/* On mobile the link follows the page instead of floating over it, so there is nothing to clear. */
+	#view-subject.active,
+	#view-subjects.active {
+		padding-bottom: 20px;
+	}
+}
+
+/* A list of subjects: rows of the list of books, with nothing where the cover goes. */
+.subject-row .collections-info {
+	flex: 1;
+}

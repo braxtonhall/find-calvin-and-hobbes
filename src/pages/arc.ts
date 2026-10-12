@@ -9,7 +9,7 @@ import { buildAppearancesSectionHtml, summarizeCollections } from "./detail";
 import { bookmarkId, ownershipId } from "../library-file";
 
 /** The strip an arc's date names: the day's own, never a special that shares its date. */
-function stripOn(source: PageSource, date: string): Comic | undefined {
+export function stripOn(source: PageSource, date: string): Comic | undefined {
 	return source.comicsByDate.get(date)?.find((comic) => !comic.id);
 }
 
@@ -40,6 +40,18 @@ function arcAppearances(strips: (Comic | undefined)[], arc: Arc): Appearance[] {
 	return appearances;
 }
 
+/** Each date's strip as a list of them says it: by its description, or its transcript where it has none. */
+export function stripsOn(
+	source: PageSource,
+	dates: string[],
+	comics: (Comic | undefined)[] = dates.map((date) => stripOn(source, date)),
+): ArcStrip[] {
+	return dates.map((date, index) => ({
+		date,
+		text: source.descriptions?.get(date) ?? comics[index]?.transcript ?? "",
+	}));
+}
+
 function neighbour(arc: Arc | undefined): ArcNeighbour | null {
 	return arc ? { id: arc.id, range: arcRange(arc) } : null;
 }
@@ -50,10 +62,7 @@ export function arcPageFrom(source: PageSource, arcId: string): ArcPage {
 	if (!arc) return { view: "arc", id: arcId, arc: null, arcsLoaded: source.arcs !== null, ...empty };
 
 	const comics = arc.dates.map((date) => stripOn(source, date));
-	const strips: ArcStrip[] = arc.dates.map((date, index) => ({
-		date,
-		text: source.descriptions?.get(date) ?? comics[index]?.transcript ?? "",
-	}));
+	const strips = stripsOn(source, arc.dates, comics);
 	const collections = summarizeCollections(
 		source,
 		comics.filter((comic): comic is Comic => comic !== undefined),
@@ -93,7 +102,7 @@ function buildNeighbourButton(arc: ArcNeighbour | null, direction: "prev" | "nex
  * each one's cell while it is hovered, and open its menu. Each is the day's own strip, never a
  * special. A strip with no description shows its transcript instead.
  */
-function buildStripRowHtml(strip: ArcStrip): string {
+export function buildStripRowHtml(strip: ArcStrip): string {
 	const dateFormatted = formatLongDate(strip.date);
 	return `<a class="result-row result-row--no-image" href="${addressOf(buildComicPath(strip.date))}" draggable="false" data-date="${strip.date}" data-bookmark="${bookmarkId({}, strip.date)}" data-ownership="${ownershipId({}, strip.date)}" aria-label="View comic from ${dateFormatted}">
 			<div class="result-header">${dateFormatted}</div>

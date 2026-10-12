@@ -7,6 +7,7 @@ import { loadCharacters } from "./characters";
 import { loadCollectionData } from "./collectionPages";
 import { loadComicSource } from "./comicSource";
 import { loadCreators } from "./creators";
+import { loadSubjects } from "./subjects";
 import { COMIC_IMAGES_PATH, exportComicsJson } from "./exportComicsJson";
 import { emitVariants } from "./imageVariants";
 import { exportDescriptions } from "./exportDescriptions";
@@ -62,10 +63,18 @@ class YamlToJsonPlugin {
 						compilation.fileDependencies.add(file);
 						compilation.emitAsset(published, new sources.RawSource(fs.readFileSync(file)));
 					}
-					const comicsJson = exportComicsJson(collectionData, basePath, arcs, characters, creators.byStrip);
+					const subjects = loadSubjects(source);
+					const comicsJson = exportComicsJson(
+						collectionData,
+						basePath,
+						arcs,
+						characters,
+						creators.byStrip,
+						subjects.byStrip,
+					);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 
-					// Not emitted: the app has these, and the characters and the creators, inside its script. See `bundledData.ts`.
+					// Not emitted: the app has these, and the characters, the creators and the subjects, inside its script. See `bundledData.ts`.
 					const rerunsJson = exportRerunsJson(source);
 					const collectionIndexJson = generateCollectionIndex(collectionData, basePath);
 
@@ -80,6 +89,7 @@ class YamlToJsonPlugin {
 						arcs: JSON.parse(arcsJson),
 						characters,
 						creators: creators.creators,
+						subjects: subjects.subjects,
 					});
 				},
 			);

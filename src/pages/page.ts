@@ -1,4 +1,15 @@
-import { Appearance, Arc, Character, Collection, Comic, CollectionIndex, Creator, Day, SortMode } from "../types";
+import {
+	Appearance,
+	Arc,
+	Character,
+	Collection,
+	Comic,
+	CollectionIndex,
+	Creator,
+	Day,
+	SortMode,
+	Subject,
+} from "../types";
 import { PAGE_CONFIG } from "../site-config";
 import { formatDateRange } from "../date-utils";
 import type { BookshelfView, LibraryView } from "../routes";
@@ -79,10 +90,15 @@ export interface DetailPage {
 	characters: Character[];
 	/** Everyone credited on the page's strips, for their names; each strip lists its own by id. */
 	creators: DetailCreator[];
+	/** Every subject the page's strips are about, for their names; each strip lists its own by id. */
+	subjects: DetailSubject[];
 }
 
 /** A creator as a strip's page names them. */
 export type DetailCreator = Pick<Creator, "id" | "name">;
+
+/** A subject as a strip's page names it. */
+export type DetailSubject = Pick<Subject, "id" | "name">;
 
 /** An arc as a strip's page names it: enough to say which part this is, step along it, and light it up. */
 export type DetailArc = Pick<Arc, "id" | "description" | "dates">;
@@ -200,6 +216,23 @@ export interface CreatorPage {
 	creator: Creator | null;
 }
 
+export interface SubjectsPage {
+	view: "subjects";
+	/** Oldest first, by the first strip about each. */
+	subjects: Subject[];
+	/** The search box's query, where it is open. Never on a page the build writes. */
+	q?: string;
+}
+
+export interface SubjectPage {
+	view: "subject";
+	id: string;
+	/** `null` when the id names no subject. */
+	subject: Subject | null;
+	/** Its strips, oldest first, as an arc's page lists its own. */
+	strips: ArcStrip[];
+}
+
 export type Page =
 	| LandingPage
 	| CreditsPage
@@ -212,7 +245,9 @@ export type Page =
 	| ArcPage
 	| ArcsPage
 	| CreatorPage
-	| CreatorsPage;
+	| CreatorsPage
+	| SubjectPage
+	| SubjectsPage;
 
 /**
  * Where a page's data comes from. The app's `state` is one of these; the build assembles another
@@ -233,6 +268,8 @@ export interface PageSource {
 	charactersById: Map<string, Character>;
 	/** In the order the creators' file lists them. Empty on a site without creators. */
 	creatorsById: Map<string, Creator>;
+	/** Oldest first, by the first strip about each. Empty on a site without subjects. */
+	subjectsById: Map<string, Subject>;
 }
 
 /** An arc by its dates: `Nov 18–19, 1985`. */
@@ -260,6 +297,10 @@ export function pageTitle(page: Page): string {
 			return `${page.creator?.name ?? "Creator not found"} — ${PAGE_CONFIG.name}`;
 		case "creators":
 			return page.q ? `${page.q} — Creators — ${PAGE_CONFIG.name}` : `Creators — ${PAGE_CONFIG.name}`;
+		case "subject":
+			return `${page.subject?.name ?? "Subject not found"} — ${PAGE_CONFIG.name}`;
+		case "subjects":
+			return page.q ? `${page.q} — Subjects — ${PAGE_CONFIG.name}` : `Subjects — ${PAGE_CONFIG.name}`;
 		case "settings":
 			return `Settings — ${PAGE_CONFIG.name}`;
 		case "bookmarks":

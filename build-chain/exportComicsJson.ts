@@ -45,6 +45,7 @@ interface Entry {
 	arcs?: string[];
 	characters?: string[];
 	creators?: Credit[];
+	subjects?: string[];
 }
 
 /**
@@ -58,6 +59,9 @@ interface Entry {
  * `characters` is empty, which is a site without `characters.yaml`.
  *
  * And its creators, keyed in `creators` as `comics.yaml` keys the strip. None where it has none.
+ *
+ * And its subjects, keyed in `subjects` the same way, for `@about:`. Only the dailies and Sundays,
+ * as with the arcs. None where it has none, which is every strip on a site without subjects.
  */
 export function exportComicsJson(
 	collectionData: CollectionData,
@@ -65,6 +69,7 @@ export function exportComicsJson(
 	arcs: Arc[] = [],
 	characters: Character[] = [],
 	creators: ReadonlyMap<string, Credit[]> = new Map(),
+	subjects: ReadonlyMap<string, string[]> = new Map(),
 	config?: string,
 ): string {
 	const folder = loadComicImages(config);
@@ -102,6 +107,8 @@ export function exportComicsJson(
 		const dailyArcs = arcsByDate.get(entry.date);
 		if (dailyArcs) entry.arcs = dailyArcs;
 		attachCharacters(entry, dateStr, daily);
+		const about = subjects.get(dateStr);
+		if (about) entry.subjects = about;
 		entries.push(entry);
 	}
 

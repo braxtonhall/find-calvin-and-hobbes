@@ -19,6 +19,7 @@ Type words to search transcripts. Type `@` in the search box for the list of fil
 | `@i:`         | `@i:own`, `@i:bookmarked`      | strips you own, bookmarked or noted                       |
 | `@featuring:` | `@featuring:susie`             | strips featuring that character                           |
 | `@by:`        | `@by:watterson`                | strips by that creator                                    |
+| `@about:`     | `@about:pounce`                | strips about that subject, like a running gag             |
 | `@during:`    | `@during:goonarmy`             | strips in that story arc                                  |
 
 The tags are `sunday` and `daily` (the colour Sundays and the black-and-white dailies), `reused`
@@ -36,7 +37,7 @@ books, which mostly share no strips: `@in:book1 @in:book3` is the strips printed
 or took over from each other: `@by:foster @by:murphy` is either one's strips. Writing `@or` between some of them changes nothing:
 `@year:1988 @or @year:1989 @year:1990` is any of the three years. Repeating a tag narrows, for `@i:` as for `@is:`: `@is:sunday @is:rerun` is the Sundays
 that ran again, and so does repeating a character: `@featuring:susie @featuring:rosalyn` is the
-strips with both. `@day:1 @day:monday` is the Mondays that fell
+strips with both, or a subject: `@about:snowmen @about:sledding` is the strips about both. `@day:1 @day:monday` is the Mondays that fell
 on the first, because a day of the month and a day of the week are different things. Filters combine
 with ordinary words, so `@year:1988 snowman` searches 1988 alone.
 
@@ -69,9 +70,9 @@ not on that list matches nothing and says so.
 
 ### Strips and their collections
 
-Books, story arcs, creators and characters are each a collection of strips, and one operator crosses
-from a strip to each kind: `@in` to its books, `@during` to its arcs, `@by` to its creators and
-`@featuring` to its characters. Each takes the one word, filter or `(group)` after it, which is about
+Books, story arcs, creators, characters and subjects are each a collection of strips, and one
+operator crosses from a strip to each kind: `@in` to its books, `@during` to its arcs, `@by` to its
+creators, `@featuring` to its characters and `@about` to its subjects. Each takes the one word, filter or `(group)` after it, which is about
 the collection rather than the strip — `@in:book3` is short for `@in (@id:book3)`:
 
 | Example                         | Meaning                                         |
@@ -91,17 +92,17 @@ the collection rather than the strip — `@in:book3` is short for `@in (@id:book
 about how that collection prints that strip, where `@is:altered` is altered in any book.
 
 The Collections page has a search box too, and the tab you are on says which kind of collection it
-finds. A collection's words are its own — a book's title, an arc's description
-— and every word of its strips, so `susie mom` finds the arcs where both appear, in one strip or
+finds. A collection's words are its own — a book's title, an arc's description, a subject's name,
+keywords and description — and an arc's are every word of its strips too, so `susie mom` finds the arcs where both appear, in one strip or
 two. Anything about its strips goes in `@has`, which crosses back down: `@has @is:sunday` is an arc
 with a Sunday, `@not @has @is:sunday` one without, and `@only @has @year:1988` one entirely in 1988.
-A collection's own filters are `@is:` (`book`, `arc`, `creator`, `character`, `colour`, `writer`,
+A collection's own filters are `@is:` (`book`, `arc`, `creator`, `character`, `subject`, `colour`, `writer`,
 `artist` — a tag that cannot be true of a kind is false), `@i:` (`own`, `noted` — only a book), `@id:`
 <!-- @strips: is not user facing yet.
 `@strips:` (`>5`, `>=5`, `<5`, `<=5`, `5`, `5..10`)
 -->
 
-and `@published:` (a year, as `@year:` takes it: a book's year, or any year one of an arc's strips ran;
+and `@published:` (a year, as `@year:` takes it: a book's year, or any year one of an arc's or a subject's strips ran;
 two side by side mean either).
 
 Filter values are read year first — `@date:1988/9/3` is September 3rd, never March 9th — and take

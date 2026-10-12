@@ -77,6 +77,16 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "creators", ...searched };
 	}
 
+	// And subjects.
+	const subjectMatch = path.match(/^\/subject\/([a-z0-9]+)$/);
+	if (subjectMatch && PAGE_CONFIG.subjects) {
+		return { view: "subject", id: subjectMatch[1] };
+	}
+
+	if (path === SUBJECTS_PATH && PAGE_CONFIG.subjects) {
+		return { view: "subjects", ...searched };
+	}
+
 	if (path === SETTINGS_PATH) {
 		return { view: "settings" };
 	}
@@ -150,9 +160,14 @@ export function isBookshelfView(view: string): view is BookshelfView {
 }
 
 /** The tabs of Collections. */
-export type CollectionsTab = "books" | "arcs" | "creators";
+export type CollectionsTab = "books" | "arcs" | "creators" | "subjects";
 
-const TAB_PATHS: Record<CollectionsTab, string> = { books: "/books", arcs: "/arcs", creators: "/creators" };
+const TAB_PATHS: Record<CollectionsTab, string> = {
+	books: "/books",
+	arcs: "/arcs",
+	creators: "/creators",
+	subjects: "/subjects",
+};
 
 /** A tab of Collections, with `query` in its search box — or, given none or an empty one, the whole tab. */
 export function buildTabPath(tab: CollectionsTab, query?: string): string {
@@ -176,10 +191,15 @@ export function buildCreatorPath(creatorId: string): string {
 	return "/creator/" + creatorId;
 }
 
-/** The tabs of Collections: the books, the arcs, and the creators. */
+export function buildSubjectPath(subjectId: string): string {
+	return "/subject/" + subjectId;
+}
+
+/** The tabs of Collections: the books, the arcs, the creators, and the subjects. */
 export const BOOKS_PATH = "/books";
 export const ARCS_PATH = "/arcs";
 export const CREATORS_PATH = "/creators";
+export const SUBJECTS_PATH = "/subjects";
 
 /**
  * Where Collections used to be a list of books alone. It is the books tab now, and the address is

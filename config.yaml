@@ -212,6 +212,12 @@ corrections:
 #               creator's page lists under Other. A credit is an id, or `{ id,
 #               role }` for what they did, like `story` or `art`; a strip's own credit replaces its
 #               run's rather than adding to it
+#   subjects    what the strips come back to, like running gags: the Subjects tab of Collections and
+#               each subject's page, the About line under a strip, and @about:. A mapping of each
+#               subject by id to its `name`, optionally a `description`, and `keywords`, other words
+#               a search of the subjects finds it by. Which strips are about one is written on the
+#               strips, in `comics`, as `subjects: [id, ...]`, on a daily or a Sunday, never a special.
+#               The list is in order of each one's first strip
 #   comicImages the folder of the strips' images, relative to this file, each named by its date as
 #               YYYYMMDD, or by a special's id, with its own extension. A strip has an image if the
 #               folder has one for it, so they can be dropped in as they are found; a folder that
@@ -228,6 +234,7 @@ compounds: !Import ./calvin-and-hobbes/compounds.yaml
 misspellings: !Import ./calvin-and-hobbes/misspellings.yaml
 characters: false
 creators: false
+subjects: false
 comicImages: ./calvin-and-hobbes/comics
 
 # Whether the Sundays ran in colour and the dailies in black and white, a format of their own. When

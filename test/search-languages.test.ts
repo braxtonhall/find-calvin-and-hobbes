@@ -1,4 +1,4 @@
-// First: turns on `@featuring` and `@by`, which `FILTER_SPECS` reads once, as it loads.
+// First: turns on `@featuring`, `@by` and `@about`, which `FILTER_SPECS` reads once, as it loads.
 import "./helpers/characters";
 
 import test from "node:test";
@@ -14,7 +14,7 @@ import { buildCollectionsHeaderHtml } from "../src/pages/collections";
 import { guessSpelling, setSpelling, spell, spellText, spellable } from "../src/spelling";
 import { getCollectionCoverage } from "../src/date-utils";
 import { state } from "../src/state";
-import { Arc, Character, Collection, Comic, Creator } from "../src/types";
+import { Arc, Character, Collection, Comic, Creator, Subject } from "../src/types";
 import { install } from "./helpers/archive";
 import { ENGINE_TUNING } from "./helpers/engine-tuning";
 
@@ -68,6 +68,17 @@ function creator(id: string, name: string, roles?: string[]): Creator {
 
 const CREATORS: Creator[] = [creator("bill", "Bill Watterson"), creator("ink", "An Inker", ["art"])];
 
+const SUBJECTS: Subject[] = [
+	{
+		id: "snowballs",
+		name: "Snowball fights",
+		description: "Somebody gets hit.",
+		keywords: ["ambush"],
+		dates: ["1988-01-03", "1988-01-05"],
+	},
+	{ id: "school", name: "School", keywords: [], dates: ["1988-01-05"] },
+];
+
 /** A Sunday and two dailies in two arcs, one strip in no book, and a special. */
 const COMICS: Comic[] = [
 	{
@@ -80,6 +91,7 @@ const COMICS: Comic[] = [
 		arcs: ["snowarc"],
 		characters: ["susie"],
 		creators: [{ id: "bill" }],
+		subjects: ["snowballs"],
 	},
 	{
 		date: "1988-01-04",
@@ -96,6 +108,7 @@ const COMICS: Comic[] = [
 		appearances: [{ collection: "plainbook", pages: [2] }],
 		arcs: ["schoolarc"],
 		characters: ["susie"],
+		subjects: ["snowballs", "school"],
 		creators: [
 			{ id: "bill", role: "story" },
 			{ id: "ink", role: "art" },
@@ -124,6 +137,7 @@ function setUp(): void {
 	state.arcsById = new Map(ARCS.map((arc) => [arc.id, arc]));
 	state.charactersById = new Map(CHARACTERS.map((character) => [character.id, character]));
 	state.creatorsById = new Map(CREATORS.map((each) => [each.id, each]));
+	state.subjectsById = new Map(SUBJECTS.map((each) => [each.id, each]));
 	state.bookmarkedStrips = new Set();
 	state.ownedStrips = new Set();
 	state.ownedBooks = new Set();
@@ -139,7 +153,7 @@ function strips(query: string): string[] {
 }
 
 /** What a tab lists for the query, by id, in the tab's order. */
-function listed(query: string, type: "book" | "arc" | "creator" | "character"): string[] {
+function listed(query: string, type: "book" | "arc" | "creator" | "character" | "subject"): string[] {
 	const results = searchCollections(query, type, NO_COMPOUNDS);
 	assert.ok(results, `"${query}" has something in it`);
 	const order = {
@@ -147,6 +161,7 @@ function listed(query: string, type: "book" | "arc" | "creator" | "character"): 
 		arc: ARCS.map((arc) => arc.id),
 		creator: CREATORS.map((each) => each.id),
 		character: CHARACTERS.map((character) => character.id),
+		subject: SUBJECTS.map((each) => each.id),
 	}[type];
 	return order.filter((id) => results.ids.has(id));
 }
@@ -335,6 +350,14 @@ test("the strip language", async (suite) => {
 		assert.deepEqual(strips("@by (@is:artist @not @is:writer)"), ["1988-01-05", "1990-02-04"]);
 		assert.deepEqual(strips("@only @by @is:writer"), ["1988-01-03", "1988-01-04"]);
 		assert.deepEqual(strips("@in (@has @featuring:mom)"), ["1988-01-03", "1988-01-04"]);
+		assert.deepEqual(strips("@about:snowballs"), ["1988-01-03", "1988-01-05"]);
+		assert.deepEqual(strips("@about (@id:school)"), ["1988-01-05"]);
+		// A strip about several, so repeating it narrows, as the characters do.
+		assert.deepEqual(strips("@about:snowballs @about:school"), ["1988-01-05"]);
+		assert.deepEqual(strips("@about:snowballs @or @about:school"), ["1988-01-03", "1988-01-05"]);
+		assert.deepEqual(strips("@about (ambush)"), ["1988-01-03", "1988-01-05"], "by a keyword");
+		assert.deepEqual(strips("@about (@has @is:sunday)"), ["1988-01-03", "1988-01-05"]);
+		assert.deepEqual(strips("@only @about @id:snowballs"), ["1988-01-03"]);
 	});
 
 	await suite.test("inside an operator a collection's text is its own words, and an arc's strips'", () => {
@@ -415,6 +438,20 @@ test("the collection language", async (suite) => {
 		assert.deepEqual(listed("@has snow", "character"), ["susie"]);
 		assert.deepEqual(listed("fort", "creator"), []);
 		assert.deepEqual(listed("watterson", "creator"), ["bill"]);
+	});
+
+	await suite.test("a subject is found by its name, its keywords and its description, not its strips' words", () => {
+		setUp();
+		assert.deepEqual(listed("snowball", "subject"), ["snowballs"]);
+		assert.deepEqual(listed("ambush", "subject"), ["snowballs"]);
+		assert.deepEqual(listed("gets hit", "subject"), ["snowballs"]);
+		assert.deepEqual(listed("fort", "subject"), []);
+		assert.deepEqual(listed("@has fort", "subject"), ["snowballs"]);
+		assert.deepEqual(listed("@is:subject", "subject"), ["snowballs", "school"]);
+		assert.deepEqual(listed("@is:subject", "arc"), []);
+		assert.deepEqual(listed("@published:1988", "subject"), ["snowballs", "school"], "by the years it ran");
+		assert.deepEqual(listed("@published:1990", "subject"), []);
+		assert.deepEqual(listed("@has @featuring:mom", "subject"), []);
 	});
 
 	await suite.test("@has looks through the strips, and grouping says whether one strip must do it all", () => {

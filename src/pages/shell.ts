@@ -12,6 +12,8 @@ import { buildArcHtml } from "./arc";
 import { buildArcsHtml } from "./arcs";
 import { buildCreatorHtml } from "./creator";
 import { buildCreatorsHtml, formatStripCount, formatYears } from "./creators";
+import { buildSubjectHtml } from "./subject";
+import { buildSubjectsHtml, formatSubjectMeta } from "./subjects";
 import { arcRange } from "./page";
 import { buildCorrectionLinkHtml } from "./correction";
 import { buildSettingsHtml } from "./settings";
@@ -37,6 +39,8 @@ export const VIEWS = [
 	"arcs",
 	"creator",
 	"creators",
+	"subject",
+	"subjects",
 	"settings",
 	"bookmarks",
 	"bookshelf",
@@ -99,6 +103,14 @@ function pageDescription(page: Page): string | null {
 		}
 		case "creators":
 			return `Everyone who made ${series}, and the strips each of them made.`;
+		case "subject": {
+			const { subject } = page;
+			if (!subject) return description;
+			const lead = `Every ${series} strip about ${subject.name}, ${formatSubjectMeta(subject)}.`;
+			return subject.description ? `${lead} ${subject.description}` : lead;
+		}
+		case "subjects":
+			return `What ${series} kept coming back to, and the strips about each one.`;
 		default:
 			return description;
 	}
@@ -171,6 +183,10 @@ export function buildViewHtml(page: Page, canGoBack: boolean): string {
 			return buildCreatorHtml(page, canGoBack);
 		case "creators":
 			return buildCreatorsHtml(page, canGoBack);
+		case "subject":
+			return buildSubjectHtml(page, canGoBack);
+		case "subjects":
+			return buildSubjectsHtml(page, canGoBack);
 		case "settings":
 			return buildSettingsHtml(canGoBack);
 		case "bookmarks":

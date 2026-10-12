@@ -1,4 +1,4 @@
-import { ARCS_PATH, BOOKS_PATH, CREATORS_PATH, HOME_PATH } from "../routes";
+import { ARCS_PATH, BOOKS_PATH, CREATORS_PATH, HOME_PATH, SUBJECTS_PATH } from "../routes";
 import { addressOf } from "../base-path";
 
 /**
@@ -35,6 +35,11 @@ export function buildArcsButton(className: string): string {
 // The way up from a creator to the list of them.
 export function buildCreatorsButton(className: string): string {
 	return `<a class="${className}" href="${addressOf(CREATORS_PATH)}">Creators</a>`;
+}
+
+// The way up from a subject to the list of them.
+export function buildSubjectsButton(className: string): string {
+	return `<a class="${className}" href="${addressOf(SUBJECTS_PATH)}">Subjects</a>`;
 }
 
 export function buildBackAndHomeButtons(canGoBack: boolean): string {

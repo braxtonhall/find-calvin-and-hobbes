@@ -40,7 +40,7 @@ import { Comic } from "./types";
  * The operators that cross between a strip and its collections bind as tightly as `@not`, and like
  * it take the one atom after them, which is usually a group: `@in (@i:own @strips:<1000)` is a
  * strip in a book that is both. `@in` goes up from a strip to its books, `@by` to its creators,
- * `@featuring` to its characters and `@during` to its arcs; `@has` goes down from a collection to
+ * `@featuring` to its characters, `@about` to its subjects and `@during` to its arcs; `@has` goes down from a collection to
  * its strips. Each is "some": `@in X` is in at least one book that is X. `@only` before one of them
  * makes it "at least one, and all of them": `@only @in @i:own` is printed only in books the reader
  * owns. What stands inside one is written in the language on the other side of it — see
@@ -364,6 +364,7 @@ const RELATIONSHIPS: Partial<Record<Filter["kind"], CrossingOperator>> = {
 	in: "in",
 	by: "by",
 	featuring: "featuring",
+	about: "about",
 	during: "during",
 };
 
@@ -377,6 +378,8 @@ function relationshipOf(filter: Filter): { operator: CrossingOperator; id: strin
 			return { operator, id: filter.creator };
 		case "featuring":
 			return { operator, id: filter.character };
+		case "about":
+			return { operator, id: filter.subject };
 		case "during":
 			return { operator, id: filter.arc };
 		default:

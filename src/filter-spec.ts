@@ -18,15 +18,16 @@ import { PAGE_CONFIG } from "./site-config";
 
 /**
  * The two languages a query can be written in. A strip query finds strips: the main search box, and
- * the inside of `@has (…)`. A collection query finds books, arcs, creators or characters: the
- * Collections page's box, and the inside of `@in (…)`, `@by (…)`, `@featuring (…)` and `@during (…)`.
+ * the inside of `@has (…)`. A collection query finds books, arcs, creators, characters or subjects:
+ * the Collections page's box, and the inside of `@in (…)`, `@by (…)`, `@featuring (…)`, `@about (…)`
+ * and `@during (…)`.
  * Every kind of collection shares the one collection language, so a filter means the same on every
  * tab; what differs is only whether its data can be true of that kind.
  */
 export type Language = "strip" | "collection";
 
 /** The kinds of collection a strip can belong to. */
-export type CollectionType = "book" | "arc" | "creator" | "character";
+export type CollectionType = "book" | "arc" | "creator" | "character" | "subject";
 
 /** `a, b or c`. */
 function orList(words: readonly string[]): string {
@@ -88,11 +89,12 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
  *
  * Repeating a filter ORs where a strip can have only one value for it — one year, one month — and
  * for the books, the arcs and the creators, which mostly share no strips; and ANDs for the tags, both
- * `@is:` and `@i:`, and the characters, which a strip carries several of. See `WIDENING` in
- * `boolean-query.ts`.
+ * `@is:` and `@i:`, and the characters and the subjects, which a strip carries several of. See
+ * `WIDENING` in `boolean-query.ts`.
  *
  * `@featuring:` only where `config.yaml` has characters for it, `@by:` only where it has creators,
- * `@during:` only where it has arcs, and `@here:` only where a book printed a strip with changes.
+ * `@about:` only where it has subjects, `@during:` only where it has arcs, and `@here:` only where a
+ * book printed a strip with changes.
  */
 export const FILTER_SPECS: readonly FilterSpec[] = [
 	{
@@ -146,6 +148,17 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 					vocabulary: true,
 					language: "strip",
 					templates: [{ label: "creator", hint: "a creator of the archive" }],
+				} satisfies FilterSpec,
+			]
+		: []),
+	...(PAGE_CONFIG.subjects
+		? [
+				{
+					name: "about",
+					hint: "Strips about a subject",
+					vocabulary: true,
+					language: "strip",
+					templates: [{ label: "subject", hint: "a subject of the archive, like a running gag" }],
 				} satisfies FilterSpec,
 			]
 		: []),
@@ -213,7 +226,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		hint: "One collection, by its id",
 		vocabulary: true,
 		language: "collection",
-		templates: [{ label: "id", hint: "a book, arc, creator or character" }],
+		templates: [{ label: "id", hint: "a book, arc, creator, character or subject" }],
 	},
 	// Not user facing yet.
 	// {
@@ -224,7 +237,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 	// },
 	{
 		name: "published",
-		hint: "Books by the year they came out, arcs by the years they ran",
+		hint: "Books by the year they came out, arcs and subjects by the years they ran",
 		language: "collection",
 		templates: [
 			{ label: "YYYY", hint: "a four-digit year" },
@@ -257,7 +270,7 @@ export const FILTER_NAMES: ReadonlySet<string> = new Set(FILTER_SPECS.map((spec)
  * in and the one inside it. `@has` goes down from a collection to its strips; the rest go up from a
  * strip to one kind of collection each. Bare, with no colon: `@in:x` is the filter, and short for
  * `@in (@id:x)`. `@by` only where there are creators, `@featuring` only where there are characters,
- * and `@during` only where there are arcs, as their filters are.
+ * `@about` only where there are subjects, and `@during` only where there are arcs, as their filters are.
  */
 export interface CrossingSpec {
 	name: CrossingOperator;
@@ -269,7 +282,7 @@ export interface CrossingSpec {
 	hint: string;
 }
 
-export type CrossingOperator = "has" | "in" | "by" | "featuring" | "during";
+export type CrossingOperator = "has" | "in" | "by" | "featuring" | "about" | "during";
 
 export const CROSSING_SPECS: readonly CrossingSpec[] = [
 	{ name: "has", from: "collection", to: "strip", hint: "Has a strip that matches what follows" },
@@ -304,6 +317,17 @@ export const CROSSING_SPECS: readonly CrossingSpec[] = [
 					to: "collection",
 					type: "creator",
 					hint: "By a creator who matches what follows",
+				} satisfies CrossingSpec,
+			]
+		: []),
+	...(PAGE_CONFIG.subjects
+		? [
+				{
+					name: "about",
+					from: "strip",
+					to: "collection",
+					type: "subject",
+					hint: "About a subject that matches what follows",
 				} satisfies CrossingSpec,
 			]
 		: []),

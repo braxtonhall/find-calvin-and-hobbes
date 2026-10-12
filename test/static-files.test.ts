@@ -106,7 +106,7 @@ test("finds the strips' images in the folder comicImages names, or none without 
 			`${comics}collections: []\ncomicImages: ${setting}\n`,
 			(config) => {
 				const data = loadCollectionData(config);
-				return JSON.parse(exportComicsJson(data, "/repo/", [], [], new Map(), config)).map(
+				return JSON.parse(exportComicsJson(data, "/repo/", [], [], new Map(), new Map(), config)).map(
 					(comic: { date: string; image?: string; aspectRatio?: number }) =>
 						comic.image ? [comic.date, comic.image, comic.aspectRatio] : [comic.date, comic.image],
 				);

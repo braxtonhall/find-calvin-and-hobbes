@@ -20,7 +20,12 @@ import { isTouchDevice } from "../utils";
  */
 
 /** Which kind of collection each tab lists. */
-export const TAB_TYPES: Record<CollectionsTab, CollectionType> = { books: "book", arcs: "arc", creators: "creator" };
+export const TAB_TYPES: Record<CollectionsTab, CollectionType> = {
+	books: "book",
+	arcs: "arc",
+	creators: "creator",
+	subjects: "subject",
+};
 
 let debounce: number | null = null;
 

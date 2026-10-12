@@ -2,7 +2,7 @@ import "./styles/theme.css";
 import "./styles/base.css";
 import "./styles/components.css";
 
-import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS } from "./bundled-data";
+import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS, SUBJECTS } from "./bundled-data";
 import { Term, registerVocabulary } from "./filter-vocabulary";
 import { arcRange } from "./pages/page";
 import { state } from "./state";
@@ -32,6 +32,9 @@ function initialize(): void {
 	registerVocabulary("featuring", () => CHARACTERS.map((character) => ({ value: character.id, hint: character.name })));
 	// And without creators, where there is no `@by:`.
 	registerVocabulary("by", () => CREATORS.map((creator) => ({ value: creator.id, hint: creator.name })));
+	// And without subjects, where there is no `@about:`.
+	const subjects: Term[] = SUBJECTS.map((subject) => ({ value: subject.id, hint: subject.name }));
+	registerVocabulary("about", () => subjects);
 	// And without arcs, where there is no `@during:`. An arc has no name, so it is offered by its dates.
 	const arcs: Term[] = ARCS.map((arc) => ({ value: arc.id, hint: `${arcRange(arc)}: ${arc.description}` }));
 	registerVocabulary("during", () => arcs);
@@ -43,12 +46,13 @@ function initialize(): void {
 		arc: arcs,
 		creator: CREATORS.map((creator) => ({ value: creator.id, hint: creator.name })),
 		character: CHARACTERS.map((character) => ({ value: character.id, hint: character.name })),
+		subject: subjects,
 	};
 	for (const [type, values] of Object.entries(ids)) registerVocabulary(`id:${type}`, () => values);
 	registerVocabulary("id", () => Object.values(ids).flat());
 
-	// `@published:` takes any year, but the menu offers the ones a book came out in or an arc ran in
-	// — on a tab, its own kind's. A year of 0 is a book with no year to give.
+	// `@published:` takes any year, but the menu offers the ones a book came out in or an arc or a
+	// subject ran in — on a tab, its own kind's. A year of 0 is a book with no year to give.
 	const yearTerms = (years: number[]): Term[] =>
 		[...new Set(years)]
 			.filter((year) => year > 0)
@@ -56,13 +60,16 @@ function initialize(): void {
 			.map((year) => ({ value: String(year), hint: "" }));
 	const bookYears = COLLECTION_INDEX.collections.map((collection) => collection.pub_year);
 	const arcYears = ARCS.flatMap((arc) => arc.dates.map((date) => Number(date.slice(0, 4))));
+	const subjectYears = SUBJECTS.flatMap((subject) => subject.dates.map((date) => Number(date.slice(0, 4))));
 	const published = {
 		book: yearTerms(bookYears),
 		arc: yearTerms(arcYears),
-		all: yearTerms([...bookYears, ...arcYears]),
+		subject: yearTerms(subjectYears),
+		all: yearTerms([...bookYears, ...arcYears, ...subjectYears]),
 	};
 	registerVocabulary("published:book", () => published.book);
 	registerVocabulary("published:arc", () => published.arc);
+	registerVocabulary("published:subject", () => published.subject);
 	registerVocabulary("published", () => published.all);
 
 	// First, so the requests are on the wire while the grid is drawn. Nothing it does after they

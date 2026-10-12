@@ -8,6 +8,8 @@ export interface StripEntry {
 	review?: string;
 	/** Character ids from `characters.yaml`. Checked where it is read, in `characters.ts`. */
 	characters?: string[];
+	/** Subject ids from `subjects.yaml`. Checked where it is read, in `subjects.ts`. */
+	subjects?: string[];
 }
 
 export interface SpecialEntry extends StripEntry {

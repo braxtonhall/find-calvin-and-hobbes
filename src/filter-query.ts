@@ -21,7 +21,7 @@ import { Comic } from "./types";
  * where a strip has only one value for it (`@year:1988 @year:1989` is either year), and for the
  * books (`@in:book1 @in:book3` is either book), and narrows for the tags (`@is:sunday @is:rerun` is
  * the Sundays that ran again, and `@i:own @i:noted` the printings owned and noted) and the characters (`@featuring:susie @featuring:rosalyn` is the
- * strips with both). The creators widen, as the books do (`@by:a @by:b` is either one's strips).
+ * strips with both) and the subjects (`@about:snowmen @about:sledding` is the strips about both). The creators widen, as the books do (`@by:a @by:b` is either one's strips).
  */
 
 /**
@@ -41,6 +41,7 @@ export type Filter =
 	| { kind: "i"; tag: string }
 	| { kind: "featuring"; character: string }
 	| { kind: "by"; creator: string }
+	| { kind: "about"; subject: string }
 	| { kind: "date"; expression: DateExpression }
 	| { kind: "after"; bound: string }
 	| { kind: "before"; bound: string }
@@ -87,7 +88,7 @@ export type Run = "reused" | "rerun";
 /**
  * The bare words that are operators rather than filters: the logical ones, `@only`, and the crossing
  * operators this site has. `@in` is both — bare, it is the operator, and with a colon the filter —
- * and so are `@by`, `@featuring` and `@during`.
+ * and so are `@by`, `@featuring`, `@about` and `@during`.
  */
 export const OPERATOR_WORDS: ReadonlySet<string> = new Set([
 	"and",
@@ -302,6 +303,7 @@ function readValue(name: string, value: string): Filter | null {
 	// A closed vocabulary of proper nouns, like the books.
 	if (name === "featuring") return knows("featuring", value) ? { kind: "featuring", character: value } : null;
 	if (name === "by") return knows("by", value) ? { kind: "by", creator: value } : null;
+	if (name === "about") return knows("about", value) ? { kind: "about", subject: value } : null;
 	if (name === "during") return knows("during", value) ? { kind: "during", arc: value } : null;
 	// Any kind's: which kind is the subject's business, and an id of another kind is only false.
 	if (name === "id") return knows("id", value, "collection") ? { kind: "id", id: value } : null;
@@ -503,6 +505,8 @@ export function passesFilter(subject: string | Comic, filter: Filter, run?: Run)
 			return features(subject, filter.character);
 		case "by":
 			return madeBy(subject, filter.creator);
+		case "about":
+			return typeof subject !== "string" && (subject.subjects ?? []).includes(filter.subject);
 		case "after":
 			return date > filter.bound;
 		case "before":

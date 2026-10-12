@@ -70,6 +70,8 @@ export interface PageConfig {
 	characters: boolean;
 	/** Whether the site has creators, from the file `config.yaml` names: `@by:`, a strip's By line, and their pages. */
 	creators: boolean;
+	/** Whether the site has subjects, from the file `config.yaml` names: `@about:`, a strip's About line, and their pages. */
+	subjects: boolean;
 	/**
 	 * Whether the Sundays ran in colour and the dailies in black and white: whether there are
 	 * `@is:sunday` and `@is:daily` and the bar's Format field, and whether a book's `colour` — that

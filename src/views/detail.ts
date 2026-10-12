@@ -76,8 +76,9 @@ function attachSetLinkHandlers(
 
 /**
  * An arc's range lights the arc, its dates on the page; a creator's name, their strips, from the
- * ranges that ship in the script — so both work on a cold load too. A character's name lights the
- * strips they are in, which only the archive can say, so it waits for the archive.
+ * ranges that ship in the script; a subject's name, its strips, whose dates ship there too — so all
+ * three work on a cold load. A character's name lights the strips they are in, which only the
+ * archive can say, so it waits for the archive.
  */
 function attachGroupLinkHandlers(element: HTMLElement, page: DetailPage): void {
 	const arcs = new Map(page.arcs.map((arc) => [arc.id, new Set(arc.dates)]));
@@ -85,6 +86,10 @@ function attachGroupLinkHandlers(element: HTMLElement, page: DetailPage): void {
 	attachSetLinkHandlers(element, ".detail-creator-link", (link) => {
 		const creator = state.creatorsById.get(link.dataset.creatorId ?? "");
 		return creator ? creatorDates(creator) : null;
+	});
+	attachSetLinkHandlers(element, ".detail-subject-link", (link) => {
+		const subject = state.subjectsById.get(link.dataset.subjectId ?? "");
+		return subject ? new Set(subject.dates) : null;
 	});
 	attachSetLinkHandlers(element, ".detail-character-link", (link) =>
 		state.dataLoaded ? featuringDates(link.dataset.characterId ?? "") : null,

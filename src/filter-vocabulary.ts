@@ -106,6 +106,7 @@ export const COLLECTION_TAGS: readonly Term[] = [
 	...(PAGE_CONFIG.arcs ? [{ value: "arc", hint: "A story arc" }] : []),
 	...(PAGE_CONFIG.creators ? [{ value: "creator", hint: "A creator" }] : []),
 	...(PAGE_CONFIG.characters ? [{ value: "character", hint: "A character" }] : []),
+	...(PAGE_CONFIG.subjects ? [{ value: "subject", hint: "A subject or running gag" }] : []),
 	...(PAGE_CONFIG.colourSundays
 		? [spelt({ value: "colour", hint: "A book that printed its Sundays in colour", american: "color" })]
 		: []),

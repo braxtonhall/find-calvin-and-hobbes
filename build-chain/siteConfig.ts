@@ -118,6 +118,7 @@ interface RawConfig {
 	misspellings?: unknown;
 	characters?: unknown;
 	creators?: unknown;
+	subjects?: unknown;
 	comicImages?: unknown;
 	colourSundays?: unknown;
 	details?: Partial<Record<string, unknown>> | null;
@@ -384,7 +385,7 @@ function flagSetting(value: unknown, name: string, fallback: boolean): boolean {
 /** The parts of the archive every site has. */
 export type RequiredPart = "comics" | "collections" | "tuning" | "credits";
 /** The parts a site can go without, with `false`. */
-export type OptionalPart = "arcs" | "reruns" | "compounds" | "misspellings" | "characters" | "creators";
+export type OptionalPart = "arcs" | "reruns" | "compounds" | "misspellings" | "characters" | "creators" | "subjects";
 
 /** Whether nothing was given for the part at all. */
 function missing(value: unknown): boolean {
@@ -418,13 +419,16 @@ export function loadOptionalPart(name: OptionalPart, config?: string): unknown {
 }
 
 /** Which of the archive's optional parts this site has, from `config.yaml` alone. See `PageConfig`. */
-export function loadFeatures(config?: string): Pick<PageConfig, "arcs" | "reruns" | "characters" | "creators"> {
+export function loadFeatures(
+	config?: string,
+): Pick<PageConfig, "arcs" | "reruns" | "characters" | "creators" | "subjects"> {
 	const raw = readConfig(config);
 	return naming(config, () => ({
 		arcs: !partIsOff(raw.arcs, "arcs"),
 		reruns: !partIsOff(raw.reruns, "reruns"),
 		characters: !partIsOff(raw.characters, "characters"),
 		creators: !partIsOff(raw.creators, "creators"),
+		subjects: !partIsOff(raw.subjects, "subjects"),
 	}));
 }
 

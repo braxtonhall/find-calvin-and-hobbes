@@ -10,7 +10,7 @@ import { isPlainClick, parseRoute } from "./router";
 import { buildComicPath, isLibraryView } from "./routes";
 import { addressOf } from "./base-path";
 import { formatDateRange, formatLongDate } from "./date-utils";
-import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS, RERUNS } from "./bundled-data";
+import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS, RERUNS, SUBJECTS } from "./bundled-data";
 import { PAGE_CONFIG } from "./site-config";
 import { Board, setBoardSource, stopLife } from "./life";
 import {
@@ -409,11 +409,11 @@ function bestMatches(tiers: ReadonlyMap<string, number>): Set<string> {
 	return new Set([...tiers].filter(([, tier]) => tier === best).map(([date]) => date));
 }
 
-/** The pages that light a set of strips of their own, in `state.collectionDateSet`: a book's, an arc's, a creator's. */
-const LIGHTS_ITS_OWN = new Set<Route["view"]>(["collection", "arc", "creator"]);
+/** The pages that light a set of strips of their own, in `state.collectionDateSet`: a book's, an arc's, a creator's, a subject's. */
+const LIGHTS_ITS_OWN = new Set<Route["view"]>(["collection", "arc", "creator", "subject"]);
 
 /** The tabs of Collections, which light the strips their search found, in `state.tabMatchDates`. */
-const TABS = new Set<Route["view"]>(["collections", "arcs", "creators"]);
+const TABS = new Set<Route["view"]>(["collections", "arcs", "creators", "subjects"]);
 
 /**
  * What the page showing is about, and the days the grid should turn to for it: a search's best
@@ -524,7 +524,7 @@ function lightFor(route: Route): ((date: string) => Light) | undefined {
 	const found = state.tabMatchDates;
 	if (TABS.has(route.view) || route.view === "bookshelf-books") return found ? (date) => found.has(date) : undefined;
 
-	// A book's strips, an arc's or a creator's: whichever the page showing set out to light.
+	// A book's strips, an arc's, a creator's or a subject's: whichever the page showing set out to light.
 	const dates = state.collectionDateSet;
 	if (LIGHTS_ITS_OWN.has(route.view) && dates) return (date) => dates.has(date);
 
@@ -923,6 +923,7 @@ function useBundledData(): void {
 	state.arcsById = new Map(ARCS.map((arc) => [arc.id, arc]));
 	state.charactersById = new Map(CHARACTERS.map((character) => [character.id, character]));
 	state.creatorsById = new Map(CREATORS.map((creator) => [creator.id, creator]));
+	state.subjectsById = new Map(SUBJECTS.map((subject) => [subject.id, subject]));
 }
 
 export async function loadComicData(): Promise<void> {

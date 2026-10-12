@@ -16,6 +16,8 @@ export interface Comic {
 	characters?: string[];
 	/** Who made the strip, as the creators' file credits it. */
 	creators?: Credit[];
+	/** What the strip is about, by id, as `comics.yaml` lists them: a running gag, a recurring game. */
+	subjects?: string[];
 }
 
 export interface Appearance {
@@ -98,6 +100,21 @@ export interface Creator {
 	specials?: CreditedSpecial[];
 }
 
+/**
+ * Something strips come back to, like a running gag: the id `@about:` takes, the name a reader knows
+ * it by, and the strips that are about it, which `comics.yaml` says strip by strip.
+ */
+export interface Subject {
+	id: string;
+	name: string;
+	/** A sentence about it, where `subjects.yaml` gives one. */
+	description?: string;
+	/** Other words a reader might look for it by, which a search of the subjects finds it by too. */
+	keywords: string[];
+	/** Its strips' dates, oldest first. Only the dailies and Sundays: a special is never about one. */
+	dates: string[];
+}
+
 /** A special as a creator's page lists it: by its title, and the day it is filed under, which is where it is shown. */
 export interface CreditedSpecial {
 	id: string;
@@ -126,6 +143,8 @@ export interface Route {
 		| "arcs"
 		| "creator"
 		| "creators"
+		| "subject"
+		| "subjects"
 		| "settings"
 		| "bookmarks"
 		| "bookshelf"
