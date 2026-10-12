@@ -133,7 +133,15 @@ export function attachRowHandlers(list: HTMLElement): void {
 			textElement.scrollTop = Math.max(0, Math.min(scrollTo, maxScroll));
 		}
 
-		if (row.dataset.ownership) attachRowMenu(row);
+		if (row.dataset.ownership) {
+			attachRowMenu(row);
+			// Opening the row's menu is pointing at the strip on purpose, so it brings the strip into view,
+			// as a focus does and a hover does not.
+			row.addEventListener("contextmenu", () => {
+				const cell = cellForDate(row.dataset.date!);
+				if (cell) scrollCellIntoViewIfNeeded(cell);
+			});
+		}
 
 		row.addEventListener("mouseenter", () => {
 			if (state.keyboardNavActive) return;
@@ -141,10 +149,11 @@ export function attachRowHandlers(list: HTMLElement): void {
 			// has none.
 			state.hoveredCell?.classList.remove("cell--hover-highlight");
 			clearRowHighlights();
+			// Lit where it is, not scrolled to: the pointer may only be passing over the row. Focusing
+			// the row, or following it, brings the strip into view.
 			const cell = cellForDate(row.dataset.date!);
 			if (cell) {
 				cell.classList.add("cell--hover-highlight");
-				scrollCellIntoViewIfNeeded(cell);
 				state.hoveredCell = cell;
 			}
 			document

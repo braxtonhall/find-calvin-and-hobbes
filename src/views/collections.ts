@@ -7,7 +7,7 @@ import { buildCollectionsBodyHtml, buildCollectionsHtml } from "../pages/collect
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { clearCollectionSoon, datesOf, highlightCollection } from "./cell-highlight";
 import { attachTabSearch, keepsHeader, narrowTab, updateTabSearch } from "./tab-search";
-import { attachRowMenu } from "./row-menu";
+import { attachRowMenu, hasMenuOpen } from "./row-menu";
 
 /**
  * Draws the list of books, or — with `adopt` — takes over the one the build drew from the same `page`.
@@ -43,12 +43,16 @@ export function attachCollectionRowHandlers(element: HTMLElement, collections: C
 		const collection = byId.get(row.dataset.collectionId ?? "") ?? null;
 		// A row followed to its book is left focused, and hidden, which blurs it; by then the grid is
 		// the book page's to draw, so only the list while it is showing may touch it.
-		const show = () => element.classList.contains("active") && collection && highlightCollection(datesOf(collection));
+		const show = (scroll: boolean) =>
+			element.classList.contains("active") && collection && highlightCollection(datesOf(collection), scroll);
 		const clear = () => element.classList.contains("active") && clearCollectionSoon(state.tabMatchDates);
-		row.addEventListener("mouseenter", show);
-		row.addEventListener("focus", show);
+		row.addEventListener("mouseenter", () => show(false));
+		row.addEventListener("focus", () => show(true));
 		row.addEventListener("mouseleave", clear);
-		row.addEventListener("blur", clear);
+		// Not when the focus goes into the row's own menu: the row is still the one pointed at.
+		row.addEventListener("blur", () => hasMenuOpen(row) || clear());
+		// Opening the row's menu is pointing at the book on purpose, so it brings the strips into view as a focus does.
+		row.addEventListener("contextmenu", () => show(true));
 		attachRowMenu(row);
 	});
 }

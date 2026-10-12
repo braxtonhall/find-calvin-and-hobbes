@@ -850,20 +850,11 @@ export function renderGrid(): void {
 		cell.classList.add("cell--hover-highlight");
 		state.hoveredCell = cell;
 
-		// The showing page's rows only: the other page keeps its rows while hidden, and a hidden row
-		// cannot be scrolled to.
-		const resultRows = document.querySelectorAll(`.view.active .result-row[data-date="${cell.dataset.date}"]`);
-		if (resultRows.length > 0) {
-			resultRows.forEach((row) => row.classList.add("result-row--highlight"));
-			const mainView = document.getElementById("main")!;
-			const lastRow = resultRows[resultRows.length - 1] as HTMLElement;
-			const rowRect = lastRow.getBoundingClientRect();
-			const mainRect = mainView.getBoundingClientRect();
-			const isVisible = rowRect.top >= mainRect.top && rowRect.bottom <= mainRect.bottom;
-			if (!isVisible) {
-				resultRows[0].scrollIntoView({ block: "center", behavior: "smooth" });
-			}
-		}
+		// The showing page's rows only: the other page keeps its rows while hidden. Lit where they are,
+		// not scrolled to, so sweeping the pointer across the grid leaves the list still.
+		document
+			.querySelectorAll(`.view.active .result-row[data-date="${cell.dataset.date}"]`)
+			.forEach((row) => row.classList.add("result-row--highlight"));
 	});
 
 	layout.addEventListener("mouseout", (event) => {

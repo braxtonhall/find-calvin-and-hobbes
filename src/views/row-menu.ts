@@ -28,6 +28,14 @@ let menuRow: HTMLElement | null = null;
 /** Keeps the row tinted as hovered while the pointer is in its menu, which is not inside it, nor `:hover` it. */
 const MENU_OPEN_CLASS = "row--menu-open";
 
+/**
+ * Whether `row`'s menu is open. Opening it takes the focus from the row into the menu, which is a blur
+ * the row should not take for the reader leaving it.
+ */
+export function hasMenuOpen(row: HTMLElement): boolean {
+	return menuRow === row;
+}
+
 /** Puts the menu away, if it is open: a page left behind takes its menu with it. */
 export function closeRowMenu(): void {
 	closeMenu(false);

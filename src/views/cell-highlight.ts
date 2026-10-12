@@ -6,17 +6,18 @@ import { Collection, Creator } from "../types";
 
 /**
  * Lights up a strip's cell in the grid while a link to that strip is hovered or focused — the same
- * ring a search result's row puts on its cell — and scrolls the grid to it if it is out of view. A
- * reader tabbing through the page is pointing at the link as much as one with a mouse is.
+ * ring a search result's row puts on its cell. Focusing it also scrolls the grid to the cell if it is
+ * out of view: a reader tabbing through the page has no other way to bring it there, where one with a
+ * mouse may only be passing over the link on the way somewhere else.
  */
 export function attachCellHighlightLink(link: HTMLElement, date: string): void {
-	const show = () => {
+	const show = (scroll: boolean) => {
 		if (state.hoveredCell) state.hoveredCell.classList.remove("cell--hover-highlight");
 		const cell = cellForDate(date);
 		if (!cell) return;
 		cell.classList.add("cell--hover-highlight");
 		state.hoveredCell = cell;
-		scrollCellIntoViewIfNeeded(cell);
+		if (scroll) scrollCellIntoViewIfNeeded(cell);
 	};
 
 	const clear = () => {
@@ -25,8 +26,8 @@ export function attachCellHighlightLink(link: HTMLElement, date: string): void {
 		state.hoveredCell = null;
 	};
 
-	link.addEventListener("mouseenter", show);
-	link.addEventListener("focus", show);
+	link.addEventListener("mouseenter", () => show(false));
+	link.addEventListener("focus", () => show(true));
 	link.addEventListener("mouseleave", clear);
 	link.addEventListener("blur", clear);
 }
@@ -79,14 +80,14 @@ export function featuringDates(character: string): Set<string> {
  * Going from one book to another only touches the cells that differ between them: a class set to
  * what it already is changes nothing, and so costs no restyle and starts no fade.
  *
- * When none of the strips is on screen, the grid scrolls to the first one, the way a hovered search
- * result brings its strip into view. A set with any strip already showing leaves the grid where it
- * is, so running a finger down a list does not throw it about.
+ * With `scroll` — a focus, not a hover — and none of the strips on screen, the grid scrolls to the
+ * first one, the way a focused search result brings its strip into view. A hover never moves the
+ * grid, so running the pointer down a list does not throw it about; following the link does.
  */
-export function highlightCollection(dates: ReadonlySet<string> | null): void {
+export function highlightCollection(dates: ReadonlySet<string> | null, scroll: boolean = false): void {
 	cancelCollectionClear();
 	const matched = lightDates(dates);
-	if (matched.length > 0 && !anyCellInView(matched)) {
+	if (scroll && matched.length > 0 && !anyCellInView(matched)) {
 		matched[0].scrollIntoView({ block: "center", behavior: "smooth" });
 	}
 }

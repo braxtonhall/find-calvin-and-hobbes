@@ -25,13 +25,13 @@ import { attachCellHighlightLink, clearCollectionSoon, datesOf, highlightCollect
  * touch it.
  */
 function attachBookHighlight(target: HTMLElement, view: HTMLElement, back: ReadonlySet<string> | null): void {
-	const show = () => {
+	const show = (scroll: boolean) => {
 		const collection = state.collectionsById?.get(target.dataset.collectionId ?? "");
-		if (collection && view.classList.contains("active")) highlightCollection(datesOf(collection));
+		if (collection && view.classList.contains("active")) highlightCollection(datesOf(collection), scroll);
 	};
 	const clear = () => view.classList.contains("active") && clearCollectionSoon(back);
-	target.addEventListener("mouseenter", show);
-	target.addEventListener("focus", show);
+	target.addEventListener("mouseenter", () => show(false));
+	target.addEventListener("focus", () => show(true));
 	target.addEventListener("mouseleave", clear);
 	target.addEventListener("blur", clear);
 }

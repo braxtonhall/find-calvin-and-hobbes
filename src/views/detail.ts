@@ -62,13 +62,13 @@ function attachSetLinkHandlers(
 	datesOf: (link: HTMLElement) => ReadonlySet<string> | null,
 ): void {
 	element.querySelectorAll<HTMLElement>(selector).forEach((link) => {
-		const show = () => {
+		const show = (scroll: boolean) => {
 			const dates = element.classList.contains("active") ? datesOf(link) : null;
-			if (dates) highlightCollection(dates);
+			if (dates) highlightCollection(dates, scroll);
 		};
 		const clear = () => element.classList.contains("active") && clearCollectionSoon();
-		link.addEventListener("mouseenter", show);
-		link.addEventListener("focus", show);
+		link.addEventListener("mouseenter", () => show(false));
+		link.addEventListener("focus", () => show(true));
 		link.addEventListener("mouseleave", clear);
 		link.addEventListener("blur", clear);
 	});

@@ -31,10 +31,10 @@ export function attachArcListHandlers(
 	element.querySelectorAll<HTMLElement>(".arc-row").forEach((row) => {
 		const dates = byId.get(row.dataset.arcId ?? "");
 		if (!dates) return;
-		const show = () => showing() && highlightCollection(dates);
+		const show = (scroll: boolean) => showing() && highlightCollection(dates, scroll);
 		const clear = () => showing() && clearCollectionSoon(back);
-		row.addEventListener("mouseenter", show);
-		row.addEventListener("focus", show);
+		row.addEventListener("mouseenter", () => show(false));
+		row.addEventListener("focus", () => show(true));
 		row.addEventListener("mouseleave", clear);
 		row.addEventListener("blur", clear);
 	});

@@ -37,10 +37,11 @@ export function renderCreators(page: CreatorsPage, adopt: boolean = false, arriv
 		const creator = byId.get(row.dataset.creatorId ?? "");
 		if (!creator) return;
 		// As the list of books does: only while the list is showing may it touch the grid.
-		const show = () => element.classList.contains("active") && highlightCollection(creatorDates(creator));
+		const show = (scroll: boolean) =>
+			element.classList.contains("active") && highlightCollection(creatorDates(creator), scroll);
 		const clear = () => element.classList.contains("active") && clearCollectionSoon(state.tabMatchDates);
-		row.addEventListener("mouseenter", show);
-		row.addEventListener("focus", show);
+		row.addEventListener("mouseenter", () => show(false));
+		row.addEventListener("focus", () => show(true));
 		row.addEventListener("mouseleave", clear);
 		row.addEventListener("blur", clear);
 	});
