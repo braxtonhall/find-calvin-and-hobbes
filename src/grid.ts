@@ -2,7 +2,7 @@ import "./grid.css";
 
 import { Day, Route } from "./types";
 import { computeDays } from "./days";
-import { clearRowHighlights, scrollCellIntoViewIfNeeded, visibleBand } from "./utils";
+import { anyCellInView, clearRowHighlights, scrollCellIntoViewIfNeeded, visibleBand } from "./utils";
 import { state } from "./state";
 import { isDayBookmarked } from "./bookmarks";
 import { loadDescriptions } from "./details";
@@ -465,6 +465,25 @@ export function followRoute(route: Route): void {
 	subjectShown = subject.key;
 	abandonMove();
 	showAnyOf(subject.dates);
+	// A page of its own strips is followed to — a book's arrows, a row of the list — and brings them
+	// into view, as a strip's page brings its strip. A search's best matches change a key at a time,
+	// so they leave the grid where it is.
+	if (LIGHTS_ITS_OWN.has(route.view)) scrollToAnyOf(subject.dates);
+}
+
+/** Scrolls the grid to the first of `dates` it is showing, unless one of them is already in view. */
+function scrollToAnyOf(dates: ReadonlySet<string>): void {
+	if (!drawn) return;
+	const cells = new Set<HTMLElement>();
+	let first: string | null = null;
+	for (const date of dates) {
+		const cell = drawn.byDate.get(date);
+		if (!cell) continue;
+		cells.add(cell);
+		if (first === null || date < first) first = date;
+	}
+	if (first === null || anyCellInView(cells)) return;
+	drawn.byDate.get(first)!.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 
 /** Turns to the page holding the first of `dates`, unless the grid is already showing one of them. */
