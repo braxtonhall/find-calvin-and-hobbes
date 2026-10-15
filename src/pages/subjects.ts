@@ -1,14 +1,23 @@
 import { escHtml } from "../utils";
 import { buildSubjectPath } from "../routes";
 import { addressOf } from "../base-path";
-import { Subject } from "../types";
+import { Subject, TabOrder } from "../types";
 import { PageSource, SubjectsPage } from "./page";
-import { buildCollectionsHeaderHtml, buildNoMatchesHtml } from "./collections";
+import { buildCollectionsHeaderHtml, buildNoMatchesHtml, orderOf, sortedByCount } from "./collections";
 import { formatStripCount, formatYears } from "./creators";
 
-/** Every subject, oldest first by the first strip about each — the order the build writes them in. */
-export function subjectsPageFrom(source: PageSource, q?: string): SubjectsPage {
-	return { view: "subjects", subjects: [...source.subjectsById.values()], ...(q === undefined ? {} : { q }) };
+/**
+ * Every subject, oldest first by the first strip about each — the order the build writes them in —
+ * or most strips first.
+ */
+export function subjectsPageFrom(source: PageSource, q?: string, order?: TabOrder): SubjectsPage {
+	const subjects = [...source.subjectsById.values()];
+	return {
+		view: "subjects",
+		subjects: order === "count" ? sortedByCount(subjects, (subject) => subject.dates.length) : subjects,
+		...(q === undefined ? {} : { q }),
+		...orderOf(order),
+	};
 }
 
 /** The years with a strip about the subject, in order. */
@@ -49,7 +58,7 @@ export function buildSubjectsHtml(
 	ids: ReadonlySet<string> | null = null,
 ): string {
 	return `<div class="collections-container">
-		${buildCollectionsHeaderHtml("subjects", canGoBack, page.q)}
+		${buildCollectionsHeaderHtml("subjects", canGoBack, page.q, page.order)}
 		<div class="collections-body">${buildSubjectsBodyHtml(page, ids)}</div>
 	</div>`;
 }

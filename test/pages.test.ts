@@ -11,7 +11,7 @@ import { generateCollectionIndex } from "../build-chain/generateCollectionIndex"
 import { loadArcs } from "../build-chain/arcs";
 import { computeDays } from "../src/days";
 import { Arc, Collection, Comic, Creator } from "../src/types";
-import { Page, PageSource } from "../src/pages/page";
+import { Page, PageSource, arcRange } from "../src/pages/page";
 import { detailPageFrom } from "../src/pages/detail";
 import { buildRangeSearchPath, collectionPageFrom } from "../src/pages/collection";
 import { admits, parseQuery } from "../src/boolean-query";
@@ -221,6 +221,36 @@ test("a prerendered document", async (suite) => {
 			assert.deepEqual(embedded, page);
 			assert.equal(activeView(document, "arc"), buildViewHtml(embedded, false));
 		}
+	});
+
+	await suite.test("sorts a tab by strip count where asked, ties in date order", () => {
+		const books = collectionsPageFrom(source, undefined, "count");
+		assert.equal(books.order, "count");
+		const counts = books.collections.map((summary) => collectionPageFrom(source, summary.id).dates.length);
+		assert.deepEqual(
+			counts,
+			[...counts].sort((a, b) => b - a),
+			"most strips first",
+		);
+		const position = new Map(source.collectionIndex!.collections.map((collection, index) => [collection.id, index]));
+		books.collections.forEach((summary, index) => {
+			const before = books.collections[index - 1];
+			if (before && counts[index - 1] === counts[index]) {
+				assert.ok(position.get(before.id)! < position.get(summary.id)!, `${summary.id} keeps date order in a tie`);
+			}
+		});
+
+		const arcs = arcsPageFrom(source, undefined, "count");
+		const lengths = arcs.list.arcs.map((arc) => arc.dates.length);
+		assert.deepEqual(
+			lengths,
+			[...lengths].sort((a, b) => b - a),
+		);
+		// No year headings, so each row says its own year.
+		const html = buildViewHtml(arcs, false);
+		assert.ok(!html.includes("arc-year"), "no year headings");
+		assert.ok(html.includes(arcRange(arcs.list.arcs[0])), "the year is in the title");
+		assert.ok(buildViewHtml(arcsPageFrom(source), false).includes("arc-year"), "date order keeps them");
 	});
 
 	await suite.test("finds an arc's strips, its books, and the arcs either side of it", () => {

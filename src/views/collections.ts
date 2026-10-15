@@ -23,7 +23,7 @@ export function renderCollections(page: CollectionsPage, adopt: boolean = false,
 		attachTabSearch(element, "books");
 	} else if (keepsHeader(element, arriving)) {
 		element.querySelector(".collections-body")!.innerHTML = buildCollectionsBodyHtml(page, ids);
-		updateTabSearch(element, page.q);
+		updateTabSearch(element, page.q, page.order);
 	} else {
 		element.innerHTML = buildCollectionsHtml(page, canGoBack(), ids);
 		attachBackAndHomeHandlers(element);

@@ -1,10 +1,17 @@
 import { ArcList, ArcsPage, PageSource } from "./page";
 import { arcListFrom, buildArcListHtml } from "./arc-list";
-import { buildCollectionsHeaderHtml, buildNoMatchesHtml } from "./collections";
+import { TabOrder } from "../types";
+import { buildCollectionsHeaderHtml, buildNoMatchesHtml, orderOf, sortedByCount } from "./collections";
 
-/** Every arc, oldest first — the order the build writes them in. */
-export function arcsPageFrom(source: PageSource, q?: string): ArcsPage {
-	return { view: "arcs", list: arcListFrom(source, source.arcs ?? []), ...(q === undefined ? {} : { q }) };
+/** Every arc, oldest first — the order the build writes them in — or longest first. */
+export function arcsPageFrom(source: PageSource, q?: string, order?: TabOrder): ArcsPage {
+	const arcs = source.arcs ?? [];
+	return {
+		view: "arcs",
+		list: arcListFrom(source, order === "count" ? sortedByCount(arcs, (arc) => arc.dates.length) : arcs),
+		...(q === undefined ? {} : { q }),
+		...orderOf(order),
+	};
 }
 
 /** The list, narrowed to `ids` where a search has narrowed it. */
@@ -20,12 +27,14 @@ export function narrowArcs(list: ArcList, ids: ReadonlySet<string> | null): ArcL
 export function buildArcsBodyHtml(page: ArcsPage, ids: ReadonlySet<string> | null = null): string {
 	if (page.list.arcs.length === 0) return `<p class="detail-missing">Arc data not available.</p>`;
 	const list = narrowArcs(page.list, ids);
-	return list.arcs.length > 0 ? buildArcListHtml(list) : buildNoMatchesHtml("arcs");
+	if (list.arcs.length === 0) return buildNoMatchesHtml("arcs");
+	// Longest first, the years are all mixed up, so there are none to head the rows with.
+	return buildArcListHtml(list, page.order !== "count");
 }
 
 export function buildArcsHtml(page: ArcsPage, canGoBack: boolean, ids: ReadonlySet<string> | null = null): string {
 	return `<div class="collections-container">
-		${buildCollectionsHeaderHtml("arcs", canGoBack, page.q)}
+		${buildCollectionsHeaderHtml("arcs", canGoBack, page.q, page.order)}
 		<div class="collections-body">${buildArcsBodyHtml(page, ids)}</div>
 	</div>`;
 }

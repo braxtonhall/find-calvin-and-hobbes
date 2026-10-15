@@ -1,13 +1,19 @@
 import { escHtml } from "../utils";
 import { buildCreatorPath } from "../routes";
 import { addressOf } from "../base-path";
-import { Creator } from "../types";
+import { Creator, TabOrder } from "../types";
 import { CreatorsPage, PageSource } from "./page";
-import { buildCollectionsHeaderHtml, buildNoMatchesHtml } from "./collections";
+import { buildCollectionsHeaderHtml, buildNoMatchesHtml, orderOf, sortedByCount } from "./collections";
 
-/** Every creator, in the order the creators' file lists them. */
-export function creatorsPageFrom(source: PageSource, q?: string): CreatorsPage {
-	return { view: "creators", creators: [...source.creatorsById.values()], ...(q === undefined ? {} : { q }) };
+/** Every creator, in the order the creators' file lists them, or most strips first. */
+export function creatorsPageFrom(source: PageSource, q?: string, order?: TabOrder): CreatorsPage {
+	const creators = [...source.creatorsById.values()];
+	return {
+		view: "creators",
+		creators: order === "count" ? sortedByCount(creators, (creator) => creator.strips) : creators,
+		...(q === undefined ? {} : { q }),
+		...orderOf(order),
+	};
 }
 
 /** `1985–1995`, or `1950–1960, 1963`: the years, with each run of them as its ends. */
@@ -60,7 +66,7 @@ export function buildCreatorsHtml(
 	ids: ReadonlySet<string> | null = null,
 ): string {
 	return `<div class="collections-container">
-		${buildCollectionsHeaderHtml("creators", canGoBack, page.q)}
+		${buildCollectionsHeaderHtml("creators", canGoBack, page.q, page.order)}
 		<div class="collections-body">${buildCreatorsBodyHtml(page, ids)}</div>
 	</div>`;
 }

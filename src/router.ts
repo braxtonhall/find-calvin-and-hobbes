@@ -218,18 +218,18 @@ function pageFor(route: Route): Page | null {
 		case "collection":
 			return state.dataLoaded ? collectionPageFrom(state, route.id ?? "") : null;
 		case "collections":
-			return state.dataLoaded && tabReady(route.q) ? collectionsPageFrom(state, route.q) : null;
+			return state.dataLoaded && tabReady(route.q) ? collectionsPageFrom(state, route.q, route.order) : null;
 		case "arcs":
-			return state.dataLoaded && tabReady(route.q) ? arcsPageFrom(state, route.q) : null;
+			return state.dataLoaded && tabReady(route.q) ? arcsPageFrom(state, route.q, route.order) : null;
 		// The creators ship inside the script, so their pages need nothing fetched — but a search of
 		// them is a search of their strips.
 		case "creators":
-			return tabReady(route.q) ? creatorsPageFrom(state, route.q) : null;
+			return tabReady(route.q) ? creatorsPageFrom(state, route.q, route.order) : null;
 		case "creator":
 			return creatorPageFrom(state, route.id ?? "");
 		// The subjects ship inside the script too, but a search of them is a search of their strips.
 		case "subjects":
-			return tabReady(route.q) ? subjectsPageFrom(state, route.q) : null;
+			return tabReady(route.q) ? subjectsPageFrom(state, route.q, route.order) : null;
 		// Its rows are its strips' descriptions, as an arc's are, and wait for them the same way.
 		case "subject":
 			if (!state.dataLoaded) return null;
@@ -288,12 +288,12 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		case "credits":
 		case "settings":
 			return { page: prerendered, adopt: true };
-		// The build writes each tab with its search closed.
+		// The build writes each tab with its search closed, in date order.
 		case "collections":
 		case "arcs":
 		case "creators":
 		case "subjects":
-			return route.q === undefined ? { page: prerendered, adopt: true } : null;
+			return route.q === undefined && route.order === undefined ? { page: prerendered, adopt: true } : null;
 		// The rows are the reader's library, which the build cannot know.
 		case "results":
 		case "bookmarks":
@@ -477,7 +477,7 @@ document.addEventListener(LIBRARY_CHANGE_EVENT, (event) => {
 	} else if (isLibraryView(route.view) || isBookshelfView(route.view)) {
 		renderLibraryRows(route.view);
 	} else if (route.view === "collections" && route.q && asksAboutReader(route.q, collectionQuery())) {
-		renderCollections(collectionsPageFrom(state, route.q), false, false);
+		renderCollections(collectionsPageFrom(state, route.q, route.order), false, false);
 	} else {
 		return;
 	}

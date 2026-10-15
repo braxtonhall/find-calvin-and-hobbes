@@ -1,4 +1,4 @@
-import { Route, SortMode } from "./types";
+import { Route, SortMode, TabOrder } from "./types";
 import { PAGE_CONFIG } from "./site-config";
 
 /**
@@ -51,10 +51,11 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 
 	// An empty `?q=` asks nothing, the same as none. See `buildTabPath`.
 	const q = params.get("q");
-	const searched = q ? { q } : {};
+	// And a tab's order the same way: date order, the default, is no parameter at all.
+	const tabParams = { ...(q ? { q } : {}), ...(params.get("sort") === "count" ? { order: "count" as const } : {}) };
 
 	if (path === BOOKS_PATH || path === COLLECTIONS_PATH) {
-		return { view: "collections", ...searched };
+		return { view: "collections", ...tabParams };
 	}
 
 	// A site without arcs has none of their addresses, so they go home like any other.
@@ -64,7 +65,7 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 	}
 
 	if (path === ARCS_PATH && PAGE_CONFIG.arcs) {
-		return { view: "arcs", ...searched };
+		return { view: "arcs", ...tabParams };
 	}
 
 	// Creators the same way, on a site without them.
@@ -74,7 +75,7 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 	}
 
 	if (path === CREATORS_PATH && PAGE_CONFIG.creators) {
-		return { view: "creators", ...searched };
+		return { view: "creators", ...tabParams };
 	}
 
 	// And subjects.
@@ -84,7 +85,7 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 	}
 
 	if (path === SUBJECTS_PATH && PAGE_CONFIG.subjects) {
-		return { view: "subjects", ...searched };
+		return { view: "subjects", ...tabParams };
 	}
 
 	if (path === SETTINGS_PATH) {
@@ -169,9 +170,13 @@ const TAB_PATHS: Record<CollectionsTab, string> = {
 	subjects: "/subjects",
 };
 
-/** A tab of Collections, with `query` in its search box — or, given none or an empty one, the whole tab. */
-export function buildTabPath(tab: CollectionsTab, query?: string): string {
-	return TAB_PATHS[tab] + (query ? "?q=" + encodeURIComponent(query) : "");
+/**
+ * A tab of Collections, with `query` in its search box — or, given none or an empty one, the whole
+ * tab — in `order`. Date order is the default, so only `?sort=count` is ever written.
+ */
+export function buildTabPath(tab: CollectionsTab, query?: string, order: TabOrder = "date"): string {
+	const params = [...(query ? ["q=" + encodeURIComponent(query)] : []), ...(order === "count" ? ["sort=count"] : [])];
+	return TAB_PATHS[tab] + (params.length > 0 ? "?" + params.join("&") : "");
 }
 
 export function buildComicPath(date: string, alternates: string[] = []): string {

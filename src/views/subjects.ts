@@ -27,7 +27,7 @@ export function renderSubjects(page: SubjectsPage, adopt: boolean = false, arriv
 		attachTabSearch(element, "subjects");
 	} else if (keepsHeader(element, arriving)) {
 		element.querySelector(".collections-body")!.innerHTML = buildSubjectsBodyHtml(page, ids);
-		updateTabSearch(element, page.q);
+		updateTabSearch(element, page.q, page.order);
 	} else {
 		element.innerHTML = buildSubjectsHtml(page, canGoBack(), ids);
 		attachBackAndHomeHandlers(element);

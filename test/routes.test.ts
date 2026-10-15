@@ -99,6 +99,11 @@ test("routes", async (suite) => {
 		const [path, search] = buildTabPath("arcs", "snow @has @is:sunday").split("?");
 		assert.deepEqual(parseRoutePath(path, "?" + search), { view: "arcs", q: "snow @has @is:sunday" });
 		assert.deepEqual(parseRoutePath(BOOKS_PATH, "?q="), { view: "collections" });
+		assert.equal(buildTabPath("books", "", "date"), BOOKS_PATH);
+		assert.equal(buildTabPath("books", undefined, "count"), BOOKS_PATH + "?sort=count");
+		const [countPath, countSearch] = buildTabPath("arcs", "snow", "count").split("?");
+		assert.deepEqual(parseRoutePath(countPath, "?" + countSearch), { view: "arcs", q: "snow", order: "count" });
+		assert.deepEqual(parseRoutePath(ARCS_PATH, "?sort=date"), { view: "arcs" });
 		assert.deepEqual(parseRoutePath(COLLECTIONS_PATH, "?q=owned"), { view: "collections", q: "owned" });
 		assert.equal(parseRoutePath("/library", ""), null, "the Library page is gone");
 	});

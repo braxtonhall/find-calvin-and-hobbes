@@ -25,7 +25,7 @@ export function renderCreators(page: CreatorsPage, adopt: boolean = false, arriv
 		attachTabSearch(element, "creators");
 	} else if (keepsHeader(element, arriving)) {
 		element.querySelector(".collections-body")!.innerHTML = buildCreatorsBodyHtml(page, ids);
-		updateTabSearch(element, page.q);
+		updateTabSearch(element, page.q, page.order);
 	} else {
 		element.innerHTML = buildCreatorsHtml(page, canGoBack(), ids);
 		attachBackAndHomeHandlers(element);

@@ -7,14 +7,7 @@ import { buildFilterBar } from "./filter-bar";
 import { attachQueryInput, syncQueryInput } from "./query-input";
 import { attachRowFocusHandler } from "./result-rows";
 import { isTouchDevice } from "../utils";
-
-const DATE_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
-	<rect x="2" y="3.5" width="12" height="10" rx="1.5" /><path d="M2 6.5h12M5.5 2v3M10.5 2v3" />
-</svg>`;
-
-const RANK_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
-	<path d="M3 3v10M3 13l-2-2M3 13l2-2M7.5 4h7M7.5 8h5M7.5 12h3" />
-</svg>`;
+import { DATE_ICON, RANK_ICON } from "../pages/collections";
 
 function sortLabelFor(sort: SortMode): string {
 	return sort === "rank"

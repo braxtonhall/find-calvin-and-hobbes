@@ -132,6 +132,9 @@ export interface Day {
 
 export type SortMode = "date" | "rank";
 
+/** How a Collections tab is ordered: by date, as the build writes it, or by how many strips each holds. */
+export type TabOrder = "date" | "count";
+
 export interface Route {
 	view:
 		| "landing"
@@ -153,6 +156,8 @@ export interface Route {
 		| "credits";
 	q?: string;
 	sort?: SortMode;
+	/** Only ever `count`: a tab in date order says nothing. */
+	order?: "count";
 	date?: string;
 	alternates?: string[];
 	id?: string;

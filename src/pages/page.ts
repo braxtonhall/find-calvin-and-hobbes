@@ -141,6 +141,8 @@ export interface ArcsPage {
 	list: ArcList;
 	/** The search box's query, where it is open. Never on a page the build writes. */
 	q?: string;
+	/** Most strips first, where the reader has asked; otherwise the order above. Never on a page the build writes. */
+	order?: "count";
 }
 
 /** A strip as an arc's page lists it: its date, and what happens in it. */
@@ -199,6 +201,8 @@ export interface CollectionsPage {
 	collections: CollectionSummary[];
 	/** The search box's query, where it is open. Never on a page the build writes. */
 	q?: string;
+	/** Most strips first, where the reader has asked; otherwise the order above. Never on a page the build writes. */
+	order?: "count";
 }
 
 export interface CreatorsPage {
@@ -207,6 +211,8 @@ export interface CreatorsPage {
 	creators: Creator[];
 	/** The search box's query, where it is open. Never on a page the build writes. */
 	q?: string;
+	/** Most strips first, where the reader has asked; otherwise the order above. Never on a page the build writes. */
+	order?: "count";
 }
 
 export interface CreatorPage {
@@ -222,6 +228,8 @@ export interface SubjectsPage {
 	subjects: Subject[];
 	/** The search box's query, where it is open. Never on a page the build writes. */
 	q?: string;
+	/** Most strips first, where the reader has asked; otherwise the order above. Never on a page the build writes. */
+	order?: "count";
 }
 
 export interface SubjectPage {

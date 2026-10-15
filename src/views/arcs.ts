@@ -53,7 +53,7 @@ export function renderArcs(page: ArcsPage, adopt: boolean = false, arriving: boo
 		attachTabSearch(element, "arcs");
 	} else if (keepsHeader(element, arriving)) {
 		element.querySelector(".collections-body")!.innerHTML = buildArcsBodyHtml(page, ids);
-		updateTabSearch(element, page.q);
+		updateTabSearch(element, page.q, page.order);
 	} else {
 		element.innerHTML = buildArcsHtml(page, canGoBack(), ids);
 		attachBackAndHomeHandlers(element);
