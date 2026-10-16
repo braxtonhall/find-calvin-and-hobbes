@@ -102,7 +102,7 @@ export function formatPublicationDate(collection: Pick<Collection, "pub_year" | 
 		: `${monthName} ${collection.pub_year}`;
 }
 
-/** A page's links out, last on it, drawn as a strip's Read and License are: a book's, and a creator's. */
+/** A page's links out, drawn as a strip's Read and License are: a book's, and a creator's. */
 export function buildLinksHtml(links: { title: string; href: string }[]): string {
 	const anchors = links
 		.map(
@@ -216,15 +216,22 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 		extrasHtml = `<p class="collection-section-heading">Extras</p><ul class="collection-extras">${page.extras.map((extra) => `<li>${escHtml(extra)}</li>`).join("")}</ul>`;
 	}
 
-	// Closed until asked for: a compendium holds most of the arcs there are, and the list would bury
-	// the rest of the page.
+	// Beside the rest of the page where there is room, and after it where there is not: a compendium
+	// holds most of the arcs there are, and the list would bury anything under it.
 	const arcsHtml =
 		page.arcs.arcs.length > 0
-			? `<details class="collection-section collection-arcs">
-			<summary class="collection-section-heading">Arcs</summary>
+			? `<section class="collection-arcs">
+			<p class="collection-section-heading">Arcs</p>
 			${buildArcListHtml(page.arcs)}
-		</details>`
+		</section>`
 			: "";
+
+	const aboutHtml = `${collection.notes && collection.notes.length > 0 ? `<p class="collection-note">${escHtml(collection.notes[0])}</p>` : ""}
+		${extrasHtml}
+		${buildAlterationsHtml(collection.alterations ?? {})}
+		${buildLinksHtml(collection.links ?? [])}
+		<p class="collection-section-heading">Date Ranges</p>
+		<div class="collection-ranges">${rangesHtml}</div>`;
 
 	const numComicsInCollection = page.dates.length;
 	let comicsSummary = "";
@@ -251,14 +258,13 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 			${buildOwnershipControlsHtml("book", collection.id)}
 			<span class="detail-actions__arrows">${buildNeighbourButton(page.prev, "prev")}${buildNeighbourButton(page.next, "next")}</span>
 		</div>
-		${collection.notes && collection.notes.length > 0 ? `<p class="collection-note">${escHtml(collection.notes[0])}</p>` : ""}
-		<details class="collection-section" open>
-			<summary class="collection-section-heading">Date Ranges</summary>
-			<div class="collection-ranges">${rangesHtml}</div>
-		</details>
-		${arcsHtml}
-		${buildAlterationsHtml(collection.alterations ?? {})}
-		${extrasHtml}
-		${buildLinksHtml(collection.links ?? [])}
+		${
+			arcsHtml
+				? `<div class="columns">
+			<div class="columns__main">${aboutHtml}</div>
+			<div class="columns__aside">${arcsHtml}</div>
+		</div>`
+				: aboutHtml
+		}
 	</div>`;
 }
