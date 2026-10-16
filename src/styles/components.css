@@ -468,3 +468,33 @@
 .library-dialog__choices {
 	margin-bottom: 0;
 }
+
+/*
+ * A page that can stand in two columns: what it is about on the left, at most 800 pixels as a page
+ * of one column is, and what is said about it on the right. One column, the left over the right,
+ * until the page has room for both; the page measures itself, not the window, so the grid's width
+ * counts too. A page with columns is wider than one without, by the right column.
+ */
+.detail-container,
+.collection-container {
+	container-type: inline-size;
+}
+
+.detail-container:has(.columns),
+.collection-container:has(.columns) {
+	max-width: 1240px;
+}
+
+.columns {
+	max-width: 800px;
+}
+
+@container (min-width: 1080px) {
+	.columns {
+		max-width: none;
+		display: grid;
+		grid-template-columns: minmax(0, 800px) minmax(0, 1fr);
+		gap: 40px;
+		align-items: start;
+	}
+}

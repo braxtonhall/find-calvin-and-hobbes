@@ -4,9 +4,8 @@ import { addressOf } from "../base-path";
 import { CreatorPage, PageSource } from "./page";
 import { CreditedSpecial } from "../types";
 import { buildFlashLabels, buildBackAndHomeButtons, buildCreatorsButton } from "./nav-buttons";
-import { buildRangeHtml } from "./collection";
+import { buildLinksHtml, buildRangeHtml } from "./collection";
 import { formatStripCount, formatYears } from "./creators";
-import { LINK_ICON_SVG } from "./detail";
 
 /**
  * No arrows to the creators either side, as a book's and an arc's page have: those are in an order
@@ -37,10 +36,10 @@ function buildOtherHtml(specials: CreditedSpecial[]): string {
 }
 
 /**
- * A creator's page, laid out as a book's: who they are, and the stretches of strips they made, with
- * the grid lighting all of them. Their strips themselves are a search away rather than listed — a
- * strip that ran for fifty years is too many rows for a page — so each range's dash is the search
- * for that range's, oldest first.
+ * A creator's page, laid out as a book's: who they are, the stretches of strips they made, and their
+ * link out last, under Links, as a book's links are, with the grid lighting all of them. Their
+ * strips themselves are a search away rather than listed — a strip that ran for fifty years is too
+ * many rows for a page — so each range's dash is the search for that range's, oldest first.
  */
 export function buildCreatorHtml(page: CreatorPage, canGoBack: boolean): string {
 	const { creator } = page;
@@ -54,9 +53,6 @@ export function buildCreatorHtml(page: CreatorPage, canGoBack: boolean): string 
 	const by = `@by:${creator.id}`;
 	const roles = creator.roles
 		? `<p class="collection-meta"><span class="collection-meta--label">Roles:</span> ${creator.roles.map(escHtml).join(" · ")}</p>`
-		: "";
-	const link = creator.link
-		? `<div class="detail-links"><a class="detail-read-link" href="${escHtml(creator.link)}" target="_blank" rel="noopener">About ${LINK_ICON_SVG}</a></div>`
 		: "";
 	const ranges = creator.ranges
 		.map((range) => `<div class="collection-range">${buildRangeHtml(range, false, by)}</div>`)
@@ -74,10 +70,10 @@ export function buildCreatorHtml(page: CreatorPage, canGoBack: boolean): string 
 				<div class="detail-actions">
 					<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildCreatorPath(creator.id)))}">${buildFlashLabels("Copy link", "Copied!")}</button>
 				</div>
-				${link}
 			</div>
 		</div>
 		${ranges ? `<p class="collection-section-heading">Date Ranges</p><div class="collection-ranges">${ranges}</div>` : ""}
 		${buildOtherHtml(creator.specials ?? [])}
+		${buildLinksHtml(creator.link ? [{ title: "About", href: creator.link }] : [])}
 	</div>`;
 }

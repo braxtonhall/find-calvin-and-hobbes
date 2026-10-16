@@ -1,3 +1,4 @@
+import type { ResultRow } from "./result-rows";
 import {
 	Appearance,
 	Arc,
@@ -145,12 +146,6 @@ export interface ArcsPage {
 	order?: "count";
 }
 
-/** A strip as an arc's page lists it: its date, and what happens in it. */
-export interface ArcStrip {
-	date: string;
-	text: string;
-}
-
 /** The arc either side of this one, named by its dates since an arc has no title. */
 export interface ArcNeighbour {
 	id: string;
@@ -163,7 +158,7 @@ export interface ArcPage {
 	/** `null` when the id names no arc. */
 	arc: Arc | null;
 	arcsLoaded: boolean;
-	strips: ArcStrip[];
+	strips: ResultRow[];
 	/**
 	 * Where each book that holds the whole arc prints it: one appearance per volume, with the pages of
 	 * all the arc's strips together.
@@ -238,7 +233,7 @@ export interface SubjectPage {
 	/** `null` when the id names no subject. */
 	subject: Subject | null;
 	/** Its strips, oldest first, as an arc's page lists its own. */
-	strips: ArcStrip[];
+	strips: ResultRow[];
 }
 
 export type Page =

@@ -21,23 +21,19 @@
 	margin-bottom: 8px;
 }
 
-/* The search results' rows, sized to a sentence rather than to a transcript. */
-.arc-strips .result-row {
-	min-height: 0;
-	padding: 12px 0;
-}
-
-.arc-strips .result-row:first-of-type {
-	padding-top: 12px;
-}
-
-.arc-strips .result-body,
-.arc-strips .result-text {
-	height: auto;
-}
-
 .arc-collections {
 	margin-top: 24px;
+}
+
+/* Beside the strips, the books start level with the first of them. */
+@container (min-width: 1080px) {
+	.arc-collections {
+		margin-top: 0;
+	}
+
+	.arc-collections .detail-collections-heading {
+		margin-top: 0;
+	}
 }
 
 /* A list of arcs: rows of the list of books, with nothing where the cover goes. */

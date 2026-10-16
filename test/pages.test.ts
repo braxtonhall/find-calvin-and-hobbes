@@ -258,10 +258,10 @@ test("a prerendered document", async (suite) => {
 		arcs.forEach((arc, index) => {
 			const page = arcPageFrom(source, arc.id);
 			assert.deepEqual(
-				page.strips.map((strip) => strip.date),
+				page.strips.map((strip) => strip.comic.date),
 				arc.dates,
 			);
-			for (const strip of page.strips) assert.ok(strip.text, `${arc.id} says what happens on ${strip.date}`);
+			for (const strip of page.strips) assert.ok(strip.text, `${arc.id} says what happens on ${strip.comic.date}`);
 			assert.deepEqual(
 				page.collections.map((collection) => collection.id),
 				arc.collections,

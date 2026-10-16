@@ -10,7 +10,8 @@ import { BOOKSHELF_BOOKS_QUERY, BookshelfView, LIBRARY_QUERIES, LibraryView, isL
 import { buildLibraryHtml } from "../pages/library";
 import { buildCollectionRowHtml, collectionsPageFrom } from "../pages/collections";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
-import { attachRowFocusHandler, attachRowHandlers, resultsHtml } from "./result-rows";
+import { attachRowFocusHandler, attachRowHandlers } from "./result-rows";
+import { resultsHtml } from "../pages/result-rows";
 import { attachCollectionRowHandlers } from "./collections";
 import { narrowTab } from "./tab-search";
 

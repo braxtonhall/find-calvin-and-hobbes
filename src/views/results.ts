@@ -7,7 +7,8 @@ import { assignTiers } from "../tiers";
 import { navigate } from "../router";
 import { HOME_PATH, buildSearchPath } from "../routes";
 import { filterMenuHasFocus } from "./filter-bar";
-import { attachRowHandlers, resultsHtml } from "./result-rows";
+import { attachRowHandlers } from "./result-rows";
+import { resultsHtml } from "../pages/result-rows";
 import { SearchBar, buildSearchBar } from "./search-bar";
 import { isTouchDevice } from "../utils";
 

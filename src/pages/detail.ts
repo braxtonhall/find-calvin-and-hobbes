@@ -550,13 +550,19 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 		);
 
 		bodies += `<div class="detail-comic${illustratedClass}" data-comic-key="${escHtml(comic.id || date)}">
-				${actionsHtml}
-				${comic.image ? `<div class="detail-image-wrapper"${ratio}><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}"${srcset} alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
-			<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
-			${transcriptHtml}
-			${readLinkHtml}
-			${runsHtml}
-			<div class="detail-collections-slot">${collectionsHtml}</div>
+			${actionsHtml}
+			<div class="columns">
+				<div class="columns__main">
+					${comic.image ? `<div class="detail-image-wrapper"${ratio}><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}"${srcset} alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
+					<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
+					${transcriptHtml}
+					${readLinkHtml}
+				</div>
+				<div class="columns__aside">
+					${runsHtml}
+					<div class="detail-collections-slot">${collectionsHtml}</div>
+				</div>
+			</div>
 		</div>`;
 	}
 

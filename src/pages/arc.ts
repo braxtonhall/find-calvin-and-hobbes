@@ -1,12 +1,11 @@
 import { escHtml } from "../utils";
-import { buildArcPath, buildComicPath } from "../routes";
+import { buildArcPath } from "../routes";
 import { addressOf } from "../base-path";
-import { formatLongDate } from "../date-utils";
 import { Appearance, Arc, Comic } from "../types";
-import { ArcNeighbour, ArcPage, ArcStrip, PageSource, arcRange } from "./page";
+import { ArcNeighbour, ArcPage, PageSource, arcRange } from "./page";
 import { buildFlashLabels, buildArcsButton, buildBackAndHomeButtons } from "./nav-buttons";
 import { buildAppearancesSectionHtml, summarizeCollections } from "./detail";
-import { bookmarkId, ownershipId } from "../library-file";
+import { ResultRow, resultsHtml } from "./result-rows";
 
 /** The strip an arc's date names: the day's own, never a special that shares its date. */
 export function stripOn(source: PageSource, date: string): Comic | undefined {
@@ -40,16 +39,27 @@ function arcAppearances(strips: (Comic | undefined)[], arc: Arc): Appearance[] {
 	return appearances;
 }
 
-/** Each date's strip as a list of them says it: by its description, or its transcript where it has none. */
+/**
+ * Each date's strip as a row of the search results' kind, as a search for them alone would list it,
+ * but told by its description, which says what happens in it, or its transcript where it has none.
+ */
 export function stripsOn(
 	source: PageSource,
 	dates: string[],
 	comics: (Comic | undefined)[] = dates.map((date) => stripOn(source, date)),
-): ArcStrip[] {
-	return dates.map((date, index) => ({
-		date,
-		text: source.descriptions?.get(date) ?? comics[index]?.transcript ?? "",
-	}));
+): ResultRow[] {
+	return comics.flatMap((comic) =>
+		comic
+			? [
+					{
+						comic,
+						text: source.descriptions?.get(comic.date) ?? comic.transcript ?? "",
+						ranges: [],
+						source: "filter" as const,
+					},
+				]
+			: [],
+	);
 }
 
 function neighbour(arc: Arc | undefined): ArcNeighbour | null {
@@ -97,21 +107,6 @@ function buildNeighbourButton(arc: ArcNeighbour | null, direction: "prev" | "nex
 	return `<a class="nav-btn" href="${escHtml(addressOf(buildArcPath(arc.id)))}" title="${label}: ${escHtml(arc.range)}">${arrow}</a>`;
 }
 
-/**
- * The arc's strips as rows of the search results' kind — the same markup, so the same handlers light
- * each one's cell while it is hovered, and open its menu. Each is the day's own strip, never a
- * special. A strip with no description shows its transcript instead.
- */
-export function buildStripRowHtml(strip: ArcStrip): string {
-	const dateFormatted = formatLongDate(strip.date);
-	return `<a class="result-row result-row--no-image" href="${addressOf(buildComicPath(strip.date))}" draggable="false" data-date="${strip.date}" data-bookmark="${bookmarkId({}, strip.date)}" data-ownership="${ownershipId({}, strip.date)}" aria-label="View comic from ${dateFormatted}">
-			<div class="result-header">${dateFormatted}</div>
-			<div class="result-body">
-				<div class="result-text">${escHtml(strip.text)}</div>
-			</div>
-		</a>`;
-}
-
 export function buildArcHtml(page: ArcPage, canGoBack: boolean): string {
 	const { arc } = page;
 
@@ -140,7 +135,9 @@ export function buildArcHtml(page: ArcPage, canGoBack: boolean): string {
 				</div>
 			</div>
 		</div>
-		<div class="arc-strips">${page.strips.map(buildStripRowHtml).join("")}</div>
-		<div class="arc-collections">${buildAppearancesSectionHtml(page.appearances, collectionsById, "", false)}</div>
+		<div class="columns">
+			<div class="columns__main arc-strips">${resultsHtml(page.strips, "")}</div>
+			<div class="columns__aside arc-collections">${buildAppearancesSectionHtml(page.appearances, collectionsById, "", false)}</div>
+		</div>
 	</div>`;
 }

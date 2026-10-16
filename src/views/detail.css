@@ -15,6 +15,17 @@
 	max-width: 800px;
 }
 
+/* Beside the strip, its lines and its books start level with its top. */
+@container (min-width: 1080px) {
+	.detail-comic .columns__aside > .detail-runs {
+		margin-top: 0;
+	}
+
+	.detail-comic .columns__aside > .detail-collections-slot:first-child .detail-collections-heading {
+		margin-top: 0;
+	}
+}
+
 .detail-back {
 	display: inline-block;
 	font-family: var(--font);

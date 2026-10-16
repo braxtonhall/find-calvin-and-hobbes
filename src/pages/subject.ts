@@ -3,7 +3,8 @@ import { buildSubjectPath } from "../routes";
 import { addressOf } from "../base-path";
 import { PageSource, SubjectPage } from "./page";
 import { buildFlashLabels, buildBackAndHomeButtons, buildSubjectsButton } from "./nav-buttons";
-import { buildStripRowHtml, stripsOn } from "./arc";
+import { stripsOn } from "./arc";
+import { resultsHtml } from "./result-rows";
 import { formatStripCount, formatYears } from "./creators";
 import { subjectYears } from "./subjects";
 
@@ -53,6 +54,6 @@ export function buildSubjectHtml(page: SubjectPage, canGoBack: boolean): string 
 				</div>
 			</div>
 		</div>
-		<div class="arc-strips">${page.strips.map(buildStripRowHtml).join("")}</div>
+		<div class="arc-strips">${resultsHtml(page.strips, "")}</div>
 	</div>`;
 }
