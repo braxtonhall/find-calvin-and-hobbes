@@ -519,7 +519,7 @@ function buildStripLinksHtml(page: DetailPage, comic: Comic): string {
 }
 
 function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: string, isSunday: boolean): string {
-	const { comics, alternates } = page;
+	const { comics, alternates, rerunOf } = page;
 	const collectionsById = new Map(page.collections.map((collection) => [collection.id, collection]));
 	const descriptionsResolved = page.descriptions !== null;
 
@@ -541,6 +541,8 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 		// The first strip's buttons are in the day's own row of actions; any other has a row of its own.
 		const actionsHtml =
 			index > 0 ? `<div class="detail-actions detail-comic-actions">${buildStripOwnershipHtml(page, comic)}</div>` : "";
+		// A rerun's note of where it's from heads the column of each strip that reran; a special never did.
+		const rerunBannerHtml = rerunOf && !comic.id ? buildRerunBannerHtml(rerunOf) : "";
 		const runsHtml = buildRunsHtml(page, date, comic);
 		const collectionsHtml = buildPrintingsSectionHtml(
 			buildPrintings(comic.appearances || [], collectionsById, (appearance) => printingKey(comic, appearance)),
@@ -553,6 +555,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 			${actionsHtml}
 			<div class="columns">
 				<div class="columns__main">
+					${rerunBannerHtml}
 					${comic.image ? `<div class="detail-image-wrapper"${ratio}><div class="detail-image-pulse"></div><img class="detail-image" src="${escHtml(comic.image)}"${srcset} alt="${escHtml(describeImage(description, dateFormatted))}" loading="lazy" onload="this.previousElementSibling.classList.add('loaded');this.parentElement.style.aspectRatio='auto'" onerror="this.previousElementSibling.style.display='none';this.style.display='none';this.parentElement.style.aspectRatio='auto'" /></div>` : ``}
 					<div class="detail-description-slot">${buildDescriptionSlotContents(comic, description, descriptionsResolved)}</div>
 					${transcriptHtml}
@@ -709,14 +712,12 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 			<span class="detail-actions__arrows">${prevButtonHtml}${nextButtonHtml}</span>
 		</div>`;
 
-	const rerunBannerHtml = rerunOf ? buildRerunBannerHtml(rerunOf) : "";
 	const bodyHtml =
 		comics.length === 0
 			? `<p class="detail-missing">No comics found</p>`
 			: buildComicBodiesHtml(page, contentDate, contentDateFormatted, contentIsSunday);
 
 	return `${headerHtml}
-		${rerunBannerHtml}
 		${bodyHtml}
 	</div>`;
 }

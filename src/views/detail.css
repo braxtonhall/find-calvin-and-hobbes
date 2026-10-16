@@ -249,7 +249,7 @@
 .detail-rerun-banner {
 	font-size: 13px;
 	color: var(--text-muted);
-	margin-bottom: 24px;
+	margin-bottom: 10px;
 }
 
 /* Below the strip, before the books: who it features, the arcs it is part of, and when else it ran, as one group. */

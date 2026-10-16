@@ -216,22 +216,15 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 		extrasHtml = `<p class="collection-section-heading">Extras</p><ul class="collection-extras">${page.extras.map((extra) => `<li>${escHtml(extra)}</li>`).join("")}</ul>`;
 	}
 
-	// Beside the rest of the page where there is room, and after it where there is not: a compendium
-	// holds most of the arcs there are, and the list would bury anything under it.
+	// Closed until asked for: a compendium holds most of the arcs there are, and the list would bury
+	// the rest of the page.
 	const arcsHtml =
 		page.arcs.arcs.length > 0
-			? `<section class="collection-arcs">
-			<p class="collection-section-heading">Arcs</p>
+			? `<details class="collection-section collection-arcs">
+			<summary class="collection-section-heading">Arcs</summary>
 			${buildArcListHtml(page.arcs)}
-		</section>`
+		</details>`
 			: "";
-
-	const aboutHtml = `${collection.notes && collection.notes.length > 0 ? `<p class="collection-note">${escHtml(collection.notes[0])}</p>` : ""}
-		${extrasHtml}
-		${buildAlterationsHtml(collection.alterations ?? {})}
-		${buildLinksHtml(collection.links ?? [])}
-		<p class="collection-section-heading">Date Ranges</p>
-		<div class="collection-ranges">${rangesHtml}</div>`;
 
 	const numComicsInCollection = page.dates.length;
 	let comicsSummary = "";
@@ -258,13 +251,14 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 			${buildOwnershipControlsHtml("book", collection.id)}
 			<span class="detail-actions__arrows">${buildNeighbourButton(page.prev, "prev")}${buildNeighbourButton(page.next, "next")}</span>
 		</div>
-		${
-			arcsHtml
-				? `<div class="columns">
-			<div class="columns__main">${aboutHtml}</div>
-			<div class="columns__aside">${arcsHtml}</div>
-		</div>`
-				: aboutHtml
-		}
+		${collection.notes && collection.notes.length > 0 ? `<p class="collection-note">${escHtml(collection.notes[0])}</p>` : ""}
+		<details class="collection-section" open>
+			<summary class="collection-section-heading">Date Ranges</summary>
+			<div class="collection-ranges">${rangesHtml}</div>
+		</details>
+		${arcsHtml}
+		${buildAlterationsHtml(collection.alterations ?? {})}
+		${extrasHtml}
+		${buildLinksHtml(collection.links ?? [])}
 	</div>`;
 }

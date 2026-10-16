@@ -15,7 +15,7 @@ import { attachArcListHandlers } from "./arcs";
  * Either way the grid learns which strips the book holds from the page, so a cold load highlights
  * them before the archive has arrived.
  *
- * The grid stays on the book; only a hovered arc in its list of arcs narrows it.
+ * Opening the Arcs section leaves the grid on the book; only a hovered arc narrows it.
  */
 export function renderCollection(page: CollectionPage, adopt: boolean = false): void {
 	const element = document.getElementById("view-collection")!;

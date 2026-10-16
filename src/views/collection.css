@@ -87,14 +87,6 @@
 	display: none;
 }
 
-/* Beside the book's arcs, what is said about it starts level with them, both flush under its row of actions. */
-@container (min-width: 1080px) {
-	.collection-container .columns__main > :first-child,
-	.collection-arcs > .collection-section-heading:first-child {
-		margin-top: 0;
-	}
-}
-
 /* Under their heading, as close as any other section's contents are. */
 .collection-container .detail-links {
 	margin-top: 0;
@@ -104,6 +96,16 @@
 	font-size: 12px;
 	color: var(--text-muted);
 	margin: 24px 0 8px 0;
+}
+
+/* A section that folds away: its heading is the toggle, and says so only by its marker and cursor. */
+summary.collection-section-heading {
+	cursor: pointer;
+	width: fit-content;
+}
+
+summary.collection-section-heading:hover {
+	color: var(--main);
 }
 
 .collection-extras {
