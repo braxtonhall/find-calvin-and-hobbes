@@ -83,12 +83,6 @@ the collection rather than the strip — `@in:book3` is short for `@in (@id:book
 | `@not @in @is:any`            | in no book at all                               |
 | `@in (@id:book1 @as:altered)` | altered in Book 1                               |
 
-<!-- @strips: is not user facing yet.
-| `@in (@i:own @strips:<1000)`            | in an owned book that isn't one of the huge Completes |
-| `@not @in @strips:>0`                   | in no book at all                                     |
-| `@during (@strips:>20 @has @is:sunday)` | in a long arc that has a Sunday                       |
--->
-
 `@only` before any of these is "at least one, and all of them". `@is:any` is anything at all, so
 `@in @is:any` is in any book and `@not @featuring @is:any` features no character. `@as:altered`, inside one, is
 about how that collection prints that strip, where `@is:altered` is altered in any book.
@@ -100,10 +94,6 @@ two. Anything about its strips goes in `@has`, which crosses back down: `@has @i
 with a Sunday, `@not @has @is:sunday` one without, `@only @has @year:1988` one entirely in 1988, and
 `@not @has @is:any` one with no strips. A collection's own filters are `@is:` (`colour`, `writer`,
 `artist`, `any` — a tag that cannot be true of a kind is false), `@i:` (`own`, `noted` — only a book), `@id:`
-<!-- @strips: is not user facing yet.
-`@strips:` (`>5`, `>=5`, `<5`, `<=5`, `5`, `5..10`)
--->
-
 and `@published:` (a year, as `@year:` takes it: a book's year, or any year one of an arc's or a subject's strips ran;
 two side by side mean either).
 

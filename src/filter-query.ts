@@ -49,14 +49,7 @@ export type Filter =
 	| { kind: "as"; tag: string }
 	| { kind: "id"; id: string }
 	| { kind: "tag"; tag: string }
-	| { kind: "strips"; comparison: Comparison }
 	| { kind: "published"; expression: DateExpression };
-
-/** A number compared, as both ends of a range, each one in: `>5` is 6 to infinity. */
-export interface Comparison {
-	low: number;
-	high: number;
-}
 
 /**
  * Where in a query a filter stands, which decides what it can mean: which language, which kind of
@@ -160,34 +153,6 @@ function windowBounds(expression: DateExpression): { from: string; to: string } 
 	}
 	const exact = dateToString(year, month, day);
 	return { from: exact, to: exact };
-}
-
-/** `>5`, `>=5`, `<5`, `<=5`, `5`, `=5` or `5..10`, as the inclusive range it names. */
-export function parseComparison(value: string): Comparison | null {
-	const range = /^(\d+)\.\.(\d+)$/.exec(value);
-	if (range) {
-		const [low, high] = [Number(range[1]), Number(range[2])];
-		return low <= high ? { low, high } : null;
-	}
-	const bound = /^(>=|<=|>|<|=)?(\d+)$/.exec(value);
-	if (!bound) return null;
-	const number = Number(bound[2]);
-	switch (bound[1]) {
-		case ">":
-			return { low: number + 1, high: Infinity };
-		case ">=":
-			return { low: number, high: Infinity };
-		case "<":
-			return { low: -Infinity, high: number - 1 };
-		case "<=":
-			return { low: -Infinity, high: number };
-		default:
-			return { low: number, high: number };
-	}
-}
-
-export function compares(comparison: Comparison, value: number): boolean {
-	return value >= comparison.low && value <= comparison.high;
 }
 
 /**
@@ -307,11 +272,6 @@ function readValue(name: string, value: string): Filter | null {
 	if (name === "during") return knows("during", value) ? { kind: "during", arc: value } : null;
 	// Any kind's: which kind is the subject's business, and an id of another kind is only false.
 	if (name === "id") return knows("id", value, "collection") ? { kind: "id", id: value } : null;
-
-	if (name === "strips") {
-		const comparison = parseComparison(value);
-		return comparison === null ? null : { kind: "strips", comparison };
-	}
 
 	// `@date`, `@before` and `@after` all read a date the same way: year first, and with no
 	// requirement that the year be one the archive holds. See `DateSource` for both reasons.
@@ -519,7 +479,6 @@ export function passesFilter(subject: string | Comic, filter: Filter, run?: Run)
 		case "as":
 		case "id":
 		case "tag":
-		case "strips":
 		case "published":
 			return false;
 	}

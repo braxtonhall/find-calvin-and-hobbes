@@ -1,6 +1,6 @@
 import { Constraint, Crossing, compileQuery } from "./boolean-query";
 import { CollectionType, crossingSpec } from "./filter-spec";
-import { Filter, Run, collectionQuery, compares, passesFilter } from "./filter-query";
+import { Filter, Run, collectionQuery, passesFilter } from "./filter-query";
 import { matchesExpression } from "./date-query";
 import type { Compounds } from "./search";
 import { stripContains, textContains } from "./search";
@@ -196,8 +196,6 @@ function passesCollectionFilter(group: Group, filter: Filter, link: Link | null)
 			return hasCollectionTag(group, filter.tag);
 		case "i":
 			return isMine(group, filter.tag);
-		case "strips":
-			return compares(filter.comparison, group.strips.length);
 		// A book by the year it came out; an arc or a subject by any year one of its strips ran.
 		case "published":
 			if (group.book !== undefined) return matchesExpression(filter.expression, String(group.book.pub_year));

@@ -38,7 +38,7 @@ import { Comic } from "./types";
  *   @year:1989` is nothing.
  *
  * The operators that cross between a strip and its collections bind as tightly as `@not`, and like
- * it take the one atom after them, which is usually a group: `@in (@i:own @strips:<1000)` is a
+ * it take the one atom after them, which is usually a group: `@in (@i:own @is:colour)` is a
  * strip in a book that is both. `@in` goes up from a strip to its books, `@by` to its creators,
  * `@featuring` to its characters, `@about` to its subjects and `@during` to its arcs; `@has` goes down from a collection to
  * its strips. Each is "some": `@in X` is in at least one book that is X. `@only` before one of them

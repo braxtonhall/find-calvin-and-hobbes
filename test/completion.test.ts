@@ -894,10 +894,9 @@ test("@published offers the years books came out in, as @year: offers its own", 
 			assert.deepEqual(valuesOffered("@published:2001|"), ["2001"]);
 		});
 
-		await suite.test("no comparisons, and still nothing for @strips", () => {
+		await suite.test("no comparisons", () => {
 			assert.equal(at("@published:>|"), null);
 			assert.deepEqual(offered("@published:x|"), []);
-			assert.deepEqual(offered("@strips:|"), []);
 		});
 
 		await suite.test("a tab its own kind's years", () => {

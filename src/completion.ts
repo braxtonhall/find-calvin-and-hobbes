@@ -118,11 +118,6 @@ function valuesOf(spec: FilterSpec, context: QueryContext = STRIP_QUERY): readon
 	return terms(spec.name, language);
 }
 
-/** Whether the value could still be typed out into a comparison: `>`, `>=1`, `5.`, `5..1`. */
-function beginsAComparison(value: string): boolean {
-	return /^(?:(?:>=?|<=?|=)?\d*|\d+\.\.?\d*)$/.test(value);
-}
-
 /** Whether a name slot could still be typed out into one of the names it takes. */
 function beginsAName(names: Map<string, number>, value: string): boolean {
 	for (const name of names.keys()) {
@@ -169,7 +164,6 @@ function beginsADate(value: string, fields: number): boolean {
  */
 function begins(spec: FilterSpec, template: ValueTemplate, value: string): boolean {
 	if (spec.vocabulary === true) return beginsATerm(spec, value);
-	if (spec.name === "strips") return beginsAComparison(value);
 	if (spec.name === "year" || spec.name === "published")
 		return open(value, template.label === "YYYY" ? YEAR_LONG : YEAR_SHORT);
 	if (spec.name === "month") return template.label === "MM" ? open(value, MONTH) : beginsAName(MONTHS, value);
@@ -200,7 +194,6 @@ function fills(spec: FilterSpec, template: ValueTemplate, value: string): boolea
 	// because the list is the whole of what the vocabulary is — and an empty value is on no list.
 	if (spec.vocabulary === true) return valuesOf(spec).some((term) => spellingsOf(term).includes(value));
 	if (value === "") return false;
-	if (spec.name === "strips") return false;
 	// A trailing separator has begun a field that has not been filled. The parser reads `1988/` as
 	// the year 1988 and the pill says so, but there is nothing finished here to offer to accept.
 	if (SEPARATOR.test(value.slice(-1))) return false;
@@ -578,9 +571,6 @@ function valueRows(spec: FilterSpec, value: string, parses: boolean, context: Qu
 		}
 		return rowsFor(spec, offers);
 	}
-
-	// A count, which nothing in the archive lists: the shape in the name's row is the help.
-	if (spec.name === "strips") return [];
 
 	// `@published:` lists the years books came out and arcs ran in, which arrive with the archive.
 	const candidates =
