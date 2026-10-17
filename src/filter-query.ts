@@ -454,6 +454,7 @@ function madeBy(subject: string | Comic, creator: string): boolean {
  *   day it first ran and the other on the day it ran again — so only the caller's `run` answers them.
  */
 function hasTag(subject: string | Comic, date: string, tag: string, run: Run | undefined): boolean {
+	if (tag === "any") return true;
 	if (tag === "sunday") return weekdayOf(date) === 0;
 	if (tag === "daily") return weekdayOf(date) !== 0;
 	if (tag === "reused" || tag === "rerun") return run === tag;

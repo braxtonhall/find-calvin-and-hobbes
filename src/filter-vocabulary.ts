@@ -73,6 +73,14 @@ function spelt(term: Term): Term {
 export type Vocabulary = () => readonly Term[];
 
 /**
+ * The tag everything has, in either language: true of every strip and every collection. Its use is
+ * inside a crossing, where it leaves only the crossing to ask — whether there is anything on the
+ * other side at all — so `@in @is:any` is in a book, `@not @in @is:any` in none, and `@has @is:any` a
+ * collection with a strip in it. Last, being the least likely to be meant.
+ */
+const ANY: Term = { value: "any", hint: "Anything at all" };
+
+/**
  * `@is:`'s tags, which belong to the language rather than to the archive, so they are known from the
  * start and never empty. Each is independent of the others — a strip can be a Sunday and altered —
  * which is why repeating `@is:` asks for all of them rather than any.
@@ -94,19 +102,17 @@ export const TAGS: readonly Term[] = [
 	...(ALTERATIONS ? [{ value: "altered", hint: "A strip a book printed with changes" }] : []),
 	{ value: "empty", hint: "A strip with an empty transcript" },
 	...(PAGE_CONFIG.arcs ? [{ value: "standalone", hint: "A strip that belongs to no story arc" }] : []),
+	ANY,
 ];
 
 /**
- * A collection's tags: which kind it is, and what can be true of one kind or another. Every kind has
- * every tag, so a query means the same on every tab, and a tag that cannot be true of a kind — an arc
- * is never a writer — is simply false of it. See `query-eval.ts`.
+ * A collection's tags: what can be true of one kind or another. Every kind has every tag, so a query
+ * means the same on every tab, and a tag that cannot be true of a kind — an arc is never a writer —
+ * is simply false of it. See `query-eval.ts`. Not which kind it is: every query has its kind already,
+ * from its tab or from the operator it stands inside, so a tag saying so could only ever be all or
+ * nothing. `any` is the one that is all.
  */
 export const COLLECTION_TAGS: readonly Term[] = [
-	{ value: "book", hint: "A book" },
-	...(PAGE_CONFIG.arcs ? [{ value: "arc", hint: "A story arc" }] : []),
-	...(PAGE_CONFIG.creators ? [{ value: "creator", hint: "A creator" }] : []),
-	...(PAGE_CONFIG.characters ? [{ value: "character", hint: "A character" }] : []),
-	...(PAGE_CONFIG.subjects ? [{ value: "subject", hint: "A subject or running gag" }] : []),
 	...(PAGE_CONFIG.colourSundays
 		? [spelt({ value: "colour", hint: "A book that printed its Sundays in colour", american: "color" })]
 		: []),
@@ -116,6 +122,7 @@ export const COLLECTION_TAGS: readonly Term[] = [
 				{ value: "artist", hint: "A creator who drew strips" },
 			]
 		: []),
+	ANY,
 ];
 
 /**

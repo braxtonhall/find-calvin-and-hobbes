@@ -43,7 +43,7 @@ import { Comic } from "./types";
  * `@featuring` to its characters, `@about` to its subjects and `@during` to its arcs; `@has` goes down from a collection to
  * its strips. Each is "some": `@in X` is in at least one book that is X. `@only` before one of them
  * makes it "at least one, and all of them": `@only @in @i:own` is printed only in books the reader
- * owns. What stands inside one is written in the language on the other side of it — see
+ * owns. `@is:any` is true of everything, so `@in @is:any` is in a book at all. What stands inside one is written in the language on the other side of it — see
  * `QueryContext` — so `@i:own` inside `@in (…)` is a book the reader owns, and outside it a
  * printing.
  *

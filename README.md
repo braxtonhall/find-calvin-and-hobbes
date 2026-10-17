@@ -25,7 +25,7 @@ Type words to search transcripts. Type `@` in the search box for the list of fil
 The tags are `sunday` and `daily` (the colour Sundays and the black-and-white dailies), `reused`
 (a strip on the day it first ran, where it was later rerun), `rerun` (a strip on a day it ran
 again), `altered` (a strip some book printed with changes), `empty` (a strip with an empty
-transcript) and `standalone` (a strip in no arc). Those are facts about the strip; `@i:` is your
+transcript), `standalone` (a strip in no arc) and `any` (every strip — see below). Those are facts about the strip; `@i:` is your
 relationship to it, kept in your browser: `@i:own` (a printing you own), `@i:bookmarked` and
 `@i:noted` (a strip you wrote a note on). Reruns only appear in results when the search asks for
 `@is:rerun` or `@i:`, or names the exact date one ran.
@@ -80,6 +80,7 @@ the collection rather than the strip — `@in:book3` is short for `@in (@id:book
 | `@in @i:own`                  | in a book you own                               |
 | `@i:own @or @in @i:own`       | a printing you own, or in a book you own        |
 | `@only @in @i:own`            | in at least one book, and only in books you own |
+| `@not @in @is:any`            | in no book at all                               |
 | `@in (@id:book1 @as:altered)` | altered in Book 1                               |
 
 <!-- @strips: is not user facing yet.
@@ -88,16 +89,17 @@ the collection rather than the strip — `@in:book3` is short for `@in (@id:book
 | `@during (@strips:>20 @has @is:sunday)` | in a long arc that has a Sunday                       |
 -->
 
-`@only` before any of these is "at least one, and all of them". `@as:altered`, inside one, is
+`@only` before any of these is "at least one, and all of them". `@is:any` is anything at all, so
+`@in @is:any` is in any book and `@not @featuring @is:any` features no character. `@as:altered`, inside one, is
 about how that collection prints that strip, where `@is:altered` is altered in any book.
 
 The Collections page has a search box too, and the tab you are on says which kind of collection it
 finds. A collection's words are its own — a book's title, an arc's description, a subject's name,
 keywords and description — and an arc's are every word of its strips too, so `susie mom` finds the arcs where both appear, in one strip or
 two. Anything about its strips goes in `@has`, which crosses back down: `@has @is:sunday` is an arc
-with a Sunday, `@not @has @is:sunday` one without, and `@only @has @year:1988` one entirely in 1988.
-A collection's own filters are `@is:` (`book`, `arc`, `creator`, `character`, `subject`, `colour`, `writer`,
-`artist` — a tag that cannot be true of a kind is false), `@i:` (`own`, `noted` — only a book), `@id:`
+with a Sunday, `@not @has @is:sunday` one without, `@only @has @year:1988` one entirely in 1988, and
+`@not @has @is:any` one with no strips. A collection's own filters are `@is:` (`colour`, `writer`,
+`artist`, `any` — a tag that cannot be true of a kind is false), `@i:` (`own`, `noted` — only a book), `@id:`
 <!-- @strips: is not user facing yet.
 `@strips:` (`>5`, `>=5`, `<5`, `<=5`, `5`, `5..10`)
 -->

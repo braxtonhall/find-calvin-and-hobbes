@@ -202,7 +202,7 @@ test("offering the values", async (suite) => {
 	});
 
 	await suite.test("@is: offers every tag, and each commits", () => {
-		assert.deepEqual(values("@is:|"), ["sunday", "daily", "reused", "rerun", "altered", "empty", "standalone"]);
+		assert.deepEqual(values("@is:|"), ["sunday", "daily", "reused", "rerun", "altered", "empty", "standalone", "any"]);
 		assert.deepEqual(values("@is:r|"), ["reused", "rerun"]);
 		assert.deepEqual(values("@is:rer|"), ["rerun"]);
 		assert.deepEqual(completions("@is:s|"), ["@is:sunday ", "@is:standalone "]);

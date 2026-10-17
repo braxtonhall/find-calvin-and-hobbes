@@ -152,12 +152,8 @@ function didRole(group: Group, tag: string): boolean {
 /** A collection's own tag. One that cannot be true of its kind is false, not a mistake. */
 function hasCollectionTag(group: Group, tag: string): boolean {
 	switch (tag) {
-		case "book":
-		case "arc":
-		case "creator":
-		case "character":
-		case "subject":
-			return group.type === tag;
+		case "any":
+			return true;
 		case "colour":
 			return group.book?.colour === true;
 		case "writer":

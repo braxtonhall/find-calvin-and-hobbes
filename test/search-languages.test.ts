@@ -331,6 +331,20 @@ test("the strip language", async (suite) => {
 		// assert.deepEqual(strips("@not @in @strips:>0"), ["special1", "1990-02-04"]);
 	});
 
+	await suite.test("@is:any is everything, so under a crossing only the crossing asks", () => {
+		setUp();
+		assert.deepEqual(strips("@in @is:any"), ["1988-01-03", "1988-01-04", "1988-01-05"]);
+		assert.deepEqual(strips("@not @in @is:any"), ["special1", "1990-02-04"]);
+		assert.deepEqual(strips("@only @in @is:any"), strips("@in @is:any"));
+		assert.deepEqual(strips("@is:any @in:snowbook"), strips("@in:snowbook"), "beside something, it is that thing");
+		assert.deepEqual(strips("@about @is:any"), ["1988-01-03", "1988-01-05"]);
+		assert.deepEqual(strips("@in @not @is:any"), []);
+		assert.deepEqual(strips("@not @in @not @is:any").length, strips("@is:any").length);
+		assert.deepEqual(strips("susie @is:any"), strips("susie"));
+		assert.deepEqual(strips("@not @is:any"), []);
+		assert.deepEqual(strips("@year:1988 @or @is:any").length, strips("@is:any").length);
+	});
+
 	await suite.test("@as: describes the link: altered in this book, not in some book", () => {
 		setUp();
 		assert.deepEqual(strips("@is:altered"), ["1988-01-03"]);
@@ -388,8 +402,7 @@ test("the collection language", async (suite) => {
 		assert.deepEqual(listed("@i:noted", "book"), ["emptybook"]);
 		assert.deepEqual(listed("@i:own", "arc"), []);
 		assert.deepEqual(listed("@not @i:own", "arc"), ["snowarc", "schoolarc"]);
-		assert.deepEqual(listed("@is:book", "book"), ["snowbook", "plainbook", "emptybook"]);
-		assert.deepEqual(listed("@is:book", "arc"), []);
+		assert.deepEqual(listed("@is:book", "book"), [], "the kind is the tab's to say, not a tag");
 		assert.deepEqual(listed("@is:colour", "book"), ["snowbook"]);
 		assert.deepEqual(listed("@is:color", "book"), ["snowbook"], "an alias");
 		assert.deepEqual(listed("@is:writer", "creator"), ["bill"]);
@@ -447,8 +460,6 @@ test("the collection language", async (suite) => {
 		assert.deepEqual(listed("gets hit", "subject"), ["snowballs"]);
 		assert.deepEqual(listed("fort", "subject"), []);
 		assert.deepEqual(listed("@has fort", "subject"), ["snowballs"]);
-		assert.deepEqual(listed("@is:subject", "subject"), ["snowballs", "school"]);
-		assert.deepEqual(listed("@is:subject", "arc"), []);
 		assert.deepEqual(listed("@published:1988", "subject"), ["snowballs", "school"], "by the years it ran");
 		assert.deepEqual(listed("@published:1990", "subject"), []);
 		assert.deepEqual(listed("@has @featuring:mom", "subject"), []);
@@ -469,6 +480,14 @@ test("the collection language", async (suite) => {
 		assert.deepEqual(listed("@has @as:altered", "book"), ["snowbook"]);
 		assert.deepEqual(listed("@has @as:altered", "arc"), [], "only a book alters a strip");
 		assert.deepEqual(listed("@has @in @i:own", "arc"), []);
+	});
+
+	await suite.test("@is:any lists every collection, and @has @is:any those with a strip", () => {
+		setUp();
+		assert.deepEqual(listed("@is:any", "book"), ["snowbook", "plainbook", "emptybook"]);
+		assert.deepEqual(listed("@has @is:any", "book"), ["snowbook", "plainbook"]);
+		assert.deepEqual(listed("@not @has @is:any", "book"), ["emptybook"]);
+		assert.deepEqual(listed("@not @is:any", "book"), []);
 	});
 
 	await suite.test("@has leaves the days a strip ran again out, unless it asks for them", () => {
@@ -532,9 +551,10 @@ test("the search box", async (suite) => {
 		assert.ok(menu("@i:", collectionQuery("book")).includes("@i:own "));
 		assert.ok(!menu("@i:", collectionQuery("book")).includes("@i:bookmarked "));
 		assert.ok(menu("@i:").includes("@i:bookmarked "));
-		assert.ok(menu("@is:b", collectionQuery("book")).includes("@is:book "));
+		assert.ok(!menu("@is:b", collectionQuery("book")).includes("@is:book "));
 		assert.ok(!menu("@is:", collectionQuery("book")).includes("@is:sunday "));
-		assert.ok(menu("@in @is:").includes("@is:book "));
+		assert.ok(menu("@in @is:").includes("@is:colour "));
+		assert.ok(menu("@in @is:").includes("@is:any ") && menu("@is:").includes("@is:any "), "in either language");
 		assert.ok(menu("@is:").includes("@is:sunday "));
 	});
 
