@@ -288,7 +288,8 @@ volumes:
     140: [19880712, 19880713]
     141: [19880714, 19880715]
     142: [19880702, 19880716]
-alterations: {}
+alterations:
+  19871124: "Text changed"
 extras:
   - Two 144-page paperback books in archival slipcase
   - Cover art selected by Bill Watterson
