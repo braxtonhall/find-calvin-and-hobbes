@@ -101,7 +101,7 @@ function everyValueOffered(): { name: string; typed: string; written: string; in
 
 	const found: { name: string; typed: string; written: string; insert: string }[] = [];
 	// The main search's own: the collection language's are offered inside `@in (…)` and on a tab, and
-	// `@here:` only inside an operator.
+	// `@as:` only inside an operator.
 	for (const spec of FILTER_SPECS.filter((spec) => spec.language === "strip")) {
 		for (const value of typed) {
 			const text = `@${spec.name}:${value}`;

@@ -46,7 +46,7 @@ export type Filter =
 	| { kind: "after"; bound: string }
 	| { kind: "before"; bound: string }
 	| { kind: "during"; arc: string }
-	| { kind: "here"; tag: string }
+	| { kind: "as"; tag: string }
 	| { kind: "id"; id: string }
 	| { kind: "tag"; tag: string }
 	| { kind: "strips"; comparison: Comparison }
@@ -62,7 +62,7 @@ export interface Comparison {
  * Where in a query a filter stands, which decides what it can mean: which language, which kind of
  * collection where the language is the collection one and something says which, and whether a
  * crossing operator stands between it and the top — a link between a strip and a collection, which
- * `@here:` describes.
+ * `@as:` describes.
  */
 export interface QueryContext {
 	language: Language;
@@ -198,7 +198,7 @@ export function compares(comparison: Comparison, value: number): boolean {
  *
  * Read in the language of the place it was written: a strip's filters in the main search and inside
  * `@has (…)`, a collection's on the Collections page and inside `@in (…)` and its kin. A filter of
- * the other language is a mistake there, and so is `@here:` with no link to describe — see
+ * the other language is a mistake there, and so is `@as:` with no link to describe — see
  * `judgeFilter` for what the reader is told about each.
  */
 export function readFilter(
@@ -222,15 +222,15 @@ export function judgeFilter(
 	const written = `@${name}${value === undefined ? "" : `:${value}`}`;
 	if (value === undefined) return { filter: null };
 
-	// `@here:` is written in either language, but only inside an operator that crosses between them.
-	if (name === "here") {
+	// `@as:` is written in either language, but only inside an operator that crosses between them.
+	if (name === "as") {
 		if (!context.link) {
 			return {
 				filter: null,
 				reason: `${written} describes a strip in a collection: use it inside @in (…) or @has (…)`,
 			};
 		}
-		return knows("here", value, language) ? { filter: { kind: "here", tag: value } } : { filter: null };
+		return knows("as", value, language) ? { filter: { kind: "as", tag: value } } : { filter: null };
 	}
 
 	if (filterSpec(name, language) === undefined) {
@@ -513,9 +513,9 @@ export function passesFilter(subject: string | Comic, filter: Filter, run?: Run)
 			return date < filter.bound;
 		case "during":
 			return typeof subject !== "string" && (subject.arcs ?? []).includes(filter.arc);
-		// A collection's filters, and `@here:`, which needs a link: neither is a strip's to answer,
+		// A collection's filters, and `@as:`, which needs a link: neither is a strip's to answer,
 		// and `query-eval.ts` answers both where they can be.
-		case "here":
+		case "as":
 		case "id":
 		case "tag":
 		case "strips":

@@ -671,7 +671,7 @@ function crossingRows(context: QueryContext): Row[] {
  *
  * Only what can be written where the caret is: the strip language's filters in the main search and
  * inside `@has (…)`, and the collection language's on the Collections page and inside `@in (…)` and
- * its kin — `root` is the box's. `@here:` only inside an operator, where there is a link for it to
+ * its kin — `root` is the box's. `@as:` only inside an operator, where there is a link for it to
  * describe.
  */
 export function completionsAt(text: string, caret: number, root: QueryContext = STRIP_QUERY): Completion | null {
@@ -688,8 +688,7 @@ export function completionsAt(text: string, caret: number, root: QueryContext = 
 	if (value === undefined) {
 		const rows = [
 			...FILTER_SPECS.filter(
-				(spec) =>
-					speaks(spec, context.language) && (spec.name !== "here" || context.link) && spec.name.startsWith(name),
+				(spec) => speaks(spec, context.language) && (spec.name !== "as" || context.link) && spec.name.startsWith(name),
 			).map(nameRow),
 			...OPERATOR_ROWS.filter((row) => row.name.startsWith(name)),
 			...crossingRows(context).filter((row) => row.name.startsWith(name)),
@@ -698,9 +697,9 @@ export function completionsAt(text: string, caret: number, root: QueryContext = 
 	}
 
 	const spec = filterSpec(name, context.language);
-	// A colon after a name that is not a filter here has no completion to offer — nor `@here:` where
+	// A colon after a name that is not a filter here has no completion to offer — nor `@as:` where
 	// there is no link for it to describe.
-	if (spec === undefined || (spec.name === "here" && !context.link)) return null;
+	if (spec === undefined || (spec.name === "as" && !context.link)) return null;
 
 	// Whether the filter works is the parser's business rather than a fourth opinion here, so no
 	// shape may claim to be filled inside a filter that would not run.

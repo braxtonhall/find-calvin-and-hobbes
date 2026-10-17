@@ -194,7 +194,7 @@ export interface Crossing {
 	only: boolean;
 	clauses: Constraint[][];
 	/**
-	 * Whether the query inside asks `@here:` about the link it crosses, at its own level. One that
+	 * Whether the query inside asks `@as:` about the link it crosses, at its own level. One that
 	 * does has to be judged afresh for each link; one that does not can be judged once per collection.
 	 */
 	linked: boolean;
@@ -592,7 +592,7 @@ function compileCrossing(node: CrossNode): Crossing | null {
 		only: node.only,
 		clauses,
 		linked: clauses.some((clause) =>
-			clause.some((constraint) => constraint.kind === "filter" && constraint.filter.kind === "here"),
+			clause.some((constraint) => constraint.kind === "filter" && constraint.filter.kind === "as"),
 		),
 		reruns: node.operator === "has" && clausesAskForReruns(clauses),
 	};

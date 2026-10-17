@@ -22,7 +22,7 @@ import { Collection, Comic } from "./types";
  * Crossing from a strip to its collections, or from a collection to its strips, judges the query
  * inside against each one on the other side. Each answer is kept for the length of one search, so a
  * book's answer is worked out once however many of its strips ask — unless the query inside asks
- * `@here:` about the particular strip and collection, which has to be asked of each pair.
+ * `@as:` about the particular strip and collection, which has to be asked of each pair.
  */
 
 /** A collection, as the collection language sees one. */
@@ -45,7 +45,7 @@ export interface StripRow {
 	run?: Run;
 }
 
-/** A strip in a collection, for `@here:` to describe. */
+/** A strip in a collection, for `@as:` to describe. */
 interface Link {
 	comic: Comic;
 	group: Group;
@@ -176,8 +176,8 @@ function isMine(group: Group, tag: string): boolean {
 	return false;
 }
 
-/** How this strip appears in this collection: `@here:`. A tag that cannot be true of the link's kind is false. */
-function hereHolds(link: Link | null, tag: string): boolean {
+/** How this strip appears in this collection: `@as:`. A tag that cannot be true of the link's kind is false. */
+function asHolds(link: Link | null, tag: string): boolean {
 	if (link === null) return false;
 	if (tag === "altered") {
 		return (
@@ -192,8 +192,8 @@ function hereHolds(link: Link | null, tag: string): boolean {
 
 function passesCollectionFilter(group: Group, filter: Filter, link: Link | null): boolean {
 	switch (filter.kind) {
-		case "here":
-			return hereHolds(link, filter.tag);
+		case "as":
+			return asHolds(link, filter.tag);
 		case "id":
 			return group.id === filter.id;
 		case "tag":
@@ -237,7 +237,7 @@ export class Evaluator {
 				let holds: boolean;
 				if (constraint.kind === "text") holds = stripContains(row.comic, constraint.text, this.compounds);
 				else if (constraint.kind === "cross") holds = this.crossFromStrip(constraint.crossing, row);
-				else if (constraint.filter.kind === "here") holds = hereHolds(link, constraint.filter.tag);
+				else if (constraint.filter.kind === "as") holds = asHolds(link, constraint.filter.tag);
 				else holds = passesFilter(row.comic, constraint.filter, row.run);
 				return holds !== constraint.negated;
 			}),

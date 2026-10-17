@@ -237,12 +237,12 @@ test("reading a query where it stands", async (suite) => {
 		assert.equal(bookmarked.reason, "Did you mean @has @i:bookmarked?");
 	});
 
-	await suite.test("@here: needs a link to describe", () => {
-		assert.equal(scanQuery("@here:altered", STRIP_QUERY).filters[0].valid, false);
-		assert.match(scanQuery("@here:altered", STRIP_QUERY).filters[0].reason!, /inside @in/);
-		assert.equal(scanQuery("@in (@here:altered)", STRIP_QUERY).filters[0].valid, true);
-		assert.equal(scanQuery("@has @here:altered", collectionQuery("book")).filters[0].valid, true);
-		assert.equal(scanQuery("@here:altered", collectionQuery("book")).filters[0].valid, false);
+	await suite.test("@as: needs a link to describe", () => {
+		assert.equal(scanQuery("@as:altered", STRIP_QUERY).filters[0].valid, false);
+		assert.match(scanQuery("@as:altered", STRIP_QUERY).filters[0].reason!, /inside @in/);
+		assert.equal(scanQuery("@in (@as:altered)", STRIP_QUERY).filters[0].valid, true);
+		assert.equal(scanQuery("@has @as:altered", collectionQuery("book")).filters[0].valid, true);
+		assert.equal(scanQuery("@as:altered", collectionQuery("book")).filters[0].valid, false);
 	});
 
 	await suite.test(
@@ -331,14 +331,14 @@ test("the strip language", async (suite) => {
 		// assert.deepEqual(strips("@not @in @strips:>0"), ["special1", "1990-02-04"]);
 	});
 
-	await suite.test("@here: describes the link: altered in this book, not in some book", () => {
+	await suite.test("@as: describes the link: altered in this book, not in some book", () => {
 		setUp();
 		assert.deepEqual(strips("@is:altered"), ["1988-01-03"]);
-		assert.deepEqual(strips("@in @here:altered"), ["1988-01-03"]);
-		assert.deepEqual(strips("@in (@id:snowbook @here:altered)"), ["1988-01-03"]);
-		assert.deepEqual(strips("@in (@id:plainbook @here:altered)"), []);
-		assert.deepEqual(strips("@in:plainbook @in (@not @id:plainbook @here:altered)"), ["1988-01-03"]);
-		assert.deepEqual(strips("@only @in @not @here:altered"), ["1988-01-04", "1988-01-05"]);
+		assert.deepEqual(strips("@in @as:altered"), ["1988-01-03"]);
+		assert.deepEqual(strips("@in (@id:snowbook @as:altered)"), ["1988-01-03"]);
+		assert.deepEqual(strips("@in (@id:plainbook @as:altered)"), []);
+		assert.deepEqual(strips("@in:plainbook @in (@not @id:plainbook @as:altered)"), ["1988-01-03"]);
+		assert.deepEqual(strips("@only @in @not @as:altered"), ["1988-01-04", "1988-01-05"]);
 	});
 
 	await suite.test("each kind of collection has its operator, and its filter as short for it", () => {
@@ -466,8 +466,8 @@ test("the collection language", async (suite) => {
 		// At least one, so the empty book is not "only" anything, though it has nothing that isn't.
 		assert.deepEqual(listed("@only @has @is:daily", "book"), []);
 		assert.deepEqual(listed("@not @has @not @is:daily", "book"), ["emptybook"]);
-		assert.deepEqual(listed("@has @here:altered", "book"), ["snowbook"]);
-		assert.deepEqual(listed("@has @here:altered", "arc"), [], "only a book alters a strip");
+		assert.deepEqual(listed("@has @as:altered", "book"), ["snowbook"]);
+		assert.deepEqual(listed("@has @as:altered", "arc"), [], "only a book alters a strip");
 		assert.deepEqual(listed("@has @in @i:own", "arc"), []);
 	});
 
@@ -515,15 +515,15 @@ test("the search box", async (suite) => {
 			rows.includes("@is:") && /* rows.includes("@strips:") && */ rows.includes("@id:") && rows.includes("@has "),
 		);
 		assert.ok(!rows.includes("@year:") && !rows.includes("@in:") && !rows.includes("@in "));
-		assert.ok(!rows.includes("@here:"), "no link to describe at the top of a tab");
+		assert.ok(!rows.includes("@as:"), "no link to describe at the top of a tab");
 	});
 
 	await suite.test("inside an operator, the language on the other side of it", () => {
 		const inBook = menu("@in (@");
-		assert.ok(/* inBook.includes("@strips:") && */ inBook.includes("@here:") && inBook.includes("@has "));
+		assert.ok(/* inBook.includes("@strips:") && */ inBook.includes("@as:") && inBook.includes("@has "));
 		assert.ok(!inBook.includes("@year:"));
 		const inHas = menu("@has (@", collectionQuery("arc"));
-		assert.ok(inHas.includes("@year:") && inHas.includes("@here:") && inHas.includes("@in "));
+		assert.ok(inHas.includes("@year:") && inHas.includes("@as:") && inHas.includes("@in "));
 		// Back out of the parenthesis, back in the box's own.
 		assert.ok(menu("@in (@i:own) @").includes("@year:"));
 	});

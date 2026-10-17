@@ -93,7 +93,7 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
  * `WIDENING` in `boolean-query.ts`.
  *
  * `@featuring:` only where `config.yaml` has characters for it, `@by:` only where it has creators,
- * `@about:` only where it has subjects, `@during:` only where it has arcs, and `@here:` only where a
+ * `@about:` only where it has subjects, `@during:` only where it has arcs, and `@as:` only where a
  * book printed a strip with changes.
  */
 export const FILTER_SPECS: readonly FilterSpec[] = [
@@ -247,7 +247,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 	...(ALTERATIONS
 		? [
 				{
-					name: "here",
+					name: "as",
 					hint: "How this strip appears in this collection",
 					vocabulary: true,
 					language: "both",

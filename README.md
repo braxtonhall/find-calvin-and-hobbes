@@ -75,12 +75,12 @@ operator crosses from a strip to each kind: `@in` to its books, `@during` to its
 creators, `@featuring` to its characters and `@about` to its subjects. Each takes the one word, filter or `(group)` after it, which is about
 the collection rather than the strip — `@in:book3` is short for `@in (@id:book3)`:
 
-| Example                         | Meaning                                         |
-| ------------------------------- | ----------------------------------------------- |
-| `@in @i:own`                    | in a book you own                               |
-| `@i:own @or @in @i:own`         | a printing you own, or in a book you own        |
-| `@only @in @i:own`              | in at least one book, and only in books you own |
-| `@in (@id:book1 @here:altered)` | altered in Book 1                               |
+| Example                       | Meaning                                         |
+| ----------------------------- | ----------------------------------------------- |
+| `@in @i:own`                  | in a book you own                               |
+| `@i:own @or @in @i:own`       | a printing you own, or in a book you own        |
+| `@only @in @i:own`            | in at least one book, and only in books you own |
+| `@in (@id:book1 @as:altered)` | altered in Book 1                               |
 
 <!-- @strips: is not user facing yet.
 | `@in (@i:own @strips:<1000)`            | in an owned book that isn't one of the huge Completes |
@@ -88,7 +88,7 @@ the collection rather than the strip — `@in:book3` is short for `@in (@id:book
 | `@during (@strips:>20 @has @is:sunday)` | in a long arc that has a Sunday                       |
 -->
 
-`@only` before any of these is "at least one, and all of them". `@here:altered`, inside one, is
+`@only` before any of these is "at least one, and all of them". `@as:altered`, inside one, is
 about how that collection prints that strip, where `@is:altered` is altered in any book.
 
 The Collections page has a search box too, and the tab you are on says which kind of collection it

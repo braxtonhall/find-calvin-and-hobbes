@@ -31,7 +31,7 @@ import { PAGE_CONFIG } from "./site-config";
 import { spellText } from "./spelling";
 
 /**
- * Whether any book printed a strip with changes: whether there are `@is:altered` and `@here:`. Read
+ * Whether any book printed a strip with changes: whether there are `@is:altered` and `@as:`. Read
  * off the books in the script, not `comics.json`, so it is known from the first keystroke.
  */
 export const ALTERATIONS = COLLECTION_INDEX.collections.some(
@@ -137,17 +137,17 @@ export const COLLECTION_MINE: readonly Term[] = [
 ];
 
 /**
- * What `@here:` can say about a strip in a collection: how that one collection holds that one strip.
+ * What `@as:` can say about a strip in a collection: how that one collection holds that one strip.
  * Only a book's alterations so far.
  */
-export const HERE_TAGS: readonly Term[] = [{ value: "altered", hint: "Printed with changes in this book" }];
+export const AS_TAGS: readonly Term[] = [{ value: "altered", hint: "Printed with changes in this book" }];
 
 const REGISTRY = new Map<string, Vocabulary>([
 	["is", () => TAGS],
 	["collection:is", () => COLLECTION_TAGS],
 	["i", () => MINE],
 	["collection:i", () => COLLECTION_MINE],
-	["here", () => HERE_TAGS],
+	["as", () => AS_TAGS],
 ]);
 
 /** Where a filter's values are kept: by its name, but for the collection language's own `@is:` and `@i:`. */
