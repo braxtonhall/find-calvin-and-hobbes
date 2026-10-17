@@ -18,6 +18,7 @@ import { arcRange } from "./page";
 import { buildCorrectionLinkHtml } from "./correction";
 import { buildSettingsHtml } from "./settings";
 import { buildLibraryHtml } from "./library";
+import { buildSiteMenuHtml } from "./site-menu";
 
 /**
  * A whole document: the template in `src/index.html` with a page's head and body filled in.
@@ -223,6 +224,7 @@ export function buildDocumentHtml(template: string, page: Page, options: Documen
 		title: escHtml(pageTitle(page)),
 		head: buildHeadHtml(page, options),
 		views: buildViewsHtml(page),
+		menu: buildSiteMenuHtml(page.view),
 		base: escHtml(basePath()),
 		series: escHtml(PAGE_CONFIG.series),
 		themeColor: escHtml(PAGE_CONFIG.themeColor),

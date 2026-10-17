@@ -44,6 +44,7 @@ import { renderCredits } from "./views/credits";
 import { closeFilterMenu } from "./views/filter-bar";
 import { closeBookPopup } from "./views/books";
 import { updateCorrectionLink } from "./views/correction";
+import { updateSiteMenu } from "./views/site-menu";
 import { cancelCollectionClear } from "./views/cell-highlight";
 import { cellForDate, followRoute, paintGrid } from "./grid";
 import { respell } from "./spelling";
@@ -340,6 +341,7 @@ export function handleRoute(prerendered: Page | null = null): void {
 	// send a correction about the page the reader came from. Whether a date is a rerun is only known
 	// once there is a page; until then the link says less, and this runs again when the data lands.
 	updateCorrectionLink(route.view, page?.view === "detail" && page.rerunOf !== null);
+	updateSiteMenu(route.view);
 
 	const viewElement = document.getElementById(`view-${route.view}`)!;
 	// Rather than typing on, or re-sorting, the page that was already showing.
