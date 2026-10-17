@@ -420,6 +420,8 @@
 	touch-action: manipulation;
 	-webkit-user-select: none;
 	user-select: none;
+	/* The pill lighting up is the rail's only response to a tap; Chrome's blue tap flash is not wanted. */
+	-webkit-tap-highlight-color: transparent;
 }
 
 .year-rail-pill {
