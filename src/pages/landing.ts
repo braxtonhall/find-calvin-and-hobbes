@@ -1,7 +1,8 @@
-import { BOOKMARKS_PATH, BOOKSHELF_PATH, BOOKS_PATH, CREDITS_PATH, SETTINGS_PATH } from "../routes";
+import { BOOKMARKS_PATH, BOOKSHELF_PATH, CREDITS_PATH, SETTINGS_PATH, buildTabPath, collectionsTabs } from "../routes";
 import { addressOf } from "../base-path";
 import { PAGE_CONFIG } from "../site-config";
 import { escHtml } from "../utils";
+import { collectionsLabel } from "./collections";
 
 // Drawn in the same idiom as the results-bar icons: 16px, stroked in `currentColor`, no fill.
 const SEARCH_ICON = `<svg class="landing-submit-search" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
@@ -49,6 +50,14 @@ function buildLogoHtml(): string {
 	return `<img class="landing-logo" src="${escHtml(PAGE_CONFIG.landingImage)}" alt="${escHtml(PAGE_CONFIG.landingAlt)}"${sizeAttributes} />`;
 }
 
+/** The link to Collections, opening on its first tab, and nothing on a site that has no collections at all. */
+function buildCollectionsLinkHtml(): string {
+	const [first] = collectionsTabs();
+	if (!first) return "";
+	return `<a href="${addressOf(buildTabPath(first))}">${collectionsLabel()}</a>
+			<span aria-hidden="true">·</span>`;
+}
+
 export function buildLandingHtml(): string {
 	return `
 		${buildMenuHtml()}
@@ -69,8 +78,7 @@ export function buildLandingHtml(): string {
 			</div>
 		</form>
 		<nav class="landing-links">
-			<a href="${addressOf(BOOKS_PATH)}">Collections</a>
-			<span aria-hidden="true">·</span>
+			${buildCollectionsLinkHtml()}
 			<a href="${addressOf(CREDITS_PATH)}">Credits</a>
 		</nav>
 	`;

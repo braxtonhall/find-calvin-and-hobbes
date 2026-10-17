@@ -1,9 +1,8 @@
 import { escHtml } from "../utils";
 import { srcsetAttributes } from "../srcset";
-import { PAGE_CONFIG } from "../site-config";
 import { isDateInCollection } from "../date-utils";
 import { TabOrder } from "../types";
-import { CollectionsTab, buildCollectionPath, buildTabPath } from "../routes";
+import { CollectionsTab, collectionsTabs, buildCollectionPath, buildTabPath } from "../routes";
 import { addressOf } from "../base-path";
 import { CollectionsPage, CollectionSummary, PageSource } from "./page";
 import { buildBackAndHomeButtons } from "./nav-buttons";
@@ -101,6 +100,23 @@ export const TAB_NOUNS: Record<CollectionsTab, string> = {
 	subjects: "subjects",
 };
 
+/** What a tab is called, in its link and, on a site with no other tab, as the page's heading. */
+export const TAB_LABELS: Record<CollectionsTab, string> = {
+	books: "Books",
+	arcs: "Arcs",
+	creators: "Creators",
+	subjects: "Subjects",
+};
+
+/**
+ * What the home page's link to Collections says: Collections where there are tabs to choose from,
+ * and the one tab's own name where there is only it.
+ */
+export function collectionsLabel(): string {
+	const tabs = collectionsTabs();
+	return tabs.length === 1 ? TAB_LABELS[tabs[0]] : "Collections";
+}
+
 /**
  * The search box — see `views/tab-search.ts` for what it does. Built as the search page's is, with
  * its × to empty it and its sort beside it, but with no filter bar: the menu is how a tab's filters
@@ -127,8 +143,8 @@ function buildTabSearchHtml(current: CollectionsTab, query: string, order: TabOr
 /**
  * Collections is books, arcs, creators and subjects, each a collection of strips, and each tab has an
  * address of its own. The tab showing is plain bold text; the others are links, quiet the way the home
- * page's are. A site without arcs, creators or subjects has only the tabs it has, and with only the books, no
- * tabs at all — but the search box all the same.
+ * page's are. A site has only the tabs it has — see `collectionsTabs` — and with only one, no tabs at
+ * all, and that one's name for the heading in place of Collections — but the search box all the same.
  *
  * Each tab's link carries the query and the order, so switching tabs asks the same question of
  * another kind of collection, and lists the answer the same way.
@@ -144,13 +160,8 @@ export function buildCollectionsHeaderHtml(
 			? `<span class="collections-tab collections-tab--current" aria-current="page">${label}</span>`
 			: `<a class="collections-tab" data-tab="${name}" href="${escHtml(addressOf(buildTabPath(name, query, order)))}">${label}</a>`;
 	const heading = `${buildBackAndHomeButtons(canGoBack)}
-		<h2 class="collections-heading">Collections</h2>`;
-	const tabs = [
-		tab("books", "Books"),
-		...(PAGE_CONFIG.arcs ? [tab("arcs", "Arcs")] : []),
-		...(PAGE_CONFIG.creators ? [tab("creators", "Creators")] : []),
-		...(PAGE_CONFIG.subjects ? [tab("subjects", "Subjects")] : []),
-	];
+		<h2 class="collections-heading">${collectionsLabel()}</h2>`;
+	const tabs = collectionsTabs().map((name) => tab(name, TAB_LABELS[name]));
 	return `${heading}
 		${tabs.length > 1 ? `<nav class="collections-tabs" aria-label="Collections">${tabs.join(`\n\t\t\t<span aria-hidden="true">·</span>\n\t\t\t`)}</nav>` : ""}
 		${buildTabSearchHtml(current, query ?? "", order)}`;

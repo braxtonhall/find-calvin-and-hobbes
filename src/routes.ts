@@ -1,5 +1,6 @@
 import { Route, SortMode, TabOrder } from "./types";
 import { PAGE_CONFIG } from "./site-config";
+import { COLLECTION_INDEX } from "./bundled-data";
 
 /**
  * The site's addresses, as strings. Nothing in here touches the DOM or `location`, so the build
@@ -54,7 +55,7 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 	// And a tab's order the same way: date order, the default, is no parameter at all.
 	const tabParams = { ...(q ? { q } : {}), ...(params.get("sort") === "count" ? { order: "count" as const } : {}) };
 
-	if (path === BOOKS_PATH || path === COLLECTIONS_PATH) {
+	if ((path === BOOKS_PATH || path === COLLECTIONS_PATH) && hasTab("books")) {
 		return { view: "collections", ...tabParams };
 	}
 
@@ -64,7 +65,7 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "arc", id: arcMatch[1] };
 	}
 
-	if (path === ARCS_PATH && PAGE_CONFIG.arcs) {
+	if (path === ARCS_PATH && hasTab("arcs")) {
 		return { view: "arcs", ...tabParams };
 	}
 
@@ -74,7 +75,7 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "creator", id: creatorMatch[1] };
 	}
 
-	if (path === CREATORS_PATH && PAGE_CONFIG.creators) {
+	if (path === CREATORS_PATH && hasTab("creators")) {
 		return { view: "creators", ...tabParams };
 	}
 
@@ -84,7 +85,7 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "subject", id: subjectMatch[1] };
 	}
 
-	if (path === SUBJECTS_PATH && PAGE_CONFIG.subjects) {
+	if (path === SUBJECTS_PATH && hasTab("subjects")) {
 		return { view: "subjects", ...tabParams };
 	}
 
@@ -100,11 +101,13 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "bookshelf" };
 	}
 
-	if (path === BOOKSHELF_CLIPPINGS_PATH) {
+	// A site with no books has no tabs on its Bookshelf: All is the clippings alone.
+	if (path === BOOKSHELF_CLIPPINGS_PATH && hasTab("books")) {
 		return { view: "bookshelf-clippings" };
 	}
 
-	if (path === BOOKSHELF_BOOKS_PATH) {
+	// A site with no books has no shelf of them.
+	if (path === BOOKSHELF_BOOKS_PATH && hasTab("books")) {
 		return { view: "bookshelf-books" };
 	}
 
@@ -156,12 +159,38 @@ export const BOOKSHELF_TABS: Record<BookshelfTab, { view: BookshelfView; path: s
 	books: { view: "bookshelf-books", path: "/bookshelf/books" },
 };
 
+/**
+ * The Bookshelf's tabs this site has, in order: all of them, or none on a site with no books, where
+ * All is the clippings alone.
+ */
+export function bookshelfTabs(): BookshelfTab[] {
+	return hasTab("books") ? (Object.keys(BOOKSHELF_TABS) as BookshelfTab[]) : [];
+}
+
 export function isBookshelfView(view: string): view is BookshelfView {
 	return Object.values(BOOKSHELF_TABS).some((tab) => tab.view === view);
 }
 
 /** The tabs of Collections. */
 export type CollectionsTab = "books" | "arcs" | "creators" | "subjects";
+
+/**
+ * The tabs of Collections this site has, in order. A site with no books has no Books tab, and one
+ * without arcs, creators or subjects none of theirs; a tab it lacks has no address. With none at all
+ * there is no Collections.
+ */
+export function collectionsTabs(): CollectionsTab[] {
+	return [
+		...(COLLECTION_INDEX.collections.length > 0 ? (["books"] as const) : []),
+		...(PAGE_CONFIG.arcs ? (["arcs"] as const) : []),
+		...(PAGE_CONFIG.creators ? (["creators"] as const) : []),
+		...(PAGE_CONFIG.subjects ? (["subjects"] as const) : []),
+	];
+}
+
+function hasTab(tab: CollectionsTab): boolean {
+	return collectionsTabs().includes(tab);
+}
 
 const TAB_PATHS: Record<CollectionsTab, string> = {
 	books: "/books",

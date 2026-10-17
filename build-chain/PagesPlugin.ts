@@ -135,16 +135,22 @@ class PagesPlugin {
 					emitPage(SETTINGS_PATH, { view: "settings" });
 					emitPage(BOOKMARKS_PATH, { view: "bookmarks" });
 					emitPage(BOOKSHELF_PATH, { view: "bookshelf" });
-					emitPage(BOOKSHELF_CLIPPINGS_PATH, { view: "bookshelf-clippings" });
-					emitPage(BOOKSHELF_BOOKS_PATH, { view: "bookshelf-books" });
 
-					const books = collectionsPageFrom(source);
-					emitPage(BOOKS_PATH, books);
-					// The old address of the list of books, which a static host can only redirect by serving
-					// a file there. This one is the books page, naming `/books` as where it lives; the app
-					// puts that in the bar. See `redirectedPath`.
-					emit(pageAssetPath(COLLECTIONS_PATH, layout), BOOKS_PATH, books);
+					// Only the tabs of Collections the site has; with none, no Collections at all.
+					// See `collectionsTabs`, which this agrees with, read from this build's data.
+					const books = data.collectionIndex.collections.length > 0;
 					const { arcs, creators, subjects } = loadFeatures();
+					if (books) {
+						const page = collectionsPageFrom(source);
+						emitPage(BOOKS_PATH, page);
+						// The old address of the list of books, which a static host can only redirect by serving
+						// a file there. This one is the books page, naming `/books` as where it lives; the app
+						// puts that in the bar. See `redirectedPath`.
+						emit(pageAssetPath(COLLECTIONS_PATH, layout), BOOKS_PATH, page);
+						// And the Bookshelf's tabs, which a site with no books has none of.
+						emitPage(BOOKSHELF_CLIPPINGS_PATH, { view: "bookshelf-clippings" });
+						emitPage(BOOKSHELF_BOOKS_PATH, { view: "bookshelf-books" });
+					}
 					if (arcs) emitPage(ARCS_PATH, arcsPageFrom(source));
 					if (creators) emitPage(CREATORS_PATH, creatorsPageFrom(source));
 					if (subjects) emitPage(SUBJECTS_PATH, subjectsPageFrom(source));
@@ -186,7 +192,7 @@ class PagesPlugin {
 						const sitemap = buildSitemapXml(siteUrl, [
 							HOME_PATH,
 							CREDITS_PATH,
-							BOOKS_PATH,
+							...(books ? [BOOKS_PATH] : []),
 							...(arcs ? [ARCS_PATH] : []),
 							...(creators ? [CREATORS_PATH] : []),
 							...(subjects ? [SUBJECTS_PATH] : []),
