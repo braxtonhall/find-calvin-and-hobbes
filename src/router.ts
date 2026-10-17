@@ -26,7 +26,7 @@ import { creatorsPageFrom } from "./pages/creators";
 import { subjectPageFrom } from "./pages/subject";
 import { subjectsPageFrom } from "./pages/subjects";
 import { renderLanding } from "./views/landing";
-import { renderResults } from "./views/results";
+import { renderResults, showResultsLoading } from "./views/results";
 import { renderDetail } from "./views/detail";
 import { renderCollection } from "./views/collection";
 import { renderCollections } from "./views/collections";
@@ -203,7 +203,11 @@ function pageFor(route: Route): Page | null {
 		case "settings":
 			return { view: "settings" };
 		case "results":
-			if (!state.dataLoaded || waitsForLibrary(route.q ?? "", "strip")) return null;
+			// An empty search finds nothing without asking the archive, so a phone's tap on the home
+			// page's box can land here, and take the focus, before the archive has arrived.
+			if ((route.q ?? "").trim() !== "" && (!state.dataLoaded || waitsForLibrary(route.q ?? "", "strip"))) {
+				return null;
+			}
 			return { view: "results", q: route.q ?? "", sort: route.sort ?? "rank" };
 		case "bookmarks":
 		case "bookshelf":
@@ -364,6 +368,13 @@ export function handleRoute(prerendered: Page | null = null): void {
 	});
 
 	if (!page) {
+		// A search typed into a bar already showing waits under it, so the bar — and a phone's
+		// keyboard, which goes with its focus — stays up.
+		if (route.view === "results" && !arriving && showResultsLoading()) {
+			state.pendingRoute = route;
+			updateGridState(route);
+			return;
+		}
 		showLoadingView(viewElement, route);
 		updateGridState(route);
 		return;

@@ -5,6 +5,7 @@ import { buildSearchPath } from "../routes";
 import { buildLandingHtml } from "../pages/landing";
 import { randomQuery } from "../suggestions";
 import { attachQueryInput, editQueryInput } from "./query-input";
+import { focusResultsInput } from "./results";
 import { isTouchDevice } from "../utils";
 
 /** Fast enough not to be a wait, slow enough that the `@` and the pill it earns can be read. */
@@ -124,6 +125,43 @@ export function renderLanding(adopt: boolean = false): void {
 	attachQueryInput(input);
 	// Not on a touchscreen, where the focus would raise a keyboard the reader never asked for.
 	if (!isTouchDevice()) input.focus();
+
+	// On a touchscreen the box is a way into the search page rather than somewhere to type. The
+	// keyboard it raises takes half the screen away, and this page, centred in the screen, would jump
+	// to the middle of what was left; the search page's bar is at the top, where nothing moves. What
+	// is in the box goes with it — a query the search button typed out, say — and the caret too.
+	const handOff = (): void => {
+		if (!isTouchDevice()) return;
+		// A tap mid-animation is not a keystroke, so it does not stop the query landing: the rest of
+		// it lands at once, and the caret after it.
+		finishTypeOut();
+		const end = input.value.length;
+		const value = input.value;
+		const selection = [input.selectionStart ?? end, input.selectionEnd ?? end] as const;
+		navigate(buildSearchPath(""));
+		focusResultsInput(value, ...selection);
+	};
+	// On the tap's click, rather than its focus: a tap focuses the box before it places the caret,
+	// and the caret is the one thing that cannot be carried over afterwards. A click is still the
+	// reader's own gesture, which iOS asks of a `focus()` before it will raise the keyboard for it.
+	// A focus that comes from no tap at all — an attached keyboard's Tab — hands off at once.
+	let tapping = false;
+	input.addEventListener("pointerdown", () => (tapping = true));
+	input.addEventListener("click", () => {
+		if (!tapping) return;
+		tapping = false;
+		handOff();
+	});
+	// A long press is no click, and leaves the box focused where it is.
+	input.addEventListener("pointercancel", () => {
+		tapping = false;
+		if (document.activeElement === input) handOff();
+	});
+	input.addEventListener("focus", () => {
+		if (!tapping) handOff();
+	});
+	// A tap on the box the build drew, before there was a script to hear it.
+	if (adopt && document.activeElement === input) handOff();
 
 	// The button never takes the focus, so the caret stays in the box through a click on it. Which
 	// also keeps the blur below meaning what it says: the reader looked away, rather than pressed

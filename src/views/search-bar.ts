@@ -21,7 +21,11 @@ export interface SearchBarOptions {
 	placeholder: string;
 	/** Where a query takes the reader, in the order asked for. */
 	pathFor(query: string, sort: SortMode): string;
-	/** Where an emptied box goes: an empty search is not a page of its own. */
+	/**
+	 * Where the clear button goes, and an emptied box: an empty search is not a page of its own. Not
+	 * on a touchscreen, where the box is the page the home page's box hands its tap to, and emptying
+	 * it leaves it standing empty; only the clear button goes.
+	 */
 	onEmpty(): void;
 }
 
@@ -72,6 +76,14 @@ export function buildSearchBar(element: HTMLElement, options: SearchBarOptions):
 	const sortButton = element.querySelector<HTMLButtonElement>(".results-sort")!;
 	const clearButton = element.querySelector<HTMLButtonElement>(".results-clear")!;
 	const onEmpty = (): void => options.onEmpty();
+	// What an emptied box does, as opposed to the clear button. See `onEmpty`.
+	const onEmptied = (): void => {
+		if (isTouchDevice()) {
+			replaceSearch(options.pathFor("", currentSort));
+		} else {
+			onEmpty();
+		}
+	};
 	const list = element.querySelector<HTMLElement>(`#${options.id}-list`)!;
 	attachQueryInput(input);
 	// Attached to the search bar rather than built beside it: the two rows are one block, and the
@@ -86,7 +98,7 @@ export function buildSearchBar(element: HTMLElement, options: SearchBarOptions):
 			if (inputQuery) {
 				replaceSearch(options.pathFor(inputQuery, currentSort));
 			} else {
-				onEmpty();
+				onEmptied();
 			}
 		}, 200);
 	});
@@ -95,9 +107,14 @@ export function buildSearchBar(element: HTMLElement, options: SearchBarOptions):
 		if (event.key === "Enter") {
 			event.preventDefault();
 			if (state.resultsDebounceTimer !== null) clearTimeout(state.resultsDebounceTimer);
+			const inputQuery = input.value.trim();
+			// Nothing to search, on the page a phone keeps for an empty box: the keyboard stays, to type with.
+			if (!inputQuery && isTouchDevice()) {
+				onEmptied();
+				return;
+			}
 			// Search is done with the keyboard, which would otherwise stay up over the results.
 			if (isTouchDevice()) input.blur();
-			const inputQuery = input.value.trim();
 			if (!inputQuery) {
 				onEmpty();
 			} else if (inputQuery !== currentQuery) {
