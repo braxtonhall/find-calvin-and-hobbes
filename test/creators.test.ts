@@ -94,13 +94,13 @@ test("creators", async (suite) => {
 		assert.deepEqual(data.creators[1].ranges, ["19880103", "19880110"]);
 	});
 
-	await suite.test("keeps a creator's link, and publishes a portrait from the mount", () => {
+	await suite.test("keeps a creator's links, and publishes a portrait from the mount", () => {
 		const data = load(
-			"people:\n  a:\n    name: Ann\n    link: https://example.com/ann\n    image: !Path ./ann.png\nruns:\n  - by: [a]\n",
+			"people:\n  a:\n    name: Ann\n    links:\n      - { title: Wiki, href: https://example.com/ann }\n    image: !Path ./ann.png\nruns:\n  - by: [a]\n",
 			{ "ann.png": Buffer.from("portrait") },
 		);
 		const [ann] = data.creators;
-		assert.equal(ann.link, "https://example.com/ann");
+		assert.deepEqual(ann.links, [{ title: "Wiki", href: "https://example.com/ann" }]);
 		assert.match(ann.image!, /^\/repo\/static\/[0-9a-f]{16}\.png$/);
 		assert.equal(data.files.size, 1);
 		const url = load("people:\n  a: { name: Ann, image: https://example.com/ann.png }\nruns:\n  - by: [a]\n");
@@ -124,8 +124,16 @@ test("creators", async (suite) => {
 		assert.throws(() => load("people:\n  Ann: { name: Ann }\n"), /Invalid creator id/);
 		assert.throws(() => load("people:\n  a: {}\n"), /needs a name/);
 		assert.throws(
-			() => load(`people:\n  a: { name: Ann, link: wikipedia }\nruns:\n  - by: [a]\n`),
-			/link must be a URL/,
+			() => load(`people:\n  a: { name: Ann, links: [{ title: Wiki, href: wikipedia }] }\nruns:\n  - by: [a]\n`),
+			/link "Wiki" must have a URL/,
+		);
+		assert.throws(
+			() => load(`people:\n  a: { name: Ann, links: https://example.com/ann }\nruns:\n  - by: [a]\n`),
+			/links must be a list/,
+		);
+		assert.throws(
+			() => load(`people:\n  a: { name: Ann, links: [{ href: https://example.com/ann }] }\nruns:\n  - by: [a]\n`),
+			/needs a title/,
 		);
 	});
 

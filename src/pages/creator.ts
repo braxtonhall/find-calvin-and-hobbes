@@ -37,7 +37,7 @@ function buildOtherHtml(specials: CreditedSpecial[]): string {
 
 /**
  * A creator's page, laid out as a book's: who they are, the stretches of strips they made, and their
- * link out last, under Links, as a book's links are, with the grid lighting all of them. Their
+ * links out last, under Links, as a book's links are, with the grid lighting all of them. Their
  * strips themselves are a search away rather than listed — a strip that ran for fifty years is too
  * many rows for a page — so each range's dash is the search for that range's, oldest first.
  */
@@ -74,6 +74,6 @@ export function buildCreatorHtml(page: CreatorPage, canGoBack: boolean): string 
 		</div>
 		${ranges ? `<p class="collection-section-heading">Date Ranges</p><div class="collection-ranges">${ranges}</div>` : ""}
 		${buildOtherHtml(creator.specials ?? [])}
-		${buildLinksHtml(creator.link ? [{ title: "About", href: creator.link }] : [])}
+		${buildLinksHtml(creator.links ?? [])}
 	</div>`;
 }

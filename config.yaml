@@ -202,8 +202,8 @@ corrections:
 #   characters  each character's name by id, for @featuring: and the Featuring line under a strip
 #   creators    who made the strips: the Creators tab of Collections and each creator's page, the By
 #               line under a strip, and @by:. A mapping of `people`, each by id with a `name`, and
-#               optionally an `image` (a URL, or `!Path`, as a cover is) and a `link` out, like an
-#               encyclopedia's page; `runs`, a list of stretches of the dailies and Sundays (never a
+#               optionally an `image` (a URL, or `!Path`, as a cover is) and `links` out, as a
+#               book's are, a list of `title` and `href`, like an encyclopedia's page; `runs`, a list of stretches of the dailies and Sundays (never a
 #               special) each credited `by` people,
 #               `from` and `to` as YYYYMMDD, both ends in and either left open, optionally only on
 #               the Sundays or only on the rest, as `days: sunday` or `days: daily`, a later run

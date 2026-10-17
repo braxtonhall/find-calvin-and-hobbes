@@ -345,7 +345,13 @@ test("a prerendered document", async (suite) => {
 			]),
 			charactersById: new Map([["calvin", { id: "calvin", name: "Calvin" }]]),
 			creatorsById: new Map([
-				creator("borgman", "Jim Borgman", { link: "https://example.com/borgman", roles: ["art"] }),
+				creator("borgman", "Jim Borgman", {
+					links: [
+						{ title: "Wikipedia", href: "https://example.com/borgman" },
+						{ title: "Website", href: "https://example.com/jim" },
+					],
+					roles: ["art"],
+				}),
 				creator("scott", "Jerry Scott"),
 			]),
 		};
@@ -370,10 +376,11 @@ test("a prerendered document", async (suite) => {
 		assert.ok(list.indexOf("Jim Borgman") < list.indexOf("Jerry Scott"));
 		const html = buildViewHtml(creatorPageFrom(credited, "borgman"), false);
 		assert.ok(!html.includes("nav-btn"));
-		assert.ok(html.includes(`href="https://example.com/borgman" target="_blank" rel="noopener">About`));
+		assert.ok(html.includes(`href="https://example.com/borgman" target="_blank" rel="noopener">Wikipedia`));
+		assert.ok(html.includes(`href="https://example.com/jim" target="_blank" rel="noopener">Website`));
 		assert.ok(html.includes(`Years:</span> ${original.slice(0, 4)}</p>`));
 		assert.ok(html.includes("Roles:</span> art"));
-		assert.ok(!buildViewHtml(creatorPageFrom(credited, "scott"), false).includes("About"));
+		assert.ok(!buildViewHtml(creatorPageFrom(credited, "scott"), false).includes(">Links<"));
 
 		// Their specials, by title, under Other — and no Other for someone with none.
 		const withSpecial: PageSource = {

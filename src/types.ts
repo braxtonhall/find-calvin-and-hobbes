@@ -86,8 +86,8 @@ export interface Creator {
 	name: string;
 	/** A portrait, from the mount where the build publishes it. */
 	image?: string;
-	/** A page about them elsewhere, like an encyclopedia's. */
-	link?: string;
+	/** Pages about them elsewhere, like an encyclopedia's, as a book's links are. */
+	links?: { title: string; href: string }[];
 	/** How many strips they are credited on, specials too. */
 	strips: number;
 	/** The years with a strip of theirs, in order. */

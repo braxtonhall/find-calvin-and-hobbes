@@ -143,10 +143,27 @@ function readMapping(value: unknown, name: string): Record<string, unknown> {
 	return value as Record<string, unknown>;
 }
 
+/** A creator's links out, as a book's are: each a `title` and an `href` that is a URL. */
+function readLinksOut(value: unknown, id: string): { title: string; href: string }[] {
+	if (value === undefined || value === null) return [];
+	if (!Array.isArray(value)) throw new Error(`Creator "${id}"'s links must be a list.`);
+	return value.map((entry) => {
+		const { title, href } = (entry ?? {}) as { title?: unknown; href?: unknown };
+		if (typeof title !== "string" || title.trim() === "") {
+			throw new Error(`Each of creator "${id}"'s links needs a title.`);
+		}
+		if (typeof href !== "string" || !isUrl(href)) {
+			throw new Error(`Creator "${id}"'s link "${title}" must have a URL as its href.`);
+		}
+		return { title: title.trim(), href };
+	});
+}
+
 /**
  * The creators and who made each strip, from the file `config.yaml` names:
  *
- *   people   each creator by id, with a `name`, and optionally an `image` and a `link` out
+ *   people   each creator by id, with a `name`, and optionally an `image` and `links` out, as a
+ *            book's are: a list of `title` and `href`
  *   runs     stretches of the dailies and Sundays each credited to people, `from` and `to`
  *            (YYYYMMDD, both ends in, either left open), and optionally only the Sundays or only
  *            the `daily` strips. A later run takes a strip from an earlier one. Never a special:
@@ -183,17 +200,15 @@ export function loadCreators(source: ComicSource, basePath: string = "/", config
 	const listed: Omit<Creator, "ranges" | "strips" | "years">[] = [];
 	for (const [id, entry] of Object.entries(people as Record<string, unknown>)) {
 		if (!CREATOR_ID.test(id)) throw new Error(`Invalid creator id "${id}": expected lowercase letters and digits.`);
-		const { name, image, link } = (entry ?? {}) as { name?: unknown; image?: unknown; link?: unknown };
+		const { name, image, links } = (entry ?? {}) as { name?: unknown; image?: unknown; links?: unknown };
 		if (typeof name !== "string" || name.trim() === "") throw new Error(`Creator "${id}" needs a name.`);
-		if (link !== undefined && link !== null && (typeof link !== "string" || !isUrl(link))) {
-			throw new Error(`Creator "${id}"'s link must be a URL.`);
-		}
 		const portrait = readImage(image, id, basePath, files, config);
+		const readLinks = readLinksOut(links, id);
 		listed.push({
 			id,
 			name: name.trim(),
 			...(portrait ? { image: portrait } : {}),
-			...(typeof link === "string" ? { link } : {}),
+			...(readLinks.length > 0 ? { links: readLinks } : {}),
 		});
 	}
 	const known = new Set(listed.map((creator) => creator.id));
