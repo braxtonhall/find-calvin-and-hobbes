@@ -1,0 +1,426 @@
+import { state } from "../state";
+import { detailPageFrom } from "../pages/detail";
+import { buildComicPath } from "../routes";
+import { addressOf } from "../base-path";
+import { PreviewStep, buildPreviewArrowsHtml, buildPreviewHtml, previewPageOf } from "../pages/preview";
+import { isPlainClick } from "../router";
+import { cellForDate, setPreviewedDate } from "../grid";
+import { isShowing, scrollCellIntoViewIfNeeded } from "../utils";
+import { respell } from "../spelling";
+import { weekdayOf } from "../date-utils";
+import { attachDetailHandlers } from "./detail";
+import { attachCellHighlightLink } from "./cell-highlight";
+import { closeBookPopup } from "./books";
+
+/*
+ * A search's preview of one of its strips, beside the results, where the page is wide enough for
+ * both. Picking a row, or a result's cell in the grid, shows its strip there rather than following
+ * it to its own page, and the preview's arrows step through the results. Anything else followed from
+ * the preview — a book, an arc, the strip's own page — is followed as anywhere else.
+ *
+ * The preview is not in the address. It outlives the results being drawn again — a keystroke, a
+ * sort, a strip's page and back — for as long as its strip is still one of them.
+ */
+
+const STORAGE_KEY = "preview";
+
+/** Whether the reader wants a preview at all; the toggle beside the sort button says. On until turned off. */
+function previewEnabled(): boolean {
+	try {
+		return localStorage.getItem(STORAGE_KEY) !== "off";
+	} catch {
+		return true;
+	}
+}
+
+function choosePreview(enabled: boolean): void {
+	try {
+		if (enabled) localStorage.removeItem(STORAGE_KEY);
+		else localStorage.setItem(STORAGE_KEY, "off");
+	} catch {
+		// Storage blocked — the choice lasts as long as the page.
+	}
+	enabledHere = enabled;
+}
+
+let enabledHere = previewEnabled();
+
+/** The results view, the block that lays the results and the preview side by side, and the two. */
+let view: HTMLElement | null = null;
+let layout: HTMLElement | null = null;
+let list: HTMLElement | null = null;
+let pane: HTMLElement | null = null;
+let toggle: HTMLButtonElement | null = null;
+
+/**
+ * The strips the preview is showing, by their rows' `data-ownership`, which names one strip on one
+ * day: a row picked from the results is its own strip; a cell picked from the grid, since a cell is a
+ * day, is every strip of the day that was a result then, as the day's own page would have them. Fixed
+ * when the preview opens, so the preview stays only while every one of them is still a result.
+ * `null` when closed.
+ */
+let previewing: readonly string[] | null = null;
+
+/**
+ * Whether the preview is showing exactly `strips`: picked again, they are followed to their page
+ * rather than previewed again. One of a day's two, picked while both show, is previewed alone.
+ */
+function isPreviewing(strips: readonly string[]): boolean {
+	return (
+		previewing !== null && previewing.length === strips.length && strips.every((strip) => previewing!.includes(strip))
+	);
+}
+
+/** `strips`' rows among `all`, if every one of them is there; otherwise none. */
+function rowsOf(all: HTMLAnchorElement[], strips: readonly string[]): HTMLAnchorElement[] {
+	const shown = all.filter((row) => strips.includes(row.dataset.ownership!));
+	return shown.length === strips.length ? shown : [];
+}
+
+const PREVIEW_ICON = `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true">
+	<rect class="preview-icon__pane" x="9" y="3.5" width="5" height="9" /><rect x="2" y="3.5" width="12" height="9" rx="1.5" />
+</svg>`;
+
+/**
+ * Whether there is room for the preview: the stylesheet decides, by the width of the results view,
+ * and says so in `--preview-fits`, so the width is written in one place.
+ */
+function fits(): boolean {
+	return layout !== null && getComputedStyle(layout).getPropertyValue("--preview-fits").trim() === "1";
+}
+
+function available(): boolean {
+	return enabledHere && view !== null && isShowing(view) && fits();
+}
+
+function rows(): HTMLAnchorElement[] {
+	return list ? [...list.querySelectorAll<HTMLAnchorElement>(".result-row")] : [];
+}
+
+function stepOf(row: HTMLAnchorElement | undefined): PreviewStep | null {
+	return row ? { href: row.getAttribute("href")!, date: row.dataset.date! } : null;
+}
+
+/** The transcripts a row shows the alternate of first, as its link to the strip's page says. */
+function alternatesOf(row: HTMLAnchorElement): string[] {
+	return new URL(row.href).searchParams.getAll("alternate");
+}
+
+function markRows(shown: readonly HTMLElement[]): void {
+	for (const row of rows()) {
+		const marked = shown.includes(row);
+		row.classList.toggle("result-row--previewing", marked);
+		if (marked) row.setAttribute("aria-current", "true");
+		else row.removeAttribute("aria-current");
+	}
+}
+
+/**
+ * The results either side of the rows previewed: the nearest not among them before the first, and
+ * after it. A day's other strip, sorted further down, is no step from the day it is already part of.
+ */
+function neighbours(
+	all: HTMLAnchorElement[],
+	shown: readonly HTMLAnchorElement[],
+): [HTMLAnchorElement | undefined, HTMLAnchorElement | undefined] {
+	const index = all.indexOf(shown[0]);
+	return [
+		all.slice(0, index).findLast((row) => !shown.includes(row)),
+		all.slice(index + 1).find((row) => !shown.includes(row)),
+	];
+}
+
+/** What scrolls the results: their own column beside a preview, or else the page. */
+function resultsScroller(): HTMLElement {
+	return layout?.classList.contains("results-layout--previewing")
+		? layout.querySelector<HTMLElement>(".results-main")!
+		: document.getElementById("main")!;
+}
+
+/**
+ * Lays the results out beside the preview, or not, keeping them scrolled where they were: one of the
+ * two scrollers takes over from the other, and both start the rows the view's padding down.
+ */
+function setPreviewing(beside: boolean): void {
+	if (!layout || layout.classList.contains("results-layout--previewing") === beside) return;
+	const scrolled = resultsScroller().scrollTop;
+	layout.classList.toggle("results-layout--previewing", beside);
+	resultsScroller().scrollTop = scrolled;
+}
+
+/** Scrolls the results to `row`, unless it is already in sight below the search bar. */
+function scrollRowIntoView(row: HTMLElement): void {
+	const scroller = resultsScroller();
+	const frame = scroller.getBoundingClientRect();
+	const top = view?.querySelector(".results-sticky")?.getBoundingClientRect().bottom ?? frame.top;
+	const rect = row.getBoundingClientRect();
+	if (rect.top >= top && rect.bottom <= frame.bottom) return;
+	const centred = (top + frame.bottom) / 2 - rect.height / 2;
+	scroller.scrollBy({ top: rect.top - centred, behavior: "smooth" });
+}
+
+/** The preview's arrows: a plain click steps, and the focus stays on the arrow it was on. */
+function attachArrows(): void {
+	pane?.querySelectorAll<HTMLAnchorElement>("a.preview-step").forEach((arrow) => {
+		arrow.addEventListener("click", (event) => {
+			if (!isPlainClick(event)) return;
+			event.preventDefault();
+			stepPreview(arrow.dataset.step === "prev" ? -1 : 1);
+		});
+	});
+}
+
+/**
+ * Shows `target`'s strips in the preview, and brings them into view in the grid — and, with
+ * `scrollList`, in the results, for rows not picked from them. Says whether there were any to show.
+ */
+function show(target: readonly string[], scrollList: boolean): boolean {
+	const all = rows();
+	const shown = rowsOf(all, target);
+	if (!pane || !layout || shown.length === 0) return false;
+	const first = shown[0];
+	const date = first.dataset.date!;
+	const alternates = [...new Set(shown.flatMap(alternatesOf))];
+	const page = previewPageOf(
+		detailPageFrom(state, date, alternates),
+		shown.map((row) => row.dataset.ownership!),
+	);
+	if (!page) return false;
+	// One strip's own page is where its row goes; more than one, the day's.
+	const href = shown.length === 1 ? first.getAttribute("href")! : addressOf(buildComicPath(date, alternates));
+
+	// What the focus was on, to be put on the same thing for what is shown next.
+	const focused = document.activeElement as HTMLElement | null;
+	const onArrow = focused?.matches(".results-preview a.preview-step") ? focused.dataset.step : undefined;
+	const onRow = focused?.matches(".result-row") ?? false;
+	const inPane = focused !== null && pane.contains(focused);
+
+	// A book's popup is floated on the body, and would be left pointing at a cover that is gone.
+	closeBookPopup();
+	previewing = target;
+	const [prev, next] = neighbours(all, shown);
+	pane.innerHTML = buildPreviewHtml(page, href, stepOf(prev), stepOf(next));
+	pane.scrollTop = 0;
+	const drawn = pane;
+	attachDetailHandlers(pane, page, () => previewing === target && drawn.isConnected);
+	attachArrows();
+	pane.querySelector(".preview-close")!.addEventListener("click", closePreview);
+	respell(pane);
+
+	present();
+	const cell = cellForDate(date);
+	if (cell) scrollCellIntoViewIfNeeded(cell);
+	if (scrollList) scrollRowIntoView(first);
+
+	if (onArrow) pane.querySelector<HTMLElement>(`a.preview-step[data-step="${onArrow}"]`)?.focus();
+	// Still in the preview, for the keys that step it to keep stepping it.
+	else if (inPane) pane.focus({ preventScroll: true });
+	else if (onRow && !shown.includes(focused as HTMLAnchorElement)) focusRow(first);
+	return true;
+}
+
+/** Set while the preview moves the focus onto a row itself, which is no reader focusing it. */
+let refocusing = false;
+
+function focusRow(row: HTMLElement): void {
+	refocusing = true;
+	row.focus({ preventScroll: true });
+	refocusing = false;
+}
+
+/**
+ * Lays the preview out beside the results, rows marked and cell ringed, while there is room for both;
+ * while there is not, puts it out of the way without closing it, so a window widened again brings it
+ * back. With nothing previewed, takes it all away.
+ */
+function present(): void {
+	const shown = previewing === null ? [] : rowsOf(rows(), previewing);
+	const room = shown.length > 0 && fits();
+	setPreviewing(room);
+	markRows(room ? shown : []);
+	setPreviewedDate(room ? shown[0].dataset.date! : null);
+}
+
+export function closePreview(): void {
+	if (previewing === null) return;
+	// A focus in the preview would go with it; it goes to the row it was showing instead.
+	const back = pane?.contains(document.activeElement) ? rowsOf(rows(), previewing)[0] : undefined;
+	previewing = null;
+	closeBookPopup();
+	if (pane) pane.innerHTML = "";
+	present();
+	if (back) focusRow(back);
+}
+
+/**
+ * The previous or next result, as the arrows step. Says whether there is a preview showing to step,
+ * which a key held for the purpose is then spent on even at either end.
+ */
+export function stepPreview(direction: -1 | 1): boolean {
+	if (previewing === null || !available()) return false;
+	const target = previewing;
+	const all = rows();
+	const shown = rowsOf(all, target);
+	if (shown.length === 0) return true;
+	const step = neighbours(all, shown)[direction === -1 ? 0 : 1];
+	if (step) show([step.dataset.ownership!], true);
+	return true;
+}
+
+/**
+ * The result day nearest the one previewed, as a strip's page steps through the days: the next or
+ * previous day with a result, or, `weekly`, the nearest with one on the same day of the week. Shows
+ * every result of that day, as its cell does. Says whether there is a preview showing to step.
+ */
+export function stepPreviewDay(direction: -1 | 1, weekly: boolean): boolean {
+	if (previewing === null || !available()) return false;
+	const all = rows();
+	const shown = rowsOf(all, previewing);
+	if (shown.length === 0) return true;
+	const from = shown[0].dataset.date!;
+	const dates = [...new Set(all.map((row) => row.dataset.date!))]
+		.filter((date) => (direction === 1 ? date > from : date < from))
+		.filter((date) => !weekly || weekdayOf(date) === weekdayOf(from))
+		.sort();
+	const to = direction === 1 ? dates[0] : dates[dates.length - 1];
+	if (to)
+		show(
+			all.filter((row) => row.dataset.date === to).map((row) => row.dataset.ownership!),
+			true,
+		);
+	return true;
+}
+
+/** Whether a strip is showing in the preview, for the keys a strip's page answers to. */
+export function previewShowing(): boolean {
+	return previewing !== null && available();
+}
+
+/** Whether the focus is inside the preview, where the arrow keys step through the days as a strip's page's do. */
+export function previewHasFocus(): boolean {
+	return pane !== null && pane.contains(document.activeElement);
+}
+
+function showToggle(): void {
+	if (!toggle) return;
+	const label = enabledHere
+		? "Previewing strips beside the results — click to open them on their own page"
+		: "Opening strips on their own page — click to preview them beside the results";
+	toggle.title = label;
+	toggle.setAttribute("aria-label", label);
+	toggle.setAttribute("aria-pressed", String(enabledHere));
+}
+
+/**
+ * Puts the preview, and its toggle, into a results view just built: `layout` is the block the
+ * results are in, `list` where the rows go, and `toolbar` the row the toggle goes at the end of.
+ * Built again only when the view is.
+ */
+export function attachPreview(
+	element: HTMLElement,
+	into: HTMLElement,
+	rowsList: HTMLElement,
+	toolbar: HTMLElement,
+): void {
+	view = element;
+	layout = into;
+	list = rowsList;
+
+	pane = document.createElement("aside");
+	pane.className = "results-preview";
+	pane.setAttribute("aria-label", "Preview");
+	// Focusable, so a click anywhere in it puts the focus there, for the arrow keys to step it.
+	pane.tabIndex = -1;
+	layout.appendChild(pane);
+
+	toggle = document.createElement("button");
+	toggle.className = "results-sort results-preview-toggle";
+	toggle.innerHTML = PREVIEW_ICON;
+	toolbar.appendChild(toggle);
+	showToggle();
+	toggle.addEventListener("click", () => {
+		choosePreview(!enabledHere);
+		showToggle();
+		if (!enabledHere) closePreview();
+	});
+
+	// A row picked while there is room for the preview is shown in it — or, picked again while it is
+	// all the preview shows, followed to its page, so a double click opens it. A modified click is a
+	// request for a tab of its own, and is left to the browser; Enter on a row is a click.
+	element.addEventListener("click", (event) => {
+		if (event.defaultPrevented || !isPlainClick(event)) return;
+		const row = (event.target as HTMLElement).closest<HTMLAnchorElement>(".result-row");
+		if (!row || !list?.contains(row) || !available()) return;
+		const strips = [row.dataset.ownership!];
+		if (isPreviewing(strips)) return;
+		if (!show(strips, false)) return;
+		event.preventDefault();
+		// On the row, for the keys that step from it. Chrome puts it there on the press; Safari does
+		// not focus a link that is clicked.
+		if (document.activeElement !== row) focusRow(row);
+	});
+
+	// A row focused from the keyboard — tabbed to, or stepped to with the arrow keys — is previewed, if
+	// the preview is open. A click focuses one too, in some browsers, but the click is the one to show
+	// it: shown here, the click would find it already previewed, and follow it to its page.
+	element.addEventListener("focusin", (event) => {
+		const row = (event.target as HTMLElement).closest<HTMLAnchorElement>(".result-row");
+		if (!row || refocusing || !list?.contains(row) || !previewShowing() || !row.matches(":focus-visible")) return;
+		const strips = [row.dataset.ownership!];
+		if (!isPreviewing(strips)) show(strips, false);
+	});
+
+	// The window narrowed past room for it puts the preview out of the way, rather than leave its
+	// cell ringed in the grid with nothing beside the results to say why, and widened brings it back.
+	new ResizeObserver(() => {
+		if (previewing !== null && isShowing(element)) present();
+	}).observe(layout);
+}
+
+/*
+ * A result's cell, clicked in the grid, previews its day: each strip of it that is a result — both
+ * of a day's two only if both are. The grid's own handler still scrolls the cell into view. Attached
+ * once the grid is there to attach it to.
+ */
+document.addEventListener("DOMContentLoaded", () => {
+	document.getElementById("grid-layout")?.addEventListener("click", (event) => {
+		if (event.defaultPrevented || !isPlainClick(event) || !available()) return;
+		const date = (event.target as HTMLElement).closest<HTMLElement>(".cell")?.dataset.date;
+		if (!date) return;
+		const day = rows()
+			.filter((row) => row.dataset.date === date)
+			.map((row) => row.dataset.ownership!);
+		// Its day already all the preview shows, the cell is followed to the day's page, as a row is.
+		if (isPreviewing(day)) return;
+		if (show(day, true)) event.preventDefault();
+	});
+});
+
+/**
+ * After the rows are drawn again: the preview follows its strips to wherever they now are among them,
+ * its arrows to their new neighbours, or closes if any of its strips is no longer a result.
+ */
+export function syncPreview(): void {
+	if (previewing === null || !pane) return;
+	const target = previewing;
+	const all = rows();
+	const shown = rowsOf(all, target);
+	if (shown.length === 0) {
+		closePreview();
+		return;
+	}
+	// A view built afresh has an empty preview, which is drawn whole.
+	if (!pane.querySelector(".detail-container")) {
+		show(target, false);
+		return;
+	}
+	present();
+	const arrows = pane.querySelector<HTMLElement>(".detail-actions__arrows");
+	if (!arrows) return;
+	const [prev, next] = neighbours(all, shown);
+	arrows.innerHTML = buildPreviewArrowsHtml(stepOf(prev), stepOf(next));
+	arrows
+		.querySelectorAll<HTMLElement>("a.preview-step")
+		.forEach((arrow) => attachCellHighlightLink(arrow, arrow.dataset.date!));
+	attachArrows();
+}

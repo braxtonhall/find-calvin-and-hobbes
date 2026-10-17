@@ -21,6 +21,7 @@ import { HOME_PATH, buildComicPath } from "./routes";
 import { getSameDayComicDate } from "./pages/detail";
 import { attachLifeEasterEgg } from "./life";
 import { holdLibrary, readLibrary } from "./ownership";
+import { closePreview, previewHasFocus, previewShowing, stepPreview, stepPreviewDay } from "./views/preview";
 
 function initialize(): void {
 	// The filters whose values are loaded data. A thunk, so this can be registered before the
@@ -112,7 +113,12 @@ document.addEventListener("DOMContentLoaded", () => {
 		const isInput = activeTag === "INPUT" || activeTag === "TEXTAREA" || activeTag === "SELECT";
 
 		if (event.key === "Escape") {
-			if (parseRoute().view !== "landing") {
+			const view = parseRoute().view;
+			// A search's preview of a strip is put away first, and the search kept.
+			if (view === "results" && previewShowing()) {
+				event.preventDefault();
+				closePreview();
+			} else if (view !== "landing") {
 				event.preventDefault();
 				navigate(HOME_PATH);
 			}
@@ -126,6 +132,11 @@ document.addEventListener("DOMContentLoaded", () => {
 				// page before the archive has loaded, which is more than the state does.
 				const arrow = document.querySelector<HTMLAnchorElement>(event.key === "ArrowLeft" ? "#nav-prev" : "#nav-next");
 				if (arrow) navigateTo(arrow.href);
+			} else if (route.view === "results") {
+				// A search's preview of a strip steps through the results: from inside it, by day, as
+				// the strip's page does; from anywhere else, as its arrows do.
+				const direction = event.key === "ArrowLeft" ? -1 : 1;
+				if (previewHasFocus() ? stepPreviewDay(direction, false) : stepPreview(direction)) event.preventDefault();
 			}
 		}
 
@@ -136,18 +147,28 @@ document.addEventListener("DOMContentLoaded", () => {
 				const direction = event.key === "ArrowUp" ? -1 : 1;
 				const adjacentDate = getSameDayComicDate(state, route.date, direction);
 				if (adjacentDate) navigate(buildComicPath(adjacentDate));
+			} else if (route.view === "results" && previewHasFocus()) {
+				// From inside a search's preview, as the strip's page does: the same day of the week.
+				if (stepPreviewDay(event.key === "ArrowUp" ? -1 : 1, true)) event.preventDefault();
 			}
 		}
 
 		if (event.key === "b" && !isInput) {
 			const route = parseRoute();
-			if (route.view === "detail") {
+			// A search's preview of a strip answers as the strip's page does.
+			const page =
+				route.view === "detail"
+					? "#view-detail"
+					: route.view === "results" && previewShowing()
+						? ".results-preview"
+						: null;
+			if (page !== null) {
 				event.preventDefault();
 				// Every strip on the page, or, where they all are already, none of them. Which is which
 				// comes from `state`, not from the buttons, which may not have been told yet — so
 				// until the library has loaded there is no telling, and nothing is done.
 				if (!state.bookmarksLoaded) return;
-				const buttons = [...document.querySelectorAll<HTMLButtonElement>("#view-detail .ownership-bookmark-btn")];
+				const buttons = [...document.querySelectorAll<HTMLButtonElement>(`${page} .ownership-bookmark-btn`)];
 				const bookmarked = (button: HTMLButtonElement) => state.bookmarkedStrips.has(button.dataset.bookmark!);
 				const all = buttons.every(bookmarked);
 				for (const button of buttons) {

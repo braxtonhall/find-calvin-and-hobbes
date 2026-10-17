@@ -48,6 +48,14 @@ export function visibleBand(): { top: number; bottom: number } {
 }
 
 /** Takes the light off every result row lit for a cell. Only one day's rows are ever lit at once. */
+/**
+ * Whether `element` is on the page showing: a view that is active, or something inside one, as a
+ * search's preview of a strip is. A view left behind keeps its markup, hidden.
+ */
+export function isShowing(element: HTMLElement): boolean {
+	return element.closest(".view.active") !== null;
+}
+
 export function clearRowHighlights(): void {
 	document
 		.querySelectorAll(".result-row--highlight")

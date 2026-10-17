@@ -120,12 +120,16 @@
 	transition: none;
 }
 
-.grid-chunk:has(.cell--selected) {
-	z-index: 1;
-}
-
+/*
+ * Skipping makes a chunk one layer, drawn all above or all below its neighbours, so raising the one
+ * with a ring raises its plain cells over the next chunk's ring too. The chunks holding the ring or
+ * the hovered cell are drawn as usual instead, so those cells take their places among the whole
+ * grid's: the hovered cell above the ring, the ring above every other cell, and the header row and
+ * labels above them both.
+ */
+.grid-chunk:has(.cell--selected),
 .grid-chunk:has(.cell--hover-highlight) {
-	z-index: 2;
+	content-visibility: visible;
 }
 
 .cell {
@@ -266,6 +270,18 @@
 	z-index: 2;
 	position: relative;
 	transform: scale(1.3);
+}
+
+/* Both are shadows, so the hover's would take the ring's place; the ring is kept, and the glow goes outside it. */
+.cell--selected.cell--hover-highlight {
+	box-shadow:
+		0 0 0 var(--cell-ring) var(--selected),
+		0 0 4px calc(var(--cell-ring) + 2px) var(--hover);
+}
+.cell--bookmarked.cell--selected.cell--hover-highlight {
+	box-shadow:
+		0 0 0 var(--cell-ring) #000,
+		0 0 4px calc(var(--cell-ring) + 2px) var(--hover);
 }
 
 /* A box of many days is too big to grow by a third. */

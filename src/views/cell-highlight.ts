@@ -1,6 +1,7 @@
 import { state } from "../state";
 import { anyCellInView, scrollCellIntoViewIfNeeded } from "../utils";
-import { cellForDate, lightDates } from "../grid";
+import { cellForDate, lightDates, paintGrid } from "../grid";
+import { parseRoute } from "../router";
 import { isDateInCollection } from "../date-utils";
 import { Collection, Creator } from "../types";
 
@@ -100,14 +101,16 @@ let pendingClear: number | null = null;
 /**
  * Puts the grid back once the pointer has left a book, unless it arrives at another first — in which
  * case that book goes straight to the next, without the whole grid lighting up and dimming again
- * in between. `back` is what it goes back to: the plain grid, or what a list lights while it is
- * showing, which a row hovered in it only narrowed.
+ * in between. `back` is what it goes back to: what a list lights while it is showing, which a row
+ * hovered in it only narrowed — or, given none, whatever the page showing lights itself: nothing on
+ * a strip's page, and its results' tiers under a search's preview of a strip.
  */
 export function clearCollectionSoon(back: ReadonlySet<string> | null = null): void {
 	cancelCollectionClear();
 	pendingClear = window.setTimeout(() => {
 		pendingClear = null;
-		highlightCollection(back);
+		if (back) highlightCollection(back);
+		else paintGrid(parseRoute());
 	}, CLEAR_DELAY_MS);
 }
 

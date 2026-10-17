@@ -59,8 +59,11 @@ function leave(row: HTMLElement, relatedTarget: EventTarget | null): void {
 	row.dispatchEvent(new MouseEvent("mouseleave", { relatedTarget: relatedTarget ?? document.body }));
 }
 
-/** `byPointer` when the menu was used with the mouse, which is still over the page's rows. */
-function changed(byPointer: boolean): void {
+/**
+ * Says the library changed — from a row's menu, or a strip's or book's own buttons. `byPointer` when
+ * the menu was used with the mouse, which is still over the page's rows.
+ */
+export function announceLibraryChange(byPointer: boolean): void {
 	document.dispatchEvent(new CustomEvent(LIBRARY_CHANGE_EVENT, { detail: { byPointer } }));
 }
 
@@ -169,7 +172,7 @@ function openMenu(row: HTMLElement, x: number, y: number): void {
 
 function bookmark({ id, date }: { id: string; date: string }, byPointer: boolean): void {
 	toggleBookmark(id, date)
-		.then(() => changed(byPointer))
+		.then(() => announceLibraryChange(byPointer))
 		.catch(() => {
 			// IndexedDB unavailable — nothing is kept
 		});
@@ -177,7 +180,7 @@ function bookmark({ id, date }: { id: string; date: string }, byPointer: boolean
 
 function own({ kind, id }: RowTarget, byPointer: boolean): void {
 	updateOwnership(kind, id, (record) => ({ owned: !record.owned }))
-		.then(() => changed(byPointer))
+		.then(() => announceLibraryChange(byPointer))
 		.catch(() => {});
 }
 
@@ -209,7 +212,7 @@ function editNote(row: HTMLElement, { kind, id, title }: RowTarget): void {
 		if (row.isConnected) row.focus({ preventScroll: true });
 		if (!save) return;
 		updateOwnership(kind, id, () => ({ note: note.value }))
-			.then(() => changed(false))
+			.then(() => announceLibraryChange(false))
 			.catch(() => {});
 	});
 

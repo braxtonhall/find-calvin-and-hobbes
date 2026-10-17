@@ -1,6 +1,7 @@
 import "./detail.css";
 
 import { state } from "../state";
+import { isShowing } from "../utils";
 import { loadDescriptions } from "../details";
 import { canGoBack, parseRoute } from "../router";
 import { DetailPage } from "../pages/page";
@@ -44,11 +45,9 @@ function patchDetailBlocks(element: HTMLElement, page: DetailPage): void {
  * a run in the paper, a step through an arc. A book's arrows are in its popup, which does its own.
  */
 function attachStripLinkHandlers(element: HTMLElement): void {
-	element
-		.querySelectorAll<HTMLElement>("a#nav-prev, a#nav-next, a.detail-rerun-link[data-date], a.detail-arc-step")
-		.forEach((link) => {
-			attachCellHighlightLink(link, link.dataset.date!);
-		});
+	element.querySelectorAll<HTMLElement>("a.nav-btn[data-date], a.detail-rerun-link[data-date]").forEach((link) => {
+		attachCellHighlightLink(link, link.dataset.date!);
+	});
 }
 
 /**
@@ -63,10 +62,10 @@ function attachSetLinkHandlers(
 ): void {
 	element.querySelectorAll<HTMLElement>(selector).forEach((link) => {
 		const show = (scroll: boolean) => {
-			const dates = element.classList.contains("active") ? datesOf(link) : null;
+			const dates = isShowing(element) ? datesOf(link) : null;
 			if (dates) highlightCollection(dates, scroll);
 		};
-		const clear = () => element.classList.contains("active") && clearCollectionSoon();
+		const clear = () => isShowing(element) && clearCollectionSoon();
 		link.addEventListener("mouseenter", () => show(false));
 		link.addEventListener("focus", () => show(true));
 		link.addEventListener("mouseleave", clear);
@@ -108,6 +107,17 @@ export function renderDetail(page: DetailPage, adopt: boolean = false): void {
 	}
 
 	attachBackAndHomeHandlers(element);
+	attachDetailHandlers(element, page, () => {
+		const route = parseRoute();
+		return route.view === "detail" && route.date === page.date;
+	});
+}
+
+/**
+ * What a strip's page does once drawn, wherever it is drawn: on its own, or as a search's preview.
+ * `stillShowing` says whether the page is still there when its descriptions arrive to be filled in.
+ */
+export function attachDetailHandlers(element: HTMLElement, page: DetailPage, stillShowing: () => boolean): void {
 	attachStripLinkHandlers(element);
 	attachGroupLinkHandlers(element, page);
 	attachBookHandlers(element);
@@ -117,8 +127,7 @@ export function renderDetail(page: DetailPage, adopt: boolean = false): void {
 
 	if (page.descriptions === null) {
 		loadDescriptions().then(() => {
-			const route = parseRoute();
-			if (route.view !== "detail" || route.date !== page.date) return;
+			if (!stillShowing()) return;
 			patchDetailBlocks(element, { ...page, descriptions: descriptionsFor(state.descriptions!, page.comics) });
 		});
 	}

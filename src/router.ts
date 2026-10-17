@@ -394,6 +394,9 @@ export function handleRoute(prerendered: Page | null = null): void {
 		case "results": {
 			renderResults(page.q, page.sort);
 			document.getElementById("main")!.scrollTop = 0;
+			// Beside a preview of a strip, the results scroll in a column of their own.
+			const column = viewElement.querySelector(".results-main");
+			if (column) column.scrollTop = 0;
 			break;
 		}
 		case "detail": {

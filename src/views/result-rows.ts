@@ -94,9 +94,9 @@ export function attachRowHandlers(list: HTMLElement): void {
 				cell.classList.add("cell--hover-highlight");
 				state.hoveredCell = cell;
 			}
-			document
-				.querySelectorAll(`.result-row[data-date="${row.dataset.date}"]`)
-				.forEach((highlightedRow) => highlightedRow.classList.add("result-row--highlight"));
+			// This row alone: a row is one strip, and another that ran the same day is not the one
+			// pointed at. The cell is the day's, so pointing at it lights every row of the day.
+			row.classList.add("result-row--highlight");
 		});
 
 		row.addEventListener("mouseleave", () => {
@@ -105,9 +105,7 @@ export function attachRowHandlers(list: HTMLElement): void {
 				state.hoveredCell.classList.remove("cell--hover-highlight");
 				state.hoveredCell = null;
 			}
-			document
-				.querySelectorAll(`.result-row[data-date="${row.dataset.date}"]`)
-				.forEach((highlightedRow) => highlightedRow.classList.remove("result-row--highlight"));
+			row.classList.remove("result-row--highlight");
 		});
 	});
 

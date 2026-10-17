@@ -2,6 +2,7 @@ import { OwnershipKind, getOwnership, updateOwnership } from "../ownership";
 import { OwnershipRecord } from "../library-file";
 import { isBookmarked, toggleBookmark } from "../bookmarks";
 import { state } from "../state";
+import { announceLibraryChange } from "./row-menu";
 
 /** How long the note waits after the last keystroke before it saves. Leaving the box saves at once. */
 const NOTE_SAVE_DELAY = 400;
@@ -43,7 +44,10 @@ function attachBookmarkButton(button: HTMLButtonElement): void {
 	}
 	button.addEventListener("click", () => {
 		toggleBookmark(id, date)
-			.then((bookmarked) => showBookmark(button, bookmarked))
+			.then((bookmarked) => {
+				showBookmark(button, bookmarked);
+				changed();
+			})
 			.catch(() => {});
 	});
 }
@@ -58,6 +62,15 @@ function readRecord(kind: OwnershipKind, id: string): Promise<OwnershipRecord | 
 	const noted = (kind === "strip" ? state.notedStrips : state.notedBooks).has(id);
 	if (noted) return getOwnership(kind, id);
 	return Promise.resolve(owned ? { id, owned } : null);
+}
+
+/**
+ * Tells a page listing the library — a search about it beside its preview of a strip — that it may
+ * have to draw its rows again, as a row's menu does. Not by pointer: the pointer is on these
+ * buttons, not over a row to light.
+ */
+function changed(): void {
+	announceLibraryChange(false);
 }
 
 /**
@@ -92,7 +105,10 @@ export function attachOwnershipControls(element: HTMLElement): void {
 
 		ownedButton.addEventListener("click", () => {
 			updateOwnership(kind, id, (record) => ({ owned: !record.owned }))
-				.then((record) => showRecord(controls, record))
+				.then((record) => {
+					showRecord(controls, record);
+					changed();
+				})
 				.catch(() => {});
 		});
 
@@ -107,7 +123,10 @@ export function attachOwnershipControls(element: HTMLElement): void {
 			if (timer !== null) window.clearTimeout(timer);
 			timer = null;
 			updateOwnership(kind, id, () => ({ note: note.value }))
-				.then((record) => showRecord(controls, record))
+				.then((record) => {
+					showRecord(controls, record);
+					changed();
+				})
 				.catch(() => {});
 		};
 		note.addEventListener("input", () => {

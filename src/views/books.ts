@@ -1,6 +1,7 @@
 import "./books.css";
 
 import { state } from "../state";
+import { isShowing } from "../utils";
 import { onViewportShift, viewport } from "../placement";
 import { attachCellHighlightLink, clearCollectionSoon, datesOf, highlightCollection } from "./cell-highlight";
 
@@ -27,9 +28,9 @@ import { attachCellHighlightLink, clearCollectionSoon, datesOf, highlightCollect
 function attachBookHighlight(target: HTMLElement, view: HTMLElement, back: ReadonlySet<string> | null): void {
 	const show = (scroll: boolean) => {
 		const collection = state.collectionsById?.get(target.dataset.collectionId ?? "");
-		if (collection && view.classList.contains("active")) highlightCollection(datesOf(collection), scroll);
+		if (collection && isShowing(view)) highlightCollection(datesOf(collection), scroll);
 	};
-	const clear = () => view.classList.contains("active") && clearCollectionSoon(back);
+	const clear = () => isShowing(view) && clearCollectionSoon(back);
 	target.addEventListener("mouseenter", () => show(false));
 	target.addEventListener("focus", () => show(true));
 	target.addEventListener("mouseleave", clear);
@@ -247,7 +248,7 @@ export function attachBookHandlers(view: HTMLElement, back: ReadonlySet<string> 
 	// A frame on, once the router has put the page where it is going to be scrolled to. A pointed-at
 	// popup is left for the pointer's next move to keep or put away.
 	requestAnimationFrame(() => {
-		if (again.isConnected && view.classList.contains("active")) openPopup(again, view, back, hovered);
+		if (again.isConnected && isShowing(view)) openPopup(again, view, back, hovered);
 	});
 }
 

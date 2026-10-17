@@ -204,3 +204,92 @@
 .result-image.loaded {
 	opacity: 1;
 }
+
+/*
+ * A search's preview of a strip, beside the results: see `preview.ts`. Only where the results view
+ * has room for both, which `--preview-fits` tells the script, and only once a row has been picked.
+ * The preview is a strip's page, drawn with its classes, so `detail.css` styles it.
+ */
+#view-results {
+	container: results / inline-size;
+}
+
+.results-sort.results-preview-toggle,
+.results-preview {
+	display: none;
+}
+
+/* Close, Open page and the arrows through the results, in one row, as far apart as the actions under the date. */
+.preview-bar {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-bottom: 20px;
+}
+
+.preview-bar > .detail-back,
+.preview-bar > .detail-home {
+	margin-bottom: 0;
+}
+
+/* Focused so the arrow keys step it, which is no control of its own to ring. */
+.results-preview:focus-visible {
+	outline: none;
+}
+
+/* Filled in, the pane the toggle shows strips in, while it does. */
+.results-preview-toggle[aria-pressed="true"] .preview-icon__pane {
+	fill: currentColor;
+}
+
+/*
+ * Beside a preview, the results scroll in a column of their own and the preview in another, so each
+ * has its scrollbar at its own edge. The view is the page's height, and the page has nothing left to
+ * scroll; the padding the view had goes to the columns.
+ */
+#view-results.active:has(> .results-layout--previewing) {
+	height: 100%;
+	padding: 0;
+}
+
+@container results (min-width: 1160px) {
+	.results-layout {
+		--preview-fits: 1;
+	}
+
+	.results-sort.results-preview-toggle {
+		display: flex;
+	}
+
+	/* The results keep room for a row's text beside its image; the preview takes a little less than a strip's page would. */
+	.results-layout--previewing {
+		display: grid;
+		grid-template-columns: minmax(600px, 1fr) minmax(0, 600px);
+		grid-template-rows: minmax(0, 1fr);
+		height: 100%;
+	}
+
+	/* A sticky bar sticks inside its scroller's padding, so the space above the bar is its own margin
+	   rather than the column's padding, and the bar sticks to the very top, as it does to the page's. */
+	.results-layout--previewing .results-main {
+		overflow-y: auto;
+		padding: 0 20px 20px;
+	}
+
+	.results-layout--previewing .results-sticky {
+		margin-top: 20px;
+	}
+
+	/* Ruled off from the results as the grid is from the page. The corrections link floats over its
+	   foot; the last line clears it, as on a strip's page. */
+	.results-layout--previewing .results-preview {
+		display: block;
+		overflow-y: auto;
+		padding: 20px 20px 56px;
+		border-left: 1px solid var(--neutral);
+	}
+
+	.result-row.result-row--previewing {
+		background: var(--hover-row);
+	}
+}

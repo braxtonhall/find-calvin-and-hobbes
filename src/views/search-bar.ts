@@ -56,7 +56,9 @@ export function buildSearchBar(element: HTMLElement, options: SearchBarOptions):
 	let currentQuery = "";
 	let currentSort: SortMode = "rank";
 
-	element.innerHTML = `<div class="results-sticky">
+	// The bar and the rows are one column of `.results-layout`, which a preview of a strip can stand
+	// beside — see `preview.ts`.
+	element.innerHTML = `<div class="results-layout"><div class="results-main"><div class="results-sticky">
 		<div class="results-search-bar">
 			<input
 				type="text"
@@ -70,7 +72,7 @@ export function buildSearchBar(element: HTMLElement, options: SearchBarOptions):
 			<button class="results-sort"></button>
 		</div>
 	</div>
-	<div id="${options.id}-list"></div>`;
+	<div id="${options.id}-list"></div></div></div>`;
 
 	const input = element.querySelector<HTMLInputElement>(".results-input")!;
 	const sortButton = element.querySelector<HTMLButtonElement>(".results-sort")!;

@@ -12,6 +12,7 @@ import { resultsHtml } from "../pages/result-rows";
 import { SearchBar, buildSearchBar } from "./search-bar";
 import { syncQueryInput } from "./query-input";
 import { isTouchDevice } from "../utils";
+import { attachPreview, syncPreview } from "./preview";
 
 /**
  * The count moved to the filter bar and dropped the query on the way — `12 results`, not
@@ -37,6 +38,12 @@ export function renderResults(query: string, sort: SortMode): void {
 			pathFor: buildSearchPath,
 			onEmpty: () => navigate(HOME_PATH),
 		});
+		attachPreview(
+			element,
+			element.querySelector<HTMLElement>(".results-layout")!,
+			bar.list,
+			element.querySelector<HTMLElement>(".results-search-bar")!,
+		);
 	}
 
 	const results = search(query, sort, TUNING, CANONICAL_FORMS);
@@ -51,6 +58,7 @@ export function renderResults(query: string, sort: SortMode): void {
 		state.searchResultTiers = assignTiers(results);
 		attachRowHandlers(bar.list);
 	}
+	syncPreview();
 
 	// Arriving from another view, rather than typing here or stepping through the rows. The filter
 	// menu counts as being here: it is floated on `document.body` rather than nested in this element,

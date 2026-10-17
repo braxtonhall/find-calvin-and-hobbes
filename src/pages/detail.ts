@@ -688,7 +688,24 @@ function buildRunsHtml(page: DetailPage, date: string, comic: Comic): string {
 }
 
 export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
-	const { date, comics, prevDate, nextDate, rerunOf } = page;
+	const { prevDate, nextDate } = page;
+	const prevButtonHtml = prevDate
+		? `<a class="nav-btn" id="nav-prev" href="${addressOf(buildComicPath(prevDate))}" data-date="${prevDate}" title="Previous comic">&larr;</a>`
+		: `<span class="nav-btn nav-btn--disabled" title="First comic">&larr;</span>`;
+	const nextButtonHtml = nextDate
+		? `<a class="nav-btn" id="nav-next" href="${addressOf(buildComicPath(nextDate))}" data-date="${nextDate}" title="Next comic">&rarr;</a>`
+		: `<span class="nav-btn nav-btn--disabled" title="Last comic">&rarr;</span>`;
+	return buildDetailShellHtml(page, buildBackAndHomeButtons(canGoBack), prevButtonHtml + nextButtonHtml);
+}
+
+/**
+ * A strip's page with the buttons above its date and the arrows in its row of actions left to the
+ * caller: a strip's own page steps through the days, and a search's preview of it through the
+ * results, with its arrows among the buttons above instead, and none here. Everything else is the
+ * page, so the two cannot drift apart.
+ */
+export function buildDetailShellHtml(page: DetailPage, leadingHtml: string, arrowsHtml: string): string {
+	const { date, comics, rerunOf } = page;
 	const dateFormatted = formatLongDate(date);
 	const isSunday = weekdayOf(date) === 0;
 	// A rerun's strip is drawn as of the day it originally ran — its own weekday, its own description.
@@ -696,20 +713,13 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 	const contentDateFormatted = rerunOf ? formatLongDate(contentDate) : dateFormatted;
 	const contentIsSunday = rerunOf ? weekdayOf(contentDate) === 0 : isSunday;
 
-	const prevButtonHtml = prevDate
-		? `<a class="nav-btn" id="nav-prev" href="${addressOf(buildComicPath(prevDate))}" data-date="${prevDate}" title="Previous comic">&larr;</a>`
-		: `<span class="nav-btn nav-btn--disabled" title="First comic">&larr;</span>`;
-	const nextButtonHtml = nextDate
-		? `<a class="nav-btn" id="nav-next" href="${addressOf(buildComicPath(nextDate))}" data-date="${nextDate}" title="Next comic">&rarr;</a>`
-		: `<span class="nav-btn nav-btn--disabled" title="Last comic">&rarr;</span>`;
-
 	const headerHtml = `<div class="detail-container">
-		${buildBackAndHomeButtons(canGoBack)}
+		${leadingHtml}
 		<h2 class="detail-date">${dateFormatted}</h2>
 		<div class="detail-actions">
 			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">${buildFlashLabels("Copy link", "Copied!")}</button>
 			${comics.length > 0 ? buildStripOwnershipHtml(page, comics[0]) : ""}
-			<span class="detail-actions__arrows">${prevButtonHtml}${nextButtonHtml}</span>
+			${arrowsHtml ? `<span class="detail-actions__arrows">${arrowsHtml}</span>` : ""}
 		</div>`;
 
 	const bodyHtml =

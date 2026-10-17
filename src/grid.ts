@@ -551,11 +551,27 @@ function lightFor(route: Route): ((date: string) => Light) | undefined {
 }
 
 /** Lights the grid for `route`: bookmarks, the open strip, and whatever the page lights and dims. */
+/** The strip a search is previewing beside its results. See `views/preview.ts`. */
+let previewed: string | null = null;
+
+/** The day the grid rings: a strip's page's own, or the one a search is previewing. */
+function selectedDate(route: Route): string | null {
+	if (route.view === "detail") return route.date ?? null;
+	return route.view === "results" ? previewed : null;
+}
+
+/** Rings `date`'s cell as the strip a search is previewing, or, given `null`, none. */
+export function setPreviewedDate(date: string | null): void {
+	if (date === previewed) return;
+	previewed = date;
+	paintGrid(parseRoute());
+}
+
 export function paintGrid(route: Route): void {
 	if (!drawn) return;
 	const { aggregate, cells, page } = drawn;
 	const lightOf = lightFor(route);
-	const selected = route.view === "detail" ? (route.date ?? null) : null;
+	const selected = selectedDate(route);
 
 	cells.forEach((cell, index) => {
 		if (aggregate) {
@@ -582,7 +598,7 @@ export function lightDates(dates: ReadonlySet<string> | null): HTMLElement[] {
 
 	if (aggregate) {
 		const route = parseRoute();
-		const selected = route.view === "detail" ? (route.date ?? null) : null;
+		const selected = selectedDate(route);
 		const lightOf = dates ? (date: string) => dates.has(date) : undefined;
 		cells.forEach((cell, index) => {
 			paintBox(cell, page.boxes[index], lightOf, selected);
