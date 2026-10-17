@@ -62,13 +62,21 @@ let toggle: HTMLButtonElement | null = null;
 let previewing: readonly string[] | null = null;
 
 /**
- * Whether the preview is showing exactly `strips`: picked again, they are followed to their page
- * rather than previewed again. One of a day's two, picked while both show, is previewed alone.
+ * Whether the preview is showing exactly `strips`: a day's cell, picked again, is followed to the
+ * day's page rather than previewed again.
  */
 function isPreviewing(strips: readonly string[]): boolean {
 	return (
 		previewing !== null && previewing.length === strips.length && strips.every((strip) => previewing!.includes(strip))
 	);
+}
+
+/**
+ * Whether the preview is showing `strip`, alone or as one of its day's: its row is marked, and,
+ * picked again, is followed to its page rather than previewed again.
+ */
+function isShowingStrip(strip: string): boolean {
+	return previewing?.includes(strip) ?? false;
 }
 
 /** `strips`' rows among `all`, if every one of them is there; otherwise none. */
@@ -344,16 +352,16 @@ export function attachPreview(
 		if (!enabledHere) closePreview();
 	});
 
-	// A row picked while there is room for the preview is shown in it — or, picked again while it is
-	// all the preview shows, followed to its page, so a double click opens it. A modified click is a
-	// request for a tab of its own, and is left to the browser; Enter on a row is a click.
+	// A row picked while there is room for the preview is shown in it — or, picked while the preview
+	// already shows it, alone or with its day's other strip, followed to its page, so a double click
+	// opens it. A modified click is a request for a tab of its own, and is left to the browser; Enter
+	// on a row is a click.
 	element.addEventListener("click", (event) => {
 		if (event.defaultPrevented || !isPlainClick(event)) return;
 		const row = (event.target as HTMLElement).closest<HTMLAnchorElement>(".result-row");
 		if (!row || !list?.contains(row) || !available()) return;
-		const strips = [row.dataset.ownership!];
-		if (isPreviewing(strips)) return;
-		if (!show(strips, false)) return;
+		if (isShowingStrip(row.dataset.ownership!)) return;
+		if (!show([row.dataset.ownership!], false)) return;
 		event.preventDefault();
 		// On the row, for the keys that step from it. Chrome puts it there on the press; Safari does
 		// not focus a link that is clicked.
@@ -366,8 +374,7 @@ export function attachPreview(
 	element.addEventListener("focusin", (event) => {
 		const row = (event.target as HTMLElement).closest<HTMLAnchorElement>(".result-row");
 		if (!row || refocusing || !list?.contains(row) || !previewShowing() || !row.matches(":focus-visible")) return;
-		const strips = [row.dataset.ownership!];
-		if (!isPreviewing(strips)) show(strips, false);
+		if (!isShowingStrip(row.dataset.ownership!)) show([row.dataset.ownership!], false);
 	});
 
 	// The window narrowed past room for it puts the preview out of the way, rather than leave its
