@@ -10,8 +10,8 @@ import { buildCollectionHtml } from "./collection";
 import { buildCollectionsHtml } from "./collections";
 import { buildArcHtml } from "./arc";
 import { buildArcsHtml } from "./arcs";
-import { buildCreatorHtml } from "./creator";
-import { buildCreatorsHtml, formatStripCount, formatYears } from "./creators";
+import { buildCharacterHtml, buildCreatorHtml, buildPeopleHtml, formatPersonMeta } from "./people";
+import { formatStripCount, formatYears } from "./strip-set";
 import { buildSubjectHtml } from "./subject";
 import { buildSubjectsHtml, formatSubjectMeta } from "./subjects";
 import { arcRange } from "./page";
@@ -40,6 +40,8 @@ export const VIEWS = [
 	"arcs",
 	"creator",
 	"creators",
+	"character",
+	"characters",
 	"subject",
 	"subjects",
 	"settings",
@@ -104,6 +106,13 @@ function pageDescription(page: Page): string | null {
 		}
 		case "creators":
 			return `Everyone who made ${series}, and the strips each of them made.`;
+		case "character": {
+			const { character } = page;
+			if (!character) return description;
+			return `Every ${series} strip featuring ${character.name}, ${formatPersonMeta(character)}.`;
+		}
+		case "characters":
+			return `Everyone in ${series}, and the strips each of them is in.`;
 		case "subject": {
 			const { subject } = page;
 			if (!subject) return description;
@@ -127,6 +136,7 @@ function ownImage(page: Page, siteUrl: string): string | null {
 	if (own) return fromSite(own, siteUrl);
 	if (page.view === "collection" && page.collection) return fromSite(page.collection.image, siteUrl);
 	if (page.view === "creator" && page.creator?.image) return fromSite(page.creator.image, siteUrl);
+	if (page.view === "character" && page.character?.image) return fromSite(page.character.image, siteUrl);
 	return null;
 }
 
@@ -182,8 +192,11 @@ export function buildViewHtml(page: Page, canGoBack: boolean): string {
 			return buildArcsHtml(page, canGoBack);
 		case "creator":
 			return buildCreatorHtml(page, canGoBack);
+		case "character":
+			return buildCharacterHtml(page, canGoBack);
 		case "creators":
-			return buildCreatorsHtml(page, canGoBack);
+		case "characters":
+			return buildPeopleHtml(page, canGoBack);
 		case "subject":
 			return buildSubjectHtml(page, canGoBack);
 		case "subjects":

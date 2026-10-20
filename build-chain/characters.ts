@@ -1,30 +1,50 @@
 import { Character } from "../src/types";
-import { StripEntry } from "./comicSource";
-import { loadCharacterSetting } from "./siteConfig";
+import { ComicSource } from "./comicSource";
+import { configName, loadOptionalPart } from "./siteConfig";
+import { readPerson, readStripLists, summarize } from "./stripSets";
 
 /**
- * The characters a strip can feature, in the order `config.yaml` gives them, which is the order the
- * menu offers them in. None where it sets `characters` to false.
+ * The characters, as the site reads them, and who each strip features.
+ *
+ * `byStrip` is keyed as `comics.yaml` keys a strip: by its compact date, or a special's id. `files`
+ * are the portraits the build publishes, each file by where it goes, as a creator's are.
  */
-export function loadCharacters(config?: string): Character[] {
-	const characters = loadCharacterSetting(config);
-	return characters === false ? [] : Object.entries(characters).map(([id, name]) => ({ id, name }));
+export interface CharacterData {
+	characters: Character[];
+	byStrip: Map<string, string[]>;
+	files: Map<string, string>;
 }
 
+const NONE: CharacterData = { characters: [], byStrip: new Map(), files: new Map() };
+
 /**
- * The characters `comics.yaml` lists for one strip, each checked against the characters' file. None
- * where the strip lists none, and none on a site without characters, whatever the strip lists.
+ * The characters, from the file `config.yaml` names, each by id with a `name` and optionally an
+ * `image`, as a creator is, in the order the file gives them, which is the order the menu offers them
+ * in. Which strips feature a character is written on the strips, in `comics.yaml`, as `characters:
+ * [id, ...]`, a special's too. A character no strip features yet is listed all the same.
+ *
+ * None, and nothing read — not even a strip's `characters` — where `config.yaml` turns them off.
  */
-export function stripCharacters(key: string, entry: StripEntry, characters: Character[]): string[] {
-	if (characters.length === 0 || entry.characters === undefined || entry.characters === null) return [];
-	if (!Array.isArray(entry.characters)) throw new Error(`Strip ${key} must list its characters as a list of ids.`);
-	const listed = entry.characters.map(String);
-	for (const id of listed) {
-		if (!characters.some((character) => character.id === id)) {
-			throw new Error(`Strip ${key} features "${id}", which is not one of the characters.`);
-		}
+export function loadCharacters(source: ComicSource, basePath: string = "/", config?: string): CharacterData {
+	const raw = loadOptionalPart("characters", config);
+	if (raw === false) return NONE;
+	if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+		throw new Error(`characters in ${configName(config)} must be a mapping of character ids, or false`);
 	}
-	return listed;
+
+	const files = new Map<string, string>();
+	const listed = Object.entries(raw as Record<string, unknown>).map(([id, entry]) =>
+		readPerson(id, entry, "character", basePath, files, config),
+	);
+	const byStrip = readStripLists(source, "characters", new Set(listed.map((character) => character.id)), "features");
+	const characters = listed.map((character): Character => ({
+		...character,
+		...summarize(
+			source,
+			[...byStrip].filter(([, ids]) => ids.includes(character.id)).map(([key]) => key),
+		),
+	}));
+	return { characters, byStrip, files };
 }
 
 export function exportCharactersJson(characters: Character[]): string {

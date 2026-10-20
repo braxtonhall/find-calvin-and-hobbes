@@ -15,14 +15,9 @@ import {
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
 import { attachOwnershipControls } from "./ownership";
-import {
-	attachCellHighlightLink,
-	clearCollectionSoon,
-	creatorDates,
-	featuringDates,
-	highlightCollection,
-} from "./cell-highlight";
+import { attachCellHighlightLink, clearCollectionSoon, personDates, highlightCollection } from "./cell-highlight";
 import { attachBookHandlers } from "./books";
+import { subjectDays } from "../pages/subjects";
 
 function patchDetailBlocks(element: HTMLElement, page: DetailPage): void {
 	for (const comic of page.comics) {
@@ -74,25 +69,25 @@ function attachSetLinkHandlers(
 }
 
 /**
- * An arc's range lights the arc, its dates on the page; a creator's name, their strips, from the
- * ranges that ship in the script; a subject's name, its strips, whose dates ship there too — so all
- * three work on a cold load. A character's name lights the strips they are in, which only the
- * archive can say, so it waits for the archive.
+ * An arc's range lights the arc, its dates on the page; a creator's or a character's name, their
+ * strips, from the ranges that ship in the script; a subject's name, its strips, whose dates ship
+ * there too — so all of them work on a cold load.
  */
 function attachGroupLinkHandlers(element: HTMLElement, page: DetailPage): void {
 	const arcs = new Map(page.arcs.map((arc) => [arc.id, new Set(arc.dates)]));
 	attachSetLinkHandlers(element, ".detail-arc-link", (link) => arcs.get(link.dataset.arcId ?? "") ?? null);
 	attachSetLinkHandlers(element, ".detail-creator-link", (link) => {
 		const creator = state.creatorsById.get(link.dataset.creatorId ?? "");
-		return creator ? creatorDates(creator) : null;
+		return creator ? personDates(creator) : null;
+	});
+	attachSetLinkHandlers(element, ".detail-character-link", (link) => {
+		const character = state.charactersById.get(link.dataset.characterId ?? "");
+		return character ? personDates(character) : null;
 	});
 	attachSetLinkHandlers(element, ".detail-subject-link", (link) => {
 		const subject = state.subjectsById.get(link.dataset.subjectId ?? "");
-		return subject ? new Set(subject.dates) : null;
+		return subject ? new Set(subjectDays(subject)) : null;
 	});
-	attachSetLinkHandlers(element, ".detail-character-link", (link) =>
-		state.dataLoaded ? featuringDates(link.dataset.characterId ?? "") : null,
-	);
 }
 
 /**

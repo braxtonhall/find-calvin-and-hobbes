@@ -447,24 +447,6 @@ export function loadComicImages(config = configPath()): string | null {
 	return folder;
 }
 
-const CHARACTER_ID = /^[a-z0-9]+$/;
-
-/** The characters, each one's name by id, in the order the menu offers them, or `false` for none. */
-export function loadCharacterSetting(config?: string): Record<string, string> | false {
-	const value = loadOptionalPart("characters", config);
-	if (value === false) return false;
-	if (!value || typeof value !== "object" || Array.isArray(value)) {
-		throw new Error(`characters in ${configName(config)} must be a mapping of character ids to names, or false`);
-	}
-	const characters: Record<string, string> = {};
-	for (const [id, name] of Object.entries(value)) {
-		if (!CHARACTER_ID.test(id)) throw new Error(`Invalid character id "${id}": expected lowercase letters and digits.`);
-		if (typeof name !== "string" || name.trim() === "") throw new Error(`Character "${id}" needs a name.`);
-		characters[id] = name;
-	}
-	return characters;
-}
-
 const STRIP_KINDS: readonly StripKind[] = ["daily", "rerun", "special"];
 const LINK_KEYS: readonly (keyof StripLinkTemplates)[] = ["readUrl", "licenseUrl"];
 

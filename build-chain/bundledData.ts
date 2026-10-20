@@ -31,7 +31,7 @@ export function loadBundledJson(config?: string): BundledJson {
 		reruns: exportRerunsJson(source, config),
 		collectionIndex: generateCollectionIndex(collectionData, basePath),
 		arcs: exportArcsJson(loadArcs(source, collectionData, config)),
-		characters: exportCharactersJson(loadCharacters(config)),
+		characters: exportCharactersJson(loadCharacters(source, basePath, config).characters),
 		creators: exportCreatorsJson(loadCreators(source, basePath, config).creators),
 		subjects: exportSubjectsJson(loadSubjects(source, config).subjects),
 	};

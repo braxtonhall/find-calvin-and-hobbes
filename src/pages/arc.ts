@@ -53,7 +53,7 @@ export function stripsOn(
 			? [
 					{
 						comic,
-						text: source.descriptions?.get(comic.date) ?? comic.transcript ?? "",
+						text: source.descriptions?.get(comic.id || comic.date) ?? comic.transcript ?? "",
 						ranges: [],
 						source: "filter" as const,
 					},

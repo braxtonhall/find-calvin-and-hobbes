@@ -68,11 +68,32 @@ export interface Arc {
 	collections: string[];
 }
 
-/** Someone a strip can feature: the id `@featuring:` takes, and the name a reader knows them by. */
-export interface Character {
+/**
+ * Where someone's strips are, as their page and the list of them say. Their strips themselves are not
+ * listed — someone in every strip of a fifty-year run is in too many — but summed up, and their dailies
+ * and Sundays written as ranges, which light the grid without the archive.
+ */
+export interface StripSummary {
+	/** How many strips they are in, specials too. */
+	strips: number;
+	/** The years with a strip of theirs, in order. */
+	years: number[];
+	/** Their daily and Sunday strips, as a book's date ranges are written: compact, `start-end`, over the strips in order. */
+	ranges: string[];
+	/** The specials they are in, which no range holds, oldest first; none where they have none. */
+	specials?: ListedSpecial[];
+}
+
+/** Someone with a page of their own: a creator, or a character. */
+export interface Person extends StripSummary {
 	id: string;
 	name: string;
+	/** A portrait, from the mount where the build publishes it. */
+	image?: string;
 }
+
+/** Someone a strip can feature: the id `@featuring:` takes, the name a reader knows them by, and where they are found. */
+export type Character = Person;
 
 /** One person credited on a strip, and what they did on it where the credit says: `story`, `art`. */
 export interface Credit {
@@ -81,23 +102,11 @@ export interface Credit {
 }
 
 /** Someone who made strips: the id `@by:` takes, the name a reader knows them by, and where they are found. */
-export interface Creator {
-	id: string;
-	name: string;
-	/** A portrait, from the mount where the build publishes it. */
-	image?: string;
+export interface Creator extends Person {
 	/** Pages about them elsewhere, like an encyclopedia's, as a book's links are. */
 	links?: { title: string; href: string }[];
-	/** How many strips they are credited on, specials too. */
-	strips: number;
-	/** The years with a strip of theirs, in order. */
-	years: number[];
-	/** Their daily and Sunday strips, as a book's date ranges are written: compact, `start-end`, over the strips in order. */
-	ranges: string[];
 	/** What their credits say they did, in the order first met; none where no credit says. */
 	roles?: string[];
-	/** The specials they are credited on, which no range holds, oldest first; none where they have none. */
-	specials?: CreditedSpecial[];
 }
 
 /**
@@ -111,12 +120,14 @@ export interface Subject {
 	description?: string;
 	/** Other words a reader might look for it by, which a search of the subjects finds it by too. */
 	keywords: string[];
-	/** Its strips' dates, oldest first. Only the dailies and Sundays: a special is never about one. */
+	/** Its dailies' and Sundays' dates, oldest first. */
 	dates: string[];
+	/** The specials about it, oldest first; none where there are none. */
+	specials?: ListedSpecial[];
 }
 
-/** A special as a creator's page lists it: by its title, and the day it is filed under, which is where it is shown. */
-export interface CreditedSpecial {
+/** A special as a list of strips names it: by its title, and the day it is filed under, which is where it is shown. */
+export interface ListedSpecial {
 	id: string;
 	title: string;
 	/** As the site writes a date: `1985-11-28`. */
@@ -146,6 +157,8 @@ export interface Route {
 		| "arcs"
 		| "creator"
 		| "creators"
+		| "character"
+		| "characters"
 		| "subject"
 		| "subjects"
 		| "settings"

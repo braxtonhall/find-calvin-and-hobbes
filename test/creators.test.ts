@@ -4,7 +4,7 @@ import { withConfig } from "./helpers/config";
 import { loadCreators } from "../build-chain/creators";
 import { loadPageConfig } from "../build-chain/siteConfig";
 import { loadComicSource, type ComicSource } from "../build-chain/comicSource";
-import { formatYears } from "../src/pages/creators";
+import { formatYears } from "../src/pages/strip-set";
 
 /**
  * The creators' file: who made each strip, from runs and single strips, and what the site learns

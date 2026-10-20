@@ -1,9 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { Appearance, CollectionData } from "./collectionPages";
-import { StripEntry, loadComicSource } from "./comicSource";
-import { Arc, Character, Credit } from "../src/types";
-import { stripCharacters } from "./characters";
+import { loadComicSource } from "./comicSource";
+import { Arc, Credit } from "../src/types";
 import { loadComicImages } from "./siteConfig";
 import { aspectRatio } from "./imageSize";
 import { variantSourceWidth } from "./imageVariants";
@@ -55,19 +54,15 @@ interface Entry {
  * `@is:standalone` lets it through, say — is answered from the strip alone. Only the dailies and
  * Sundays: an arc is made of the strips that ran in the paper, and a special never did.
  *
- * Each strip carries its characters the same way, for `@featuring:`, special or not. None where
- * `characters` is empty, which is a site without `characters.yaml`.
- *
- * And its creators, keyed in `creators` as `comics.yaml` keys the strip. None where it has none.
- *
- * And its subjects, keyed in `subjects` the same way, for `@about:`. Only the dailies and Sundays,
- * as with the arcs. None where it has none, which is every strip on a site without subjects.
+ * And its characters, its creators and its subjects, for `@featuring:`, `@by:` and `@about:`, special
+ * or not, each keyed as `comics.yaml` keys the strip. None where it has none, which is every strip on
+ * a site without them.
  */
 export function exportComicsJson(
 	collectionData: CollectionData,
 	basePath: string = "/",
 	arcs: Arc[] = [],
-	characters: Character[] = [],
+	characters: ReadonlyMap<string, string[]> = new Map(),
 	creators: ReadonlyMap<string, Credit[]> = new Map(),
 	subjects: ReadonlyMap<string, string[]> = new Map(),
 	config?: string,
@@ -82,11 +77,13 @@ export function exportComicsJson(
 		if (appearances && appearances.length) entry.appearances = appearances;
 	};
 
-	const attachCharacters = (entry: Entry, key: string, listing: StripEntry) => {
-		const featured = stripCharacters(key, listing, characters);
-		if (featured.length) entry.characters = featured;
+	const attachLists = (entry: Entry, key: string) => {
+		const featured = characters.get(key);
+		if (featured) entry.characters = featured;
 		const credits = creators.get(key);
 		if (credits) entry.creators = credits;
+		const about = subjects.get(key);
+		if (about) entry.subjects = about;
 	};
 
 	const arcsByDate = new Map<string, string[]>();
@@ -106,9 +103,7 @@ export function exportComicsJson(
 		attachAppearances(entry, dateStr);
 		const dailyArcs = arcsByDate.get(entry.date);
 		if (dailyArcs) entry.arcs = dailyArcs;
-		attachCharacters(entry, dateStr, daily);
-		const about = subjects.get(dateStr);
-		if (about) entry.subjects = about;
+		attachLists(entry, dateStr);
 		entries.push(entry);
 	}
 
@@ -122,7 +117,7 @@ export function exportComicsJson(
 		if (special.sort) entry.sort = special.sort;
 		attach(entry, sid);
 		attachAppearances(entry, sid);
-		attachCharacters(entry, sid, special);
+		attachLists(entry, sid);
 		entries.push(entry);
 	}
 

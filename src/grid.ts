@@ -409,11 +409,11 @@ function bestMatches(tiers: ReadonlyMap<string, number>): Set<string> {
 	return new Set([...tiers].filter(([, tier]) => tier === best).map(([date]) => date));
 }
 
-/** The pages that light a set of strips of their own, in `state.collectionDateSet`: a book's, an arc's, a creator's, a subject's. */
-const LIGHTS_ITS_OWN = new Set<Route["view"]>(["collection", "arc", "creator", "subject"]);
+/** The pages that light a set of strips of their own, in `state.collectionDateSet`: a book's, an arc's, a creator's, a character's, a subject's. */
+const LIGHTS_ITS_OWN = new Set<Route["view"]>(["collection", "arc", "creator", "character", "subject"]);
 
 /** The tabs of Collections, which light the strips their search found, in `state.tabMatchDates`. */
-const TABS = new Set<Route["view"]>(["collections", "arcs", "creators", "subjects"]);
+const TABS = new Set<Route["view"]>(["collections", "arcs", "creators", "characters", "subjects"]);
 
 /**
  * What the page showing is about, and the days the grid should turn to for it: a search's best
@@ -543,7 +543,7 @@ function lightFor(route: Route): ((date: string) => Light) | undefined {
 	const found = state.tabMatchDates;
 	if (TABS.has(route.view) || route.view === "bookshelf-books") return found ? (date) => found.has(date) : undefined;
 
-	// A book's strips, an arc's, a creator's or a subject's: whichever the page showing set out to light.
+	// A book's strips, an arc's, a creator's, a character's or a subject's: whichever the page showing set out to light.
 	const dates = state.collectionDateSet;
 	if (LIGHTS_ITS_OWN.has(route.view) && dates) return (date) => dates.has(date);
 

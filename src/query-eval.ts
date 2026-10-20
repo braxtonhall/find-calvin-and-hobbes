@@ -107,18 +107,14 @@ export function groups(type: CollectionType): Groups {
 		for (const arc of state.arcs ?? []) {
 			list.push({ type, id: arc.id, words: arc.description, stripWords: true, strips: [] });
 		}
-	} else if (type === "creator") {
-		for (const creator of state.creatorsById.values()) {
-			list.push({ type, id: creator.id, words: creator.name, stripWords: false, strips: [] });
+	} else if (type === "creator" || type === "character") {
+		for (const person of (type === "creator" ? state.creatorsById : state.charactersById).values()) {
+			list.push({ type, id: person.id, words: person.name, stripWords: false, strips: [] });
 		}
-	} else if (type === "subject") {
+	} else {
 		for (const subject of state.subjectsById.values()) {
 			const words = [subject.name, ...subject.keywords, subject.description ?? ""].join(" ");
 			list.push({ type, id: subject.id, words, stripWords: false, strips: [] });
-		}
-	} else {
-		for (const character of state.charactersById.values()) {
-			list.push({ type, id: character.id, words: character.name, stripWords: false, strips: [] });
 		}
 	}
 

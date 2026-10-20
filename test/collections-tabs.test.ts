@@ -20,14 +20,14 @@ import { addressOf } from "../src/base-path";
 /** Runs `check` on a site with only the given kinds of collection, whatever `config.yaml` has. */
 function withTabs(books: boolean, arcs: boolean, check: () => void): void {
 	const { collections } = COLLECTION_INDEX;
-	const { arcs: hadArcs, creators, subjects } = PAGE_CONFIG;
+	const { arcs: hadArcs, creators, characters, subjects } = PAGE_CONFIG;
 	try {
 		COLLECTION_INDEX.collections = books ? collections : [];
-		Object.assign(PAGE_CONFIG, { arcs, creators: false, subjects: false });
+		Object.assign(PAGE_CONFIG, { arcs, creators: false, characters: false, subjects: false });
 		check();
 	} finally {
 		COLLECTION_INDEX.collections = collections;
-		Object.assign(PAGE_CONFIG, { arcs: hadArcs, creators, subjects });
+		Object.assign(PAGE_CONFIG, { arcs: hadArcs, creators, characters, subjects });
 	}
 }
 

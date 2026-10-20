@@ -88,7 +88,7 @@ export interface DetailPage {
 	/** The arcs the page's strip belongs to — on a rerun day, the arcs of the strip it shows. */
 	arcs: DetailArc[];
 	/** Every character the page's strips feature, for their names; each strip lists its own by id. */
-	characters: Character[];
+	characters: DetailCharacter[];
 	/** Everyone credited on the page's strips, for their names; each strip lists its own by id. */
 	creators: DetailCreator[];
 	/** Every subject the page's strips are about, for their names; each strip lists its own by id. */
@@ -97,6 +97,9 @@ export interface DetailPage {
 
 /** A creator as a strip's page names them. */
 export type DetailCreator = Pick<Creator, "id" | "name">;
+
+/** A character as a strip's page names them. */
+export type DetailCharacter = Pick<Character, "id" | "name">;
 
 /** A subject as a strip's page names it. */
 export type DetailSubject = Pick<Subject, "id" | "name">;
@@ -217,6 +220,25 @@ export interface CreatorPage {
 	creator: Creator | null;
 }
 
+export interface CharactersPage {
+	view: "characters";
+	/** In the order the characters' file lists them. */
+	characters: Character[];
+	/** The search box's query, where it is open. Never on a page the build writes. */
+	q?: string;
+	/** Most strips first, where the reader has asked; otherwise the order above. Never on a page the build writes. */
+	order?: "count";
+}
+
+export interface CharacterPage {
+	view: "character";
+	id: string;
+	/** `null` when the id names no character. */
+	character: Character | null;
+	/** Every strip they are in, oldest first, as a subject's page lists its own. */
+	strips: ResultRow[];
+}
+
 export interface SubjectsPage {
 	view: "subjects";
 	/** Oldest first, by the first strip about each. */
@@ -249,6 +271,8 @@ export type Page =
 	| ArcsPage
 	| CreatorPage
 	| CreatorsPage
+	| CharacterPage
+	| CharactersPage
 	| SubjectPage
 	| SubjectsPage;
 
@@ -267,7 +291,7 @@ export interface PageSource {
 	/** Oldest first; `null` until they have loaded. */
 	arcs: Arc[] | null;
 	arcsById: Map<string, Arc> | null;
-	/** Empty on a site without characters. */
+	/** In the order the characters' file lists them. Empty on a site without characters. */
 	charactersById: Map<string, Character>;
 	/** In the order the creators' file lists them. Empty on a site without creators. */
 	creatorsById: Map<string, Creator>;
@@ -300,6 +324,10 @@ export function pageTitle(page: Page): string {
 			return `${page.creator?.name ?? "Creator not found"} — ${PAGE_CONFIG.name}`;
 		case "creators":
 			return page.q ? `${page.q} — Creators — ${PAGE_CONFIG.name}` : `Creators — ${PAGE_CONFIG.name}`;
+		case "character":
+			return `${page.character?.name ?? "Character not found"} — ${PAGE_CONFIG.name}`;
+		case "characters":
+			return page.q ? `${page.q} — Characters — ${PAGE_CONFIG.name}` : `Characters — ${PAGE_CONFIG.name}`;
 		case "subject":
 			return `${page.subject?.name ?? "Subject not found"} — ${PAGE_CONFIG.name}`;
 		case "subjects":

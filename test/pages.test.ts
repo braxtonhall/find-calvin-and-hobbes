@@ -10,7 +10,7 @@ import { exportDescriptions } from "../build-chain/exportDescriptions";
 import { generateCollectionIndex } from "../build-chain/generateCollectionIndex";
 import { loadArcs } from "../build-chain/arcs";
 import { computeDays } from "../src/days";
-import { Arc, Collection, Comic, Creator } from "../src/types";
+import { Arc, Character, Collection, Comic, Creator } from "../src/types";
 import { Page, PageSource, arcRange } from "../src/pages/page";
 import { detailPageFrom } from "../src/pages/detail";
 import { buildRangeSearchPath, collectionPageFrom } from "../src/pages/collection";
@@ -19,8 +19,8 @@ import { parseRoutePath } from "../src/routes";
 import { collectionsPageFrom } from "../src/pages/collections";
 import { arcPageFrom } from "../src/pages/arc";
 import { arcsPageFrom } from "../src/pages/arcs";
-import { creatorPageFrom } from "../src/pages/creator";
-import { creatorsPageFrom } from "../src/pages/creators";
+import { characterPageFrom, charactersPageFrom, creatorPageFrom, creatorsPageFrom } from "../src/pages/people";
+import { subjectPageFrom } from "../src/pages/subject";
 import { isDateInCollection } from "../src/date-utils";
 import { buildDocumentHtml, buildViewHtml, PAGE_DATA_ID } from "../src/pages/shell";
 import { loadPageLayout, pageAssetPath } from "../build-chain/siteConfig";
@@ -85,6 +85,11 @@ function activeView(document: string, view: string): string {
 }
 
 const source = loadSource();
+
+/** A character, by id, in one strip of 1986 unless `extra` says otherwise. */
+function character(id: string, name: string, extra: Partial<Character> = {}): [string, Character] {
+	return [id, { id, name, strips: 1, years: [1986], ranges: ["19860707"], ...extra }];
+}
 const options = { siteUrl: "https://example.test", path: "" };
 
 test("a prerendered document", async (suite) => {
@@ -343,7 +348,7 @@ test("a prerendered document", async (suite) => {
 				],
 				[special.date, [credit(special, { id: "scott" })]],
 			]),
-			charactersById: new Map([["calvin", { id: "calvin", name: "Calvin" }]]),
+			charactersById: new Map([["calvin", { id: "calvin", name: "Calvin", strips: 1, years: [], ranges: [] }]]),
 			creatorsById: new Map([
 				creator("borgman", "Jim Borgman", {
 					links: [
@@ -391,14 +396,14 @@ test("a prerendered document", async (suite) => {
 		};
 		assert.ok(
 			buildViewHtml(creatorPageFrom(withSpecial, "scott"), false).includes(
-				`Other</p><ul class="collection-ranges creator-specials"><li class="collection-range"><a class="collection-range-date" href="/${special.date}" data-date="${special.date}">The poster</a></li></ul>`,
+				`Other</p><ul class="collection-ranges person-specials"><li class="collection-range"><a class="collection-range-date" href="/${special.date}" data-date="${special.date}">The poster</a></li></ul>`,
 			),
 		);
 		assert.ok(!html.includes(">Other<"));
 		assert.equal(creatorPageFrom(credited, "nobody").creator, null);
 	});
 
-	await suite.test("names who a strip features, each a search for them, on a special too", () => {
+	await suite.test("names who a strip features, each the way to their page, on a special too", () => {
 		// Its own characters, rather than `comics.yaml`'s, which need not list any.
 		const special = [...source.comicsByDate.values()].flat().find((comic) => comic.id)!;
 		const [rerunDate, original] = [...source.reruns][0];
@@ -411,13 +416,16 @@ test("a prerendered document", async (suite) => {
 				[special.date, [cast(special, "calvin")]],
 			]),
 			charactersById: new Map([
-				["calvin", { id: "calvin", name: "Calvin" }],
-				["hobbes", { id: "hobbes", name: "Hobbes" }],
-				["dad", { id: "dad", name: "Dad" }],
+				character("calvin", "Calvin", {
+					image: "/assets/calvin.png",
+					specials: [{ id: special.id!, title: "The poster", date: special.date }],
+				}),
+				character("hobbes", "Hobbes", { strips: 0, years: [], ranges: [] }),
+				character("dad", "Dad"),
 			]),
 		};
 		const link = (id: string, name: string) =>
-			`<a class="detail-rerun-link detail-character-link" href="/search?q=%40featuring%3A${id}&amp;sort=date" data-character-id="${id}">${name}</a>`;
+			`<a class="detail-rerun-link detail-character-link" href="/character/${id}" data-character-id="${id}">${name}</a>`;
 
 		// In the order `characters.yaml` lists them, and on a rerun day, the strip it shows.
 		for (const date of [original, rerunDate]) {
@@ -434,7 +442,66 @@ test("a prerendered document", async (suite) => {
 		// A strip that lists no one has no line.
 		const [unlisted] = [...source.comicsByDate.keys()].filter((date) => date !== original && date !== special.date);
 		assert.ok(!buildViewHtml(detailPageFrom(featuring, unlisted), false).includes("Featuring"));
+
+		// The list, in the characters' order, each with its portrait's space, and one no strip features yet.
+		const list = buildViewHtml(charactersPageFrom(featuring), false);
+		assert.ok(list.indexOf("Calvin") < list.indexOf("Hobbes") && list.indexOf("Hobbes") < list.indexOf("Dad"));
+		assert.ok(list.includes(`<img class="person-portrait" src="/assets/calvin.png"`));
+		assert.ok(list.includes(`<div class="collections-meta">0 strips</div>`));
+		// Their page, as a subject's: a portrait, and every strip they are in as rows, the special too.
+		const page = characterPageFrom(featuring, "calvin");
+		assert.deepEqual(
+			page.strips.map((row) => row.comic.id ?? row.comic.date),
+			special.date < original ? [special.id, original] : [original, special.id],
+		);
+		const html = buildViewHtml(page, false);
+		assert.ok(html.includes(`<img class="person-portrait" src="/assets/calvin.png" alt="Calvin" />`));
+		assert.ok(html.includes(`>Characters</a>`));
+		assert.ok(html.includes(`class="arc-strips"`));
+		assert.ok(!html.includes("Date Ranges") && !html.includes(">Roles:") && !html.includes(">Links<"));
+		assert.ok(!buildViewHtml(characterPageFrom(featuring, "hobbes"), false).includes("Years:"));
+		assert.equal(characterPageFrom(featuring, "nobody").character, null);
 	});
+
+	await suite.test(
+		"names what a strip is about, a special too, and lists the special with the subject's strips",
+		() => {
+			const special = [...source.comicsByDate.values()].flat().find((comic) => comic.id)!;
+			const [daily] = [...source.comicsByDate.keys()].filter((date) => date < special.date);
+			const about = (comic: Comic): Comic => ({ ...comic, subjects: ["snow"] });
+			const subjects: PageSource = {
+				...source,
+				comicsByDate: new Map([
+					...source.comicsByDate,
+					[daily, source.comicsByDate.get(daily)!.map(about)],
+					[special.date, source.comicsByDate.get(special.date)!.map((comic) => (comic.id ? about(comic) : comic))],
+				]),
+				subjectsById: new Map([
+					[
+						"snow",
+						{
+							id: "snow",
+							name: "Snowmen",
+							keywords: [],
+							dates: [daily],
+							specials: [{ id: special.id!, title: "The poster", date: special.date }],
+						},
+					],
+				]),
+			};
+			const line = `About <a class="detail-rerun-link detail-subject-link" href="/subject/snow" data-subject-id="snow">Snowmen</a>`;
+			assert.ok(buildViewHtml(detailPageFrom(subjects, special.date), false).includes(line));
+			const page = subjectPageFrom(subjects, "snow");
+			assert.deepEqual(
+				page.strips.map((row) => row.comic.id ?? row.comic.date),
+				[daily, special.id],
+			);
+			assert.ok(buildViewHtml(page, false).includes("Comics:</span> 2 strips"));
+			// Each row told by its own strip's description: the special's by its id, not its day's.
+			const [, row] = page.strips;
+			assert.equal(row.text, source.descriptions?.get(special.id!) ?? special.transcript);
+		},
+	);
 
 	await suite.test("names itself and where it lives", () => {
 		const document = buildDocumentHtml(template, detailPageFrom(source, "1986-07-07"), {

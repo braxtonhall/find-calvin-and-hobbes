@@ -4,7 +4,7 @@ import { addressOf } from "../base-path";
 import { Subject, TabOrder } from "../types";
 import { PageSource, SubjectsPage } from "./page";
 import { buildCollectionsHeaderHtml, buildNoMatchesHtml, orderOf, sortedByCount } from "./collections";
-import { formatStripCount, formatYears } from "./creators";
+import { formatStripCount, formatYears } from "./strip-set";
 
 /**
  * Every subject, oldest first by the first strip about each — the order the build writes them in —
@@ -14,21 +14,31 @@ export function subjectsPageFrom(source: PageSource, q?: string, order?: TabOrde
 	const subjects = [...source.subjectsById.values()];
 	return {
 		view: "subjects",
-		subjects: order === "count" ? sortedByCount(subjects, (subject) => subject.dates.length) : subjects,
+		subjects: order === "count" ? sortedByCount(subjects, subjectStripCount) : subjects,
 		...(q === undefined ? {} : { q }),
 		...orderOf(order),
 	};
 }
 
+/** How many strips are about the subject, specials too. */
+export function subjectStripCount(subject: Pick<Subject, "dates" | "specials">): number {
+	return subject.dates.length + (subject.specials?.length ?? 0);
+}
+
+/** The days of the strips about the subject, in order: its dailies' and Sundays', and those its specials are filed under. */
+export function subjectDays(subject: Pick<Subject, "dates" | "specials">): string[] {
+	return [...subject.dates, ...(subject.specials ?? []).map((special) => special.date)].sort();
+}
+
 /** The years with a strip about the subject, in order. */
-export function subjectYears(subject: Pick<Subject, "dates">): number[] {
-	return [...new Set(subject.dates.map((date) => Number(date.slice(0, 4))))];
+export function subjectYears(subject: Pick<Subject, "dates" | "specials">): number[] {
+	return [...new Set(subjectDays(subject).map((date) => Number(date.slice(0, 4))))];
 }
 
 /** `1985–1995 · 36 strips`, or only the count for a subject no strip is about yet. */
-export function formatSubjectMeta(subject: Pick<Subject, "dates">): string {
-	const count = formatStripCount(subject.dates.length);
-	return subject.dates.length > 0 ? `${formatYears(subjectYears(subject))} · ${count}` : count;
+export function formatSubjectMeta(subject: Pick<Subject, "dates" | "specials">): string {
+	const count = formatStripCount(subjectStripCount(subject));
+	return subjectStripCount(subject) > 0 ? `${formatYears(subjectYears(subject))} · ${count}` : count;
 }
 
 /**

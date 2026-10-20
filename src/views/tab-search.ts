@@ -28,6 +28,7 @@ export const TAB_TYPES: Record<CollectionsTab, CollectionType> = {
 	books: "book",
 	arcs: "arc",
 	creators: "creator",
+	characters: "character",
 	subjects: "subject",
 };
 

@@ -12,7 +12,7 @@ import {
 import { buildManifest } from "../build-chain/favicon";
 import { sampleGif, withConfig } from "./helpers/config";
 import { loadArcs } from "../build-chain/arcs";
-import { loadCharacters, stripCharacters } from "../build-chain/characters";
+import { loadCharacters } from "../build-chain/characters";
 import { loadCreditsHtml } from "../build-chain/credits";
 import { loadReruns } from "../build-chain/reruns";
 import type { CollectionData } from "../build-chain/collectionPages";
@@ -304,22 +304,83 @@ test("config.yaml", async (suite) => {
 		});
 	});
 
+	// Two strips and a special, which is all a character's strips are read from.
+	const CAST_SOURCE: ComicSource = {
+		strips: {
+			"19851118": { transcript: "", characters: ["susie"] },
+			"19851119": { transcript: "", characters: ["susie", "calvin", "susie"] },
+			"19851120": { transcript: "" },
+		},
+		specials: { poster: { transcript: "", date: "19870301", title: "The poster", characters: ["calvin"] } },
+	};
+	const loadCast = (config: string) => loadCharacters(CAST_SOURCE, "/", config);
+
 	await suite.test("imports the characters from the file config.yaml names", () => {
 		withConfig("name: x\nseries: x\ncharacters: !Import ./cast/people.yaml\n", (config, projectDir) => {
 			fs.mkdirSync(path.join(projectDir, "cast"));
-			fs.writeFileSync(path.join(projectDir, "cast", "people.yaml"), "calvin: Calvin\nsusie: Susie Derkins\n");
+			fs.writeFileSync(
+				path.join(projectDir, "cast", "people.yaml"),
+				"calvin: { name: Calvin }\nsusie: { name: Susie Derkins }\nhobbes: { name: Hobbes }\n",
+			);
 			assert.equal(loadPageConfig(config).characters, true);
-			const characters = loadCharacters(config);
+			const { characters, byStrip } = loadCast(config);
 			assert.deepEqual(characters, [
-				{ id: "calvin", name: "Calvin" },
-				{ id: "susie", name: "Susie Derkins" },
+				{
+					id: "calvin",
+					name: "Calvin",
+					strips: 2,
+					years: [1985, 1987],
+					ranges: ["19851119"],
+					specials: [{ id: "poster", title: "The poster", date: "1987-03-01" }],
+				},
+				{ id: "susie", name: "Susie Derkins", strips: 2, years: [1985], ranges: ["19851118-19851119"] },
+				// In no strip yet, and listed all the same.
+				{ id: "hobbes", name: "Hobbes", strips: 0, years: [], ranges: [] },
 			]);
 			assert.ok(configDependencies(config).files.includes(path.join(projectDir, "cast", "people.yaml")));
-			assert.deepEqual(stripCharacters("19851118", { transcript: "", characters: ["susie"] }, characters), ["susie"]);
-			assert.deepEqual(stripCharacters("19851118", { transcript: "" }, characters), []);
+			// Each strip's, once each, in its own order, a special's too.
+			assert.deepEqual(
+				[...byStrip],
+				[
+					["19851118", ["susie"]],
+					["19851119", ["susie", "calvin"]],
+					["poster", ["calvin"]],
+				],
+			);
+		});
+	});
+
+	await suite.test("publishes a character's portrait from the mount, as a creator's", () => {
+		withConfig(
+			"name: x\nseries: x\ncharacters:\n  calvin: { name: Calvin, image: !Path ./calvin.png }\n  susie: { name: Susie, image: https://example.com/susie.png }\n",
+			(config, projectDir) => {
+				fs.writeFileSync(path.join(projectDir, "calvin.png"), "");
+				const { characters, files } = loadCharacters(CAST_SOURCE, "/repo/", config);
+				const [published] = [...files.keys()];
+				assert.equal(characters[0].image, `/repo/${published}`);
+				assert.equal(files.get(published), path.join(projectDir, "calvin.png"));
+				assert.equal(characters[1].image, "https://example.com/susie.png");
+			},
+		);
+		assert.throws(
+			() => withConfig("name: x\nseries: x\ncharacters:\n  calvin: { name: Calvin, image: calvin.png }\n", loadCast),
+			/Character "calvin"'s image .* must be a URL/,
+		);
+	});
+
+	await suite.test("refuses a strip that features someone the characters' file does not list", () => {
+		const source: ComicSource = { strips: { "19851118": { transcript: "", characters: ["suzy"] } }, specials: {} };
+		withConfig("name: x\nseries: x\ncharacters:\n  susie: { name: Susie }\n", (config) => {
+			assert.throws(() => loadCharacters(source, "/", config), /Strip 19851118 features "suzy"/);
+		});
+		const special: ComicSource = {
+			strips: {},
+			specials: { poster: { transcript: "", date: "19870301", title: "x", characters: "susie" as never } },
+		};
+		withConfig("name: x\nseries: x\ncharacters:\n  susie: { name: Susie }\n", (config) => {
 			assert.throws(
-				() => stripCharacters("19851118", { transcript: "", characters: ["suzy"] }, characters),
-				/19851118 features "suzy"/,
+				() => loadCharacters(special, "/", config),
+				/Special poster must list its characters as a list of ids/,
 			);
 		});
 	});
@@ -328,12 +389,15 @@ test("config.yaml", async (suite) => {
 		withConfig("name: x\nseries: x\ncharacters: !Import ./cast/index.yaml\n", (config, projectDir) => {
 			fs.mkdirSync(path.join(projectDir, "cast"));
 			fs.writeFileSync(path.join(projectDir, "cast", "index.yaml"), "!Import ./people.yaml\n");
-			fs.writeFileSync(path.join(projectDir, "cast", "people.yaml"), "hobbes: Hobbes\n");
-			assert.deepEqual(loadCharacters(config), [{ id: "hobbes", name: "Hobbes" }]);
+			fs.writeFileSync(path.join(projectDir, "cast", "people.yaml"), "hobbes: { name: Hobbes }\n");
+			assert.deepEqual(
+				loadCharacters({ strips: {}, specials: {} }, "/", config).characters.map((character) => character.id),
+				["hobbes"],
+			);
 		});
 		withConfig("name: x\nseries: x\ncharacters: !Import ./loop.yaml\n", (config, projectDir) => {
 			fs.writeFileSync(path.join(projectDir, "loop.yaml"), "!Import ./site.yaml\n");
-			assert.throws(() => loadCharacters(config), /imports it back/);
+			assert.throws(() => loadCast(config), /imports it back/);
 		});
 	});
 
@@ -341,29 +405,31 @@ test("config.yaml", async (suite) => {
 	await suite.test("fails for an imported file that is not there", () => {
 		withConfig("name: x\nseries: x\ncharacters: !Import ./people.yaml\n", (config) => {
 			assert.throws(() => loadPageConfig(config), /site\.yaml imports \.\/people\.yaml, which does not exist/);
-			assert.throws(() => loadCharacters(config), /people\.yaml, which does not exist/);
+			assert.throws(() => loadCast(config), /people\.yaml, which does not exist/);
 		});
 	});
 
 	await suite.test("has no characters where config.yaml turns them off, and must say", () => {
 		withConfig("name: x\nseries: x\ncharacters: false\n", (config) => {
 			assert.equal(loadPageConfig(config).characters, false);
-			assert.deepEqual(loadCharacters(config), []);
 			// A strip's list is not read, or checked, on a site without them.
-			assert.deepEqual(stripCharacters("19851118", { transcript: "", characters: ["nobody"] }, []), []);
+			const source: ComicSource = { strips: { "19851118": { transcript: "", characters: ["nobody"] } }, specials: {} };
+			const { characters, byStrip } = loadCharacters(source, "/", config);
+			assert.deepEqual(characters, []);
+			assert.equal(byStrip.size, 0);
 		});
 		assert.throws(() => withConfig("name: x\nseries: x\ncharacters:\n", loadPageConfig), /must give characters/);
 		assert.throws(
-			() => withConfig("name: x\nseries: x\ncharacters: true\n", loadCharacters),
-			/characters.*mapping of character ids to names, or false/,
+			() => withConfig("name: x\nseries: x\ncharacters: true\n", loadCast),
+			/characters.*mapping of character ids, or false/,
 		);
 	});
 
 	await suite.test("refuses malformed characters", () => {
-		const read = (characters: string) => () =>
-			withConfig(`name: x\nseries: x\ncharacters:\n${characters}`, loadCharacters);
-		assert.throws(read("  Miss Wormwood: Miss Wormwood\n"), /Invalid character id/);
+		const read = (characters: string) => () => withConfig(`name: x\nseries: x\ncharacters:\n${characters}`, loadCast);
+		assert.throws(read("  Miss Wormwood: { name: Miss Wormwood }\n"), /Invalid character id/);
 		assert.throws(read("  wormwood:\n"), /needs a name/);
+		assert.throws(read("  wormwood: Miss Wormwood\n"), /needs a name/);
 		assert.throws(read("  - calvin\n"), /mapping/);
 	});
 

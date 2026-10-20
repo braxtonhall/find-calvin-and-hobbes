@@ -1,10 +1,9 @@
-import path from "path";
-import { Creator, CreditedSpecial, Credit } from "../src/types";
+import { Creator, Credit } from "../src/types";
 import { ComicSource } from "./comicSource";
 import { configName, loadOptionalPart } from "./siteConfig";
-import { isUrl, staticPath } from "./staticFiles";
+import { isUrl } from "./staticFiles";
+import { readPerson, summarize } from "./stripSets";
 
-const CREATOR_ID = /^[a-z0-9]+$/;
 const COMPACT_DATE = /^\d{8}$/;
 
 /** Which strips a run covers by their day: every one, the Sundays alone, or the rest. */
@@ -30,10 +29,6 @@ export interface CreatorData {
 }
 
 const NONE: CreatorData = { creators: [], byStrip: new Map(), files: new Map() };
-
-function isoDate(compact: string): string {
-	return `${compact.slice(0, 4)}-${compact.slice(4, 6)}-${compact.slice(6, 8)}`;
-}
 
 function isSunday(compact: string): boolean {
 	const day = new Date(
@@ -92,46 +87,6 @@ function covers(run: Run, compact: string): boolean {
 	if (run.days === "sunday") return isSunday(compact);
 	if (run.days === "daily") return !isSunday(compact);
 	return true;
-}
-
-/**
- * A portrait as the site shows it: a URL as it is, or a file named with `!Path`, as the path it is
- * published at, from the mount, and noted in `files` for the build to copy there.
- */
-function readImage(value: unknown, id: string, basePath: string, files: Map<string, string>, config?: string) {
-	if (value === undefined || value === null) return undefined;
-	if (typeof value === "string" && isUrl(value)) return value;
-	if (typeof value === "string" && path.isAbsolute(value)) {
-		const published = staticPath(value);
-		files.set(published, value);
-		return `${basePath}${published}`;
-	}
-	throw new Error(`Creator "${id}"'s image in ${configName(config)} must be a URL, or a file as !Path ./portrait.png`);
-}
-
-/**
- * The strips' dates as ranges, each running over the strips in order, so a stretch with no strip of
- * its own — a rerun, a break — does not split one. Written as a book's date ranges are.
- */
-function rangesOf(dates: string[], all: string[]): string[] {
-	const credited = new Set(dates);
-	const ranges: string[] = [];
-	let start: string | null = null;
-	let previous: string | null = null;
-	const close = () => {
-		if (start) ranges.push(start === previous ? start : `${start}-${previous}`);
-		start = null;
-	};
-	for (const date of all) {
-		if (credited.has(date)) {
-			start ??= date;
-			previous = date;
-		} else {
-			close();
-		}
-	}
-	close();
-	return ranges;
 }
 
 /** The creators' `strips` or `specials`: each by its key, to the people credited. Empty where there are none. */
@@ -199,15 +154,9 @@ export function loadCreators(source: ComicSource, basePath: string = "/", config
 	const files = new Map<string, string>();
 	const listed: Omit<Creator, "ranges" | "strips" | "years">[] = [];
 	for (const [id, entry] of Object.entries(people as Record<string, unknown>)) {
-		if (!CREATOR_ID.test(id)) throw new Error(`Invalid creator id "${id}": expected lowercase letters and digits.`);
-		const { name, image, links } = (entry ?? {}) as { name?: unknown; image?: unknown; links?: unknown };
-		if (typeof name !== "string" || name.trim() === "") throw new Error(`Creator "${id}" needs a name.`);
-		const portrait = readImage(image, id, basePath, files, config);
-		const readLinks = readLinksOut(links, id);
+		const readLinks = readLinksOut((entry as { links?: unknown } | null)?.links, id);
 		listed.push({
-			id,
-			name: name.trim(),
-			...(portrait ? { image: portrait } : {}),
+			...readPerson(id, entry, "creator", basePath, files, config),
 			...(readLinks.length > 0 ? { links: readLinks } : {}),
 		});
 	}
@@ -233,20 +182,9 @@ export function loadCreators(source: ComicSource, basePath: string = "/", config
 		byStrip.set(key, readCredits(value, `Special ${key} in the creators`, known));
 	}
 
-	const days = Object.keys(source.strips).sort();
 	const creators = listed.map((creator): Creator => {
 		const credits = [...byStrip].filter(([, credits]) => credits.some((credit) => credit.id === creator.id));
 		if (credits.length === 0) throw new Error(`Creator "${creator.id}" is credited on no strip.`);
-		const dates = credits.map(([key]) => key).filter((key) => source.strips[key]);
-		const specials = credits
-			.flatMap(([key]): CreditedSpecial[] => {
-				const special = source.specials[key];
-				return special ? [{ id: key, title: special.title, date: isoDate(special.date) }] : [];
-			})
-			.sort(
-				(a, b) => a.date.localeCompare(b.date) || (source.specials[a.id].sort ?? 0) - (source.specials[b.id].sort ?? 0),
-			);
-		const years = new Set(credits.map(([key]) => Number((source.specials[key]?.date ?? key).slice(0, 4))));
 		const roles = [
 			...new Set(
 				credits.flatMap(([, credits]) =>
@@ -256,11 +194,11 @@ export function loadCreators(source: ComicSource, basePath: string = "/", config
 		];
 		return {
 			...creator,
-			strips: credits.length,
-			years: [...years].sort((a, b) => a - b),
-			ranges: rangesOf(dates, days),
+			...summarize(
+				source,
+				credits.map(([key]) => key),
+			),
 			...(roles.length > 0 ? { roles } : {}),
-			...(specials.length > 0 ? { specials } : {}),
 		};
 	});
 

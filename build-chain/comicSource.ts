@@ -6,15 +6,15 @@ export interface StripEntry {
 	description?: string;
 	source?: string;
 	review?: string;
-	/** Character ids from `characters.yaml`. Checked where it is read, in `characters.ts`. */
+	/** Character ids from `characters.yaml`. Checked where it is read, in `stripSets.ts`. */
 	characters?: string[];
-	/** Subject ids from `subjects.yaml`. Checked where it is read, in `subjects.ts`. */
+	/** Subject ids from `subjects.yaml`. Checked where it is read, in `stripSets.ts`. */
 	subjects?: string[];
 }
 
 export interface SpecialEntry extends StripEntry {
 	date: string;
-	/** What a list of strips calls it, having no date of its own to go by: a creator's page lists their specials by it. */
+	/** What a list of strips calls it, having no date of its own to go by: a creator's, a character's or a subject's page lists its specials by it. */
 	title: string;
 	sort?: number;
 }

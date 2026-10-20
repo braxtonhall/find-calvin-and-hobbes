@@ -7,11 +7,10 @@ import { state } from "../state";
 import { canGoBack } from "../router";
 import { SubjectPage, SubjectsPage } from "../pages/page";
 import { buildSubjectHtml } from "../pages/subject";
-import { buildSubjectsBodyHtml, buildSubjectsHtml } from "../pages/subjects";
+import { buildSubjectsBodyHtml, buildSubjectsHtml, subjectDays } from "../pages/subjects";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
-import { attachCopyLinkHandler } from "./copy-link";
 import { clearCollectionSoon, highlightCollection } from "./cell-highlight";
-import { attachRowFocusHandler, attachRowHandlers } from "./result-rows";
+import { renderStripSet } from "./strip-set";
 import { attachTabSearch, keepsHeader, narrowTab, updateTabSearch } from "./tab-search";
 
 /**
@@ -34,7 +33,7 @@ export function renderSubjects(page: SubjectsPage, adopt: boolean = false, arriv
 		attachTabSearch(element, "subjects");
 	}
 
-	const byId = new Map(page.subjects.map((subject) => [subject.id, new Set(subject.dates)]));
+	const byId = new Map(page.subjects.map((subject) => [subject.id, new Set(subjectDays(subject))]));
 	element.querySelectorAll<HTMLElement>(".subject-row").forEach((row) => {
 		const dates = byId.get(row.dataset.subjectId ?? "");
 		if (!dates) return;
@@ -48,24 +47,9 @@ export function renderSubjects(page: SubjectsPage, adopt: boolean = false, arriv
 	});
 }
 
-let rowFocusAttached = false;
-
-/**
- * Draws a subject's page, or — with `adopt` — takes over the one the build drew from the same
- * `page`. The grid shows its strips while it is open, as an arc's page shows the arc, and its dates
- * ship in the script, so a cold load lights them before the archive has arrived.
- */
+/** Draws a subject's page, or — with `adopt` — takes over the one the build drew from the same `page`. */
 export function renderSubject(page: SubjectPage, adopt: boolean = false): void {
 	const element = document.getElementById("view-subject")!;
-	state.collectionDateSet = new Set(page.subject?.dates ?? []);
-	if (!adopt) element.innerHTML = buildSubjectHtml(page, canGoBack());
-	attachBackAndHomeHandlers(element);
-	attachCopyLinkHandler(element);
-
-	const strips = element.querySelector<HTMLElement>(".arc-strips");
-	if (strips) attachRowHandlers(strips);
-	if (!rowFocusAttached) {
-		attachRowFocusHandler(element);
-		rowFocusAttached = true;
-	}
+	const html = adopt ? null : buildSubjectHtml(page, canGoBack());
+	renderStripSet(element, html, new Set(page.subject ? subjectDays(page.subject) : []));
 }

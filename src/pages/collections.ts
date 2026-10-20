@@ -97,6 +97,7 @@ export const TAB_NOUNS: Record<CollectionsTab, string> = {
 	books: "books",
 	arcs: "arcs",
 	creators: "creators",
+	characters: "characters",
 	subjects: "subjects",
 };
 
@@ -105,6 +106,7 @@ export const TAB_LABELS: Record<CollectionsTab, string> = {
 	books: "Books",
 	arcs: "Arcs",
 	creators: "Creators",
+	characters: "Characters",
 	subjects: "Subjects",
 };
 
@@ -141,7 +143,7 @@ function buildTabSearchHtml(current: CollectionsTab, query: string, order: TabOr
 }
 
 /**
- * Collections is books, arcs, creators and subjects, each a collection of strips, and each tab has an
+ * Collections is books, arcs, creators, characters and subjects, each a collection of strips, and each tab has an
  * address of its own. The tab showing is plain bold text; the others are links, quiet the way the home
  * page's are. A site has only the tabs it has — see `collectionsTabs` — and with only one, no tabs at
  * all, and that one's name for the heading in place of Collections — but the search box all the same.

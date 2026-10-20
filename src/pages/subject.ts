@@ -1,12 +1,10 @@
-import { escHtml } from "../utils";
 import { buildSubjectPath } from "../routes";
-import { addressOf } from "../base-path";
 import { PageSource, SubjectPage } from "./page";
-import { buildFlashLabels, buildBackAndHomeButtons, buildSubjectsButton } from "./nav-buttons";
-import { stripsOn } from "./arc";
-import { resultsHtml } from "./result-rows";
-import { formatStripCount, formatYears } from "./creators";
-import { subjectYears } from "./subjects";
+import { buildBackAndHomeButtons, buildSubjectsButton } from "./nav-buttons";
+import { Comic, Subject } from "../types";
+import { stripOn, stripsOn } from "./arc";
+import { buildStripSetHtml } from "./strip-set";
+import { subjectStripCount, subjectYears } from "./subjects";
 
 /**
  * No arrows to the subjects either side, as a creator's page has none: the order they are listed in
@@ -14,46 +12,37 @@ import { subjectYears } from "./subjects";
  */
 export function subjectPageFrom(source: PageSource, subjectId: string): SubjectPage {
 	const subject = source.subjectsById.get(subjectId) ?? null;
-	return { view: "subject", id: subjectId, subject, strips: subject ? stripsOn(source, subject.dates) : [] };
+	return {
+		view: "subject",
+		id: subjectId,
+		subject,
+		strips: subject ? stripsOn(source, [], stripsAbout(source, subject)) : [],
+	};
 }
 
-function buildNavButtons(canGoBack: boolean): string {
-	return `${buildBackAndHomeButtons(canGoBack)}
-		${buildSubjectsButton("detail-home")}`;
+/** Its dailies and Sundays and its specials together, oldest first, a special after the day's own strip. */
+function stripsAbout(source: PageSource, subject: Subject): (Comic | undefined)[] {
+	const strips = [
+		...subject.dates.map((date) => ({ date, comic: stripOn(source, date) })),
+		...(subject.specials ?? []).map((special) => ({
+			date: special.date,
+			comic: source.comicsByDate.get(special.date)?.find((comic) => comic.id === special.id),
+		})),
+	];
+	return strips.sort((a, b) => a.date.localeCompare(b.date)).map((strip) => strip.comic);
 }
 
-/**
- * A subject's page, laid out as an arc's: what it is, and every strip about it, oldest first, as
- * rows of the search results' kind, with the grid lighting all of them.
- */
+/** What it is, and every strip about it. See `buildStripSetHtml`. */
 export function buildSubjectHtml(page: SubjectPage, canGoBack: boolean): string {
 	const { subject } = page;
-	if (!subject) {
-		return `<div class="collection-container">
-			${buildNavButtons(canGoBack)}
-			<p class="detail-missing">Subject "${escHtml(page.id)}" not found.</p>
-		</div>`;
-	}
-
-	const description = subject.description ? `<p class="arc-description">${escHtml(subject.description)}</p>` : "";
-	const years =
-		subject.dates.length > 0
-			? `<p class="collection-meta"><span class="collection-meta--label">Years:</span> ${formatYears(subjectYears(subject))}</p>`
-			: "";
-
-	return `<div class="collection-container">
-		${buildNavButtons(canGoBack)}
-		<div class="collection-header">
-			<div class="collection-info">
-				<h2 class="collection-name">${escHtml(subject.name)}</h2>
-				${description}
-				<p class="collection-meta"><span class="collection-meta--label">Comics:</span> ${formatStripCount(subject.dates.length)}</p>
-				${years}
-				<div class="detail-actions">
-					<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildSubjectPath(subject.id)))}">${buildFlashLabels("Copy link", "Copied!")}</button>
-				</div>
-			</div>
-		</div>
-		<div class="arc-strips">${resultsHtml(page.strips, "")}</div>
-	</div>`;
+	const nav = `${buildBackAndHomeButtons(canGoBack)}
+		${buildSubjectsButton("detail-home")}`;
+	const header = subject && {
+		name: subject.name,
+		...(subject.description ? { description: subject.description } : {}),
+		strips: subjectStripCount(subject),
+		years: subjectYears(subject),
+		path: buildSubjectPath(subject.id),
+	};
+	return buildStripSetHtml(nav, header, `Subject "${page.id}" not found.`, page.strips);
 }

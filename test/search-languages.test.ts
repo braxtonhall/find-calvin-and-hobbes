@@ -57,9 +57,9 @@ const ARCS: Arc[] = [
 ];
 
 const CHARACTERS: Character[] = [
-	{ id: "susie", name: "Susie Derkins" },
-	{ id: "mom", name: "Mom" },
-	{ id: "rosalyn", name: "Rosalyn" },
+	{ id: "susie", name: "Susie Derkins", strips: 0, years: [], ranges: [] },
+	{ id: "mom", name: "Mom", strips: 0, years: [], ranges: [] },
+	{ id: "rosalyn", name: "Rosalyn", strips: 0, years: [], ranges: [] },
 ];
 
 function creator(id: string, name: string, roles?: string[]): Creator {

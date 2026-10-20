@@ -21,8 +21,7 @@ import { collectionPageFrom } from "./pages/collection";
 import { collectionsPageFrom } from "./pages/collections";
 import { arcPageFrom } from "./pages/arc";
 import { arcsPageFrom } from "./pages/arcs";
-import { creatorPageFrom } from "./pages/creator";
-import { creatorsPageFrom } from "./pages/creators";
+import { characterPageFrom, charactersPageFrom, creatorPageFrom, creatorsPageFrom } from "./pages/people";
 import { subjectPageFrom } from "./pages/subject";
 import { subjectsPageFrom } from "./pages/subjects";
 import { renderLanding } from "./views/landing";
@@ -31,7 +30,7 @@ import { renderDetail } from "./views/detail";
 import { renderCollection } from "./views/collection";
 import { renderCollections } from "./views/collections";
 import { renderArc, renderArcs } from "./views/arcs";
-import { renderCreator, renderCreators } from "./views/creators";
+import { renderCharacter, renderCreator, renderPeople } from "./views/people";
 import { renderSubject, renderSubjects } from "./views/subjects";
 import { loadDescriptions } from "./details";
 import { renderSettings } from "./views/settings";
@@ -51,7 +50,7 @@ import { respell } from "./spelling";
 
 /** The views that are tabs of one page, which share its header: Collections', and the Bookshelf's. */
 const TAB_GROUPS: ReadonlySet<string>[] = [
-	new Set(["collections", "arcs", "creators", "subjects"]),
+	new Set(["collections", "arcs", "creators", "characters", "subjects"]),
 	new Set(["bookshelf", "bookshelf-clippings", "bookshelf-books"]),
 ];
 
@@ -226,23 +225,28 @@ function pageFor(route: Route): Page | null {
 			return state.dataLoaded && tabReady(route.q) ? collectionsPageFrom(state, route.q, route.order) : null;
 		case "arcs":
 			return state.dataLoaded && tabReady(route.q) ? arcsPageFrom(state, route.q, route.order) : null;
-		// The creators ship inside the script, so their pages need nothing fetched — but a search of
-		// them is a search of their strips.
+		// The creators and the characters ship inside the script, so their pages need nothing fetched —
+		// but a search of them is a search of their strips.
 		case "creators":
 			return tabReady(route.q) ? creatorsPageFrom(state, route.q, route.order) : null;
 		case "creator":
 			return creatorPageFrom(state, route.id ?? "");
+		case "characters":
+			return tabReady(route.q) ? charactersPageFrom(state, route.q, route.order) : null;
 		// The subjects ship inside the script too, but a search of them is a search of their strips.
 		case "subjects":
 			return tabReady(route.q) ? subjectsPageFrom(state, route.q, route.order) : null;
-		// Its rows are its strips' descriptions, as an arc's are, and wait for them the same way.
+		// Their rows are their strips' descriptions, as an arc's are, and wait for them the same way.
 		case "subject":
+		case "character":
 			if (!state.dataLoaded) return null;
 			if (!state.descriptions) {
 				void loadDescriptions().then(resumeRoute);
 				return null;
 			}
-			return subjectPageFrom(state, route.id ?? "");
+			return route.view === "subject"
+				? subjectPageFrom(state, route.id ?? "")
+				: characterPageFrom(state, route.id ?? "");
 		case "arc":
 			if (!state.dataLoaded) return null;
 			// The rows are the strips' descriptions, which arrive on their own; the spinner waits for
@@ -297,6 +301,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		case "collections":
 		case "arcs":
 		case "creators":
+		case "characters":
 		case "subjects":
 			return route.q === undefined && route.order === undefined ? { page: prerendered, adopt: true } : null;
 		// The rows are the reader's library, which the build cannot know.
@@ -317,6 +322,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 		case "collection":
 		case "arc":
 		case "creator":
+		case "character":
 		case "subject":
 			return prerendered.id === route.id ? { page: prerendered, adopt: true } : null;
 	}
@@ -430,9 +436,15 @@ export function handleRoute(prerendered: Page | null = null): void {
 			document.getElementById("main")!.scrollTop = 0;
 			break;
 		}
-		case "creators": {
-			renderCreators(page, adopt, arriving);
+		case "creators":
+		case "characters": {
+			renderPeople(page, adopt, arriving);
 			if (arriving) document.getElementById("main")!.scrollTop = 0;
+			break;
+		}
+		case "character": {
+			renderCharacter(page, adopt);
+			document.getElementById("main")!.scrollTop = 0;
 			break;
 		}
 		case "subject": {

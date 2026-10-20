@@ -22,6 +22,8 @@ export const CORRECTION_PAGES = [
 	"arcs",
 	"creator",
 	"creators",
+	"character",
+	"characters",
 	"subject",
 	"subjects",
 	"settings",

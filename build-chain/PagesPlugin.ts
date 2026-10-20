@@ -12,10 +12,12 @@ import {
 	BOOKSHELF_CLIPPINGS_PATH,
 	BOOKSHELF_PATH,
 	buildArcPath,
+	buildCharacterPath,
 	buildCollectionPath,
 	buildComicPath,
 	buildCreatorPath,
 	buildSubjectPath,
+	CHARACTERS_PATH,
 	COLLECTIONS_PATH,
 	CREATORS_PATH,
 	CREDITS_PATH,
@@ -28,8 +30,7 @@ import { collectionPageFrom } from "../src/pages/collection";
 import { collectionsPageFrom } from "../src/pages/collections";
 import { arcPageFrom } from "../src/pages/arc";
 import { arcsPageFrom } from "../src/pages/arcs";
-import { creatorPageFrom } from "../src/pages/creator";
-import { creatorsPageFrom } from "../src/pages/creators";
+import { characterPageFrom, charactersPageFrom, creatorPageFrom, creatorsPageFrom } from "../src/pages/people";
 import { subjectPageFrom } from "../src/pages/subject";
 import { subjectsPageFrom } from "../src/pages/subjects";
 import { buildDocumentHtml } from "../src/pages/shell";
@@ -139,7 +140,7 @@ class PagesPlugin {
 					// Only the tabs of Collections the site has; with none, no Collections at all.
 					// See `collectionsTabs`, which this agrees with, read from this build's data.
 					const books = data.collectionIndex.collections.length > 0;
-					const { arcs, creators, subjects } = loadFeatures();
+					const { arcs, creators, characters, subjects } = loadFeatures();
 					if (books) {
 						const page = collectionsPageFrom(source);
 						emitPage(BOOKS_PATH, page);
@@ -153,35 +154,25 @@ class PagesPlugin {
 					}
 					if (arcs) emitPage(ARCS_PATH, arcsPageFrom(source));
 					if (creators) emitPage(CREATORS_PATH, creatorsPageFrom(source));
+					if (characters) emitPage(CHARACTERS_PATH, charactersPageFrom(source));
 					if (subjects) emitPage(SUBJECTS_PATH, subjectsPageFrom(source));
 
-					const collectionPaths: string[] = [];
-					for (const collection of data.collectionIndex.collections) {
-						const routePath = buildCollectionPath(collection.id);
-						collectionPaths.push(routePath);
-						emitPage(routePath, collectionPageFrom(source, collection.id));
-					}
-
-					const arcPaths: string[] = [];
-					for (const arc of data.arcs) {
-						const routePath = buildArcPath(arc.id);
-						arcPaths.push(routePath);
-						emitPage(routePath, arcPageFrom(source, arc.id));
-					}
-
-					const creatorPaths: string[] = [];
-					for (const creator of data.creators) {
-						const routePath = buildCreatorPath(creator.id);
-						creatorPaths.push(routePath);
-						emitPage(routePath, creatorPageFrom(source, creator.id));
-					}
-
-					const subjectPaths: string[] = [];
-					for (const subject of data.subjects) {
-						const routePath = buildSubjectPath(subject.id);
-						subjectPaths.push(routePath);
-						emitPage(routePath, subjectPageFrom(source, subject.id));
-					}
+					// Each book's, arc's, creator's, character's and subject's own page, and where each is.
+					const emitEach = (
+						items: { id: string }[],
+						pathOf: (id: string) => string,
+						pageFrom: (source: PageSource, id: string) => Page,
+					): string[] =>
+						items.map(({ id }) => {
+							const routePath = pathOf(id);
+							emitPage(routePath, pageFrom(source, id));
+							return routePath;
+						});
+					const collectionPaths = emitEach(data.collectionIndex.collections, buildCollectionPath, collectionPageFrom);
+					const arcPaths = emitEach(data.arcs, buildArcPath, arcPageFrom);
+					const creatorPaths = emitEach(data.creators, buildCreatorPath, creatorPageFrom);
+					const characterPaths = emitEach(data.characters, buildCharacterPath, characterPageFrom);
+					const subjectPaths = emitEach(data.subjects, buildSubjectPath, subjectPageFrom);
 
 					// A rerun day has a page too, pointing at the strip that ran again on it.
 					for (const date of [...source.comicsByDate.keys(), ...source.reruns.keys()]) {
@@ -195,10 +186,12 @@ class PagesPlugin {
 							...(books ? [BOOKS_PATH] : []),
 							...(arcs ? [ARCS_PATH] : []),
 							...(creators ? [CREATORS_PATH] : []),
+							...(characters ? [CHARACTERS_PATH] : []),
 							...(subjects ? [SUBJECTS_PATH] : []),
 							...collectionPaths,
 							...arcPaths,
 							...creatorPaths,
+							...characterPaths,
 							...subjectPaths,
 						]);
 						compilation.emitAsset("sitemap.xml", new sources.RawSource(sitemap));

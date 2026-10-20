@@ -79,6 +79,16 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "creators", ...tabParams };
 	}
 
+	// And characters.
+	const characterMatch = path.match(/^\/character\/([a-z0-9]+)$/);
+	if (characterMatch && PAGE_CONFIG.characters) {
+		return { view: "character", id: characterMatch[1] };
+	}
+
+	if (path === CHARACTERS_PATH && hasTab("characters")) {
+		return { view: "characters", ...tabParams };
+	}
+
 	// And subjects.
 	const subjectMatch = path.match(/^\/subject\/([a-z0-9]+)$/);
 	if (subjectMatch && PAGE_CONFIG.subjects) {
@@ -172,11 +182,11 @@ export function isBookshelfView(view: string): view is BookshelfView {
 }
 
 /** The tabs of Collections. */
-export type CollectionsTab = "books" | "arcs" | "creators" | "subjects";
+export type CollectionsTab = "books" | "arcs" | "creators" | "characters" | "subjects";
 
 /**
  * The tabs of Collections this site has, in order. A site with no books has no Books tab, and one
- * without arcs, creators or subjects none of theirs; a tab it lacks has no address. With none at all
+ * without arcs, creators, characters or subjects none of theirs; a tab it lacks has no address. With none at all
  * there is no Collections.
  */
 export function collectionsTabs(): CollectionsTab[] {
@@ -184,6 +194,7 @@ export function collectionsTabs(): CollectionsTab[] {
 		...(COLLECTION_INDEX.collections.length > 0 ? (["books"] as const) : []),
 		...(PAGE_CONFIG.arcs ? (["arcs"] as const) : []),
 		...(PAGE_CONFIG.creators ? (["creators"] as const) : []),
+		...(PAGE_CONFIG.characters ? (["characters"] as const) : []),
 		...(PAGE_CONFIG.subjects ? (["subjects"] as const) : []),
 	];
 }
@@ -196,6 +207,7 @@ const TAB_PATHS: Record<CollectionsTab, string> = {
 	books: "/books",
 	arcs: "/arcs",
 	creators: "/creators",
+	characters: "/characters",
 	subjects: "/subjects",
 };
 
@@ -225,14 +237,19 @@ export function buildCreatorPath(creatorId: string): string {
 	return "/creator/" + creatorId;
 }
 
+export function buildCharacterPath(characterId: string): string {
+	return "/character/" + characterId;
+}
+
 export function buildSubjectPath(subjectId: string): string {
 	return "/subject/" + subjectId;
 }
 
-/** The tabs of Collections: the books, the arcs, the creators, and the subjects. */
+/** The tabs of Collections: the books, the arcs, the creators, the characters, and the subjects. */
 export const BOOKS_PATH = "/books";
 export const ARCS_PATH = "/arcs";
 export const CREATORS_PATH = "/creators";
+export const CHARACTERS_PATH = "/characters";
 export const SUBJECTS_PATH = "/subjects";
 
 /**

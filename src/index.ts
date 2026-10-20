@@ -5,6 +5,7 @@ import "./styles/components.css";
 import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS, SUBJECTS } from "./bundled-data";
 import { Term, registerVocabulary } from "./filter-vocabulary";
 import { arcRange } from "./pages/page";
+import { subjectYears as subjectYearsOf } from "./pages/subjects";
 import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
 import {
@@ -29,12 +30,16 @@ function initialize(): void {
 	registerVocabulary("in", () =>
 		(state.collectionIndex?.collections ?? []).map((collection) => ({ value: collection.id, hint: collection.name })),
 	);
+	const named = (items: { id: string; name: string }[]): Term[] =>
+		items.map((item) => ({ value: item.id, hint: item.name }));
+	const characters = named(CHARACTERS);
+	const creators = named(CREATORS);
+	const subjects = named(SUBJECTS);
 	// Empty on a site without characters, where there is no `@featuring:` to ask.
-	registerVocabulary("featuring", () => CHARACTERS.map((character) => ({ value: character.id, hint: character.name })));
+	registerVocabulary("featuring", () => characters);
 	// And without creators, where there is no `@by:`.
-	registerVocabulary("by", () => CREATORS.map((creator) => ({ value: creator.id, hint: creator.name })));
+	registerVocabulary("by", () => creators);
 	// And without subjects, where there is no `@about:`.
-	const subjects: Term[] = SUBJECTS.map((subject) => ({ value: subject.id, hint: subject.name }));
 	registerVocabulary("about", () => subjects);
 	// And without arcs, where there is no `@during:`. An arc has no name, so it is offered by its dates.
 	const arcs: Term[] = ARCS.map((arc) => ({ value: arc.id, hint: `${arcRange(arc)}: ${arc.description}` }));
@@ -45,8 +50,8 @@ function initialize(): void {
 	const ids: Record<string, Term[]> = {
 		book: COLLECTION_INDEX.collections.map((collection) => ({ value: collection.id, hint: collection.name })),
 		arc: arcs,
-		creator: CREATORS.map((creator) => ({ value: creator.id, hint: creator.name })),
-		character: CHARACTERS.map((character) => ({ value: character.id, hint: character.name })),
+		creator: creators,
+		character: characters,
 		subject: subjects,
 	};
 	for (const [type, values] of Object.entries(ids)) registerVocabulary(`id:${type}`, () => values);
@@ -61,7 +66,7 @@ function initialize(): void {
 			.map((year) => ({ value: String(year), hint: "" }));
 	const bookYears = COLLECTION_INDEX.collections.map((collection) => collection.pub_year);
 	const arcYears = ARCS.flatMap((arc) => arc.dates.map((date) => Number(date.slice(0, 4))));
-	const subjectYears = SUBJECTS.flatMap((subject) => subject.dates.map((date) => Number(date.slice(0, 4))));
+	const subjectYears = SUBJECTS.flatMap(subjectYearsOf);
 	const published = {
 		book: yearTerms(bookYears),
 		arc: yearTerms(arcYears),

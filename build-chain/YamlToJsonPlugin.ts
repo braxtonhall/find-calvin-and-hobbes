@@ -56,10 +56,10 @@ class YamlToJsonPlugin {
 					const arcs = loadArcs(source, collectionData);
 					const arcsJson = exportArcsJson(arcs);
 
-					const characters = loadCharacters();
+					const characters = loadCharacters(source, basePath);
 					const creators = loadCreators(source, basePath);
-					// The portraits, each where the creators link to it, as the covers are.
-					for (const [published, file] of creators.files) {
+					// The portraits, each where the creators and the characters link to it, as the covers are.
+					for (const [published, file] of [...creators.files, ...characters.files]) {
 						compilation.fileDependencies.add(file);
 						compilation.emitAsset(published, new sources.RawSource(fs.readFileSync(file)));
 					}
@@ -68,7 +68,7 @@ class YamlToJsonPlugin {
 						collectionData,
 						basePath,
 						arcs,
-						characters,
+						characters.byStrip,
 						creators.byStrip,
 						subjects.byStrip,
 					);
@@ -87,7 +87,7 @@ class YamlToJsonPlugin {
 						collectionIndex: JSON.parse(collectionIndexJson),
 						descriptions: JSON.parse(descriptionsJson),
 						arcs: JSON.parse(arcsJson),
-						characters,
+						characters: characters.characters,
 						creators: creators.creators,
 						subjects: subjects.subjects,
 					});

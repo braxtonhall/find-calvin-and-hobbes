@@ -1,26 +1,17 @@
-import { Appearance, Character, Comic } from "../types";
+import { Appearance, Comic } from "../types";
 import { escHtml } from "../utils";
 import { srcsetAttributes } from "../srcset";
 import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
 import {
 	buildArcPath,
+	buildCharacterPath,
 	buildCollectionPath,
 	buildComicPath,
 	buildCreatorPath,
-	buildSearchPath,
 	buildSubjectPath,
 } from "../routes";
 import { addressOf } from "../base-path";
-import {
-	BookNeighbours,
-	DetailArc,
-	DetailCollection,
-	DetailCreator,
-	DetailPage,
-	DetailSubject,
-	PageSource,
-	arcRange,
-} from "./page";
+import { BookNeighbours, DetailArc, DetailCollection, DetailPage, PageSource, arcRange } from "./page";
 import { buildBackAndHomeButtons, buildFlashLabels } from "./nav-buttons";
 import { PAGE_CONFIG } from "../site-config";
 import { StripLinkSubject, stripLinks } from "../strip-links";
@@ -218,26 +209,14 @@ function arcsOf(source: PageSource, comics: Comic[]): DetailArc[] {
 	});
 }
 
-/** The characters the page's strips feature, each once, in the order `characters.yaml` lists them. */
-function charactersOf(source: PageSource, comics: Comic[]): Character[] {
-	const featured = new Set(comics.flatMap((comic) => comic.characters ?? []));
-	return [...source.charactersById.values()].filter((character) => featured.has(character.id));
-}
-
-/** Everyone credited on the page's strips, each once, in the order the creators' file lists them. */
-function creatorsOf(source: PageSource, comics: Comic[]): DetailCreator[] {
-	const credited = new Set(comics.flatMap((comic) => (comic.creators ?? []).map((credit) => credit.id)));
-	return [...source.creatorsById.values()]
-		.filter((creator) => credited.has(creator.id))
-		.map((creator) => ({ id: creator.id, name: creator.name }));
-}
-
-/** Every subject the page's strips are about, each once, oldest first, as the list of them is. */
-function subjectsOf(source: PageSource, comics: Comic[]): DetailSubject[] {
-	const about = new Set(comics.flatMap((comic) => comic.subjects ?? []));
-	return [...source.subjectsById.values()]
-		.filter((subject) => about.has(subject.id))
-		.map((subject) => ({ id: subject.id, name: subject.name }));
+/**
+ * The characters, creators or subjects the page's strips name, each once, by id and name, in the
+ * order their list has them: the characters' and the creators' as their files list them, the
+ * subjects oldest first.
+ */
+function namedOn(all: Map<string, { id: string; name: string }>, ids: string[]): { id: string; name: string }[] {
+	const named = new Set(ids);
+	return [...all.values()].filter((item) => named.has(item.id)).map(({ id, name }) => ({ id, name }));
 }
 
 /** The page for a date, from whatever holds the archive — the app's state or the build's data. */
@@ -258,9 +237,18 @@ export function detailPageFrom(source: PageSource, date: string, alternates: str
 		collections: summarizeCollections(source, comics),
 		descriptions: source.descriptions ? descriptionsFor(source.descriptions, comics) : null,
 		arcs: arcsOf(source, comics),
-		characters: charactersOf(source, comics),
-		creators: creatorsOf(source, comics),
-		subjects: subjectsOf(source, comics),
+		characters: namedOn(
+			source.charactersById,
+			comics.flatMap((comic) => comic.characters ?? []),
+		),
+		creators: namedOn(
+			source.creatorsById,
+			comics.flatMap((comic) => (comic.creators ?? []).map((credit) => credit.id)),
+		),
+		subjects: namedOn(
+			source.subjectsById,
+			comics.flatMap((comic) => comic.subjects ?? []),
+		),
 	};
 }
 
@@ -611,79 +599,76 @@ function buildRerunBannerHtml(originalDate: string): string {
 	return `<p class="detail-rerun-banner detail-meta">${metaContents("rerun", `Originally ran ${buildRerunLinkHtml(originalDate)}`)}</p>`;
 }
 
-/**
- * `Featuring Calvin, Hobbes and Dad`, in the order `characters.yaml` lists them. Each name is a search
- * for every strip featuring them, oldest first, since a search that is only a filter has nothing to
- * rank by; `data-character-id` is what the view reads to light up those strips while it is hovered.
- */
-function buildFeaturingLineHtml(page: DetailPage, comic: Comic): string {
-	const links = page.characters
-		.filter((character) => comic.characters?.includes(character.id))
-		.map(
-			(character) =>
-				`<a class="detail-rerun-link detail-character-link" href="${escHtml(addressOf(buildSearchPath(`@featuring:${character.id}`, "date")))}" data-character-id="${escHtml(character.id)}">${escHtml(character.name)}</a>`,
-		);
-	return links.length > 0
-		? `<li class="detail-run detail-meta">${metaContents("featuring", `Featuring ${andList(links)}`)}</li>`
-		: "";
-}
-
 /** `a`, `a and b`, `a, b and c`. */
 function andList(items: string[]): string {
 	return items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}` : (items[0] ?? "");
 }
 
 /**
- * `By Bill Watterson`, or `By Jerry Scott (story) and Jim Borgman (art)`, in the order the strip's
- * credit lists them. Each name is the way to that creator's page; `data-creator-id` is what the view
- * reads to light up their strips while it is hovered.
+ * A name under a strip, as the way to its page: a creator's, a character's or a subject's.
+ * `data-<kind>-id` is what the view reads to light up its strips while it is hovered.
  */
-function buildByLineHtml(page: DetailPage, comic: Comic): string {
-	const names = new Map(page.creators.map((creator) => [creator.id, creator.name]));
-	const links = (comic.creators ?? []).flatMap((credit) => {
-		const name = names.get(credit.id);
-		if (!name) return [];
-		const link = `<a class="detail-rerun-link detail-creator-link" href="${escHtml(addressOf(buildCreatorPath(credit.id)))}" data-creator-id="${escHtml(credit.id)}">${escHtml(name)}</a>`;
-		return [credit.role ? `${link} (${escHtml(credit.role)})` : link];
-	});
+function namedLinkHtml(
+	kind: "creator" | "character" | "subject",
+	item: { id: string; name: string },
+	path: string,
+): string {
+	return `<a class="detail-rerun-link detail-${kind}-link" href="${escHtml(addressOf(path))}" data-${kind}-id="${escHtml(item.id)}">${escHtml(item.name)}</a>`;
+}
+
+/** A line under a strip of `lead` and the names, or nothing where there are none. */
+function namedLineHtml(icon: MetaKind, lead: string, links: string[]): string {
 	return links.length > 0
-		? `<li class="detail-run detail-meta">${metaContents("by", `By ${andList(links)}`)}</li>`
+		? `<li class="detail-run detail-meta">${metaContents(icon, `${lead} ${andList(links)}`)}</li>`
 		: "";
 }
 
 /**
- * `About The pounce and Snowmen`, in the order the list of subjects has them: oldest first. Each name
- * is the way to that subject's page; `data-subject-id` is what the view reads to light up its strips
- * while it is hovered.
+ * `By Bill Watterson`, or `By Jerry Scott (story) and Jim Borgman (art)`, in the order the strip's
+ * credit lists them.
  */
+function buildByLineHtml(page: DetailPage, comic: Comic): string {
+	const named = new Map(page.creators.map((creator) => [creator.id, creator]));
+	const links = (comic.creators ?? []).flatMap((credit) => {
+		const creator = named.get(credit.id);
+		if (!creator) return [];
+		const link = namedLinkHtml("creator", creator, buildCreatorPath(creator.id));
+		return [credit.role ? `${link} (${escHtml(credit.role)})` : link];
+	});
+	return namedLineHtml("by", "By", links);
+}
+
+/** `Featuring Calvin, Hobbes and Dad`, in the order the characters' file lists them. */
+function buildFeaturingLineHtml(page: DetailPage, comic: Comic): string {
+	const links = page.characters
+		.filter((character) => comic.characters?.includes(character.id))
+		.map((character) => namedLinkHtml("character", character, buildCharacterPath(character.id)));
+	return namedLineHtml("featuring", "Featuring", links);
+}
+
+/** `About The pounce and Snowmen`, in the order the list of subjects has them: oldest first. */
 function buildAboutLineHtml(page: DetailPage, comic: Comic): string {
 	const links = page.subjects
 		.filter((subject) => comic.subjects?.includes(subject.id))
-		.map(
-			(subject) =>
-				`<a class="detail-rerun-link detail-subject-link" href="${escHtml(addressOf(buildSubjectPath(subject.id)))}" data-subject-id="${escHtml(subject.id)}">${escHtml(subject.name)}</a>`,
-		);
-	return links.length > 0
-		? `<li class="detail-run detail-meta">${metaContents("about", `About ${andList(links)}`)}</li>`
-		: "";
+		.map((subject) => namedLinkHtml("subject", subject, buildSubjectPath(subject.id)));
+	return namedLineHtml("about", "About", links);
 }
 
 /**
  * Who made the strip, who it features, what it is about, the arcs it is part of, and when else the paper ran it on an
  * original day, together under the strip. Only the day's own strip ran in the paper, so a special
- * has only the first two: it never reran, is in no arc, and is about no subject. A rerun day's reruns are empty; where its strip is from is
+ * has only the first three: it never reran, and is in no arc. A rerun day's reruns are empty; where its strip is from is
  * said above it instead.
  */
 function buildRunsHtml(page: DetailPage, date: string, comic: Comic): string {
-	const people = buildByLineHtml(page, comic) + buildFeaturingLineHtml(page, comic);
-	if (comic.id) return people ? `<ul class="detail-runs">${people}</ul>` : "";
+	const named = buildByLineHtml(page, comic) + buildFeaturingLineHtml(page, comic) + buildAboutLineHtml(page, comic);
+	if (comic.id) return named ? `<ul class="detail-runs">${named}</ul>` : "";
 	const reruns = page.rerunOf ? [] : page.runs.slice(1);
 	const rerun =
 		reruns.length > 0
 			? `<li class="detail-run detail-meta">${metaContents("rerun", `Reran ${joinRerunLinks(reruns)}`)}</li>`
 			: "";
-	const lines =
-		people + buildAboutLineHtml(page, comic) + page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("") + rerun;
+	const lines = named + page.arcs.map((arc) => buildArcLineHtml(arc, date)).join("") + rerun;
 	return lines ? `<ul class="detail-runs">${lines}</ul>` : "";
 }
 

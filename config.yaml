@@ -180,7 +180,7 @@ corrections:
 # ones can be set to false instead, which leaves out what they are for and reads nothing.
 #
 #   comics      the strips: their transcripts, descriptions, and specials, each special with a
-#               `title`, which a creator's page lists it by
+#               `title`, which a creator's, a character's or a subject's page lists it by
 #   collections the books, as a list. `!Map [Import, ./folder/*.yaml]` imports every file a pattern
 #               matches, in the order of their paths. A book's `image`, its cover, is a URL, or a
 #               file as `!Path ./cover.png`, relative to the file it is written in, which the build
@@ -199,7 +199,11 @@ corrections:
 #   compounds   the compound words the search keeps whole or splits beyond what it finds itself
 #   misspellings words the search takes as others, as if they were written right: a mapping of each
 #               word to a list of its misspellings, like `susie: [suzie]`
-#   characters  each character's name by id, for @featuring: and the Featuring line under a strip
+#   characters  who is in the strips: the Characters tab of Collections and each character's page,
+#               the Featuring line under a strip, and @featuring:. A mapping of each character by id
+#               to its `name`, and optionally an `image`, as a creator's is. Which strips feature one
+#               is written on the strips, in `comics`, as `characters: [id, ...]`, a special's too.
+#               The list is in the order given here
 #   creators    who made the strips: the Creators tab of Collections and each creator's page, the By
 #               line under a strip, and @by:. A mapping of `people`, each by id with a `name`, and
 #               optionally an `image` (a URL, or `!Path`, as a cover is) and `links` out, as a
@@ -216,8 +220,8 @@ corrections:
 #               each subject's page, the About line under a strip, and @about:. A mapping of each
 #               subject by id to its `name`, optionally a `description`, and `keywords`, other words
 #               a search of the subjects finds it by. Which strips are about one is written on the
-#               strips, in `comics`, as `subjects: [id, ...]`, on a daily or a Sunday, never a special.
-#               The list is in order of each one's first strip
+#               strips, in `comics`, as `subjects: [id, ...]`, a special's too. The list is in order
+#               of each one's first strip
 #   comicImages the folder of the strips' images, relative to this file, each named by its date as
 #               YYYYMMDD, or by a special's id, with its own extension. A strip has an image if the
 #               folder has one for it, so they can be dropped in as they are found; a folder that
