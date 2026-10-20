@@ -236,7 +236,7 @@ arcs: !Import ./calvin-and-hobbes/arcs.yaml
 reruns: !Import ./calvin-and-hobbes/reruns.yaml
 compounds: !Import ./calvin-and-hobbes/compounds.yaml
 misspellings: !Import ./calvin-and-hobbes/misspellings.yaml
-characters: false
+characters: !Import ./calvin-and-hobbes/characters.yaml
 creators: false
 subjects: false
 comicImages: ./calvin-and-hobbes/comics
