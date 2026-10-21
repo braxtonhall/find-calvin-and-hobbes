@@ -5,7 +5,7 @@ import { ListedSpecial, Person, TabOrder } from "../types";
 import { CharacterPage, CharactersPage, CreatorPage, CreatorsPage, PageSource } from "./page";
 import { buildFlashLabels, buildBackAndHomeButtons, buildCharactersButton, buildCreatorsButton } from "./nav-buttons";
 import { buildLinksHtml, buildRangeHtml } from "./collection";
-import { buildCollectionsHeaderHtml, buildNoMatchesHtml, orderOf, sortedByCount } from "./collections";
+import { buildCollectionsHeaderHtml, buildNoMatchesHtml, orderOf } from "./collections";
 import { stripsOn } from "./arc";
 import { buildStripSetHtml, formatStripCount, formatYears } from "./strip-set";
 
@@ -27,10 +27,38 @@ export function peopleOf(page: PeoplePage): Person[] {
 	return page.view === "creators" ? page.creators : page.characters;
 }
 
-/** Every one of `people`, in the order their file lists them, or most strips first. */
+/** The day they are first in, compact, as `ranges` writes one; none where they are in no strip yet. */
+function firstDay(person: Person): string | undefined {
+	const days = [person.ranges[0]?.slice(0, 8), person.specials?.[0]?.date.replace(/-/g, "")];
+	return days.filter((day) => day !== undefined).sort()[0];
+}
+
+/** Earliest first, and anyone in no strip yet last. */
+function byFirstDay(a: Person, b: Person): number {
+	const [first, second] = [firstDay(a), firstDay(b)];
+	if (first === second) return 0;
+	if (first === undefined) return 1;
+	if (second === undefined) return -1;
+	return first.localeCompare(second);
+}
+
+function byStrips(a: Person, b: Person): number {
+	return b.strips - a.strips;
+}
+
+/** Most strips first, those in as many by when they first appear, and any still tied by id. */
+export function byAppearances(a: Person, b: Person): number {
+	return byStrips(a, b) || byFirstDay(a, b) || a.id.localeCompare(b.id);
+}
+
+/** By when they first appear, those first seen the same day most strips first, and any still tied by id. */
+function byDebut(a: Person, b: Person): number {
+	return byFirstDay(a, b) || byStrips(a, b) || a.id.localeCompare(b.id);
+}
+
+/** Every one of `people`, by when they first appear, or most strips first. */
 function ordered<T extends Person>(people: Map<string, T>, order?: TabOrder): T[] {
-	const all = [...people.values()];
-	return order === "count" ? sortedByCount(all, (person) => person.strips) : all;
+	return [...people.values()].sort(order === "count" ? byAppearances : byDebut);
 }
 
 export function creatorsPageFrom(source: PageSource, q?: string, order?: TabOrder): CreatorsPage {

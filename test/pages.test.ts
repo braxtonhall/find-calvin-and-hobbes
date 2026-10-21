@@ -10,7 +10,7 @@ import { exportDescriptions } from "../build-chain/exportDescriptions";
 import { generateCollectionIndex } from "../build-chain/generateCollectionIndex";
 import { loadArcs } from "../build-chain/arcs";
 import { computeDays } from "../src/days";
-import { Arc, Character, Collection, Comic, Creator } from "../src/types";
+import { Arc, Character, Collection, Comic, Creator, TabOrder } from "../src/types";
 import { Page, PageSource, arcRange } from "../src/pages/page";
 import { detailPageFrom } from "../src/pages/detail";
 import { buildRangeSearchPath, collectionPageFrom } from "../src/pages/collection";
@@ -443,9 +443,9 @@ test("a prerendered document", async (suite) => {
 		const [unlisted] = [...source.comicsByDate.keys()].filter((date) => date !== original && date !== special.date);
 		assert.ok(!buildViewHtml(detailPageFrom(featuring, unlisted), false).includes("Featuring"));
 
-		// The list, in the characters' order, each with its portrait's space, and one no strip features yet.
+		// The list, by first appearance, each with its portrait's space, and one no strip features yet, last.
 		const list = buildViewHtml(charactersPageFrom(featuring), false);
-		assert.ok(list.indexOf("Calvin") < list.indexOf("Hobbes") && list.indexOf("Hobbes") < list.indexOf("Dad"));
+		assert.ok(list.indexOf("Calvin") < list.indexOf("Dad") && list.indexOf("Dad") < list.indexOf("Hobbes"));
 		assert.ok(list.includes(`<img class="person-portrait" src="/assets/calvin.png"`));
 		assert.ok(list.includes(`<div class="collections-meta">0 strips</div>`));
 		// Their page, as a subject's: a portrait, and every strip they are in as rows, the special too.
@@ -462,6 +462,36 @@ test("a prerendered document", async (suite) => {
 		assert.ok(!buildViewHtml(characterPageFrom(featuring, "hobbes"), false).includes("Years:"));
 		assert.equal(characterPageFrom(featuring, "nobody").character, null);
 	});
+
+	await suite.test(
+		"lists the characters and creators by first appearance, or by count, each breaking the other's ties",
+		() => {
+			const cast: PageSource = {
+				...source,
+				charactersById: new Map([
+					// First in 1986 by a special, before any of their strips.
+					character("a", "A", {
+						strips: 2,
+						ranges: ["19870101-19870102"],
+						specials: [{ id: "s", title: "S", date: "1986-01-01" }],
+					}),
+					character("e", "E", { strips: 5, ranges: ["19860101-19860105"] }),
+					character("d", "D", { strips: 0, years: [], ranges: [] }),
+					character("c", "C", { strips: 2, ranges: ["19850101", "19900101"] }),
+					character("b", "B", { strips: 5, ranges: ["19860101-19860105"] }),
+				]),
+			};
+			const ids = (order?: TabOrder) => charactersPageFrom(cast, undefined, order).characters.map(({ id }) => id);
+			assert.deepEqual(ids(), ["c", "b", "e", "a", "d"]);
+			assert.deepEqual(ids("count"), ["b", "e", "c", "a", "d"]);
+			// And the creators the same way.
+			const creators: PageSource = { ...source, creatorsById: cast.charactersById as Map<string, Creator> };
+			const creatorIds = (order?: TabOrder) =>
+				creatorsPageFrom(creators, undefined, order).creators.map(({ id }) => id);
+			assert.deepEqual(creatorIds(), ids());
+			assert.deepEqual(creatorIds("count"), ids("count"));
+		},
+	);
 
 	await suite.test(
 		"names what a strip is about, a special too, and lists the special with the subject's strips",

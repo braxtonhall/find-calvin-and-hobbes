@@ -6,6 +6,7 @@ import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS, SUBJECTS } from "./bundle
 import { Term, registerVocabulary } from "./filter-vocabulary";
 import { arcRange } from "./pages/page";
 import { subjectYears as subjectYearsOf } from "./pages/subjects";
+import { byAppearances } from "./pages/people";
 import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
 import {
@@ -32,7 +33,8 @@ function initialize(): void {
 	);
 	const named = (items: { id: string; name: string }[]): Term[] =>
 		items.map((item) => ({ value: item.id, hint: item.name }));
-	const characters = named(CHARACTERS);
+	// The characters most often seen first, where the creators and subjects keep their files' order.
+	const characters = named([...CHARACTERS].sort(byAppearances));
 	const creators = named(CREATORS);
 	const subjects = named(SUBJECTS);
 	// Empty on a site without characters, where there is no `@featuring:` to ask.

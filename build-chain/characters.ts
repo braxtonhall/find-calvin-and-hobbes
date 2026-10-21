@@ -19,8 +19,7 @@ const NONE: CharacterData = { characters: [], byStrip: new Map(), files: new Map
 
 /**
  * The characters, from the file `config.yaml` names, each by id with a `name` and optionally an
- * `image`, as a creator is, in the order the file gives them, which is the order the menu offers them
- * in. Which strips feature a character is written on the strips, in `comics.yaml`, as `characters:
+ * `image`, as a creator is, in the order the file gives them. Which strips feature a character is written on the strips, in `comics.yaml`, as `characters:
  * [id, ...]`, a special's too. A character no strip features yet is listed all the same.
  *
  * None, and nothing read — not even a strip's `characters` — where `config.yaml` turns them off.
