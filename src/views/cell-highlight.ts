@@ -2,7 +2,7 @@ import { state } from "../state";
 import { anyCellInView, scrollCellIntoViewIfNeeded } from "../utils";
 import { cellForDate, lightDates, paintGrid } from "../grid";
 import { parseRoute } from "../router";
-import { isDateInCollection } from "../date-utils";
+import { isDateInCollection, isSabbatical } from "../date-utils";
 import { Collection, Person } from "../types";
 
 /**
@@ -41,7 +41,11 @@ const bookDates = new WeakMap<BookRanges, Set<string>>();
 export function datesOf(collection: BookRanges): Set<string> {
 	const known = bookDates.get(collection);
 	if (known) return known;
-	const dates = new Set(state.allDays.map((day) => day.date).filter((date) => isDateInCollection(date, collection)));
+	// A range can run straight through a sabbatical — a character in the strip from start to end — but
+	// no strip ran in one, so its days are not among the range's.
+	const dates = new Set(
+		state.allDays.map((day) => day.date).filter((date) => !isSabbatical(date) && isDateInCollection(date, collection)),
+	);
 	// Before the grid is built there are no days to find, and so nothing worth remembering.
 	if (state.allDays.length > 0) bookDates.set(collection, dates);
 	return dates;
