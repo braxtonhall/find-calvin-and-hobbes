@@ -44,6 +44,8 @@ interface Drawn {
 	cells: HTMLElement[];
 	/** The cell each of the page's days is in. */
 	byDate: Map<string, HTMLElement>;
+	/** The page's `.grid-chunk`s, top to bottom. */
+	chunks: HTMLElement[];
 }
 
 let drawn: Drawn | null = null;
@@ -126,6 +128,12 @@ const HIGHLIGHT_DEADZONE_DAYS = 2 * 7;
 const ROWS_PER_CHUNK = 8;
 
 /**
+ * Chunks kept drawn past each edge of the screen (see `.grid-chunk--near`), on top of the margin
+ * the browser keeps itself, which a fast scroll can outrun. 0 leaves it all to the browser.
+ */
+const OVERSCAN_CHUNKS: number = 2;
+
+/**
  * Where a row sits, worked out from the grid's own box rather than read off a cell: an off-screen
  * chunk of the grid is skipped by the browser, and measuring a cell in one would have it laid out
  * again on every scroll.
@@ -188,6 +196,28 @@ function drawYearRail(page: GridPage, deadzone: number): void {
 	sizer.textContent = "'00";
 	rail.replaceChildren(...railEntries.map((entry) => entry.button), sizer);
 	updateActiveYears();
+}
+
+/** Marks the chunks within `OVERSCAN_CHUNKS` of the part of the grid on screen. */
+function updateOverscan(): void {
+	if (OVERSCAN_CHUNKS === 0 || !drawn) return;
+	const { top, bottom } = visibleBand();
+	const gridTop = grid.getBoundingClientRect().top;
+	const { gap, pitch } = rowGeometry();
+	// A grid that is not showing has no rows to measure.
+	if (pitch <= gap) return;
+	const chunkPitch = ROWS_PER_CHUNK * pitch;
+	const first = Math.floor((top - gridTop) / chunkPitch) - OVERSCAN_CHUNKS;
+	const last = Math.floor((bottom - gridTop) / chunkPitch) + OVERSCAN_CHUNKS;
+	drawn.chunks.forEach((chunk, index) => chunk.classList.toggle("grid-chunk--near", index >= first && index <= last));
+}
+
+/** Scroll events already come once a frame, so the chunks are marked in the frame they scroll in. */
+function attachOverscan(): void {
+	if (OVERSCAN_CHUNKS === 0) return;
+	document.getElementById("grid-scroller")!.addEventListener("scroll", updateOverscan);
+	document.getElementById("grid-container")!.addEventListener("scroll", updateOverscan);
+	window.addEventListener("resize", updateOverscan);
 }
 
 function attachYearRail(): void {
@@ -366,7 +396,8 @@ function drawGrid(): void {
 
 	grid.replaceChildren(...chunks);
 	watchChunksInView(chunks);
-	drawn = { page, aggregate, cells, byDate };
+	drawn = { page, aggregate, cells, byDate, chunks };
+	updateOverscan();
 
 	layout.replaceChildren(
 		grid,
@@ -871,6 +902,7 @@ export function renderGrid(): void {
 
 	buildControls();
 	attachYearRail();
+	attachOverscan();
 	setBoardSource(gridBoard);
 
 	// Opened on a strip, the grid starts on the page holding it, rather than drawing another first.

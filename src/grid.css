@@ -121,6 +121,14 @@
 }
 
 /*
+ * The chunks just past the screen (see `OVERSCAN_CHUNKS`) are drawn ahead of time, so that a fast
+ * scroll does not reach one before the browser has drawn it and show a blank gap where it should be.
+ */
+.grid-chunk--near {
+	content-visibility: visible;
+}
+
+/*
  * Skipping makes a chunk one layer, drawn all above or all below its neighbours, so raising the one
  * with a ring raises its plain cells over the next chunk's ring too. The chunks holding the ring or
  * the hovered cell are drawn as usual instead, so those cells take their places among the whole
