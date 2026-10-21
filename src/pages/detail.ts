@@ -493,14 +493,14 @@ function buildStripOwnershipHtml(page: DetailPage, comic: Comic): string {
 	});
 }
 
-/** The strip's Read and License links, as `config.yaml` writes them, if it writes any. */
+/** The strip's links, like Read and License, as `config.yaml` writes them, if it writes any. */
 function buildStripLinksHtml(page: DetailPage, comic: Comic): string {
 	const subject = linkSubject(page, comic);
 	const links = stripLinks(PAGE_CONFIG.details[subject.kind], subject);
 	const anchors = links
 		.map(
-			({ label, href }) =>
-				`<a class="detail-read-link" href="${escHtml(href)}" target="_blank" rel="noopener">${label} ${LINK_ICON_SVG}</a>`,
+			({ title, href }) =>
+				`<a class="detail-read-link" href="${escHtml(href)}" target="_blank" rel="noopener">${escHtml(title)} ${LINK_ICON_SVG}</a>`,
 		)
 		.join("");
 	return anchors ? `<div class="detail-links">${anchors}</div>` : "";

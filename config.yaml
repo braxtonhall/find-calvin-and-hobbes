@@ -277,9 +277,11 @@ colourSundays: true
 # Clicking a box that stands for many days zooms in on them. Such a box shows the strongest of its
 # days: lit if any of them matched, and grey only if all of them are. Bookmarks show on days alone.
 
-# The links under a strip on its page. A link left out, or empty, is not drawn.
+# The links under a strip on its page, by the kind of strip it is. Each kind is a list of links, drawn
+# in its order, each a `title`, what the link says, and an `href`, where it leads. A kind left out,
+# or empty, carries no links, and a link whose `href` is left out, or empty, is not drawn.
 #
-# Each is a template, filled in from the strip it is under:
+# Each `href` is a template, filled in from the strip it is under:
 #
 #   daily    the day's own strip: {{strip.date}} (1986-07-07), {{strip.year}}, {{strip.month}},
 #            {{strip.day}}, the last two with leading zeros
@@ -289,9 +291,13 @@ colourSundays: true
 #            filed under
 details:
   daily:
-    readUrl: https://www.gocomics.com/calvinandhobbes/{{strip.year}}/{{strip.month}}/{{strip.day}}
-    licenseUrl: https://licensing.andrewsmcmeel.com/features/ch?date={{strip.date}}
+    - title: Read
+      href: https://www.gocomics.com/calvinandhobbes/{{strip.year}}/{{strip.month}}/{{strip.day}}
+    - title: License
+      href: https://licensing.andrewsmcmeel.com/features/ch?date={{strip.date}}
   rerun:
-    readUrl: https://www.gocomics.com/calvinandhobbes/{{strip.rerun.year}}/{{strip.rerun.month}}/{{strip.rerun.day}}
-    licenseUrl: https://licensing.andrewsmcmeel.com/features/ch?date={{strip.original.date}}
-  special: {}
+    - title: Read
+      href: https://www.gocomics.com/calvinandhobbes/{{strip.rerun.year}}/{{strip.rerun.month}}/{{strip.rerun.day}}
+    - title: License
+      href: https://licensing.andrewsmcmeel.com/features/ch?date={{strip.original.date}}
+  special: []

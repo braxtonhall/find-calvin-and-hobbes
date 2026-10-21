@@ -1,8 +1,8 @@
 import type { StripLinkTemplates } from "./site-config";
 
 /**
- * The links under a strip — Read and License — written from the templates in `config.yaml`, so that
- * where they lead is the configuration's business rather than the page's.
+ * The links under a strip, like Read and License, written from the templates in `config.yaml`, so that
+ * what they are called and where they lead is the configuration's business rather than the page's.
  *
  * Which templates apply depends on what kind of strip it is, and each kind has its own fields:
  *
@@ -19,14 +19,9 @@ export type StripLinkSubject =
 	| { kind: "special"; id: string; date: string };
 
 export interface StripLink {
-	label: string;
+	title: string;
 	href: string;
 }
-
-const LABELS: [keyof StripLinkTemplates, string][] = [
-	["readUrl", "Read"],
-	["licenseUrl", "License"],
-];
 
 /** An ISO date's fields, under a name: `strip.year` is `1986`, `strip.month` is `07`. */
 function dateFields(prefix: string, date: string): Record<string, string> {
@@ -56,8 +51,7 @@ export function fillLinkTemplate(template: string, fields: Record<string, string
 /** The strip's links, in order, leaving out any without a template. */
 export function stripLinks(templates: StripLinkTemplates, subject: StripLinkSubject): StripLink[] {
 	const fields = stripLinkFields(subject);
-	return LABELS.filter(([key]) => templates[key]).map(([key, label]) => ({
-		label,
-		href: fillLinkTemplate(templates[key]!, fields),
-	}));
+	return templates
+		.filter(({ href }) => href)
+		.map(({ title, href }) => ({ title, href: fillLinkTemplate(href, fields) }));
 }

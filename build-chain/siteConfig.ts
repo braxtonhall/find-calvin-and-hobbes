@@ -448,7 +448,7 @@ export function loadComicImages(config = configPath()): string | null {
 }
 
 const STRIP_KINDS: readonly StripKind[] = ["daily", "rerun", "special"];
-const LINK_KEYS: readonly (keyof StripLinkTemplates)[] = ["readUrl", "licenseUrl"];
+const LINK_KEYS = ["title", "href"];
 
 /** Something of each kind to fill the templates in for, so a template asking for a field its kind lacks fails the build. */
 const SAMPLE_SUBJECTS: Record<StripKind, StripLinkSubject> = {
@@ -469,14 +469,24 @@ function loadLinkTemplates(details: RawConfig["details"]): PageConfig["details"]
 
 	const result = {} as PageConfig["details"];
 	for (const kind of STRIP_KINDS) {
-		const raw = (details?.[kind] ?? {}) as Record<string, unknown>;
-		const templates: StripLinkTemplates = {};
-		for (const [key, value] of Object.entries(raw)) {
-			if (!(LINK_KEYS as readonly string[]).includes(key)) {
-				throw new ConfigError((file) => `details.${kind}.${key} in ${file} is not one of ${LINK_KEYS.join(", ")}`);
+		const raw = details?.[kind] ?? [];
+		if (!Array.isArray(raw)) throw new ConfigError((file) => `details.${kind} in ${file} must be a list of links`);
+		const templates: StripLinkTemplates = [];
+		for (const [index, entry] of raw.entries()) {
+			const name = `details.${kind}[${index}]`;
+			if (entry === null || typeof entry !== "object" || Array.isArray(entry)) {
+				throw new ConfigError((file) => `${name} in ${file} must be a mapping of title and href`);
 			}
-			const template = stringSetting(value, `details.${kind}.${key}`);
-			if (template) templates[key as keyof StripLinkTemplates] = template;
+			for (const key of Object.keys(entry)) {
+				if (!LINK_KEYS.includes(key)) {
+					throw new ConfigError((file) => `${name}.${key} in ${file} is not one of ${LINK_KEYS.join(", ")}`);
+				}
+			}
+			const { title, href } = entry as { title?: unknown; href?: unknown };
+			const label = stringSetting(title, `${name}.title`);
+			if (!label) throw new ConfigError((file) => `${name} in ${file} needs a title`);
+			const template = stringSetting(href, `${name}.href`);
+			if (template) templates.push({ title: label, href: template });
 		}
 		try {
 			stripLinks(templates, SAMPLE_SUBJECTS[kind]);

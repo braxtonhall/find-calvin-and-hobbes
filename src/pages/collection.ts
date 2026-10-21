@@ -102,7 +102,7 @@ export function formatPublicationDate(collection: Pick<Collection, "pub_year" | 
 		: `${monthName} ${collection.pub_year}`;
 }
 
-/** A page's links out, drawn as a strip's Read and License are: a book's, and a creator's. */
+/** A page's links out, drawn as a strip's are: a book's, and a creator's. */
 export function buildLinksHtml(links: { title: string; href: string }[]): string {
 	const anchors = links
 		.map(

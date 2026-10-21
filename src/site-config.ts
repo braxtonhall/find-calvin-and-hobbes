@@ -10,11 +10,8 @@
 
 import type { CorrectionPage } from "./correction-links";
 
-/** The templates for one kind of strip's links. A link with no template is not drawn. See `strip-links.ts`. */
-export interface StripLinkTemplates {
-	readUrl?: string;
-	licenseUrl?: string;
-}
+/** One kind of strip's links, in order, each a label and the template of its address. See `strip-links.ts`. */
+export type StripLinkTemplates = { title: string; href: string }[];
 
 /**
  * The corrections form's address for each kind of page, as a template. A kind with none carries no
