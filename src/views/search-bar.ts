@@ -7,6 +7,7 @@ import { buildFilterBar } from "./filter-bar";
 import { attachQueryInput, syncQueryInput } from "./query-input";
 import { attachRowFocusHandler } from "./result-rows";
 import { isTouchDevice } from "../utils";
+import { revealSearch } from "../grid";
 import { DATE_ICON, RANK_ICON } from "../pages/collections";
 
 function sortLabelFor(sort: SortMode): string {
@@ -119,9 +120,10 @@ export function buildSearchBar(element: HTMLElement, options: SearchBarOptions):
 			if (isTouchDevice()) input.blur();
 			if (!inputQuery) {
 				onEmpty();
-			} else if (inputQuery !== currentQuery) {
-				replaceSearch(options.pathFor(inputQuery, currentSort));
+				return;
 			}
+			revealSearch(inputQuery);
+			if (inputQuery !== currentQuery) replaceSearch(options.pathFor(inputQuery, currentSort));
 		}
 	});
 

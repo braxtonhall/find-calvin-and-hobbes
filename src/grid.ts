@@ -444,6 +444,8 @@ let subjectShown: string | null = null;
  * turn it back. Leaving forgets the subject, so coming back to it turns there again.
  */
 export function followRoute(route: Route): void {
+	// A search submitted is waited for on its own results page; any other page drops it.
+	if (submitted !== null && (route.view !== "results" || route.q !== submitted)) submitted = null;
 	if (route.view === "detail" && route.date) {
 		subjectShown = null;
 		// A turn still fading out was asked for before the strip was: the strip has the say.
@@ -461,28 +463,58 @@ export function followRoute(route: Route): void {
 		}
 		return;
 	}
-	if (subject.key === subjectShown) return;
+	// Its results are known now, so a search submitted is brought into view here or not at all: to
+	// its best matches, unless any match is on screen already.
+	const reveal = submitted !== null;
+	submitted = null;
+	const revealSearched = (): void => scrollToAnyOf(subject.dates, state.searchResultTiers!.keys());
+	if (subject.key === subjectShown) {
+		if (reveal) revealSearched();
+		return;
+	}
 	subjectShown = subject.key;
 	abandonMove();
 	showAnyOf(subject.dates);
 	// A page of its own strips is followed to — a book's arrows, a row of the list — and brings them
 	// into view, as a strip's page brings its strip. A search's best matches change a key at a time,
-	// so they leave the grid where it is.
-	if (LIGHTS_ITS_OWN.has(route.view)) scrollToAnyOf(subject.dates);
+	// so they leave the grid where it is, unless the reader submitted it.
+	if (reveal) revealSearched();
+	else if (LIGHTS_ITS_OWN.has(route.view)) scrollToAnyOf(subject.dates);
 }
 
-/** Scrolls the grid to the first of `dates` it is showing, unless one of them is already in view. */
-function scrollToAnyOf(dates: ReadonlySet<string>): void {
+/** The query the reader last submitted, until its results page has brought its matches into view. */
+let submitted: string | null = null;
+
+/**
+ * Brings a search's best matches into view, as a book's page brings its strips, unless one of its
+ * matches is on screen already. Only for a search the reader submitted, with Enter or the search button: one the
+ * box runs as they type would throw the grid about at every pause. Called before the results page is
+ * routed to, it waits for that page, and for its results if they have yet to arrive; called on the
+ * page already showing them — Enter on what the box had already searched — it scrolls at once.
+ */
+export function revealSearch(query: string): void {
+	submitted = query;
+	const route = parseRoute();
+	if (route.view === "results" && route.q === query) followRoute(route);
+}
+
+/**
+ * Scrolls the grid to the first of `dates` it is showing, unless one of `enough` — `dates` themselves,
+ * unless told otherwise — is already in view.
+ */
+function scrollToAnyOf(dates: ReadonlySet<string>, enough: Iterable<string> = dates): void {
 	if (!drawn) return;
-	const cells = new Set<HTMLElement>();
 	let first: string | null = null;
 	for (const date of dates) {
-		const cell = drawn.byDate.get(date);
-		if (!cell) continue;
-		cells.add(cell);
-		if (first === null || date < first) first = date;
+		if (drawn.byDate.has(date) && (first === null || date < first)) first = date;
 	}
-	if (first === null || anyCellInView(cells)) return;
+	if (first === null) return;
+	const cells = new Set<HTMLElement>();
+	for (const date of enough) {
+		const cell = drawn.byDate.get(date);
+		if (cell) cells.add(cell);
+	}
+	if (anyCellInView(cells)) return;
 	drawn.byDate.get(first)!.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 

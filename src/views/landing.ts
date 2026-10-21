@@ -6,6 +6,7 @@ import { buildLandingHtml } from "../pages/landing";
 import { randomQuery } from "../suggestions";
 import { attachQueryInput, editQueryInput } from "./query-input";
 import { focusResultsInput } from "./results";
+import { revealSearch } from "../grid";
 import { isTouchDevice } from "../utils";
 
 /** Fast enough not to be a wait, slow enough that the `@` and the pill it earns can be read. */
@@ -159,6 +160,7 @@ export function renderLanding(adopt: boolean = false): void {
 		}
 		// Search is done with the keyboard, which would otherwise stay up over the results.
 		if (isTouchDevice()) input.blur();
+		revealSearch(query);
 		navigate(buildSearchPath(query));
 	});
 }
