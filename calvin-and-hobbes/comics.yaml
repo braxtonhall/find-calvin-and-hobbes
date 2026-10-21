@@ -534,11 +534,11 @@ strips:
   "19860331":
     transcript: I told you I'm not sick! What's that? Will it hurt? It's a tongue depressor. It won't hurt at all. What's that? Will it hurt? It's a stethoscope. It won't hurt at all. What's that? Will it hurt? It's a cattle prod. It hurts a little less than a branding iron. Little kids have no sense of humor.
     description: Calvin is in the doctor's office wondering what the doctor is doing.  The doctor shows his tongue depressor, the stethoscope, and Calvin wonders if they will hurt him.  Finally, the doctor pulls out an ear light.  Calvin asks what that is, and the doctor tells him a cattle prod.  Calvin keels over, while the doctor says little kids have no sense of humor.
-    characters: [calvin]
+    characters: [calvin, doctor]
   "19860401":
     transcript: Hey Doc, why are you rubbing my arm with cotton? Are you going to put a leech there? Are you going to bleed me? You're not going to amputate, are you? Are you?? What's that? Is that a shot? Are you going to ... Aaughh! It went clear through my arm!! Ow ow ow ow!!! I'm dying! I hope you've paid your malpractice insurance, you quack!! Where's my mom??!
     description: Calvin is in the doctor's office getting his arm swabbed.   He asks if the doctor is going to put a leech on it, if he's being bled, or going to amputate.  As Mom is reading a magazine, Calvin yells that the shot went through his arm.  He yells that he's dying and hopes the doctor's malpractice insurance is paid up.  Calvin calls him a quack and yells for his Mom, as she buries her face into the magazine.
-    characters: [calvin, mom]
+    characters: [calvin, mom, doctor]
   "19860402":
     transcript: Safari Al hacks his way through the jungle! Suddenly, a giant gorilla rips through the foliage! Clean your room. What? You heard me. It's a jungle in here!
     description: Calvin, as Safari Al, hacks through the jungle.  A giant gorilla rips through the foliage and grabs Safari Al.  The gorilla says "Clean your room".  Calvin, in his room, looks at Mom who tells him again to clean his room because it's a jungle in there.
@@ -2477,11 +2477,11 @@ strips:
   "19870729":
     transcript: Hi there, Calvin. I understand you're not feeling well. Me? I'm fine! I just sit around torture chambers in my underwear for kicks. Let's see your degree, you quack! I'm not going to hurt you. I'm just going to examine you to see what's wrong. I'll tell you what's wrong! I've got Dr. Frankenstein for a pediatrician, that's what's wrong! Nurse, call the anesthesiologist in here, will you please? My Dad's a lawyer, I'll have you know! Don't come near me!
     description: The doctor is seeing Calvin.  He tells Calvin he understands he's not feeling well.  Calvin retorts that he's fine. He sits around torture chambers in his underwear for kicks.  He asks to see the doctor's degree and calls him a quack.  The doctor says he isn't going to hurt Calvin.  He just wants to examine him.  Calvin says that what's wrong is that he has Dr. Frankenstein for a pediatrician.  The doctor whispers to the nurse to call the anesthesiologist.  Calvin tells him his Dad is a lawyer and not to come near him.
-    characters: [calvin]
+    characters: [calvin, doctor]
   "19870730":
     transcript: Deep in a dank dungeon on the dismal planet Zog, the fearless Spaceman Spiff is held prisoner by the sinister Zog king. A guard leads Spiff to the interrogation room. Our hero is stoic and defiant! At last I meet the famed Spaceman Spiff! I trust you are ... heh ... heh ... enjoying your visit? You're wasting your time, maggot from mars! I'll never give in! Never, you hear me?! Never! Kid, don't make me recant the Hippocratic oath, ok?
     description: Spaceman Spiff is in a dungeon on the planet Zog.  A guard leads Spiff to the interrogation room.  The inquisitor says he finally gets to meet the famed Spaceman Spiff.  He trusts Spiff is enjoying his visit.  Spiff calls him a maggot from Mars and says he'll never give in.  Calvin is hiding behind the scale with the doctor on his knees telling Calvin not to make him recant his Hippocratic oath.
-    characters: [calvin, spiff]
+    characters: [calvin, doctor, spiff]
   "19870731":
     transcript: Well, you certainly were a terror in the doctor's office. I fended him off with his own tongue depressor. That's why I didn't get a shot. You didn't need a shot. Your behavior was inexcusable. All that counts is that he couldn't get near enough to stick me. He thinks I'm a little pink pin cushion in underpants. Someday I hope you have a kid that puts you through what I've gone through. Yeah, Grandma says that's what she used to tell you.
     description: As they drive home, Mom tells Calvin he was a terror at the doctor's office.  Calvin says he didn't get a shot because he fended the doctor off with a tongue depressor.  Mom says he didn't need a shot and that his behavior was inexcusable.  Calvin is just glad that the doctor couldn't get close enough to stick him.  He says the doctor thinks he's a pink pin cushion in underpants.  Mom tells Calvin she hopes he has a kid one day who puts him through the same things he's putting her through.  Calvin replies that Grandma says that's what she used to tell Mom.
@@ -4262,7 +4262,7 @@ strips:
   "19881017":
     transcript: Well, it looks like Calvin just caught the bug going around. Nothing serious. Keep an eye on him, and let me know if he isn't feeling better soon. OK. Thank you. So long, Calvin. You were a good patient this time. Mm. Nothing like a little virus to take the edge off a kid. I'd still rather let his teacher deal with him.
     description: Calvin slowly puts his shirt back on.  The doctor tells Mom that Calvin just caught the bug that's going around. He tells her to keep an eye on Calvin and let him know if Calvin isn't feeling better soon.  Calvin sleepily walks away.  The doctor tells him he was a good patient today.  He then tells Mom there's nothing like a little virus to take the edge off a kid. Mom says she'd still rather let his teacher deal with him.
-    characters: [calvin, mom]
+    characters: [calvin, mom, doctor]
   "19881018":
     transcript: I get to stay home from school today. I get to lie in bed, drink tea, and read comic books all day. I wish I could do this every day. ... like some people I know. Your Mom doesn't bring ME tea in bed.
     description: Calvin is lying in bed.  He says he gets to stay home from school.  He gets to lie in bed, drink tea, and read comic books all day.  He says he wishes he could do that every day...like some people he knows.  He looks over at Hobbes, who's also in bed with comics.
@@ -6702,7 +6702,7 @@ strips:
   "19900613":
     transcript: Yep, that's chicken pox all right. CHICKEN pox?! Mom, what IS this guy? A veterinarian? The virus should run its course in about a week. He's mad! MAD, I say! I'll be the REAL doctor is tied up and gagged in the other exam room! He's extremely contagious, so keep him away from other kids. Sue him, Mom! Drive his malpractice insurance up! Calvin has to be INSIDE for a WEEK?? That's a nasty twitch you've developed. Hey Doc, for 10 bucks I'll make sure you see those kids in the waiting room again real soon!
     description: The doctor tells Mom that Calvin has chicken pox.  Calvin asks if he's a veterinarian.  The doctor says it will run its course in about a week.  Calvin complains that the doctor is mad.  He accuses him of having the real doctor tied up and gagged in the other exam room.  The doctor says Calvin is extremely contagious, so he needs to be kept from other kids.  Calvin wants Mom to sue him and drive up his malpractice insurance.  Horrified, Mom repeats that Calvin has to be inside for a week.  The doctor notices a nasty twitch Mom has developed.  Calvin offers, for ten dollars, to make sure the doctor sees all the kids in the waiting room again real soon.
-    characters: [calvin, mom]
+    characters: [calvin, mom, doctor]
   "19900614":
     transcript: Hello? Hi Susie! It's me, Calvin! I was wondering if you'd like to come over and play. Why sure! Boy, I don't think you've EVER invited me to... Calvin, what are you doing? Nothing, Mom. Go away. You're contagious! You can't have anyone over to play! Shh! Shh! You'll spoil the whole thing! I was going to trick Susie into catching... hey! Let go! Ow! *CLICK* Any chance of getting transferred, Dad?
     description: Calvin calls Susie on the phone.  He asks her if she'd like to come over and play.  Susie says he's never invited her before.  In the background, Mom asks Calvin what he's doing.  He tells her to go away.  Mom says he's contagious and can't have anyone over to play.  Calvin says she's spoiling the whole thing.  He was trying to trick Susie into catching his bug.  The phone hangs up.  Susie calls to her Dad to see if there's any chance of him transferring.
@@ -7013,11 +7013,11 @@ strips:
   "19900827":
     transcript: What are you doing? That's Susie's doll. I know. C'mon, let's scram. We can't take her doll! That would be STEALING! No it wouldn't. Are we going to give it back? If she pays the ransom.
     description: Hobbes asks what Calvin is doing.  He's picked up Susie's doll.  Hobbes says they can't take it.  That would be stealing.  Hobbes asks if they're going to give it back.  Calvin replies they will if she pays the ransom.
-    characters: [calvin, hobbes]
+    characters: [calvin, hobbes, binkybetsy]
   "19900828":
     transcript: Hey, where's Binky Betsy? I know I left her right here when I went inside. Did somebody TAKE her? Everything else is still here. Where did my doll go?! IF YOU WANT TO SEE YOUR DOLL AGAIN I always like cut-and-paste. How much should we ask for? A hundred dollars?
     description: Susie comes back and wonders what happened to her Binky Betsy.  She knows she left her there, and she wonders if someone took her.  Everything else is still there.  Calvin and Hobbes are making a ransom note.  Hobbes says he likes cut-and-paste.  Calvin asks how much they should ask for.  He thinks one hundred dollars.
-    characters: [calvin, hobbes, susie]
+    characters: [calvin, hobbes, susie, binkybetsy]
   "19900829":
     transcript: Mom, I can't find my doll. Have you seen it anywh... DING DONG Hmm, there's nobody here. What's this note? "Susie, if you want to see your doll again, leave $100 in this envelope by the tree out in front. Do not call the police. You cannot trace us. You cannot find us. Sincerely, Calvin."
     description: Susie goes back inside telling her Mom that she can't find her doll.  The doorbell rings.  No one is there, but there is a note on the ground.  Susie reads the note.  It reads "Susie, if you want to see your doll again, leave $100 in this envelope by the tree out front".  It warns her not to call the police.  It says she can't trace or find them.  It's signed "Sincerely, Calvin".
@@ -7050,11 +7050,11 @@ strips:
   "19900905":
     transcript: All right, Susie, I brought your dumb doll back! Now let Hobbes out, OK? Fair's fair! I dunno, Calvin. I'm thinking I might rather have your tiger. You can keep Binky Betsy. Aahh! I don't want a DOLL! This is yours! Take it! Oh, you'll grow to like her, Calvin. She has the cutest accessories you can buy! No! No! I want Hobbes! Take this! But I think Hobbes likes it better here with ME. HE DOES NOT!
     description: Calvin brings Susie's doll back to her house.  Susie opens the door and tells Calvin she thinks she might rather have his tiger than her doll.  She tells Calvin he can keep Binky Betsy.  Calvin doesn't want a doll.  Susie says he'll grow to like her.  She has the cutest accessories you can buy.  Calvin says he wants Hobbes.  Susie tells him she thinks Hobbes likes it better there with her.  Calvin yells that he does not.
-    characters: [calvin, susie]
+    characters: [calvin, susie, binkybetsy]
   "19900906":
     transcript: Look, Susie, I'll give you your doll AND I'll give you a quarter, OK? It's all I have. Will you let Hobbes out NOW?? All right, here. And next time, leave my stuff alone. Got it? Right! Sure! Jerk. What kind of tiger ARE you?! You didn't even maul her! What were you DOING there?! Wouldn't YOU like to know!
     description: Calvin offers to give Susie her doll and a quarter to return Hobbes.  Susie agrees and tells Calvin to leave her stuff alone next time.  They exchange and think each other are jerks.  Later, Calvin asks Hobbes what kind of tiger he is.  He didn't try to maul her.  He asks what he was doing in Susie's house.  Hobbes says wouldn't Calvin like to know.
-    characters: [calvin, hobbes, susie, stuffedhobbes]
+    characters: [calvin, hobbes, susie, stuffedhobbes, binkybetsy]
   "19900907":
     transcript: I've got to say, Hobbes, it doesn't give our club a lot of credit when the First Tiger is a willing captive of the enemy. THBPTB We stole HER doll, and I'm the one who had to pay ransom! It's a disgrace! You get 15 demerits for besmirching the club's reputation, plus five demerits for conduct unbecoming an officer, and a censure in the book club for not devouring Susie when you had the chance. Hmm, anything else? I almost told her our code when she rubbed my tummy. GOOD GRAVY, WHOSE SIDE ARE YOU ON?!
     description: In their tree fort, Calvin says it doesn't give their club a lot of credit when the First Tiger is a willing captive of the enemy.  Hobbes sticks out his tongue.  Calvin says they stole her doll, and he had to pay ransom.  He says it's a disgrace.  Calvin doles out demerits for besmirching the club's reputation and conduct unbecoming an officer.  He also gives a censure for not devouring Susie when he had the chance.  When Calvin asks if there's anything else, Hobbes tells him he almost gave her their code when she rubbed his tummy.  Calvin asks whose side he's on.
@@ -10353,11 +10353,11 @@ strips:
   "19930809":
     transcript: Good! Susie's still playing on the sidewalk! We'll stroll by and "accidentally" drop the coded message. Yes Hobbes, I have a TOP SECRET, CODED letter for you here! Verrrry mysterious! Verrry secret! Just make sure the note doesn't fall into a GIRL'S hands! If the code is broken and read, our plans will be ruined! We did it! Ha! Everything is going perfectly! ...Except she's not picking up the letter.
     description: Calvin sees Susie still playing.  He and Hobbes will walk past Susie and drop the top secret, coded letter for Hobbes.  They walk past, drop the note, and Calvin says if it falls into a girl's hands, their plans will be ruined.  Behind a tree, Calvin says everything is working perfectly.  Hobbes says except she isn't picking up the letter.
-    characters: [calvin, hobbes, susie, stuffedhobbes]
+    characters: [calvin, hobbes, susie, stuffedhobbes, binkybetsy]
   "19930810":
     transcript: Why isn't Susie picking up the coded message?! Doesn't she SEE it?? What's WRONG with her?! Doesn't she know enough to intercept somebody else's secret letter when it's dropped right in front of her?? Maybe she wasn't paying attention to us. That's inconceivable! Who wouldn't be interested in everything we do?!
     description: Calvin wonders why Susie doesn't pick up the letter.  Calvin is frustrated.  Hobbes wonders if she wasn't paying attention to them.  Calvin thinks it's inconceivable anyone wouldn't be interested in everything they do.
-    characters: [calvin, hobbes, susie]
+    characters: [calvin, hobbes, susie, binkybetsy]
   "19930811":
     transcript: Look! Susie sees the letter! She's picking it up! She's reading the envelope! ... she's walking over here... You dropped this letter for Hobbes. Here. Um... gee, thanks. Well, that was awfully decent of her. It's no use! It's no use! Everybody gets good enemies except ME!
     description: Hobbes sees Susie picking up the letter.  She walks over, and returns the letter to Calvin.  Hobbes says that was awfully decent of her.  Calvin bangs his hands on the tree, saying everybody gets good enemies except him.
@@ -10365,7 +10365,7 @@ strips:
   "19930812":
     transcript: Let's stroll over THIS way ONCE AGAIN, Hobbes! Yes, lets! It's a good think you have that TOP SECRET, CODED letter, Hobbes! It would be awful if you happened to DROP it near SUSIE one more time! If I were SUSIE, and I FOUND THE LETTER, I'd PICK IT UP AND DECODE IT, so I could RUIN ALL OUR PLANS! That would sure be BAD for US! It worked! She's opening the letter! Good. I was afraid we'd have to hit her on the head and read it to her.
     description: Calvin and Hobbes walk by Susie again.  They mention the top secret note again. Calvin mentions Susie finding the letter and spoiling their plans again.  Behind the tree, Hobbes sees Susie opening the letter.  Calvin was worried he'd have to hit her on the head and read it to her.
-    characters: [calvin, hobbes, susie, stuffedhobbes]
+    characters: [calvin, hobbes, susie, stuffedhobbes, binkybetsy]
   "19930813":
     transcript: This must be the coded letter Calvin's trying to get me to read. Hmph, not much of a code... just backward letters! I can read it through the back of the page. "Dear Hobbes, if Susie goes behind our house at noon, all our secret plans will be ruined. Calvin." Gosh, it's almost noon! I'd better hurry over to Calvin's house if I want to spoil his plans! Wheee! Ha ha! She fell for it! C'mon Hobbes, hurry!
     description: Susie reads the coded note.  She's suspicious.  She yells that she better hurry over to spoil their plans.  Calvin says she fell for it, so off they go.
@@ -12358,7 +12358,7 @@ strips:
   "19950830":
     transcript: Here's Stinky, the talking sock! Hi, Stinky! Say something to Susie! Hello, you ugly bucket of boogers! That darn "Throw your voice" ad made it sound like everyone would be fooled.
     description: Calvin has a sock on his hand.  He goes up to Susie and says it's Stinky, the talking sock.  Stinky says Susie is an ugly bucket of boogers.  Calvin, beaten up and lying on the ground, says that darn "throw your voice" ad made it sound like everyone would be fooled.
-    characters: [calvin, susie]
+    characters: [calvin, susie, binkybetsy]
   "19950831":
     transcript: There aren't many heroes these days. Who is out there to inspire us with a personal example of virtue and self-sacrifice in the name of a higher good? Who can we look up to? Business leaders? Sports figures? Politicians? Celebrities? Heck, we're lucky if they don't end up in prison! Fortunately, if we can't get inspiration, we'll accept entertainment. As usual, the hero business is up to me.
     description: Calvin tells Hobbes there aren't many heroes these days.  He asks who is out there to inspire them with a personal example of virtue and self-sacrifice.  He asks if they can look up to business leaders, politicians, celebrities.  He says they're lucky if they don't end up in prison.  Hobbes says that fortunately, if they can't get inspiration, they'll accept entertainment.  Calvin dons his Stupendous Man hood and says that the hero business is up to him.
@@ -12530,15 +12530,15 @@ strips:
   "19951011":
     transcript: A UFO!! Take us to the Supreme Earthling Potentate. Um... well... Speaking. Ah! What luck. It was I who chose the landing site. Kudos for Navigator Nebular!
     description: Two aliens come out of their spacecraft and ask to see the supreme earthling potentate.  Calvin says they're speaking to him.  One of the aliens says he chose the landing site.  Kudos to navigator Nebular.
-    characters: [calvin, hobbes, galaxoid, nebular]
+    characters: [calvin, hobbes, galaxoidnebular]
   "19951012":
     transcript: So, uh, what can I do for you? We are taking over your world. You are?? What for?? Earth is prime real estate. Location, location, location. I guess I'd never thought about that. Charm, atmosphere, quiet galaxy... Actually the atmosphere needs cleaning. A good fixer upper.
     description: The aliens are taking over the world.  Calvin asks why.  The aliens reply earth is prime real estate.  Calvin says he never thought of that.  One alien says there is charm, atmosphere, and a quiet galaxy.  Hobbes says the atmosphere needs cleaning.  The other alien says it's a good fixer upper.
-    characters: [calvin, hobbes, galaxoid, nebular]
+    characters: [calvin, hobbes, galaxoidnebular]
   "19951013":
     transcript: As Supreme Earthling Potentate, I'm afraid I can't let you just come in and take over the planet. You make this difficult. Prepare for war. Let's not be hasty. I'll trade you Earth for 50 alien tree leaves. Pst! These primitive fools must use leaves as currncy! It's a deal! I need them by 8:00 tonight, and they have to be properly identified and labeled. Hurry, Nebular! At light speed, we can just make it! our leader will be most pleased.
     description: Calvin says he can't let them come in and take over the planet.  The aliens tell him to prepare for war.  Calvin offers to trade the earth for fifty alien tree leaves.  One alien whispers the primitive fools must use leaves for currency.  It's a deal.  Calvin says he needs them by 8:00 tonight, properly identified and labeled.  The aliens race off, saying their leader will be most pleased.
-    characters: [calvin, galaxoid, nebular]
+    characters: [calvin, galaxoidnebular]
   "19951014":
     transcript: You're trading the Earth for 50 alien tree leaves?! I'll have the coolest project in the class! And best of all, we don't need to waste any more time on this! The aliens are doing all the work! We can goof off the rest of the day! But then the aliens take over the Earth. Well it's not like the grownups have done such a bang-up job.
     description: Hobbes asks Calvin if he's trading earth for fifty alien tree leaves.  Calvin says he'll have the coolest project in class.  Plus, he doesn't have to waste any more time on gathering his own leaves.  They can goof off all day.  Hobbes says then the aliens take over the earth.  Calvin replies it isn't like the grownups have done such a bang-up job.
@@ -12813,15 +12813,15 @@ strips:
   "19951219":
     transcript: Oh boy, look at all the snow! It must be six inches deep! This will be perfect for sledding or... DING DONG DING DONG DING DONG All right! I'm coming! I'm coming! What the heck is wrong with this planet you sold us?!
     description: Calvin looks out the window to see snow.  He thinks it will be perfect sledding weather.  The doorbell rings.  It's the aliens Calvin sold the planet to for fifty alien tree leaves.  They asks what's wrong with the planet he sold.
-    characters: [calvin, galaxoid, nebular]
+    characters: [calvin, galaxoidnebular]
   "19951220":
     transcript: Galaxoid and nebular! This cold white glop covers us and freezes our innards! It's snow. You'd better get used to it, 'cause we get it every winter. You did not tell us that this planet's axis would tilt away from the sun. You didn't ask. We paid 50 leaves for this planet! You greatly overcharged us! Yeah well, "let the buyer beware." You are a most dishonorable potentate! We demand you bring this planet up to code!
     description: The aliens complain the cold white glop covers them and freezes their innards.  Calvin says it's snow.  They get it every winter.  The aliens complain Calvin didn't tell them about that.  He replies that they didn't ask.  They say they were overcharged.  Calvin tells them "let the buyer beware".  The aliens walk off complaining that he's a dishonorable potentate.  They demand he bring the planet up to code.
-    characters: [calvin, galaxoid, nebular]
+    characters: [calvin, galaxoidnebular]
   "19951221":
     transcript: Who's at the door, Calvin? AAHH! Um.. uh.. girl scouts! Do we want any cookies? Girl scouts? Cookies? It seems early, but sure, let me get my purse. Oh no! Scram, you guys! Not until you fix the climate! I'll see what I can do. Do not trifle with us, Earth leader! Where are the girl scouts? They suddenly had to go earn a merit badge. Quick, where's Hobbes?
     description: Mom asks who's at the door.  Calvin tells her it's the Girl Scouts.  He whisks the aliens outside.  He tells them he'll see what he can do about fixing the climate.  Mom asks where the Girl Scouts went.  Calvin says they had to earn a merit badge.
-    characters: [calvin, mom, galaxoid, nebular]
+    characters: [calvin, mom, galaxoidnebular]
   "19951222":
     transcript: The aliens didn't know about winter? They claim I sold them a planet with a faulty axis. What should I do? Offer a refund. Give back their leaf collection. Arrggh! I threw it away when it got such a bad grade! Hmm... well, we should at least help them stay warm then. But what could they wear? They don't even have arms! ... they need huge socks or something. HEY! NO! Bad idea! Bad idea!
     description: Calvin tells Hobbes the aliens claim he sold a defective planet.  Hobbes suggests offering a refund.  Calvin threw away the leaf collection when it got a bad grade.  Hobbes thinks they should help them stay warm.  Calvin says they don't have arms.  They'd need huge socks.  Hobbes starts to take down their Christmas stockings from the fireplace.  Calvin thinks that's a bad idea.
@@ -12829,7 +12829,7 @@ strips:
   "19951223":
     transcript: Ooh, this is toasty! Thank you, Earth leader! That's my Christmas stocking! They're going away with our stockings! Santa can't fill 'em with loot! I'm sure Santa knows we did a nice thing and he'll work it all out. Hey yeah, I did something GOOD! We're talking jackpot! We're talking multiple trips from the pole to haul it all! Your selflessness is the hope of the season.
     description: Hobbes puts the Christmas stockings on the aliens.  They thank the earth leader and leave.  Calvin complains Santa can't fill them with loot.  Hobbes is sure that Santa knows they did a good thing, and things will work out.  Calvin realizes he did do something good.  He's thinking jackpot now.  Hobbes says Calvin's selflessness is the hope of the season.
-    characters: [calvin, hobbes, galaxoid, nebular]
+    characters: [calvin, hobbes, galaxoidnebular]
   "19951224":
     transcript: Ok boys, have we loaded everything? Ah, there's still the matter of this Calvin, sir. His list is 30 pages long, not including the supplement about incendiary weapons. The research dept. thought you should handle this one personally. Well, is he naughty or nice? Ah, a bit problematic, chief... here's his dossier. Ohhh yes, the "noodle incident" kid... That was a while ago, boss. He says he was framed, and we've had trouble verifying the particulars. Accounts seem to vary. What about all these slushballs thrown at the girl down the street? My my my! No dispute there. Surveillance documents some 400 incidents, but the kid claims extenuating circumstances. Hmm.. don't they all. A tiger vouches for the kid's character... says the kid tries to be sort of good if he's not tempted otherwise. What do his parents say? Here's the dad's comments. We're looking into the sarcasm factor. All right, I've made up my mind. Is the boy asleep yet? Ah, no, he's wide awake. Santa won't come until we're asleep, you know. I can't take the suspense!
     description: One of Santa's elves wants him to look at Calvin's list.  It includes a supplement on incendiary weapons.  Santa asks if Calvin's naughty or nice.  The elf hands Santa the dossier.  Santa notices "the noodle incident".  The elf says they have had trouble verifying the particulars of that case.  Santa notices all the slushballs Calvin has thrown at the girl down the street.  The elf says that surveillance documents 400 incidents, but the kid claims extenuating circumstances.  The elf says the tiger vouches for the kid's character.  Santa asks what the parents say.  The elf indicates they're looking into the sarcasm factor in the dad's comments.  Santa says he's made up his mind and asks if Calvin's asleep.  The elf says he is wide awake.  In bed, Hobbes tells Calvin Santa won't come until they're asleep.  Calvin can't take the suspense.

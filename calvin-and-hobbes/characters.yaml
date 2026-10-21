@@ -24,8 +24,12 @@ lockjaw:
   name: Mr. Lockjaw
 barber:
   name: The Barber
+doctor:
+  name: The Doctor
 stuffedhobbes:
   name: Stuffed Hobbes
+binkybetsy:
+  name: Binky Betsy
 spiff:
   name: Spaceman Spiff
 stupendous:
@@ -34,7 +38,5 @@ tracer:
   name: Tracer Bullet
 napalm:
   name: Captain Napalm
-galaxoid:
-  name: Galaxoid
-nebular:
-  name: Nebular
+galaxoidnebular:
+  name: Galaxoid and Nebular

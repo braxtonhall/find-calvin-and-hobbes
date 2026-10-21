@@ -5,7 +5,8 @@ import "./styles/components.css";
 import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS, SUBJECTS } from "./bundled-data";
 import { Term, registerVocabulary } from "./filter-vocabulary";
 import { arcRange } from "./pages/page";
-import { subjectYears as subjectYearsOf } from "./pages/subjects";
+import { subjectStripCount, subjectYears as subjectYearsOf } from "./pages/subjects";
+import { sortedByCount } from "./pages/collections";
 import { byAppearances } from "./pages/people";
 import { state } from "./state";
 import { buildGridData, renderGrid, loadComicData } from "./grid";
@@ -33,10 +34,11 @@ function initialize(): void {
 	);
 	const named = (items: { id: string; name: string }[]): Term[] =>
 		items.map((item) => ({ value: item.id, hint: item.name }));
-	// The characters most often seen first, where the creators and subjects keep their files' order.
+	// The most common first, ties to the earliest, then by id: the subjects already come by first
+	// day and id, so a stable sort by count keeps those ties.
 	const characters = named([...CHARACTERS].sort(byAppearances));
-	const creators = named(CREATORS);
-	const subjects = named(SUBJECTS);
+	const creators = named([...CREATORS].sort(byAppearances));
+	const subjects = named(sortedByCount(SUBJECTS, subjectStripCount));
 	// Empty on a site without characters, where there is no `@featuring:` to ask.
 	registerVocabulary("featuring", () => characters);
 	// And without creators, where there is no `@by:`.

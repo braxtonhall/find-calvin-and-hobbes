@@ -172,6 +172,8 @@ corrections:
     books: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.762468410=Book&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
     arc: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.762468410=Arc&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
     arcs: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.762468410=Arc&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
+    character: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.762468410=Character&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
+    characters: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.762468410=Character&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
     credits: https://docs.google.com/forms/d/e/1FAIpQLSdlFXnwd3p8fJjuZg91WKNVGMwoTYHvrg-mZJj4VFpcF3nq8w/viewform?usp=pp_url&entry.1138251038={{page.url}}&entry.2127852102={{page.origin}}&entry.46703544={{site.commit}}
 
 # The archive itself. Each part can be written here in place, but is usually `!Import ./file.yaml`,

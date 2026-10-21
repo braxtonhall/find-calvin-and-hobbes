@@ -107,7 +107,16 @@ test("the corrections form's address", async (suite) => {
 	});
 
 	await suite.test("is there only for a kind of page with a template", () => {
-		for (const view of ["detail", "collection", "collections", "arc", "arcs", "credits"] as const) {
+		for (const view of [
+			"detail",
+			"collection",
+			"collections",
+			"arc",
+			"arcs",
+			"character",
+			"characters",
+			"credits",
+		] as const) {
 			assert.notEqual(buildCorrectionUrl({ view, url: "", commit: "" }), null, view);
 		}
 		assert.equal(buildCorrectionUrl({ view: "landing", url: "", commit: "" }), null);
