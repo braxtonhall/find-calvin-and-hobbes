@@ -195,7 +195,9 @@ export function judgeFilter(
 				reason: `${written} describes a strip in a collection: use it inside @in (…) or @has (…)`,
 			};
 		}
-		return knows("as", value, language) ? { filter: { kind: "as", tag: value } } : { filter: null };
+		return knows("as", value, language)
+			? { filter: { kind: "as", tag: canonical("as", value, language) } }
+			: { filter: null };
 	}
 
 	if (filterSpec(name, language) === undefined) {

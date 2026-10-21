@@ -145,9 +145,19 @@ export const COLLECTION_MINE: readonly Term[] = [
 
 /**
  * What `@as:` can say about a strip in a collection: how that one collection holds that one strip.
- * Only a book's alterations so far.
+ * Whether a book altered it, where any book did, and how it printed it, where the Sundays were a
+ * format of their own. A book printing a strip twice, once in colour and once in ink, prints it as both.
  */
-export const AS_TAGS: readonly Term[] = [{ value: "altered", hint: "Printed with changes in this book" }];
+export const AS_TAGS: readonly Term[] = [
+	...(ALTERATIONS ? [{ value: "altered", hint: "Printed with changes in this book" }] : []),
+	...(PAGE_CONFIG.colourSundays
+		? [
+				spelt({ value: "colour", hint: "Printed in colour in this book", american: "color" }),
+				spelt({ value: "greyscale", hint: "Printed in greyscale in this book", american: "grayscale" }),
+				{ value: "ink", hint: "Printed as bare ink in this book" },
+			]
+		: []),
+];
 
 const REGISTRY = new Map<string, Vocabulary>([
 	["is", () => TAGS],

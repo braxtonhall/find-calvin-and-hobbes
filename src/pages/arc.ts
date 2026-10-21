@@ -1,7 +1,9 @@
 import { escHtml } from "../utils";
 import { buildArcPath } from "../routes";
 import { addressOf } from "../base-path";
-import { Appearance, Arc, Comic } from "../types";
+import { Appearance, Arc, Comic, PrintFormat } from "../types";
+import { PRINT_FORMATS, printedFormats } from "../print-format";
+import { PAGE_CONFIG } from "../site-config";
 import { ArcNeighbour, ArcPage, PageSource, arcRange } from "./page";
 import { buildFlashLabels, buildArcsButton, buildBackAndHomeButtons } from "./nav-buttons";
 import { buildAppearancesSectionHtml, summarizeCollections } from "./detail";
@@ -16,16 +18,26 @@ export function stripOn(source: PageSource, date: string): Comic | undefined {
  * Where each book that holds the whole arc prints it, the arc's pages gathered into one appearance
  * per volume. Pages are in the order of the arc's strips, so the first is where the arc begins.
  */
-function arcAppearances(strips: (Comic | undefined)[], arc: Arc): Appearance[] {
+function arcAppearances(source: PageSource, strips: (Comic | undefined)[], arc: Arc): Appearance[] {
 	const appearances: Appearance[] = [];
 	for (const collection of arc.collections) {
+		const book = source.collectionsById?.get(collection);
 		const inBook = strips.flatMap((comic) =>
-			(comic?.appearances ?? []).filter((appearance) => appearance.collection === collection),
+			comic
+				? (comic.appearances ?? [])
+						.filter((appearance) => appearance.collection === collection)
+						.map((appearance) => ({
+							...appearance,
+							formats: printedFormats(comic, appearance, book, PAGE_CONFIG.colourSundays),
+						}))
+				: [],
 		);
 		const pagesByVolume = new Map<number | undefined, Set<number>>();
+		const formats = new Set<PrintFormat>();
 		for (const appearance of inBook) {
 			if (!pagesByVolume.has(appearance.volume)) pagesByVolume.set(appearance.volume, new Set());
 			for (const page of appearance.pages) pagesByVolume.get(appearance.volume)!.add(page);
+			for (const format of appearance.formats ?? []) formats.add(format);
 		}
 		const volumes = [...pagesByVolume].sort(([a], [b]) => (a ?? 0) - (b ?? 0));
 		for (const [volume, pages] of volumes) {
@@ -33,6 +45,8 @@ function arcAppearances(strips: (Comic | undefined)[], arc: Arc): Appearance[] {
 				collection,
 				...(volume !== undefined ? { volume } : {}),
 				pages: [...pages],
+				// The whole arc's, on each volume's: the cover goes grey for how the book printed the arc.
+				...(formats.size ? { formats: PRINT_FORMATS.filter((format) => formats.has(format)) } : {}),
 			});
 		}
 	}
@@ -86,7 +100,7 @@ export function arcPageFrom(source: PageSource, arcId: string): ArcPage {
 		arc,
 		arcsLoaded: true,
 		strips,
-		appearances: arcAppearances(comics, arc),
+		appearances: arcAppearances(source, comics, arc),
 		collections,
 		prev: neighbour(arcs[index - 1]),
 		next: neighbour(arcs[index + 1]),
@@ -137,7 +151,12 @@ export function buildArcHtml(page: ArcPage, canGoBack: boolean): string {
 		</div>
 		<div class="columns">
 			<div class="columns__main arc-strips">${resultsHtml(page.strips, "")}</div>
-			<div class="columns__aside arc-collections">${buildAppearancesSectionHtml(page.appearances, collectionsById, "", false)}</div>
+			<div class="columns__aside arc-collections">${buildAppearancesSectionHtml(
+				page.appearances,
+				collectionsById,
+				"",
+				page.strips.map((row) => row.comic),
+			)}</div>
 		</div>
 	</div>`;
 }

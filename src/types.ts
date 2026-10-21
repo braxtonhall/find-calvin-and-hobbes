@@ -18,13 +18,29 @@ export interface Comic {
 	creators?: Credit[];
 	/** What the strip is about, by id, as `comics.yaml` lists them: a running gag, a recurring game. */
 	subjects?: string[];
+	/**
+	 * How a special was made to be printed, as `comics.yaml` says, where a daily is ink and a Sunday
+	 * colour by the day it ran. Only on a special, and only where `config.yaml` has `colourSundays`.
+	 */
+	format?: PrintFormat;
 }
+
+/**
+ * How a book printed a strip: in colour, in black and white shaded grey, as the early books printed
+ * their Sundays, or as bare ink, as the dailies ran and as a catalogue prints the original art.
+ */
+export type PrintFormat = "colour" | "greyscale" | "ink";
 
 export interface Appearance {
 	collection: string;
 	volume?: number;
 	pages: number[];
 	altered?: true;
+	/**
+	 * How the book printed the strip, on all its pages together, in `PRINT_FORMATS`' order: only
+	 * where that is not as the book usually prints such a strip. Read it with `printedFormats`.
+	 */
+	formats?: PrintFormat[];
 }
 
 export interface Collection {
@@ -36,7 +52,10 @@ export interface Collection {
 	pub_month: number;
 	pub_day?: number;
 	image: string;
-	/** Whether it printed the Sundays in colour. Read only where `config.yaml` has `colourSundays`. */
+	/**
+	 * Whether it printed the Sundays in colour, rather than in greyscale: how a Sunday on one of its
+	 * pages is printed where the page does not say. Read only where `config.yaml` has `colourSundays`.
+	 */
 	colour?: boolean;
 	sundays?: boolean;
 	notes: string[];

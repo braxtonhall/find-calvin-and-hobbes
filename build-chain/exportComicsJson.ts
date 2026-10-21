@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Appearance, CollectionData } from "./collectionPages";
 import { loadComicSource } from "./comicSource";
-import { Arc, Credit } from "../src/types";
+import { Arc, Credit, PrintFormat } from "../src/types";
 import { loadComicImages } from "./siteConfig";
 import { aspectRatio } from "./imageSize";
 import { variantSourceWidth } from "./imageVariants";
@@ -45,6 +45,7 @@ interface Entry {
 	characters?: string[];
 	creators?: Credit[];
 	subjects?: string[];
+	format?: PrintFormat;
 }
 
 /**
@@ -115,6 +116,7 @@ export function exportComicsJson(
 		};
 		if (special.alternate) entry.alternate = special.alternate;
 		if (special.sort) entry.sort = special.sort;
+		if (special.format) entry.format = special.format;
 		attach(entry, sid);
 		attachAppearances(entry, sid);
 		attachLists(entry, sid);

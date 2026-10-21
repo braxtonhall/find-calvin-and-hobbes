@@ -2,6 +2,7 @@ import "./books.css";
 
 import { state } from "../state";
 import { isShowing } from "../utils";
+import { respell } from "../spelling";
 import { onViewportShift, viewport } from "../placement";
 import { attachCellHighlightLink, clearCollectionSoon, datesOf, highlightCollection } from "./cell-highlight";
 
@@ -165,6 +166,8 @@ function openPopup(
 
 	const element = popupElement();
 	element.replaceChildren(template.content.cloneNode(true));
+	// The template is inert, so the page's respelling never reached it.
+	respell(element);
 	element.setAttribute("aria-label", cover.getAttribute("aria-label") ?? "");
 	element.querySelectorAll<HTMLElement>("a.book__arrow").forEach((link) => {
 		// A plain click only, which is the one the router follows here rather than in another tab.

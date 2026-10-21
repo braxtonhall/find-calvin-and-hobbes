@@ -13,7 +13,7 @@
  * to know about both.
  */
 
-import { ALTERATIONS, COLLECTION_MINE, COLLECTION_TAGS, MINE, TAGS } from "./filter-vocabulary";
+import { AS_TAGS, COLLECTION_MINE, COLLECTION_TAGS, MINE, TAGS } from "./filter-vocabulary";
 import { PAGE_CONFIG } from "./site-config";
 
 /**
@@ -226,14 +226,15 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 			{ label: "YY", hint: "any year ending in those two digits" },
 		],
 	},
-	...(ALTERATIONS
+	...(AS_TAGS.length > 0
 		? [
 				{
 					name: "as",
 					hint: "How this strip appears in this collection",
 					vocabulary: true,
 					language: "both",
-					templates: [{ label: "tag", hint: "altered" }],
+					// The last, which is spelt one way only: `ink`, or else `altered`.
+					templates: [{ label: "tag", hint: AS_TAGS[AS_TAGS.length - 1].value }],
 				} satisfies FilterSpec,
 			]
 		: []),

@@ -86,7 +86,7 @@ const COMICS: Comic[] = [
 		transcript: "Snow everywhere! Let's build a fort.",
 		appearances: [
 			{ collection: "snowbook", pages: [1], altered: true },
-			{ collection: "plainbook", pages: [1] },
+			{ collection: "plainbook", pages: [1, 3], formats: ["greyscale", "ink"] },
 		],
 		arcs: ["snowarc"],
 		characters: ["susie"],
@@ -330,6 +330,18 @@ test("the strip language", async (suite) => {
 		assert.deepEqual(strips("@in (@id:plainbook @as:altered)"), []);
 		assert.deepEqual(strips("@in:plainbook @in (@not @id:plainbook @as:altered)"), ["1988-01-03"]);
 		assert.deepEqual(strips("@only @in @not @as:altered"), ["1988-01-04", "1988-01-05"]);
+	});
+
+	// Only the plain book's printing of the Sunday says how; the rest are as their books usually print them.
+	await suite.test("@as: says how this book printed the strip, in either spelling", () => {
+		setUp();
+		assert.deepEqual(strips("@in @as:colour"), ["1988-01-03"]);
+		assert.deepEqual(strips("@in (@id:plainbook @as:color)"), []);
+		assert.deepEqual(strips("@in (@id:plainbook @as:grayscale)"), ["1988-01-03"]);
+		assert.deepEqual(strips("@in (@id:plainbook @as:greyscale @as:ink)"), ["1988-01-03"], "printed both ways");
+		assert.deepEqual(strips("@in (@id:snowbook @as:ink)"), ["1988-01-04"]);
+		assert.deepEqual(listed("@has @as:color", "book"), ["snowbook"]);
+		assert.deepEqual(listed("@has @as:ink", "arc"), [], "only a book prints a strip");
 	});
 
 	await suite.test("each kind of collection has its operator, and its filter as short for it", () => {

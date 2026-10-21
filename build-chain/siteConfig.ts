@@ -418,6 +418,12 @@ export function loadOptionalPart(name: OptionalPart, config?: string): unknown {
 	return naming(config, () => partIsOff(value, name)) ? false : resolved(value);
 }
 
+/** Whether the Sundays ran in colour and the dailies in ink, from `config.yaml` alone. See `PageConfig`. */
+export function loadColourSundays(config?: string): boolean {
+	const raw = readConfig(config);
+	return naming(config, () => flagSetting(raw.colourSundays, "colourSundays", false));
+}
+
 /** Which of the archive's optional parts this site has, from `config.yaml` alone. See `PageConfig`. */
 export function loadFeatures(
 	config?: string,

@@ -9,7 +9,7 @@ import { TUNING } from "../src/tuning";
 import { CANONICAL_FORMS } from "../src/compounds";
 import { state } from "../src/state";
 import { ARCHIVE_SPAN } from "../src/archive";
-import { RERUNS } from "../src/bundled-data";
+import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS, RERUNS, SUBJECTS } from "../src/bundled-data";
 import { PAGE_CONFIG } from "../src/site-config";
 import { loadPageConfig } from "../build-chain/siteConfig";
 import { loadCollectionData } from "../build-chain/collectionPages";
@@ -19,6 +19,9 @@ import { exportRerunsJson } from "../build-chain/reruns";
 import { exportDescriptions } from "../build-chain/exportDescriptions";
 import { generateCollectionIndex } from "../build-chain/generateCollectionIndex";
 import { loadArcs } from "../build-chain/arcs";
+import { loadCharacters } from "../build-chain/characters";
+import { loadCreators } from "../build-chain/creators";
+import { loadSubjects } from "../build-chain/subjects";
 import { CollectionIndex } from "../src/types";
 import { withConfig } from "./helpers/config";
 
@@ -38,10 +41,25 @@ registerVocabulary("in", () =>
 	index.collections.map((collection) => ({ value: collection.id, hint: collection.name })),
 );
 
-/** The archive as the app has it once it has loaded: the strips with their books and arcs, the reruns, the descriptions. */
+/**
+ * The archive as the app has it once it has loaded: the strips with their books, arcs, characters,
+ * creators and subjects, as the build writes them; the reruns; the descriptions; and the parts that
+ * ship inside the script, as `useBundledData` sets them, which a crossing like `@featuring rosalyn`
+ * looks through.
+ */
 function installSiteArchive(): void {
+	state.collectionIndex = COLLECTION_INDEX;
+	state.collectionsById = new Map(COLLECTION_INDEX.collections.map((collection) => [collection.id, collection]));
+	state.arcs = ARCS;
+	state.arcsById = new Map(ARCS.map((arc) => [arc.id, arc]));
+	state.charactersById = new Map(CHARACTERS.map((character) => [character.id, character]));
+	state.creatorsById = new Map(CREATORS.map((creator) => [creator.id, creator]));
+	state.subjectsById = new Map(SUBJECTS.map((subject) => [subject.id, subject]));
 	const arcs = loadArcs(comicSource, collectionData);
-	state.comics = JSON.parse(exportComicsJson(collectionData, "/", arcs));
+	const characters = loadCharacters(comicSource).byStrip;
+	const creators = loadCreators(comicSource).byStrip;
+	const subjects = loadSubjects(comicSource).byStrip;
+	state.comics = JSON.parse(exportComicsJson(collectionData, "/", arcs, characters, creators, subjects));
 	state.reruns = new Map(Object.entries(JSON.parse(exportRerunsJson(comicSource))));
 	state.descriptions = new Map(Object.entries(JSON.parse(exportDescriptions())));
 }

@@ -104,11 +104,11 @@ export function preferredSpelling(): Spelling {
 	return rememberedSpelling() ?? guessedSpelling();
 }
 
-/** Remembers the spelling a reader has written out in full: `@is:color` or `@is:colour`. */
+/** Remembers the spelling a reader has written out in full: `@is:color` or `@as:greyscale`. */
 export function rememberSpelling(text: string): void {
-	const spelt = /@is:colou?r(?![a-z])/i.exec(text);
+	const spelt = /@(?:is|as):(?:colou?r|gr[ae]yscale)(?![a-z])/i.exec(text);
 	if (spelt === null) return;
-	chooseSpelling(/colour/i.test(spelt[0]) ? "british" : "american");
+	chooseSpelling(/colour|grey/i.test(spelt[0]) ? "british" : "american");
 }
 
 /**
@@ -118,6 +118,7 @@ export function rememberSpelling(text: string): void {
  */
 const AMERICAN: Readonly<Record<string, string>> = {
 	colour: "color",
+	greyscale: "grayscale",
 	spelt: "spelled",
 };
 

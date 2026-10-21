@@ -1,4 +1,4 @@
-import { Appearance, Comic } from "../types";
+import { Appearance, Comic, PrintFormat } from "../types";
 import { escHtml } from "../utils";
 import { srcsetAttributes } from "../srcset";
 import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
@@ -17,6 +17,8 @@ import { PAGE_CONFIG } from "../site-config";
 import { StripLinkSubject, stripLinks } from "../strip-links";
 import { bookmarkId, ownershipId } from "../library-file";
 import { buildOwnershipControlsHtml } from "./ownership";
+import { PRINT_FORMATS, printedFormats } from "../print-format";
+import { spellable } from "../spelling";
 
 export function getAdjacentComicDate(
 	source: PageSource,
@@ -275,6 +277,8 @@ interface Printing {
 	collection: DetailCollection;
 	/** Where the strip is, one per volume it is in: the volume, when the book has them, and the pages. */
 	places: { volume?: number; pages: number[] }[];
+	/** How the book printed it, on every page together. None where the site has no `colourSundays`. */
+	formats: Set<PrintFormat>;
 }
 
 function buildPrintings(
@@ -291,12 +295,13 @@ function buildPrintings(
 		const key = keyOf(appearance);
 		let printing = printingsByKey.get(key);
 		if (!printing) {
-			printing = { key, collection, places: [] };
+			printing = { key, collection, places: [], formats: new Set() };
 			printingsByKey.set(key, printing);
 		}
 
 		const { volume, pages } = appearance;
 		printing.places.push(volume ? { volume, pages } : { pages });
+		for (const format of appearance.formats ?? []) printing.formats.add(format);
 	}
 
 	return [...printingsByKey.values()];
@@ -339,6 +344,21 @@ function buildBookArrowHtml(date: string | null, direction: -1 | 1): string {
 		: `<span class="nav-btn nav-btn--disabled book__arrow" title="${direction === -1 ? "First" : "Last"} strip in this book">${arrow}</span>`;
 }
 
+/**
+ * How a strip was made to be printed: a special as `comics.yaml` says, a Sunday in colour, and a
+ * daily in ink. A book printing it otherwise is what its cover says.
+ */
+function nativeFormat(comic: Comic): PrintFormat {
+	return comic.format ?? (weekdayOf(comic.date) === 0 ? "colour" : "ink");
+}
+
+/** A format as the popup names it, in the reader's spelling. */
+const FORMAT_LABELS: Record<PrintFormat, string> = {
+	colour: spellable("Colour"),
+	greyscale: spellable("Greyscale"),
+	ink: "Ink",
+};
+
 /** The badge on a cover whose printing of the strip was altered: an asterisk, which says what it means when hovered. */
 const ALTERATION_BADGE = `<span class="collection-book__badge"><svg viewBox="0 0 10 10" aria-hidden="true"><path d="M5 1v8M1.54 3l6.92 4M1.54 7l6.92-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg><span class="collection-book__badge-label">Altered</span></span>`;
 
@@ -355,10 +375,15 @@ function buildBookHtml(
 	printing: Printing,
 	neighbours: BookNeighbours | undefined | null,
 	alterationKey: string,
-	isSunday: boolean,
+	natives: PrintFormat[],
 ): string {
 	const { collection } = printing;
-	const isBlackAndWhite = PAGE_CONFIG.colourSundays && isSunday && !collection.colour;
+	const formats = PRINT_FORMATS.filter((format) => printing.formats.has(format));
+	// Grey where the strips were made in colour and the book printed them in none.
+	const isBlackAndWhite = natives.includes("colour") && formats.length > 0 && !formats.includes("colour");
+	// Said where the book printed them otherwise than they were made: in greyscale, or in colour and in ink.
+	const isOtherwise =
+		formats.length > 0 && (formats.length !== natives.length || formats.some((format) => !natives.includes(format)));
 	const alteration = collection.alterations && collection.alterations[alterationKey];
 	// The cover's ratio holds the space until it loads.
 	const ratio = collection.aspectRatio ? ` style="aspect-ratio: ${collection.aspectRatio}"` : "";
@@ -381,8 +406,8 @@ function buildBookHtml(
 	const where = printing.places.map((place) =>
 		place.volume ? `Book ${place.volume}, ${formatPages(place.pages, true)}` : formatPages(place.pages, true),
 	);
-	// Black and white is about the page the strip is on, so it goes on that line; an alteration gets its own.
-	const colour = isBlackAndWhite ? " · Black & white" : "";
+	// The format is about the page the strip is on, so it goes on that line; an alteration gets its own.
+	const colour = isOtherwise ? ` · ${formats.map((format) => FORMAT_LABELS[format]).join(" &amp; ")}` : "";
 	const notes = alteration ? [`Altered · ${alteration}`] : [];
 
 	const href = escHtml(addressOf(buildCollectionPath(collection.id)));
@@ -398,7 +423,7 @@ function buildBookHtml(
 	const card = `<template class="book__card">
 		<div class="book__text">
 			<a class="book__name" href="${href}" data-collection-id="${escHtml(collection.id)}">${escHtml(collection.name)}</a> <span class="book__year">${collection.pub_year}</span>
-			<span class="book__line">${escHtml(where.join("; ") + colour)}</span>
+			<span class="book__line">${escHtml(where.join("; "))}${colour}</span>
 			${notes.map((note) => `<span class="book__line book__note">${escHtml(note)}</span>`).join("")}
 		</div>
 		${nav}
@@ -410,12 +435,13 @@ function buildBookHtml(
 /**
  * The books a strip is in: a row of covers, any one of which opens a popup with the rest.
  * `neighbours` is by printing key, or `null` where there are no arrows, as on an arc's page.
+ * `natives` are how the strips were made to be printed, which a cover is told against.
  */
 function buildPrintingsSectionHtml(
 	printings: Printing[],
 	neighbours: Record<string, BookNeighbours> | null,
 	alterationKey: string,
-	isSunday: boolean,
+	natives: PrintFormat[],
 ): string {
 	const heading = `<p class="detail-collections-heading detail-meta">${metaContents("collected", "Collected in")}</p>`;
 	if (printings.length === 0) {
@@ -423,7 +449,7 @@ function buildPrintingsSectionHtml(
 	}
 
 	const books = printings
-		.map((printing) => buildBookHtml(printing, neighbours && neighbours[printing.key], alterationKey, isSunday))
+		.map((printing) => buildBookHtml(printing, neighbours && neighbours[printing.key], alterationKey, natives))
 		.join("");
 	return `${heading}<div class="detail-collections">${books}</div>`;
 }
@@ -433,10 +459,11 @@ export function buildAppearancesSectionHtml(
 	appearances: Appearance[],
 	collectionsById: Map<string, DetailCollection>,
 	alterationKey: string,
-	isSunday: boolean,
+	strips: Comic[],
 ): string {
 	const printings = buildPrintings(appearances, collectionsById, (appearance) => appearance.collection);
-	return buildPrintingsSectionHtml(printings, null, alterationKey, isSunday);
+	const natives = PRINT_FORMATS.filter((format) => strips.some((comic) => nativeFormat(comic) === format));
+	return buildPrintingsSectionHtml(printings, null, alterationKey, natives);
 }
 
 function describeImage(description: string | undefined, dateFormatted: string): string {
@@ -506,7 +533,7 @@ function buildStripLinksHtml(page: DetailPage, comic: Comic): string {
 	return anchors ? `<div class="detail-links">${anchors}</div>` : "";
 }
 
-function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: string, isSunday: boolean): string {
+function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: string): string {
 	const { comics, alternates, rerunOf } = page;
 	const collectionsById = new Map(page.collections.map((collection) => [collection.id, collection]));
 	const descriptionsResolved = page.descriptions !== null;
@@ -533,10 +560,22 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 		const rerunBannerHtml = rerunOf && !comic.id ? buildRerunBannerHtml(rerunOf) : "";
 		const runsHtml = buildRunsHtml(page, date, comic);
 		const collectionsHtml = buildPrintingsSectionHtml(
-			buildPrintings(comic.appearances || [], collectionsById, (appearance) => printingKey(comic, appearance)),
+			buildPrintings(
+				(comic.appearances || []).map((appearance) => ({
+					...appearance,
+					formats: printedFormats(
+						comic,
+						appearance,
+						collectionsById.get(appearance.collection),
+						PAGE_CONFIG.colourSundays,
+					),
+				})),
+				collectionsById,
+				(appearance) => printingKey(comic, appearance),
+			),
 			page.bookNeighbours,
 			comicKey(comic),
-			isSunday,
+			[nativeFormat(comic)],
 		);
 
 		bodies += `<div class="detail-comic${illustratedClass}" data-comic-key="${escHtml(comic.id || date)}">
@@ -692,11 +731,9 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 export function buildDetailShellHtml(page: DetailPage, leadingHtml: string, arrowsHtml: string): string {
 	const { date, comics, rerunOf } = page;
 	const dateFormatted = formatLongDate(date);
-	const isSunday = weekdayOf(date) === 0;
-	// A rerun's strip is drawn as of the day it originally ran — its own weekday, its own description.
+	// A rerun's strip is drawn as of the day it originally ran — its own date, its own description.
 	const contentDate = rerunOf ?? date;
 	const contentDateFormatted = rerunOf ? formatLongDate(contentDate) : dateFormatted;
-	const contentIsSunday = rerunOf ? weekdayOf(contentDate) === 0 : isSunday;
 
 	const headerHtml = `<div class="detail-container">
 		${leadingHtml}
@@ -710,7 +747,7 @@ export function buildDetailShellHtml(page: DetailPage, leadingHtml: string, arro
 	const bodyHtml =
 		comics.length === 0
 			? `<p class="detail-missing">No comics found</p>`
-			: buildComicBodiesHtml(page, contentDate, contentDateFormatted, contentIsSunday);
+			: buildComicBodiesHtml(page, contentDate, contentDateFormatted);
 
 	return `${headerHtml}
 		${bodyHtml}

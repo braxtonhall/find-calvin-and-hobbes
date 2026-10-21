@@ -5,7 +5,9 @@ import { matchesExpression } from "./date-query";
 import type { Compounds } from "./search";
 import { stripContains, textContains } from "./search";
 import { state } from "./state";
-import { Collection, Comic } from "./types";
+import { Collection, Comic, PrintFormat } from "./types";
+import { printedFormats } from "./print-format";
+import { PAGE_CONFIG } from "./site-config";
 
 /**
  * Judging a query that is not ranked: the collection language, and both sides of every crossing
@@ -168,18 +170,21 @@ function isMine(group: Group, tag: string): boolean {
 	return false;
 }
 
-/** How this strip appears in this collection: `@as:`. A tag that cannot be true of the link's kind is false. */
+/**
+ * How this strip appears in this collection: `@as:`, altered or in a format. A tag that cannot be
+ * true of the link's kind is false: only a book prints a strip.
+ */
 function asHolds(link: Link | null, tag: string): boolean {
-	if (link === null) return false;
-	if (tag === "altered") {
-		return (
-			link.group.type === "book" &&
-			(link.comic.appearances ?? []).some(
-				(appearance) => appearance.collection === link.group.id && appearance.altered === true,
-			)
-		);
-	}
-	return false;
+	if (link === null || link.group.type !== "book") return false;
+	return (link.comic.appearances ?? []).some(
+		(appearance) =>
+			appearance.collection === link.group.id &&
+			(tag === "altered"
+				? appearance.altered === true
+				: printedFormats(link.comic, appearance, link.group.book, PAGE_CONFIG.colourSundays).includes(
+						tag as PrintFormat,
+					)),
+	);
 }
 
 function passesCollectionFilter(group: Group, filter: Filter, link: Link | null): boolean {

@@ -88,11 +88,16 @@ search:
   #                                    neither a new one nor, where the site has reruns, a rerun —
   #                                    moves to the next year that has one.
   suggestions:
-    - revenge of the baby-sat
-    - snow goons
+    - something under the bed is drooling
+    - yukon
     - weirdos from another planet
-    - "@year:1995 there's treasure everywhere"
-    - homicidal psycho jungle cat!
+    - revenge of the baby-sat
+    - scientific progress goes boink
+    - snow goons
+    - the days are just packed
+    - homicidal psycho jungle cat
+    - there's treasure everywhere
+    - it's a magical world
     - transmogrifier
     - spaceman spiff
     - stupendous man
@@ -100,17 +105,16 @@ search:
     - miss wormwood
     - duplicator
     - time machine
-    - yukon
     - water balloon
     - calvinball
     - waiting for the school bus
-    - 'rosalyn @or "baby sitter"'
+    - "@featuring rosalyn"
     - "@month:december @day:24 @is:sunday"
     - november 18 1985
-    - "@is:sunday snowman"
-    - "@is:sunday @year:1985"
+    - "@is:sunday @year:1985 @year:1995"
     - "@in:sundaypages"
     - "@in:lazysunday"
+    # - "@in:exploring" # TODO add this in when Exploring is indexed
     - "@in:tenthanniversary"
     - "@is:rerun"
     - "{{featured.month}} {{featured.day}} {{featured.year}}"
