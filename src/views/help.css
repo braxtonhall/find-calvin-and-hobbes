@@ -185,6 +185,12 @@
 	border-top: 1px solid var(--neutral);
 }
 
+/* One with no room for its query beside it sets them all under, each where its question starts. */
+.help-examples--stacked .help-example {
+	flex-direction: column;
+	align-items: flex-start;
+}
+
 @media (max-width: 768px) {
 	/* No room for a hint beside its form: it goes under it. */
 	.help-form {
