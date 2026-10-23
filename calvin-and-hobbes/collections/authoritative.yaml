@@ -252,8 +252,8 @@ pages:
   253: [19881204]
 alterations:
   19871124: "Text changed"
-  19880313: Possibly miscolored dinosaur Sunday strip — off-putting greyish-green hue
-    in some book editions. Not Watterson's intention.
+  # TODO confirm this! I can't find this in my copy
+  # 19880313: Possibly miscolored dinosaur Sunday strip — off-putting greyish-green hue in some book editions. Not Watterson's intention.
   19880828: Uses vertical redrawn version.
 extras:
   - Front cover art
