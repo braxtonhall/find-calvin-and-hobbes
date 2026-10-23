@@ -172,7 +172,7 @@ interface RailEntry {
 
 let railEntries: RailEntry[] = [];
 
-/** The year rail again, gold and in white, cut down to the part of the grid on screen. See `placeRailWindow`. */
+/** The year rail again, grey and darker, cut down to the part of the grid on screen. See `placeRailWindow`. */
 let railWindow: HTMLElement | null = null;
 
 /** The shortest the rail's window gets, however little of the grid is on screen: about a pill. */

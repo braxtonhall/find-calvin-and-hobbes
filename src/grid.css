@@ -562,8 +562,9 @@
 }
 
 /*
- * The rail's window (see `placeRailWindow`): the rail laid out again over itself, gold with white
- * years, and cut down to the part of the grid on screen, so that a year half in it is half white.
+ * The rail's window (see `placeRailWindow`): the rail laid out again over itself, grey with darker
+ * years as the grid's scrollbar is, and cut down to the part of the grid on screen, so that a year
+ * half in it is half dark.
  */
 .year-rail-window {
 	position: absolute;
@@ -571,7 +572,7 @@
 	display: flex;
 	flex-direction: column;
 	padding: inherit;
-	background: var(--main);
+	background: var(--neutral);
 	pointer-events: none;
 	clip-path: inset(0 0 100% 0);
 }
@@ -581,7 +582,7 @@
 }
 
 .year-rail-window .year-rail-pill {
-	color: #fff;
+	color: var(--text);
 }
 
 @media (max-width: 768px) {

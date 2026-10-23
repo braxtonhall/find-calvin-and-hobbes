@@ -39,7 +39,7 @@ export function attachGridScrollbar(grid: HTMLElement): void {
 	const maxScroll = () => scroller.scrollHeight - scroller.clientHeight;
 
 	// Each label's darker copy is cut down to the part of it the pill is behind, so that a label half
-	// on the pill is half dark, as the year rail's years are half white in its window.
+	// on the pill is half dark, as the year rail's years are in its window.
 	const place = () => {
 		thumb.style.transform = `translateY(${(scroller.scrollTop / maxScroll()) * travel}px)`;
 		const pill = thumb.getBoundingClientRect();
