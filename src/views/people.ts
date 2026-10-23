@@ -75,6 +75,6 @@ export function renderCreator(page: CreatorPage, adopt: boolean = false): void {
 /** Draws a character's page, or — with `adopt` — takes over the one the build drew from the same `page`. */
 export function renderCharacter(page: CharacterPage, adopt: boolean = false): void {
 	const element = document.getElementById("view-character")!;
-	const html = adopt ? null : buildCharacterHtml(page, canGoBack());
-	renderStripSet(element, html, page.character ? personDates(page.character) : new Set());
+	const html = adopt ? null : buildCharacterHtml(page, canGoBack(), false);
+	renderStripSet(element, html, page.character ? personDates(page.character) : new Set(), page.strips);
 }

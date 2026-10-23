@@ -50,6 +50,6 @@ export function renderSubjects(page: SubjectsPage, adopt: boolean = false, arriv
 /** Draws a subject's page, or — with `adopt` — takes over the one the build drew from the same `page`. */
 export function renderSubject(page: SubjectPage, adopt: boolean = false): void {
 	const element = document.getElementById("view-subject")!;
-	const html = adopt ? null : buildSubjectHtml(page, canGoBack());
-	renderStripSet(element, html, new Set(page.subject ? subjectDays(page.subject) : []));
+	const html = adopt ? null : buildSubjectHtml(page, canGoBack(), false);
+	renderStripSet(element, html, new Set(page.subject ? subjectDays(page.subject) : []), page.strips);
 }

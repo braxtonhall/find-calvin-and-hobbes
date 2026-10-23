@@ -621,6 +621,9 @@ function bestMatches(tiers: ReadonlyMap<string, number>): Set<string> {
 /** The pages that light a set of strips of their own, in `state.collectionDateSet`: a book's, an arc's, a creator's, a character's, a subject's. */
 const LIGHTS_ITS_OWN = new Set<Route["view"]>(["collection", "arc", "creator", "character", "subject"]);
 
+/** Those of them that list their strips as rows, which a hovered cell lights as a search's does. */
+const LISTS_ITS_STRIPS = new Set<Route["view"]>(["arc", "character", "subject"]);
+
 /** The tabs of Collections, which light the strips their search found, in `state.tabMatchDates`. */
 const TABS = new Set<Route["view"]>(["collections", "arcs", "creators", "characters", "subjects"]);
 
@@ -1114,7 +1117,7 @@ export function renderGrid(): void {
 		const route = parseRoute();
 		// The pages whose rows are the grid's cells, lit and dimmed; anywhere else a hover is only the
 		// tooltip.
-		if (route.view !== "results" && !isLibraryView(route.view)) return;
+		if (route.view !== "results" && !isLibraryView(route.view) && !LISTS_ITS_STRIPS.has(route.view)) return;
 		// A rerun day holds no strip of its own — its strip is filed under the day it first ran — but it
 		// is a row all the same, so it is not the empty day `cell--none` otherwise means.
 		if (cell.classList.contains("cell--none") && !cell.classList.contains("cell--rerun")) return;

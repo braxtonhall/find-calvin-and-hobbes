@@ -11,8 +11,7 @@ import { buildLibraryHtml } from "../pages/library";
 import { buildCollectionRowHtml, collectionsPageFrom } from "../pages/collections";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { attachCopyLinkHandler } from "./copy-link";
-import { attachRowFocusHandler, attachRowHandlers } from "./result-rows";
-import { resultsHtml } from "../pages/result-rows";
+import { attachRowFocusHandler, drawRows } from "./result-rows";
 import { attachCollectionRowHandlers } from "./collections";
 import { narrowTab } from "./tab-search";
 
@@ -53,9 +52,8 @@ export function renderLibraryRows(view: LibraryView | BookshelfView): void {
 		return;
 	}
 	const results = search(LIBRARY_QUERIES[view], "date", TUNING, CANONICAL_FORMS);
-	list.innerHTML = resultsHtml(results, EMPTY[view]);
+	drawRows(list, results, EMPTY[view]);
 	state.searchResultTiers = assignTiers(results);
-	attachRowHandlers(list);
 }
 
 /** The books the reader owns, as Collections' rows, with their strips lit in the grid as a tab's search lights them. */

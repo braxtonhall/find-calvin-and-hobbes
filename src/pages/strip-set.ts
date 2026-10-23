@@ -35,13 +35,15 @@ export interface StripSetHeader {
 /**
  * A subject's page, or a character's, laid out as an arc's: what it is, and every strip it is in,
  * oldest first, as rows of the search results' kind, with the grid lighting all of them. `nav` is
- * the buttons above it; `missing` is what the page says where the id names nothing.
+ * the buttons above it; `missing` is what the page says where the id names nothing. Without
+ * `withStrips` the rows are left for the app to draw a batch at a time — see `drawRows`.
  */
 export function buildStripSetHtml(
 	nav: string,
 	header: StripSetHeader | null,
 	missing: string,
 	strips: ResultRow[],
+	withStrips: boolean,
 ): string {
 	if (!header) {
 		return `<div class="collection-container">
@@ -70,6 +72,6 @@ export function buildStripSetHtml(
 				${years}
 			</div>
 		</div>
-		<div class="arc-strips">${resultsHtml(strips, "")}</div>
+		<div class="arc-strips">${withStrips ? resultsHtml(strips, "") : ""}</div>
 	</div>`;
 }

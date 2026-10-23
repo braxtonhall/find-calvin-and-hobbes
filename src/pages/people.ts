@@ -199,7 +199,7 @@ export function buildCreatorHtml(page: CreatorPage, canGoBack: boolean): string 
 }
 
 /** Who they are, and every strip they are in. See `buildStripSetHtml`. */
-export function buildCharacterHtml(page: CharacterPage, canGoBack: boolean): string {
+export function buildCharacterHtml(page: CharacterPage, canGoBack: boolean, withStrips = true): string {
 	const { character } = page;
 	const nav = `${buildBackAndHomeButtons(canGoBack)}
 		${buildCharactersButton("detail-home")}`;
@@ -210,5 +210,5 @@ export function buildCharacterHtml(page: CharacterPage, canGoBack: boolean): str
 		years: character.years,
 		path: buildCharacterPath(character.id),
 	};
-	return buildStripSetHtml(nav, header, `Character "${page.id}" not found.`, page.strips);
+	return buildStripSetHtml(nav, header, `Character "${page.id}" not found.`, page.strips, withStrips);
 }

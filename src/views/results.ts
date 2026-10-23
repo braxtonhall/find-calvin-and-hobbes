@@ -8,8 +8,7 @@ import { navigate, replaceSearch } from "../router";
 import { HOME_PATH, buildSearchPath } from "../routes";
 import { buildHelpLinkHtml } from "../pages/help";
 import { filterMenuHasFocus } from "./filter-bar";
-import { attachRowHandlers } from "./result-rows";
-import { resultsHtml } from "../pages/result-rows";
+import { clearRows, drawRows } from "./result-rows";
 import { SearchBar, buildSearchBar } from "./search-bar";
 import { syncQueryInput } from "./query-input";
 import { isTouchDevice } from "../utils";
@@ -52,12 +51,11 @@ export function renderResults(query: string, sort: SortMode): void {
 	// An empty box asks nothing, so it is told nothing: no "No comics found", and no grid dimmed
 	// around matches there are none of. Only a phone stays here with one — see `buildSearchBar`.
 	if (query.trim() === "") {
-		bar.list.innerHTML = "";
+		clearRows(bar.list);
 		state.searchResultTiers = null;
 	} else {
-		bar.list.innerHTML = resultsHtml(results, EMPTY);
+		drawRows(bar.list, results, EMPTY);
 		state.searchResultTiers = assignTiers(results);
-		attachRowHandlers(bar.list);
 	}
 	syncPreview();
 
@@ -97,6 +95,6 @@ export function focusResultsInput(value: string, start: number, end: number): vo
 export function showResultsLoading(): boolean {
 	const element = document.getElementById("view-results")!;
 	if (!bar || !element.contains(bar.input)) return false;
-	bar.list.innerHTML = '<div class="results-empty"><div class="spinner results-spinner"></div></div>';
+	clearRows(bar.list, '<div class="results-empty"><div class="spinner results-spinner"></div></div>');
 	return true;
 }

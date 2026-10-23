@@ -33,7 +33,7 @@ function stripsAbout(source: PageSource, subject: Subject): (Comic | undefined)[
 }
 
 /** What it is, and every strip about it. See `buildStripSetHtml`. */
-export function buildSubjectHtml(page: SubjectPage, canGoBack: boolean): string {
+export function buildSubjectHtml(page: SubjectPage, canGoBack: boolean, withStrips = true): string {
 	const { subject } = page;
 	const nav = `${buildBackAndHomeButtons(canGoBack)}
 		${buildSubjectsButton("detail-home")}`;
@@ -44,5 +44,5 @@ export function buildSubjectHtml(page: SubjectPage, canGoBack: boolean): string 
 		years: subjectYears(subject),
 		path: buildSubjectPath(subject.id),
 	};
-	return buildStripSetHtml(nav, header, `Subject "${page.id}" not found.`, page.strips);
+	return buildStripSetHtml(nav, header, `Subject "${page.id}" not found.`, page.strips, withStrips);
 }

@@ -12,6 +12,9 @@ import { weekdayOf } from "../date-utils";
 import { attachDetailHandlers } from "./detail";
 import { attachCellHighlightLink } from "./cell-highlight";
 import { closeBookPopup } from "./books";
+import { ROWS_DRAWN, resultsOf, rowAt } from "./result-rows";
+import { alternatesOf, rowHrefOf } from "../pages/result-rows";
+import { ownershipId } from "../library-file";
 
 /*
  * A search's preview of one of its strips, beside the results, where the page is wide enough for
@@ -80,9 +83,24 @@ function isShowingStrip(strip: string): boolean {
 	return previewing?.includes(strip) ?? false;
 }
 
-/** `strips`' rows among `all`, if every one of them is there; otherwise none. */
-function rowsOf(all: HTMLAnchorElement[], strips: readonly string[]): HTMLAnchorElement[] {
-	const shown = all.filter((row) => strips.includes(row.dataset.ownership!));
+/**
+ * A result, by what its row says, whether or not the row is drawn yet: the results are drawn a batch
+ * at a time, and the preview steps through, counts and finds a day among all of them.
+ */
+interface Entry {
+	/** Where it sits among the results. */
+	index: number;
+	date: string;
+	/** Its row's `data-ownership`. */
+	strip: string;
+	href: string;
+	/** The transcripts its strip's page shows the alternate of first, as its row's link says. */
+	alternates: string[];
+}
+
+/** `strips`' results among `all`, if every one of them is there; otherwise none. */
+function rowsOf(all: Entry[], strips: readonly string[]): Entry[] {
+	const shown = all.filter((entry) => strips.includes(entry.strip));
 	return shown.length === strips.length ? shown : [];
 }
 
@@ -102,22 +120,30 @@ function available(): boolean {
 	return enabledHere && view !== null && isShowing(view) && fits();
 }
 
-function rows(): HTMLAnchorElement[] {
-	return list ? [...list.querySelectorAll<HTMLAnchorElement>(".result-row")] : [];
+function entries(): Entry[] {
+	return (list ? (resultsOf(list) ?? []) : []).map((result, index) => ({
+		index,
+		date: result.comic.date,
+		strip: ownershipId(result.comic, result.comic.date),
+		href: rowHrefOf(result),
+		alternates: alternatesOf(result),
+	}));
 }
 
-function stepOf(row: HTMLAnchorElement | undefined): PreviewStep | null {
-	return row ? { href: row.getAttribute("href")!, date: row.dataset.date! } : null;
+/** The row of `entry`, drawn for the purpose if it is not drawn yet. */
+function rowOf(entry: Entry): HTMLElement | undefined {
+	return list ? rowAt(list, entry.index) : undefined;
 }
 
-/** The transcripts a row shows the alternate of first, as its link to the strip's page says. */
-function alternatesOf(row: HTMLAnchorElement): string[] {
-	return new URL(row.href).searchParams.getAll("alternate");
+function stepOf(entry: Entry | undefined): PreviewStep | null {
+	return entry ? { href: entry.href, date: entry.date } : null;
 }
 
-function markRows(shown: readonly HTMLElement[]): void {
-	for (const row of rows()) {
-		const marked = shown.includes(row);
+/** Marks the rows drawn of `shown`; a row drawn later is marked as it is drawn. */
+function markRows(shown: readonly Entry[]): void {
+	const strips = new Set(shown.map((entry) => entry.strip));
+	for (const row of list?.querySelectorAll<HTMLElement>(".result-row") ?? []) {
+		const marked = strips.has(row.dataset.ownership!);
 		row.classList.toggle("result-row--previewing", marked);
 		if (marked) row.setAttribute("aria-current", "true");
 		else row.removeAttribute("aria-current");
@@ -125,22 +151,19 @@ function markRows(shown: readonly HTMLElement[]): void {
 }
 
 /** Where the rows previewed sit among the results. */
-function placeOf(all: HTMLAnchorElement[], shown: readonly HTMLAnchorElement[]): Place {
-	return { at: shown.map((row) => all.indexOf(row) + 1).sort((a, b) => a - b), of: all.length };
+function placeOf(all: Entry[], shown: readonly Entry[]): Place {
+	return { at: shown.map((entry) => entry.index + 1).sort((a, b) => a - b), of: all.length };
 }
 
 /**
  * The results either side of the rows previewed: the nearest not among them before the first, and
  * after it. A day's other strip, sorted further down, is no step from the day it is already part of.
  */
-function neighbours(
-	all: HTMLAnchorElement[],
-	shown: readonly HTMLAnchorElement[],
-): [HTMLAnchorElement | undefined, HTMLAnchorElement | undefined] {
-	const index = all.indexOf(shown[0]);
+function neighbours(all: Entry[], shown: readonly Entry[]): [Entry | undefined, Entry | undefined] {
+	const index = shown[0].index;
 	return [
-		all.slice(0, index).findLast((row) => !shown.includes(row)),
-		all.slice(index + 1).find((row) => !shown.includes(row)),
+		all.slice(0, index).findLast((entry) => !shown.includes(entry)),
+		all.slice(index + 1).find((entry) => !shown.includes(entry)),
 	];
 }
 
@@ -189,19 +212,19 @@ function attachArrows(): void {
  * `scrollList`, in the results, for rows not picked from them. Says whether there were any to show.
  */
 function show(target: readonly string[], scrollList: boolean): boolean {
-	const all = rows();
+	const all = entries();
 	const shown = rowsOf(all, target);
 	if (!pane || !layout || shown.length === 0) return false;
 	const first = shown[0];
-	const date = first.dataset.date!;
-	const alternates = [...new Set(shown.flatMap(alternatesOf))];
+	const date = first.date;
+	const alternates = [...new Set(shown.flatMap((entry) => entry.alternates))];
 	const page = previewPageOf(
 		detailPageFrom(state, date, alternates),
-		shown.map((row) => row.dataset.ownership!),
+		shown.map((entry) => entry.strip),
 	);
 	if (!page) return false;
 	// One strip's own page is where its row goes; more than one, the day's.
-	const href = shown.length === 1 ? first.getAttribute("href")! : addressOf(buildComicPath(date, alternates));
+	const href = shown.length === 1 ? first.href : addressOf(buildComicPath(date, alternates));
 
 	// What the focus was on, to be put on the same thing for what is shown next.
 	const focused = document.activeElement as HTMLElement | null;
@@ -224,12 +247,13 @@ function show(target: readonly string[], scrollList: boolean): boolean {
 	present();
 	const cell = cellForDate(date);
 	if (cell) scrollCellIntoViewIfNeeded(cell);
-	if (scrollList) scrollRowIntoView(first);
+	const firstRow = scrollList || onRow ? rowOf(first) : undefined;
+	if (scrollList && firstRow) scrollRowIntoView(firstRow);
 
 	if (onArrow) pane.querySelector<HTMLElement>(`a.preview-step[data-step="${onArrow}"]`)?.focus();
 	// Still in the preview, for the keys that step it to keep stepping it.
 	else if (inPane) pane.focus({ preventScroll: true });
-	else if (onRow && !shown.includes(focused as HTMLAnchorElement)) focusRow(first);
+	else if (onRow && firstRow && !shown.some((entry) => entry.strip === focused!.dataset.ownership)) focusRow(firstRow);
 	return true;
 }
 
@@ -248,17 +272,18 @@ function focusRow(row: HTMLElement): void {
  * back. With nothing previewed, takes it all away.
  */
 function present(): void {
-	const shown = previewing === null ? [] : rowsOf(rows(), previewing);
+	const shown = previewing === null ? [] : rowsOf(entries(), previewing);
 	const room = shown.length > 0 && fits();
 	setPreviewing(room);
 	markRows(room ? shown : []);
-	setPreviewedDate(room ? shown[0].dataset.date! : null);
+	setPreviewedDate(room ? shown[0].date : null);
 }
 
 export function closePreview(): void {
 	if (previewing === null) return;
 	// A focus in the preview would go with it; it goes to the row it was showing instead.
-	const back = pane?.contains(document.activeElement) ? rowsOf(rows(), previewing)[0] : undefined;
+	const entry = pane?.contains(document.activeElement) ? rowsOf(entries(), previewing)[0] : undefined;
+	const back = entry && rowOf(entry);
 	previewing = null;
 	closeBookPopup();
 	if (pane) pane.innerHTML = "";
@@ -273,11 +298,11 @@ export function closePreview(): void {
 export function stepPreview(direction: -1 | 1): boolean {
 	if (previewing === null || !available()) return false;
 	const target = previewing;
-	const all = rows();
+	const all = entries();
 	const shown = rowsOf(all, target);
 	if (shown.length === 0) return true;
 	const step = neighbours(all, shown)[direction === -1 ? 0 : 1];
-	if (step) show([step.dataset.ownership!], true);
+	if (step) show([step.strip], true);
 	return true;
 }
 
@@ -288,18 +313,18 @@ export function stepPreview(direction: -1 | 1): boolean {
  */
 export function stepPreviewDay(direction: -1 | 1, weekly: boolean): boolean {
 	if (previewing === null || !available()) return false;
-	const all = rows();
+	const all = entries();
 	const shown = rowsOf(all, previewing);
 	if (shown.length === 0) return true;
-	const from = shown[0].dataset.date!;
-	const dates = [...new Set(all.map((row) => row.dataset.date!))]
+	const from = shown[0].date;
+	const dates = [...new Set(all.map((entry) => entry.date))]
 		.filter((date) => (direction === 1 ? date > from : date < from))
 		.filter((date) => !weekly || weekdayOf(date) === weekdayOf(from))
 		.sort();
 	const to = direction === 1 ? dates[0] : dates[dates.length - 1];
 	if (to)
 		show(
-			all.filter((row) => row.dataset.date === to).map((row) => row.dataset.ownership!),
+			all.filter((entry) => entry.date === to).map((entry) => entry.strip),
 			true,
 		);
 	return true;
@@ -383,6 +408,11 @@ export function attachPreview(
 		if (!isShowingStrip(row.dataset.ownership!)) show([row.dataset.ownership!], false);
 	});
 
+	// A batch of rows drawn as the reader scrolls may hold one the preview is showing.
+	rowsList.addEventListener(ROWS_DRAWN, () => {
+		if (previewing !== null) present();
+	});
+
 	// The window narrowed past room for it puts the preview out of the way, rather than leave its
 	// cell ringed in the grid with nothing beside the results to say why, and widened brings it back.
 	new ResizeObserver(() => {
@@ -400,9 +430,9 @@ document.addEventListener("DOMContentLoaded", () => {
 		if (event.defaultPrevented || !isPlainClick(event) || !available()) return;
 		const date = (event.target as HTMLElement).closest<HTMLElement>(".cell")?.dataset.date;
 		if (!date) return;
-		const day = rows()
-			.filter((row) => row.dataset.date === date)
-			.map((row) => row.dataset.ownership!);
+		const day = entries()
+			.filter((entry) => entry.date === date)
+			.map((entry) => entry.strip);
 		// Its day already all the preview shows, the cell is followed to the day's page, as a row is.
 		if (isPreviewing(day)) return;
 		if (show(day, true)) event.preventDefault();
@@ -416,7 +446,7 @@ document.addEventListener("DOMContentLoaded", () => {
 export function syncPreview(): void {
 	if (previewing === null || !pane) return;
 	const target = previewing;
-	const all = rows();
+	const all = entries();
 	const shown = rowsOf(all, target);
 	if (shown.length === 0) {
 		closePreview();

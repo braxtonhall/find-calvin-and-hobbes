@@ -35,8 +35,38 @@ function labelOf(result: ResultRow): string {
 	return [SOURCE_LABELS[result.source], result.rerun ? "Rerun" : ""].filter(Boolean).join(" · ");
 }
 
-/** The rows, or `empty` when there are none, each badged with how it matched. */
-export function resultsHtml(results: readonly ResultRow[], empty: string): string {
+/** The transcripts a row's strip opens on the alternate of, when the alternate is what matched. */
+export function alternatesOf(result: ResultRow): string[] {
+	return result.matchedAlternate ? [dateToCompact(result.comic.date)] : [];
+}
+
+/** Where a row goes: its strip's page. */
+export function rowHrefOf(result: ResultRow): string {
+	return addressOf(buildComicPath(result.comic.date, alternatesOf(result)));
+}
+
+/**
+ * A row's picture of its strip. Left out of a row drawn plain, and put in when the row is first on
+ * screen — see `drawRows`.
+ */
+export function rowImageHtml(result: ResultRow): string {
+	const { comic } = result;
+	if (!comic.image) return "";
+	const dateFormatted = formatLongDate(comic.date);
+	// Covering a box 200 pixels by 140, as `.result-image-wrap` does: a daily, wider than the box, by its height.
+	const srcset = srcsetAttributes(
+		comic.image,
+		comic.width,
+		`${Math.max(200, Math.ceil(140 * (comic.aspectRatio ?? 1)))}px`,
+	);
+	return `<img class="result-image" src="${escHtml(comic.image)}"${srcset} alt="Comic from ${dateFormatted}" loading="lazy" onload="this.classList.add('loaded')" onerror="this.style.display='none'" />`;
+}
+
+/**
+ * The rows, or `empty` when there are none, each badged with how it matched. A `plain` row is its
+ * header and its text, for find-in-page to search, with its picture's box left empty for now.
+ */
+export function resultsHtml(results: readonly ResultRow[], empty: string, plain = false): string {
 	if (results.length === 0) {
 		return `<div class="results-empty">${empty}</div>`;
 	}
@@ -55,16 +85,12 @@ export function resultsHtml(results: readonly ResultRow[], empty: string): strin
 		// focus and Enter behaviour that had to be spelled out now comes for free — and announces as a
 		// link, which is the truth. `draggable="false"` because dragging from inside an anchor drags the
 		// link instead of selecting text, and the transcript below is text a reader may want to copy.
-		// Covering a box 200 pixels by 140, as `.result-image-wrap` does: a daily, wider than the box, by its height.
-		const srcset = comic.image
-			? srcsetAttributes(comic.image, comic.width, `${Math.max(200, Math.ceil(140 * (comic.aspectRatio ?? 1)))}px`)
-			: "";
-		const comicLink = addressOf(buildComicPath(comic.date, result.matchedAlternate ? [dateToCompact(comic.date)] : []));
-		html += `<a class="result-row${comic.image ? "" : " result-row--no-image"}" href="${comicLink}" draggable="false" data-date="${comic.date}" data-bookmark="${escHtml(bookmarkId(comic, comic.date))}" data-ownership="${escHtml(ownershipId(comic, comic.date))}" aria-label="View comic from ${dateFormatted}">
+		const comicLink = rowHrefOf(result);
+		html += `<a class="result-row${comic.image ? "" : " result-row--no-image"}${plain ? " result-row--plain" : ""}" href="${comicLink}" draggable="false" data-date="${comic.date}" data-bookmark="${escHtml(bookmarkId(comic, comic.date))}" data-ownership="${escHtml(ownershipId(comic, comic.date))}" aria-label="View comic from ${dateFormatted}">
 			<div class="result-header">${dateFormatted}${sourceTag}</div>
 			<div class="result-body">
 				<div class="result-text">${highlighted}</div>
-				${comic.image ? `<div class="result-image-wrap"><img class="result-image" src="${escHtml(comic.image)}"${srcset} alt="Comic from ${dateFormatted}" onload="this.classList.add('loaded')" onerror="this.style.display='none'" /></div>` : ``}
+				${comic.image ? `<div class="result-image-wrap">${plain ? "" : rowImageHtml(result)}</div>` : ``}
 			</div>
 		</a>`;
 	}
