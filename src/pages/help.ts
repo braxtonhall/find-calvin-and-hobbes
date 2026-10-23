@@ -7,7 +7,7 @@ import { filterSpans } from "../completion";
 import { STRIP_QUERY } from "../filter-query";
 import { escHtml } from "../utils";
 import { TAB_LABELS } from "./collections";
-import { buildBackAndHomeButtons, buildPageTitle } from "./nav-buttons";
+import { buildBackAndHomeButtons, buildPageTitle, buildSectionTitle } from "./nav-buttons";
 
 /** Text the site wrote, escaped, in the reader's spelling once `respell` has been at it. */
 function text(value: string): string {
@@ -85,7 +85,7 @@ function entryHtml(entry: HelpEntry): string {
 
 function sectionHtml(section: HelpSection): string {
 	return `<section class="help-section" id="${section.id}">
-		<h3 class="help-section-heading">${escHtml(section.title)}</h3>
+		${buildSectionTitle("help-section-heading", escHtml(section.title), addressOf(HELP_PATH) + "#" + section.id)}
 		${section.intro.map((sentence) => `<p class="help-intro">${prose(sentence)}</p>`).join("")}
 		${section.entries.map(entryHtml).join("")}
 	</section>`;
@@ -101,7 +101,7 @@ function examplesHtml(examples: HelpExample[]): string {
 		)
 		.join("");
 	return `<section class="help-section" id="examples">
-		<h3 class="help-section-heading">Examples</h3>
+		${buildSectionTitle("help-section-heading", "Examples", addressOf(HELP_PATH) + "#examples")}
 		<ul class="help-examples">${items}</ul>
 	</section>`;
 }
@@ -121,7 +121,7 @@ export function buildHelpHtml(canGoBack: boolean): string {
 		.join(`<span aria-hidden="true">·</span>`);
 	return `<div class="help-container">
 		${buildBackAndHomeButtons(canGoBack)}
-		${buildPageTitle("help-heading", "Help", addressOf(HELP_PATH))}
+		${buildPageTitle("help-heading", "Searching", addressOf(HELP_PATH))}
 		<nav class="help-contents" aria-label="Contents">${contents}</nav>
 		${examples.length > 0 ? examplesHtml(examples) : ""}
 		${sections.map(sectionHtml).join("")}

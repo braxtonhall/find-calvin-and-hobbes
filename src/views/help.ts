@@ -7,7 +7,7 @@ import { attachCopyLinkHandler } from "./copy-link";
 
 /**
  * Draws the help page, or — with `adopt` — takes over the page the build drew, and goes to the
- * entry the address names: `/help#strips-in`, from the search box's menu.
+ * entry the address names: `/searching#strips-in`, from the search box's menu.
  */
 export function renderHelp(adopt: boolean = false): void {
 	const element = document.getElementById("view-help")!;

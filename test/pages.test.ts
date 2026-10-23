@@ -172,7 +172,7 @@ test("a prerendered document", async (suite) => {
 
 	await suite.test("holds the help page, which explains only the filters this site has", () => {
 		const page: Page = { view: "help" };
-		const document = buildDocumentHtml(template, page, { ...options, path: "/help" });
+		const document = buildDocumentHtml(template, page, { ...options, path: "/searching" });
 		assert.deepEqual(embeddedPage(document), page);
 		const view = activeView(document, "help");
 		assert.equal(view, buildViewHtml(page, false));
@@ -184,7 +184,7 @@ test("a prerendered document", async (suite) => {
 		assert.doesNotMatch(view, /id="strips-about"/);
 		assert.doesNotMatch(view, />@about</);
 		assert.match(view, /id="examples"/);
-		assert.match(document, /<title>Help — Find Calvin and Hobbes<\/title>/);
+		assert.match(document, /<title>Searching — Find Calvin and Hobbes<\/title>/);
 	});
 
 	await suite.test("holds the settings, which are the same for everyone until the app fills them in", () => {

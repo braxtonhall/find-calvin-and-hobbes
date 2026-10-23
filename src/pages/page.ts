@@ -377,6 +377,6 @@ export function pageTitle(page: Page): string {
 		case "credits":
 			return `Credits — ${PAGE_CONFIG.name}`;
 		case "help":
-			return `Help — ${PAGE_CONFIG.name}`;
+			return `Searching — ${PAGE_CONFIG.name}`;
 	}
 }

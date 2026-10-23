@@ -114,7 +114,7 @@ export function navigateTo(href: string): boolean {
 	const url = new URL(href, location.href);
 	const path = pathOf(url.pathname);
 	if (path === null) return false;
-	// The hash too, for a link to one place on a page: `/help#in`.
+	// The hash too, for a link to one place on a page: `/searching#in`.
 	navigate(path + url.search + url.hash);
 	return true;
 }

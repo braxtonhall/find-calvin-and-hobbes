@@ -22,20 +22,22 @@ export function flashButton(button: HTMLButtonElement): void {
 }
 
 /**
- * Wires the page's Copy link button, if it has one, and the title's words beside it, which copy
- * wherever they are clicked — short of a drag that selected some of them, which is someone after the
- * words. The rest of the title's row is left alone. The
- * button carries the page's address as the links write it, from the mount; the origin is put on
+ * Wires every title's Copy link button — the page's, and any heading's within it — and the title's
+ * words beside it, which copy wherever they are clicked, short of a drag that selected some of them,
+ * which is someone after the words. The rest of the title's row is left alone. The
+ * button carries its address as the links write it, from the mount; the origin is put on
  * here, where it is known.
  */
 export function attachCopyLinkHandler(element: HTMLElement): void {
-	const copyButton = element.querySelector<HTMLButtonElement>("#copy-link-btn");
-	if (!copyButton) return;
-	const copy = () => {
-		if (window.getSelection()?.toString()) return;
-		const url = window.location.origin + copyButton.dataset.href;
-		navigator.clipboard.writeText(url).then(() => flashButton(copyButton));
-	};
-	copyButton.addEventListener("click", copy);
-	copyButton.closest(".page-title")?.querySelector(".page-title__text")?.addEventListener("click", copy);
+	element.querySelectorAll<HTMLElement>(".page-title").forEach((title) => {
+		const copyButton = title.querySelector<HTMLButtonElement>(".copy-link-btn--icon");
+		if (!copyButton) return;
+		const copy = () => {
+			if (window.getSelection()?.toString()) return;
+			const url = window.location.origin + copyButton.dataset.href;
+			navigator.clipboard.writeText(url).then(() => flashButton(copyButton));
+		};
+		copyButton.addEventListener("click", copy);
+		title.querySelector(".page-title__text")?.addEventListener("click", copy);
+	});
 }

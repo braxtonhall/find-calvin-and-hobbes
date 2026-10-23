@@ -278,7 +278,7 @@ export const BOOKSHELF_PATH = BOOKSHELF_TABS.all.path;
 export const BOOKSHELF_CLIPPINGS_PATH = BOOKSHELF_TABS.clippings.path;
 export const BOOKSHELF_BOOKS_PATH = BOOKSHELF_TABS.books.path;
 export const CREDITS_PATH = "/credits";
-export const HELP_PATH = "/help";
+export const HELP_PATH = "/searching";
 export const HOME_PATH = "/";
 
 /** The address an old one now lives at, or `null` for one that has not moved. */

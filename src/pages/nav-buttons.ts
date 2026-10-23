@@ -107,5 +107,14 @@ const COPIED_ICON = `<svg class="copy-link-icon copy-link-icon--copied" viewBox=
  * is the title's look, `.detail-date` or `.collection-name`; `titleHtml` is escaped already.
  */
 export function buildPageTitle(className: string, titleHtml: string, href: string): string {
-	return `<div class="page-title ${className}"><h2 class="page-title__text">${titleHtml}</h2><button type="button" class="copy-link-btn copy-link-btn--icon" id="copy-link-btn" data-href="${escHtml(href)}" aria-label="Copy link">${buildFlashLabels(COPY_LINK_ICON, COPIED_ICON)}</button></div>`;
+	return buildTitle("h2", className, titleHtml, href, ` id="copy-link-btn"`);
+}
+
+/** A heading within a page, drawn and copied as its title is: `href` is the link to that place on it. */
+export function buildSectionTitle(className: string, titleHtml: string, href: string): string {
+	return buildTitle("h3", className, titleHtml, href, "");
+}
+
+function buildTitle(tag: string, className: string, titleHtml: string, href: string, idAttr: string): string {
+	return `<div class="page-title ${className}"><${tag} class="page-title__text">${titleHtml}</${tag}><button type="button" class="copy-link-btn copy-link-btn--icon"${idAttr} data-href="${escHtml(href)}" aria-label="Copy link">${buildFlashLabels(COPY_LINK_ICON, COPIED_ICON)}</button></div>`;
 }
