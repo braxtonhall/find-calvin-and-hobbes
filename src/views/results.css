@@ -254,7 +254,7 @@
 	padding: 0;
 }
 
-@container results (min-width: 1160px) {
+@container results (min-width: 900px) {
 	.results-layout {
 		--preview-fits: 1;
 	}
@@ -263,10 +263,10 @@
 		display: flex;
 	}
 
-	/* The results keep room for a row's text beside its image; the preview takes a little less than a strip's page would. */
+	/* The preview takes half the view, up to a little less than a strip's page would; the results take the rest. */
 	.results-layout--previewing {
 		display: grid;
-		grid-template-columns: minmax(600px, 1fr) minmax(0, 600px);
+		grid-template-columns: minmax(0, 1fr) min(600px, 50%);
 		grid-template-rows: minmax(0, 1fr);
 		height: 100%;
 	}
