@@ -26,18 +26,28 @@ export function attachBackAndHomeHandlers(element: HTMLElement): void {
 //
 // The count is narrow between two links, and a thumb aimed at it tends to land on an arrow, so a step
 // by an arrow shows it too: on the page stepped to, once the router has drawn it, later in this click.
+// Either way it goes again after a moment, so as not to sit over the page's title.
+const COUNT_SHOWN_MS = 1500;
+let countTimer: ReturnType<typeof setTimeout> | undefined;
+
+function showCountBriefly(count: Element): void {
+	clearTimeout(countTimer);
+	count.classList.add("nav-count--open");
+	countTimer = setTimeout(() => count.classList.remove("nav-count--open"), COUNT_SHOWN_MS);
+}
+
 document.addEventListener("click", (event) => {
 	if (!isTouchDevice()) return;
 	const target = event.target as HTMLElement;
 	const count = target.closest(".nav-count");
-	document.querySelectorAll(".nav-count--open").forEach((open) => {
-		if (open !== count) open.classList.remove("nav-count--open");
-	});
-	count?.classList.toggle("nav-count--open");
+	const wasOpen = count?.classList.contains("nav-count--open") ?? false;
+	document.querySelectorAll(".nav-count--open").forEach((open) => open.classList.remove("nav-count--open"));
+	clearTimeout(countTimer);
+	if (count && !wasOpen) showCountBriefly(count);
 	if (target.closest(".nav-arrows > a.nav-btn")) {
 		setTimeout(() => {
 			const shown = [...document.querySelectorAll<HTMLElement>(".nav-count")].find((c) => c.offsetParent !== null);
-			shown?.classList.add("nav-count--open");
+			if (shown) showCountBriefly(shown);
 		});
 	}
 });
