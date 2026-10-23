@@ -11,7 +11,16 @@ import {
 	buildSubjectPath,
 } from "../routes";
 import { addressOf } from "../base-path";
-import { BookNeighbours, DetailArc, DetailCollection, DetailPage, PageSource, arcRange } from "./page";
+import {
+	BookArcNeighbour,
+	BookArcNeighbours,
+	BookNeighbours,
+	DetailArc,
+	DetailCollection,
+	DetailPage,
+	PageSource,
+	arcRange,
+} from "./page";
 import { buildBackAndHomeButtons, buildNavRow, buildPageTitle } from "./nav-buttons";
 import { PAGE_CONFIG } from "../site-config";
 import { StripLinkSubject, stripLinks } from "../strip-links";
@@ -336,12 +345,28 @@ function metaContents(kind: MetaKind, html: string): string {
 
 const BOOK_ICON = `<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2zM22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
-function buildBookArrowHtml(date: string | null, direction: -1 | 1): string {
+/** One of a book popup's arrows: the page it goes to, the day it lights in the grid, and an arc's range. */
+interface BookStep {
+	href: string;
+	date: string;
+	name?: string;
+}
+
+/** A book popup's arrows: through the book's strips on a strip's page, and through its arcs on an arc's. */
+interface BookSteps {
+	unit: "strip" | "arc";
+	prev: BookStep | null;
+	next: BookStep | null;
+}
+
+function buildBookArrowHtml(step: BookStep | null, direction: -1 | 1, unit: BookSteps["unit"]): string {
 	const arrow = direction === -1 ? "&larr;" : "&rarr;";
-	const title = direction === -1 ? "Previous strip in this book" : "Next strip in this book";
-	return date
-		? `<a class="nav-btn book__arrow" href="${addressOf(buildComicPath(date))}" data-date="${date}" title="${title}" aria-label="${title}">${arrow}</a>`
-		: `<span class="nav-btn nav-btn--disabled book__arrow" title="${direction === -1 ? "First" : "Last"} strip in this book">${arrow}</span>`;
+	const label = `${direction === -1 ? "Previous" : "Next"} ${unit} in this book`;
+	if (!step) {
+		return `<span class="nav-btn nav-btn--disabled book__arrow" title="${direction === -1 ? "First" : "Last"} ${unit} in this book">${arrow}</span>`;
+	}
+	const title = step.name ? `${label}: ${escHtml(step.name)}` : label;
+	return `<a class="nav-btn book__arrow" href="${escHtml(step.href)}" data-date="${step.date}" title="${title}" aria-label="${title}">${arrow}</a>`;
 }
 
 /**
@@ -365,18 +390,12 @@ const ALTERATION_BADGE = `<span class="collection-book__badge"><svg viewBox="0 0
 /**
  * One book the strip is in, as a cover that can be selected. The cover over the volume and page the
  * strip is on is all the row shows. Selected, it opens a popup above it with the book's name, the
- * way to its page, and arrows through its strips: the `<template>` is what the view fills the popup
- * with, inert until then.
+ * way to its page, and arrows through its strips — or, on an arc's page, its arcs: the `<template>`
+ * is what the view fills the popup with, inert until then.
  *
- * `neighbours` is `null` where there is no one strip to step from, as on an arc's page. `data-book`
- * is the book, which the view reads to keep a book selected from one strip to the next.
+ * `data-book` is the book, which the view reads to keep a book selected from one page to the next.
  */
-function buildBookHtml(
-	printing: Printing,
-	neighbours: BookNeighbours | undefined | null,
-	alterationKey: string,
-	natives: PrintFormat[],
-): string {
+function buildBookHtml(printing: Printing, steps: BookSteps, alterationKey: string, natives: PrintFormat[]): string {
 	const { collection } = printing;
 	const formats = PRINT_FORMATS.filter((format) => printing.formats.has(format));
 	// Grey where the strips were made in colour and the book printed them in none.
@@ -396,7 +415,7 @@ function buildBookHtml(
 	// One short line for the label under the cover: `Bk 1 · p. 357`, the volume shortened to fit. An
 	// arc's label names only the page its first strip is on; the popup has the rest.
 	const places =
-		neighbours === null
+		steps.unit === "arc"
 			? printing.places.slice(0, 1).map((place) => ({ ...place, pages: place.pages.slice(0, 1) }))
 			: printing.places;
 	const caption = places
@@ -414,12 +433,9 @@ function buildBookHtml(
 	// A link to the book's page, which a mouse follows; a tap opens the popup instead — see `attachBookHandlers`.
 	const cover = `<a class="book__cover" href="${href}" aria-haspopup="dialog" aria-expanded="false" data-collection-id="${escHtml(collection.id)}" aria-label="${escHtml(collection.name)}"><span class="collection-entry"><span class="collection-book${isBlackAndWhite ? " collection-book--bw" : ""}"${ratio}><img src="${escHtml(collection.image)}"${srcset} alt="" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />${alteration ? ALTERATION_BADGE : ""}</span><span class="collection-pages">${caption}</span></span></a>`;
 
-	// The way to the book's page sits between the arrows through it — alone, where there are none.
+	// The way to the book's page sits between the arrows through it.
 	const goTo = `<a class="nav-btn book__go" href="${href}" data-collection-id="${escHtml(collection.id)}" title="Go to this book" aria-label="Go to this book">${BOOK_ICON}</a>`;
-	const nav =
-		neighbours === null
-			? `<span class="book__nav">${goTo}</span>`
-			: `<span class="book__nav">${buildBookArrowHtml(neighbours?.prev ?? null, -1)}${goTo}${buildBookArrowHtml(neighbours?.next ?? null, 1)}</span>`;
+	const nav = `<span class="book__nav">${buildBookArrowHtml(steps.prev, -1, steps.unit)}${goTo}${buildBookArrowHtml(steps.next, 1, steps.unit)}</span>`;
 	const card = `<template class="book__card">
 		<div class="book__text">
 			<a class="book__name" href="${href}" data-collection-id="${escHtml(collection.id)}">${escHtml(collection.name)}</a> <span class="book__year">${collection.pub_year}</span>
@@ -434,12 +450,12 @@ function buildBookHtml(
 
 /**
  * The books a strip is in: a row of covers, any one of which opens a popup with the rest.
- * `neighbours` is by printing key, or `null` where there are no arrows, as on an arc's page.
- * `natives` are how the strips were made to be printed, which a cover is told against.
+ * `stepsOf` gives each cover's arrows. `natives` are how the strips were made to be printed, which a
+ * cover is told against.
  */
 function buildPrintingsSectionHtml(
 	printings: Printing[],
-	neighbours: Record<string, BookNeighbours> | null,
+	stepsOf: (printing: Printing) => BookSteps,
 	alterationKey: string,
 	natives: PrintFormat[],
 ): string {
@@ -449,21 +465,42 @@ function buildPrintingsSectionHtml(
 	}
 
 	const books = printings
-		.map((printing) => buildBookHtml(printing, neighbours && neighbours[printing.key], alterationKey, natives))
+		.map((printing) => buildBookHtml(printing, stepsOf(printing), alterationKey, natives))
 		.join("");
 	return `${heading}<div class="detail-collections">${books}</div>`;
 }
 
-/** The books an arc is in, from the appearances its page gathers: one row per book. */
+function stripStep(date: string | null): BookStep | null {
+	return date ? { href: addressOf(buildComicPath(date)), date } : null;
+}
+
+function arcStep(arc: BookArcNeighbour | null): BookStep | null {
+	return arc ? { href: addressOf(buildArcPath(arc.id)), date: arc.date, name: arc.range } : null;
+}
+
+/**
+ * The books an arc is in, from the appearances its page gathers: one row per book, its arrows to the
+ * arcs either side in that book, from `neighbours` by book.
+ */
 export function buildAppearancesSectionHtml(
 	appearances: Appearance[],
 	collectionsById: Map<string, DetailCollection>,
 	alterationKey: string,
 	strips: Comic[],
+	neighbours: Record<string, BookArcNeighbours>,
 ): string {
 	const printings = buildPrintings(appearances, collectionsById, (appearance) => appearance.collection);
 	const natives = PRINT_FORMATS.filter((format) => strips.some((comic) => nativeFormat(comic) === format));
-	return buildPrintingsSectionHtml(printings, null, alterationKey, natives);
+	return buildPrintingsSectionHtml(
+		printings,
+		(printing) => ({
+			unit: "arc",
+			prev: arcStep(neighbours[printing.key]?.prev ?? null),
+			next: arcStep(neighbours[printing.key]?.next ?? null),
+		}),
+		alterationKey,
+		natives,
+	);
 }
 
 function describeImage(description: string | undefined, dateFormatted: string): string {
@@ -572,7 +609,11 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 				collectionsById,
 				(appearance) => printingKey(comic, appearance),
 			),
-			page.bookNeighbours,
+			(printing) => ({
+				unit: "strip",
+				prev: stripStep(page.bookNeighbours[printing.key]?.prev ?? null),
+				next: stripStep(page.bookNeighbours[printing.key]?.next ?? null),
+			}),
 			comicKey(comic),
 			[nativeFormat(comic)],
 		);

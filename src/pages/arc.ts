@@ -4,9 +4,10 @@ import { addressOf } from "../base-path";
 import { Appearance, Arc, Comic, PrintFormat } from "../types";
 import { PRINT_FORMATS, printedFormats } from "../print-format";
 import { PAGE_CONFIG } from "../site-config";
-import { ArcNeighbour, ArcPage, PageSource, arcRange } from "./page";
+import { ArcNeighbour, ArcPage, BookArcNeighbour, BookArcNeighbours, PageSource, arcRange } from "./page";
 import { buildArcsButton, buildBackAndHomeButtons, buildNavRow, buildPageTitle } from "./nav-buttons";
 import { buildAppearancesSectionHtml, summarizeCollections } from "./detail";
+import { arcsInPrintOrder } from "./collection";
 import { ResultRow, resultsHtml } from "./result-rows";
 
 /** The strip an arc's date names: the day's own, never a special that shares its date. */
@@ -80,9 +81,38 @@ function neighbour(arc: Arc | undefined): ArcNeighbour | null {
 	return arc ? { id: arc.id, range: arcRange(arc) } : null;
 }
 
+function bookNeighbour(arc: Arc | undefined): BookArcNeighbour | null {
+	return arc ? { id: arc.id, range: arcRange(arc), date: arc.dates[0] } : null;
+}
+
+/**
+ * Each book's arcs in the order its page lists them, built the first time an arc's page asks for the
+ * book, since every arc in it asks of the same one.
+ */
+const bookArcOrders = new WeakMap<Arc[], Map<string, Arc[]>>();
+
+function bookArcOrder(source: PageSource, arcs: Arc[], collection: string): Arc[] {
+	let orders = bookArcOrders.get(arcs);
+	if (!orders) bookArcOrders.set(arcs, (orders = new Map()));
+	let order = orders.get(collection);
+	if (!order) orders.set(collection, (order = arcsInPrintOrder(source, collection)));
+	return order;
+}
+
+function findBookNeighbours(source: PageSource, arcs: Arc[], arc: Arc): Record<string, BookArcNeighbours> {
+	const neighbours: Record<string, BookArcNeighbours> = {};
+	for (const collection of arc.collections) {
+		const order = bookArcOrder(source, arcs, collection);
+		const index = order.findIndex((candidate) => candidate.id === arc.id);
+		if (index === -1) continue;
+		neighbours[collection] = { prev: bookNeighbour(order[index - 1]), next: bookNeighbour(order[index + 1]) };
+	}
+	return neighbours;
+}
+
 export function arcPageFrom(source: PageSource, arcId: string): ArcPage {
 	const arc = source.arcsById?.get(arcId) ?? null;
-	const empty = { strips: [], appearances: [], collections: [], prev: null, next: null };
+	const empty = { strips: [], appearances: [], collections: [], prev: null, next: null, bookNeighbours: {} };
 	if (!arc) return { view: "arc", id: arcId, arc: null, arcsLoaded: source.arcs !== null, ...empty };
 
 	const comics = arc.dates.map((date) => stripOn(source, date));
@@ -104,6 +134,7 @@ export function arcPageFrom(source: PageSource, arcId: string): ArcPage {
 		collections,
 		prev: neighbour(arcs[index - 1]),
 		next: neighbour(arcs[index + 1]),
+		bookNeighbours: findBookNeighbours(source, arcs, arc),
 	};
 }
 
@@ -151,6 +182,7 @@ export function buildArcHtml(page: ArcPage, canGoBack: boolean): string {
 				collectionsById,
 				"",
 				page.strips.map((row) => row.comic),
+				page.bookNeighbours,
 			)}</div>
 		</div>
 	</div>`;

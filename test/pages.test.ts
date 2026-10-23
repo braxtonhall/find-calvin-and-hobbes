@@ -276,6 +276,14 @@ test("a prerendered document", async (suite) => {
 			assert.equal(covers.length, arc.collections.length, `${arc.id} shows each book once`);
 			assert.equal(page.prev?.id ?? null, arcs[index - 1]?.id ?? null);
 			assert.equal(page.next?.id ?? null, arcs[index + 1]?.id ?? null);
+			// Each book's arrows step to the arcs either side in the order the book's page lists them.
+			for (const collection of arc.collections) {
+				const listed = collectionPageFrom(source, collection).arcs.arcs.map((listedArc) => listedArc.id);
+				const at = listed.indexOf(arc.id);
+				const steps = page.bookNeighbours[collection];
+				assert.equal(steps.prev?.id ?? null, listed[at - 1] ?? null, `${arc.id} steps back in ${collection}`);
+				assert.equal(steps.next?.id ?? null, listed[at + 1] ?? null, `${arc.id} steps on in ${collection}`);
+			}
 		});
 		assert.equal(arcPageFrom(source, "nosucharc").arc, null);
 	});

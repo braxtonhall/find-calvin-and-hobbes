@@ -155,6 +155,17 @@ export interface ArcNeighbour {
 	range: string;
 }
 
+/** An arc a book's popup steps to, with its first day, which the arrow lights in the grid. */
+export interface BookArcNeighbour extends ArcNeighbour {
+	date: string;
+}
+
+/** The arcs either side of one in a book, in the order a reader meets them there. */
+export interface BookArcNeighbours {
+	prev: BookArcNeighbour | null;
+	next: BookArcNeighbour | null;
+}
+
 export interface ArcPage {
 	view: "arc";
 	id: string;
@@ -170,6 +181,8 @@ export interface ArcPage {
 	collections: DetailCollection[];
 	prev: ArcNeighbour | null;
 	next: ArcNeighbour | null;
+	/** The arcs either side of this one in each of its books, by book. */
+	bookNeighbours: Record<string, BookArcNeighbours>;
 }
 
 /**

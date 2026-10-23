@@ -9,7 +9,7 @@ import { attachCellHighlightLink, clearCollectionSoon, datesOf, highlightCollect
 /*
  * The books a strip is in, on a strip's page or an arc's: a row of covers, each a link to its book's
  * page. Pointed at, or focused from the keyboard, a cover shows a popup above it — the book's name,
- * the way to its page, and arrows through its strips — which lingers once left, long enough for the
+ * the way to its page, and arrows through its strips, or its arcs on an arc's page — which lingers once left, long enough for the
  * pointer to cross into it. A click follows the link. A tap has no pointer to linger with, so it
  * opens the popup and keeps it open instead, until a press anywhere else, or Escape, puts it away,
  * as the filter bar's menus are. The popup floats on `document.body`, as their menu does, so nothing

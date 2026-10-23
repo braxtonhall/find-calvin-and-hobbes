@@ -22,7 +22,7 @@ import { LINK_ICON_SVG } from "./detail";
  * first strip in the book. That is mostly date order, and where it is not, the list shows it — a
  * check by eye on the data as much as a list. Ties keep date order.
  */
-function arcsInPrintOrder(source: PageSource, collectionId: string): Arc[] {
+export function arcsInPrintOrder(source: PageSource, collectionId: string): Arc[] {
 	const held = (source.arcs ?? []).filter((arc) => arc.collections.includes(collectionId));
 	const position = (arc: Arc): [number, number] => {
 		const appearances = arc.dates.flatMap(
