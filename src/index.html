@@ -38,20 +38,21 @@
 		<div class="mobile-overlay" id="mobile-overlay"></div>
 
 		<aside id="sidebar">
-			<!-- The grid and, by the year rail on mobile, the buttons under it. The scroller scrolls on
-			desktop, the container on mobile, and the buttons stay outside both. -->
+			<!-- The grid, its days of the week laid over its top, and, by the year rail on mobile, the
+			buttons under it. The scroller scrolls on desktop, the container on mobile, and the days and
+			the buttons stay outside both. -->
 			<div id="grid-column">
+				<div class="grid-header-row" aria-hidden="true">
+					<div class="grid-header">M</div>
+					<div class="grid-header">T</div>
+					<div class="grid-header">W</div>
+					<div class="grid-header">T</div>
+					<div class="grid-header">F</div>
+					<div class="grid-header">S</div>
+					<div class="grid-header">S</div>
+				</div>
 				<div id="grid-scroller">
 					<div id="grid-container">
-						<div class="grid-header-row" aria-hidden="true">
-							<div class="grid-header">M</div>
-							<div class="grid-header">T</div>
-							<div class="grid-header">W</div>
-							<div class="grid-header">T</div>
-							<div class="grid-header">F</div>
-							<div class="grid-header">S</div>
-							<div class="grid-header">S</div>
-						</div>
 						<div class="grid-layout" id="grid-layout"></div>
 					</div>
 				</div>

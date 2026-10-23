@@ -100,7 +100,16 @@ function createLabelSizer(texts: readonly string[]): HTMLElement {
 	return sizer;
 }
 
-function createLabelColumn(className: string, spans: LabelSpan[], sizer: readonly string[] = []): HTMLElement {
+/**
+ * `lit` gives each label a darker copy of itself, for where the grid's scrollbar is behind it. See
+ * `attachGridScrollbar`.
+ */
+function createLabelColumn(
+	className: string,
+	spans: LabelSpan[],
+	sizer: readonly string[] = [],
+	lit = false,
+): HTMLElement {
 	const column = document.createElement("div");
 	column.className = `grid-labels ${className}`;
 	if (sizer.length > 0) column.appendChild(createLabelSizer(sizer));
@@ -115,6 +124,13 @@ function createLabelColumn(className: string, spans: LabelSpan[], sizer: readonl
 		const label = document.createElement("div");
 		label.className = "grid-sticky-label";
 		label.textContent = span.text;
+		if (lit) {
+			const copy = document.createElement("span");
+			copy.className = "grid-sticky-label-lit";
+			copy.setAttribute("aria-hidden", "true");
+			copy.textContent = span.text;
+			label.appendChild(copy);
+		}
 
 		wrap.appendChild(label);
 		column.appendChild(wrap);
@@ -147,23 +163,157 @@ function rowGeometry(): { gap: number; pitch: number } {
 
 interface RailEntry {
 	button: HTMLButtonElement;
-	firstRow: number;
+	/** The rows its year spans, from `startRow` up to `endRow`. */
+	startRow: number;
+	endRow: number;
+	/** The last row that counts it as on screen, for `aria-current`: not a sliver at its end. */
 	lastRow: number;
 }
 
 let railEntries: RailEntry[] = [];
+
+/** The year rail again, gold and in white, cut down to the part of the grid on screen. See `placeRailWindow`. */
+let railWindow: HTMLElement | null = null;
+
+/** The shortest the rail's window gets, however little of the grid is on screen: about a pill. */
+const MIN_RAIL_WINDOW_PX = 18;
+
+/** Where the rail's window was last drawn, down the rail. */
+let railWindowSpan = { from: 0, to: 0 };
+
+/**
+ * The rail's window, where it is going: its middle, which it is always at, and its height, which it
+ * eases to (see `drawRailWindow`). `shownHeight` is the height it has got to, null to jump straight
+ * to the next.
+ */
+let railWindowTarget = { middle: 0, height: 0 };
+let railWindowShownHeight: number | null = null;
+let railWindowFrame = 0;
+
+/** How much of the way to its height the rail's window goes each frame. */
+const RAIL_WINDOW_EASE = 0.2;
+
+/** How far a finger on the rail goes before it is dragging the window, not tapping. */
+const RAIL_DRAG_PX = 4;
+
+/** Halvings in `scrollRailWindowTo`'s search: well under a pixel, however long the grid. */
+const RAIL_SEARCH_STEPS = 30;
+
+/** A wheel's line, in pixels, where it counts in lines rather than pixels. */
+const WHEEL_LINE_PX = 16;
 
 function updateActiveYears(): void {
 	const { top, bottom } = visibleBand();
 	const gridTop = grid.getBoundingClientRect().top;
 	const { gap, pitch } = rowGeometry();
 	const cellSize = pitch - gap;
-	for (const { button, firstRow, lastRow } of railEntries) {
-		const onScreen = gridTop + firstRow * pitch < bottom && gridTop + lastRow * pitch + cellSize > top;
-		button.classList.toggle("year-rail-button--active", onScreen);
+	for (const { button, startRow, lastRow } of railEntries) {
+		const onScreen = gridTop + startRow * pitch < bottom && gridTop + lastRow * pitch + cellSize > top;
 		if (onScreen) button.setAttribute("aria-current", "true");
 		else button.removeAttribute("aria-current");
 	}
+	placeRailWindow();
+}
+
+/**
+ * The rail as a scrollbar: a window over it as tall as the part of the grid on screen. The years are
+ * not all as long, and their buttons all are, so each edge is placed by its year — so far through the
+ * year's rows, so far down its button — and the window always covers just the years in view, and as
+ * much of each.
+ */
+function placeRailWindow(): void {
+	const rail = railWindow?.parentElement;
+	if (!railWindow || !rail || !drawn || railEntries.length === 0) return;
+	// On desktop, where there is no rail.
+	if (rail.clientHeight === 0) return;
+	const { top, bottom } = visibleBand();
+	const gridTop = grid.getBoundingClientRect().top;
+	const { gap, pitch } = rowGeometry();
+	if (pitch <= gap) return;
+
+	const { from, to } = railWindowFor((top - gridTop) / pitch, (bottom - gridTop) / pitch);
+	railWindowTarget = { middle: (from + to) / 2, height: to - from };
+	railWindowShownHeight ??= railWindowTarget.height;
+	drawRailWindow();
+}
+
+/** Where down the rail the window goes, with the rows from `topRow` to `bottomRow` on screen. */
+function railWindowFor(topRow: number, bottomRow: number): { from: number; to: number } {
+	const rows = drawn!.page.rows;
+	const railAt = (row: number): number => {
+		const clamped = Math.min(Math.max(row, 0), rows);
+		const entry = railEntries.findLast((candidate) => candidate.startRow <= clamped) ?? railEntries[0];
+		const through = Math.min(1, (clamped - entry.startRow) / Math.max(1, entry.endRow - entry.startRow));
+		return entry.button.offsetTop + through * entry.button.offsetHeight;
+	};
+
+	const first = railEntries[0].button;
+	const last = railEntries[railEntries.length - 1].button;
+	const start = first.offsetTop;
+	const end = last.offsetTop + last.offsetHeight;
+	const from = railAt(topRow);
+	const to = railAt(bottomRow);
+	if (to - from >= MIN_RAIL_WINDOW_PX) return { from, to };
+	const middle = Math.min(Math.max((from + to) / 2, start + MIN_RAIL_WINDOW_PX / 2), end - MIN_RAIL_WINDOW_PX / 2);
+	return { from: middle - MIN_RAIL_WINDOW_PX / 2, to: middle + MIN_RAIL_WINDOW_PX / 2 };
+}
+
+/**
+ * Draws the rail's window at its middle, and a step nearer its height. The height changes as its
+ * edges pass through years of different lengths, and across the row a year begins in, by a pixel
+ * or so each time, which a slow scroll would show as a jitter; eased, it is a smooth growing and
+ * shrinking. Each frame until it is there.
+ */
+function drawRailWindow(): void {
+	cancelAnimationFrame(railWindowFrame);
+	railWindowFrame = 0;
+	const rail = railWindow?.parentElement;
+	if (!railWindow || !rail || railEntries.length === 0 || railWindowShownHeight === null) return;
+
+	const { middle, height: target } = railWindowTarget;
+	railWindowShownHeight += (target - railWindowShownHeight) * RAIL_WINDOW_EASE;
+	if (Math.abs(target - railWindowShownHeight) < 0.1) railWindowShownHeight = target;
+
+	const last = railEntries[railEntries.length - 1].button;
+	const from = Math.max(railEntries[0].button.offsetTop, middle - railWindowShownHeight / 2);
+	const to = Math.min(last.offsetTop + last.offsetHeight, middle + railWindowShownHeight / 2);
+	const side = parseFloat(getComputedStyle(rail).paddingLeft) || 0;
+	railWindow.style.clipPath = `inset(${from}px ${side}px ${rail.clientHeight - to}px ${side}px round 4px)`;
+	railWindowSpan = { from, to };
+
+	if (railWindowShownHeight !== target) railWindowFrame = requestAnimationFrame(drawRailWindow);
+}
+
+/**
+ * Scrolls the grid to bring the middle of the rail's window to a point down the rail. The window's
+ * edges are each placed by their own year, so its middle is not simply the middle row's place; the
+ * scroll is searched for that puts it there, which only ever moves it one way as the grid scrolls on.
+ */
+function scrollRailWindowTo(y: number, behavior: ScrollBehavior): void {
+	if (railEntries.length === 0 || !drawn) return;
+	const scroller = document.getElementById("grid-container")!;
+	const { top, bottom } = visibleBand();
+	const gridTop = grid.getBoundingClientRect().top;
+	const { gap, pitch } = rowGeometry();
+	if (pitch <= gap) return;
+
+	const here = scroller.scrollTop;
+	const topRow = (top - gridTop) / pitch;
+	const bottomRow = (bottom - gridTop) / pitch;
+	const middleAt = (scrollTop: number): number => {
+		const rows = (scrollTop - here) / pitch;
+		const { from, to } = railWindowFor(topRow + rows, bottomRow + rows);
+		return (from + to) / 2;
+	};
+
+	let low = 0;
+	let high = scroller.scrollHeight - scroller.clientHeight;
+	for (let step = 0; step < RAIL_SEARCH_STEPS; step++) {
+		const mid = (low + high) / 2;
+		if (middleAt(mid) < y) low = mid;
+		else high = mid;
+	}
+	scroller.scrollTo({ top: high, behavior });
 }
 
 /** The year rail's buttons, one for each of the page's years. */
@@ -182,20 +332,37 @@ function drawYearRail(page: GridPage, deadzone: number): void {
 		pill.textContent = span.text;
 		button.appendChild(pill);
 
-		button.addEventListener("click", () => {
+		// From the keyboard, to the year's start. A tap is the rail's, which is a scrollbar's track: see
+		// `attachRailScrubbing`.
+		button.addEventListener("click", (event) => {
+			if (event.detail !== 0) return;
 			scroller.scrollTo({ top: span.startRow * rowGeometry().pitch, behavior: "smooth" });
 		});
 
 		const lastBox = page.boxes[Math.max(span.firstBox, span.lastBox - deadzone)];
-		return { button, firstRow: span.startRow, lastRow: lastBox.row };
+		return { button, startRow: span.startRow, endRow: span.endRow, lastRow: lastBox.row };
 	});
+
+	// Copies of the buttons, only to be seen: the taps go through to the buttons themselves.
+	railWindow = document.createElement("div");
+	railWindow.className = "year-rail-window";
+	railWindow.setAttribute("aria-hidden", "true");
+	railWindow.inert = true;
+	railWindow.hidden = railEntries.length === 0;
+	railWindow.append(...railEntries.map((entry) => entry.button.cloneNode(true)));
+
+	// The rail is the grid's scrollbar wherever it has years to show, and the container's own would
+	// only cover the months.
+	document.getElementById("grid-container")!.classList.toggle("grid-container--railed", railEntries.length > 0);
 
 	// The rail keeps its width whichever years it lists, or none, for the same reason the labels do.
 	const sizer = document.createElement("span");
 	sizer.className = "year-rail-pill year-rail-sizer";
 	sizer.setAttribute("aria-hidden", "true");
 	sizer.textContent = "'00";
-	rail.replaceChildren(...railEntries.map((entry) => entry.button), sizer);
+	rail.replaceChildren(...railEntries.map((entry) => entry.button), sizer, railWindow);
+	// A new page or level starts the window at its height, rather than easing from the last one's.
+	railWindowShownHeight = null;
 	updateActiveYears();
 }
 
@@ -240,52 +407,62 @@ function attachYearRail(): void {
 }
 
 /**
- * A finger run along the rail jumps the grid to each year it passes over, and the rail lights them
- * as it goes. A tap is still only a tap: nothing happens until the finger reaches another year, and
- * then the jumps are instant, since a smooth scroll would trail behind the finger.
+ * The rail is the grid's scrollbar, and its window the thumb. A tap off the window brings the
+ * window's middle to it, smoothly; a tap on it does nothing. A finger run along it drags the window
+ * with it, held where it was taken hold of — or, taken hold of off the window, by its middle — and
+ * the jumps are instant, since a smooth scroll would trail behind the finger. A wheel over it scrolls
+ * the grid, as one over a scrollbar would.
  */
 function attachRailScrubbing(): void {
 	const rail = document.getElementById("year-rail")!;
 	const scroller = document.getElementById("grid-container")!;
 	let pointer: number | null = null;
-	let current: HTMLButtonElement | null = null;
-	let scrubbed = false;
+	let startY = 0;
+	let grab = 0;
+	let dragging = false;
 
-	const buttonAt = (event: PointerEvent) =>
-		document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLButtonElement>(".year-rail-button") ?? null;
+	const railY = (event: PointerEvent) => event.clientY - rail.getBoundingClientRect().top;
 
 	rail.addEventListener("pointerdown", (event) => {
+		if (event.button !== 0 || railEntries.length === 0) return;
 		pointer = event.pointerId;
-		current = buttonAt(event);
-		scrubbed = false;
+		rail.setPointerCapture(event.pointerId);
+		startY = railY(event);
+		const { from, to } = railWindowSpan;
+		grab = startY >= from && startY <= to ? startY - (from + to) / 2 : 0;
+		dragging = false;
 	});
 
 	rail.addEventListener("pointermove", (event) => {
 		if (event.pointerId !== pointer) return;
-		const button = buttonAt(event);
-		if (!button || button === current || !rail.contains(button)) return;
-		current = button;
-		scrubbed = true;
-		const entry = railEntries.find((candidate) => candidate.button === button);
-		if (entry) scroller.scrollTo({ top: entry.firstRow * rowGeometry().pitch });
+		const y = railY(event);
+		if (!dragging && Math.abs(y - startY) < RAIL_DRAG_PX) return;
+		dragging = true;
+		scrollRailWindowTo(y - grab, "instant");
 	});
 
-	const end = (event: PointerEvent) => {
+	rail.addEventListener("pointerup", (event) => {
+		if (event.pointerId !== pointer) return;
+		pointer = null;
+		if (!dragging) scrollRailWindowTo(startY - grab, "smooth");
+	});
+	rail.addEventListener("pointercancel", (event) => {
 		if (event.pointerId === pointer) pointer = null;
-	};
-	rail.addEventListener("pointerup", end);
-	rail.addEventListener("pointercancel", end);
+	});
 
-	// The finger lifting at the end of a run would otherwise click the year it started on, and
-	// scroll back to it.
 	rail.addEventListener(
-		"click",
+		"wheel",
 		(event) => {
-			if (!scrubbed) return;
-			scrubbed = false;
-			event.stopPropagation();
+			event.preventDefault();
+			const unit =
+				event.deltaMode === WheelEvent.DOM_DELTA_PAGE
+					? scroller.clientHeight
+					: event.deltaMode === WheelEvent.DOM_DELTA_LINE
+						? WHEEL_LINE_PX
+						: 1;
+			scroller.scrollBy({ top: event.deltaY * unit });
 		},
-		true,
+		{ passive: false },
 	);
 }
 
@@ -405,7 +582,7 @@ function drawGrid(): void {
 		// Sized for the months at every level, so the grid's column, and the buttons under it, keep
 		// their width as it zooms.
 		createLabelColumn("month-labels", page.narrowLabels, MONTH_NAMES),
-		createLabelColumn("year-labels", page.labels),
+		createLabelColumn("year-labels", page.labels, [], true),
 	);
 
 	drawYearRail(page, level.unit === "day" ? HIGHLIGHT_DEADZONE_DAYS : 0);

@@ -41,15 +41,15 @@
 }
 
 /*
- * The grid's scrollbar: a pill around the labels, behind them as the year rail's are behind its years,
- * in the pale gold of a day a search passed over, for the labels to be read on. Placed by
- * `attachGridScrollbar`, and grabbed through the labels, so it takes no pointer itself. Over the
- * header row, whose background crosses the labels' column, so that it reaches the top as the browser's
- * would; the labels are raised above it in turn.
+ * The grid's scrollbar: a pill around the labels, behind them as the year rail's window is behind its
+ * years, in the grey the sidebar is ruled off in, with the labels darker on it (see
+ * `.grid-sticky-label-lit`). Placed by `attachGridScrollbar`, from level with the grid's first row to
+ * the foot, and grabbed through the labels, so it takes no pointer itself. Under the hovered cell and
+ * the open day's ring, which reach over it from the last column, and the labels, raised above it.
  */
 .grid-scrollbar {
 	position: absolute;
-	z-index: 4;
+	z-index: 0;
 	opacity: 0;
 	pointer-events: none;
 	transition: opacity 0.3s;
@@ -65,8 +65,9 @@
 }
 
 .grid-scrollbar-thumb {
-	border-radius: 4px;
-	background: var(--main-faded);
+	/* Square against the sidebar's edge, which it runs to. */
+	border-radius: 4px 0 0 4px;
+	background: var(--neutral);
 }
 
 /* Dragging it along the labels does not select them. */
@@ -85,16 +86,38 @@
 	background: var(--bg);
 }
 
-/* Above the raised chunks (see `.grid-chunk`), which would otherwise scroll over it. */
+/*
+ * Laid over the top of the scroller rather than in it, so that a bounce at either end moves the grid
+ * alone, under the days, which stay put, as does the scrollbar beside them. The rows scrolling up go
+ * under it; the labels, raised above it, stick level with the days. The container keeps the room for
+ * it over the grid.
+ */
 .grid-header-row {
-	position: sticky;
+	position: absolute;
 	top: 0;
+	left: 0;
+	right: 0;
 	z-index: 3;
 	display: grid;
 	grid-template-columns: repeat(7, var(--day-size));
 	gap: var(--grid-gap);
+	padding: var(--grid-padding) var(--grid-padding) 0;
 	background: var(--bg-sidebar);
-	box-shadow: -8px 0 0 var(--bg-sidebar);
+}
+
+.grid-header-row:not(.grid-header-row--hidden) + #grid-scroller #grid-container {
+	padding-top: calc(var(--grid-padding) + var(--day-size));
+}
+
+/* A day brought into view, by the browser for focus or by `scrollIntoView`, is brought out from under them. */
+.grid-header-row:not(.grid-header-row--hidden) + #grid-scroller,
+.grid-header-row:not(.grid-header-row--hidden) + #grid-scroller #grid-container {
+	scroll-padding-top: calc(var(--grid-padding) + var(--day-size));
+}
+
+/* Level with the days, past the padding above them. */
+.grid-header-row:not(.grid-header-row--hidden) + #grid-scroller .grid-sticky-label {
+	top: var(--grid-padding);
 }
 
 /* Zoomed out, where a column is not a day of the week. */
@@ -416,6 +439,27 @@
 	color: var(--text-muted);
 }
 
+/*
+ * A label again, in the text's own colour, over itself: cut down to where the grid's scrollbar is
+ * behind it (see `attachGridScrollbar`), and fading in and out with it.
+ */
+.grid-sticky-label-lit {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	padding-left: inherit;
+	color: var(--text);
+	opacity: 0;
+	clip-path: inset(100% 0 0 0);
+	transition: opacity 0.3s;
+}
+
+#grid-column.grid-scrollbar-shown .grid-sticky-label-lit {
+	opacity: 1;
+	transition-duration: 0.1s;
+}
+
 #year-rail {
 	display: none;
 }
@@ -492,7 +536,7 @@
 	touch-action: manipulation;
 	-webkit-user-select: none;
 	user-select: none;
-	/* The pill lighting up is the rail's only response to a tap; Chrome's blue tap flash is not wanted. */
+	/* The window sliding to it is the rail's only response to a tap; Chrome's blue tap flash is not wanted. */
 	-webkit-tap-highlight-color: transparent;
 }
 
@@ -506,14 +550,10 @@
 	text-align: center;
 	font-variant-numeric: tabular-nums;
 	color: var(--text-muted);
-	transition:
-		background 0.15s,
-		color 0.15s;
 }
 
-/* See `drawYearRail`. As wide as the widest of the years' pills, bold as the year showing is, and no height at all. */
+/* See `drawYearRail`. As wide as the widest of the years' pills, and no height at all. */
 .year-rail-sizer {
-	font-weight: 600;
 	flex: none;
 	height: 0;
 	padding-block: 0;
@@ -521,10 +561,27 @@
 	visibility: hidden;
 }
 
-.year-rail-button--active .year-rail-pill {
+/*
+ * The rail's window (see `placeRailWindow`): the rail laid out again over itself, gold with white
+ * years, and cut down to the part of the grid on screen, so that a year half in it is half white.
+ */
+.year-rail-window {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	padding: inherit;
 	background: var(--main);
+	pointer-events: none;
+	clip-path: inset(0 0 100% 0);
+}
+
+.year-rail-window[hidden] {
+	display: none;
+}
+
+.year-rail-window .year-rail-pill {
 	color: #fff;
-	font-weight: 600;
 }
 
 @media (max-width: 768px) {
@@ -551,10 +608,13 @@
 		overflow-y: auto;
 	}
 
-	.grid-header-row {
-		box-shadow:
-			-8px 0 0 var(--bg-sidebar),
-			0 -8px 0 var(--bg-sidebar);
+	/* The year rail is its scrollbar. See `drawYearRail`. */
+	.grid-container--railed {
+		scrollbar-width: none;
+	}
+
+	.grid-container--railed::-webkit-scrollbar {
+		display: none;
 	}
 
 	.cell {
@@ -594,6 +654,7 @@
 	}
 
 	#year-rail {
+		position: relative;
 		display: flex;
 		flex-direction: column;
 		flex-shrink: 0;

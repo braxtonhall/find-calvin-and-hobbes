@@ -15,7 +15,7 @@ const LINGER_MS = 800;
 /** The shortest the pill gets, however long the grid, to stay something to grab. */
 const MIN_THUMB_PX = 24;
 
-/** Between the pill and the cells on one side, and the sidebar's edge on the other. */
+/** Between the pill and the cells. On the other side it runs to the sidebar's edge. */
 const GAP_PX = 1;
 
 export function attachGridScrollbar(grid: HTMLElement): void {
@@ -38,21 +38,32 @@ export function attachGridScrollbar(grid: HTMLElement): void {
 
 	const maxScroll = () => scroller.scrollHeight - scroller.clientHeight;
 
+	// Each label's darker copy is cut down to the part of it the pill is behind, so that a label half
+	// on the pill is half dark, as the year rail's years are half white in its window.
 	const place = () => {
 		thumb.style.transform = `translateY(${(scroller.scrollTop / maxScroll()) * travel}px)`;
+		const pill = thumb.getBoundingClientRect();
+		for (const copy of column.querySelectorAll<HTMLElement>(".grid-sticky-label-lit")) {
+			const label = copy.getBoundingClientRect();
+			const above = Math.max(0, pill.top - label.top);
+			const below = Math.max(0, label.bottom - pill.bottom);
+			copy.style.clipPath = `inset(${above}px 0 ${below}px 0)`;
+		}
 	};
 
 	// Measured each time the pill comes out and as it scrolls, since what is in the scroller, and so
-	// how far it scrolls, changes without the scroller changing size. Top to bottom of the scroller, as
-	// the browser's would be.
+	// how far it scrolls, changes without the scroller changing size. From where the first row of
+	// cells is, scrolled to the top, below the days of the week and the padding, to the foot of the
+	// scroller, as the browser's would go.
 	const measure = () => {
 		track.hidden = maxScroll() <= 0;
 		if (track.hidden) return;
-		const height = scroller.clientHeight;
+		const above = grid.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+		const height = scroller.clientHeight - above;
 		const left = grid.getBoundingClientRect().right - column.getBoundingClientRect().left + GAP_PX;
 		track.style.left = `${left}px`;
-		track.style.width = `${column.clientWidth - left - GAP_PX}px`;
-		track.style.top = `${scroller.offsetTop}px`;
+		track.style.width = `${column.clientWidth - left}px`;
+		track.style.top = `${scroller.offsetTop + above}px`;
 		track.style.height = `${height}px`;
 		thumbHeight = Math.max(MIN_THUMB_PX, (scroller.clientHeight / scroller.scrollHeight) * height);
 		travel = height - thumbHeight;
@@ -64,9 +75,10 @@ export function attachGridScrollbar(grid: HTMLElement): void {
 		const shown = hovering || dragging || lingering !== undefined;
 		if (shown && !track.classList.contains("grid-scrollbar--shown")) measure();
 		track.classList.toggle("grid-scrollbar--shown", shown);
+		column.classList.toggle("grid-scrollbar-shown", shown && !track.hidden);
 	};
 
-	scroller.addEventListener("scroll", () => {
+	const followScroll = () => {
 		measure();
 		clearTimeout(lingering);
 		lingering = setTimeout(() => {
@@ -74,7 +86,17 @@ export function attachGridScrollbar(grid: HTMLElement): void {
 			showOrHide();
 		}, LINGER_MS);
 		showOrHide();
-	});
+	};
+	scroller.addEventListener("scroll", followScroll);
+	// A wheel turned at either end scrolls nothing, and so sends no scroll, but brings the browser's
+	// own out all the same.
+	scroller.addEventListener(
+		"wheel",
+		(event) => {
+			if (event.deltaY !== 0) followScroll();
+		},
+		{ passive: true },
+	);
 
 	// Right of the cells is the labels, and on a level with none, the room they would have.
 	const onLabels = (event: PointerEvent) => event.clientX > grid.getBoundingClientRect().right;

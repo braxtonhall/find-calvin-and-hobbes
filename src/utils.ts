@@ -34,15 +34,16 @@ export function isTouchDevice(): boolean {
 }
 
 /**
- * The part of the grid on screen, below its sticky header: the desktop's scroller clips it, or the
- * mobile container. Zoomed out, where the header is not drawn, it starts at the top of the scroller.
+ * The part of the grid on screen, below the days of the week laid over its top: the desktop's
+ * scroller clips it, or the mobile container. Zoomed out, where the days are not drawn, it starts at
+ * the top of the scroller.
  */
 export function visibleBand(): { top: number; bottom: number } {
 	const scroller = document.getElementById("grid-scroller")!.getBoundingClientRect();
 	const container = document.getElementById("grid-container")!.getBoundingClientRect();
 	const header = document.querySelector<HTMLElement>(".grid-header-row")!.getBoundingClientRect();
 	return {
-		top: Math.max(scroller.top, container.top) + header.height,
+		top: Math.max(scroller.top, container.top, header.height > 0 ? header.bottom : -Infinity),
 		bottom: Math.min(scroller.bottom, container.bottom),
 	};
 }
@@ -62,14 +63,9 @@ export function clearRowHighlights(): void {
 		.forEach((highlightedRow) => highlightedRow.classList.remove("result-row--highlight"));
 }
 
-/** Whether any of `cells` is wholly inside the part of the grid on screen, below its sticky header. */
+/** Whether any of `cells` is wholly inside the part of the grid on screen. */
 export function anyCellInView(cells: Iterable<HTMLElement>): boolean {
-	const band = visibleBand();
-	const header = document.querySelector<HTMLElement>(".grid-header-row")!.getBoundingClientRect();
-	// Below the header itself where it is drawn, which sits inside the container's padding;
-	// zoomed out, where it is not, the band's own top is the edge.
-	const top = header.height > 0 ? header.bottom : band.top;
-	const bottom = band.bottom;
+	const { top, bottom } = visibleBand();
 
 	// Each cell's chunk is asked first. An off-screen chunk is skipped by the browser, and measuring a
 	// cell inside one would have it styled and laid out only to learn that it is off screen.
