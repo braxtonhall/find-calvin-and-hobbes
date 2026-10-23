@@ -12,7 +12,13 @@ import { buildCollectionPath, buildComicPath, buildSearchPath } from "../routes"
 import { addressOf } from "../base-path";
 import { Arc, Collection } from "../types";
 import { CollectionNeighbour, CollectionPage, PageSource } from "./page";
-import { buildBackAndHomeButtons, buildCollectionsButton, buildNavRow, buildPageTitle } from "./nav-buttons";
+import {
+	buildBackAndHomeButtons,
+	buildCollectionsButton,
+	buildNavRow,
+	buildPageTitle,
+	buildStepperHtml,
+} from "./nav-buttons";
 import { arcListFrom, buildArcListHtml } from "./arc-list";
 import { buildOwnershipControlsHtml } from "./ownership";
 import { LINK_ICON_SVG } from "./detail";
@@ -74,6 +80,7 @@ export function collectionPageFrom(source: PageSource, collectionId: string): Co
 		dates,
 		prev: neighbour(index - 1),
 		next: neighbour(index + 1),
+		place: index >= 0 ? { at: [index + 1], of: collections.length } : null,
 		arcs: arcListFrom(source, collection ? arcsInPrintOrder(source, collection.id) : []),
 	};
 }
@@ -233,7 +240,7 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 	}
 
 	return `<div class="collection-container">
-		${buildNavRow(buildNavButtons(canGoBack), buildNeighbourButton(page.prev, "prev") + buildNeighbourButton(page.next, "next"))}
+		${buildNavRow(buildNavButtons(canGoBack), buildStepperHtml(buildNeighbourButton(page.prev, "prev"), buildNeighbourButton(page.next, "next"), page.place, "Book"))}
 		<div class="collection-header collection-header--book">
 			<div class="collection-cover"${collection.aspectRatio ? ` style="aspect-ratio: ${collection.aspectRatio}"` : ""}>
 				<img src="${imageUrl}"${srcset} alt="${escHtml(collection.name)} cover" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />

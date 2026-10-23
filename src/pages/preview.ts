@@ -1,8 +1,8 @@
 import { escHtml } from "../utils";
 import { ownershipId } from "../library-file";
-import { DetailPage } from "./page";
+import { DetailPage, Place } from "./page";
 import { buildDetailShellHtml } from "./detail";
-import { buildNavRow } from "./nav-buttons";
+import { buildNavRow, buildStepperHtml } from "./nav-buttons";
 
 /**
  * A search's preview of one of its rows, or of a day's: the strip's own page, beside the results, for
@@ -30,9 +30,9 @@ export function previewPageOf(page: DetailPage, keys: readonly string[]): Detail
 /**
  * The preview's arrows. Links to the rows' own pages, so a modified click opens one in a tab of its
  * own; a plain click is the view's, which steps the preview. `data-date` lights the cell, as the strip
- * page's arrows do.
+ * page's arrows do. `place` is the rows previewed among the results.
  */
-export function buildPreviewArrowsHtml(prev: PreviewStep | null, next: PreviewStep | null): string {
+export function buildPreviewArrowsHtml(prev: PreviewStep | null, next: PreviewStep | null, place: Place): string {
 	const arrow = (step: PreviewStep | null, direction: "prev" | "next") => {
 		const glyph = direction === "prev" ? "&larr;" : "&rarr;";
 		if (!step) {
@@ -41,7 +41,7 @@ export function buildPreviewArrowsHtml(prev: PreviewStep | null, next: PreviewSt
 		const label = direction === "prev" ? "Previous result" : "Next result";
 		return `<a class="nav-btn preview-step" href="${escHtml(step.href)}" data-step="${direction}" data-date="${step.date}" title="${label}" aria-label="${label}">${glyph}</a>`;
 	};
-	return arrow(prev, "prev") + arrow(next, "next");
+	return buildStepperHtml(arrow(prev, "prev"), arrow(next, "next"), place, "Result");
 }
 
 /** `href` is the strip's own page, as its row links to it. */
@@ -50,11 +50,12 @@ export function buildPreviewHtml(
 	href: string,
 	prev: PreviewStep | null,
 	next: PreviewStep | null,
+	place: Place,
 ): string {
 	const leading = buildNavRow(
 		`<button class="detail-back preview-close">Close</button>
 		<a class="detail-home" href="${escHtml(href)}">Open page</a>`,
-		buildPreviewArrowsHtml(prev, next),
+		buildPreviewArrowsHtml(prev, next, place),
 	);
 	return buildDetailShellHtml(page, leading);
 }

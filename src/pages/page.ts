@@ -63,6 +63,15 @@ export type DetailCollection = Pick<
 	"id" | "name" | "pub_year" | "image" | "colour" | "aspectRatio" | "width" | "alterations"
 >;
 
+/**
+ * Where a page sits in the list its arrows step through, counting from one: usually one place, two
+ * where a preview shows a day's two strips, none where the page is off the list, as a rerun day is.
+ */
+export interface Place {
+	at: number[];
+	of: number;
+}
+
 export interface BookNeighbours {
 	prev: string | null;
 	next: string | null;
@@ -78,6 +87,8 @@ export interface DetailPage {
 	rerunOf: string | null;
 	prevDate: string | null;
 	nextDate: string | null;
+	/** Among the strip days the arrows step through. */
+	place: Place;
 	/** The days the newspaper ran this page's strip: the original, then each rerun, in order. */
 	runs: string[];
 	/** The strips either side of each of this page's strips in each book, by `printingKey`. */
@@ -119,6 +130,7 @@ export interface CollectionPage {
 	/** The books either side of this one in publication order, which the arrows step to. */
 	prev: CollectionNeighbour | null;
 	next: CollectionNeighbour | null;
+	place: Place | null;
 	/** The arcs the book prints in full, in the order it prints them. */
 	arcs: ArcList;
 }
@@ -181,6 +193,7 @@ export interface ArcPage {
 	collections: DetailCollection[];
 	prev: ArcNeighbour | null;
 	next: ArcNeighbour | null;
+	place: Place | null;
 	/** The arcs either side of this one in each of its books, by book. */
 	bookNeighbours: Record<string, BookArcNeighbours>;
 }

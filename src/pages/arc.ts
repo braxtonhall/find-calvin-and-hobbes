@@ -5,7 +5,7 @@ import { Appearance, Arc, Comic, PrintFormat } from "../types";
 import { PRINT_FORMATS, printedFormats } from "../print-format";
 import { PAGE_CONFIG } from "../site-config";
 import { ArcNeighbour, ArcPage, BookArcNeighbour, BookArcNeighbours, PageSource, arcRange } from "./page";
-import { buildArcsButton, buildBackAndHomeButtons, buildNavRow, buildPageTitle } from "./nav-buttons";
+import { buildArcsButton, buildBackAndHomeButtons, buildNavRow, buildPageTitle, buildStepperHtml } from "./nav-buttons";
 import { buildAppearancesSectionHtml, summarizeCollections } from "./detail";
 import { arcsInPrintOrder } from "./collection";
 import { ResultRow, resultsHtml } from "./result-rows";
@@ -112,7 +112,15 @@ function findBookNeighbours(source: PageSource, arcs: Arc[], arc: Arc): Record<s
 
 export function arcPageFrom(source: PageSource, arcId: string): ArcPage {
 	const arc = source.arcsById?.get(arcId) ?? null;
-	const empty = { strips: [], appearances: [], collections: [], prev: null, next: null, bookNeighbours: {} };
+	const empty = {
+		strips: [],
+		appearances: [],
+		collections: [],
+		prev: null,
+		next: null,
+		place: null,
+		bookNeighbours: {},
+	};
 	if (!arc) return { view: "arc", id: arcId, arc: null, arcsLoaded: source.arcs !== null, ...empty };
 
 	const comics = arc.dates.map((date) => stripOn(source, date));
@@ -134,6 +142,7 @@ export function arcPageFrom(source: PageSource, arcId: string): ArcPage {
 		collections,
 		prev: neighbour(arcs[index - 1]),
 		next: neighbour(arcs[index + 1]),
+		place: index >= 0 ? { at: [index + 1], of: arcs.length } : null,
 		bookNeighbours: findBookNeighbours(source, arcs, arc),
 	};
 }
@@ -167,7 +176,7 @@ export function buildArcHtml(page: ArcPage, canGoBack: boolean): string {
 	const count = arc.dates.length;
 
 	return `<div class="collection-container">
-		${buildNavRow(buildNavButtons(canGoBack), buildNeighbourButton(page.prev, "prev") + buildNeighbourButton(page.next, "next"))}
+		${buildNavRow(buildNavButtons(canGoBack), buildStepperHtml(buildNeighbourButton(page.prev, "prev"), buildNeighbourButton(page.next, "next"), page.place, "Arc"))}
 		<div class="collection-header">
 			<div class="collection-info">
 				${buildPageTitle("collection-name", escHtml(arcRange(arc)), addressOf(buildArcPath(arc.id)))}

@@ -19,9 +19,10 @@ import {
 	DetailCollection,
 	DetailPage,
 	PageSource,
+	Place,
 	arcRange,
 } from "./page";
-import { buildBackAndHomeButtons, buildNavRow, buildPageTitle } from "./nav-buttons";
+import { buildBackAndHomeButtons, buildNavRow, buildPageTitle, buildStepperHtml } from "./nav-buttons";
 import { PAGE_CONFIG } from "../site-config";
 import { StripLinkSubject, stripLinks } from "../strip-links";
 import { bookmarkId, ownershipId } from "../library-file";
@@ -48,6 +49,18 @@ export function getAdjacentComicDate(
 		i += direction;
 	}
 	return null;
+}
+
+/** Where `date` sits among the days `getAdjacentComicDate` steps through — nowhere, on a rerun day. */
+export function comicDayPlace(source: PageSource, date: string): Place {
+	const at: number[] = [];
+	let of = 0;
+	for (const day of source.allDays) {
+		if (day.state !== "has-comic" || !source.comicsByDate.has(day.date)) continue;
+		of++;
+		if (day.date === date) at.push(of);
+	}
+	return { at, of };
 }
 
 export function getSameDayComicDate(source: PageSource, date: string, direction: -1 | 1): string | null {
@@ -243,6 +256,7 @@ export function detailPageFrom(source: PageSource, date: string, alternates: str
 		rerunOf,
 		prevDate: getAdjacentComicDate(source, date, -1),
 		nextDate: getAdjacentComicDate(source, date, 1),
+		place: comicDayPlace(source, date),
 		runs: comics.length > 0 ? findRuns(source, rerunOf ?? date) : [],
 		bookNeighbours: findBookNeighbours(source, comics),
 		collections: summarizeCollections(source, comics),
@@ -759,7 +773,13 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 	const nextButtonHtml = nextDate
 		? `<a class="nav-btn" id="nav-next" href="${addressOf(buildComicPath(nextDate))}" data-date="${nextDate}" title="Next comic">&rarr;</a>`
 		: `<span class="nav-btn nav-btn--disabled" title="Last comic">&rarr;</span>`;
-	return buildDetailShellHtml(page, buildNavRow(buildBackAndHomeButtons(canGoBack), prevButtonHtml + nextButtonHtml));
+	return buildDetailShellHtml(
+		page,
+		buildNavRow(
+			buildBackAndHomeButtons(canGoBack),
+			buildStepperHtml(prevButtonHtml, nextButtonHtml, page.place, "Strip"),
+		),
+	);
 }
 
 /**

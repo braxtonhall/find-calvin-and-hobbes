@@ -3,6 +3,7 @@ import { detailPageFrom } from "../pages/detail";
 import { buildComicPath } from "../routes";
 import { addressOf } from "../base-path";
 import { PreviewStep, buildPreviewArrowsHtml, buildPreviewHtml, previewPageOf } from "../pages/preview";
+import type { Place } from "../pages/page";
 import { isPlainClick } from "../router";
 import { cellForDate, setPreviewedDate } from "../grid";
 import { isShowing, scrollCellIntoViewIfNeeded } from "../utils";
@@ -123,6 +124,11 @@ function markRows(shown: readonly HTMLElement[]): void {
 	}
 }
 
+/** Where the rows previewed sit among the results. */
+function placeOf(all: HTMLAnchorElement[], shown: readonly HTMLAnchorElement[]): Place {
+	return { at: shown.map((row) => all.indexOf(row) + 1).sort((a, b) => a - b), of: all.length };
+}
+
 /**
  * The results either side of the rows previewed: the nearest not among them before the first, and
  * after it. A day's other strip, sorted further down, is no step from the day it is already part of.
@@ -207,7 +213,7 @@ function show(target: readonly string[], scrollList: boolean): boolean {
 	closeBookPopup();
 	previewing = target;
 	const [prev, next] = neighbours(all, shown);
-	pane.innerHTML = buildPreviewHtml(page, href, stepOf(prev), stepOf(next));
+	pane.innerHTML = buildPreviewHtml(page, href, stepOf(prev), stepOf(next), placeOf(all, shown));
 	pane.scrollTop = 0;
 	const drawn = pane;
 	attachDetailHandlers(pane, page, () => previewing === target && drawn.isConnected);
@@ -425,7 +431,7 @@ export function syncPreview(): void {
 	const arrows = pane.querySelector<HTMLElement>(".nav-arrows");
 	if (!arrows) return;
 	const [prev, next] = neighbours(all, shown);
-	arrows.innerHTML = buildPreviewArrowsHtml(stepOf(prev), stepOf(next));
+	arrows.innerHTML = buildPreviewArrowsHtml(stepOf(prev), stepOf(next), placeOf(all, shown));
 	arrows
 		.querySelectorAll<HTMLElement>("a.preview-step")
 		.forEach((arrow) => attachCellHighlightLink(arrow, arrow.dataset.date!));

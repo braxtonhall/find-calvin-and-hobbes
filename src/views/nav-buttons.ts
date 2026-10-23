@@ -1,5 +1,6 @@
 import { canGoBack } from "../router";
 import { buildBackButton } from "../pages/nav-buttons";
+import { isTouchDevice } from "../utils";
 
 /**
  * Wires the Back button, after making sure it says what the history does. A prerendered page is
@@ -19,3 +20,14 @@ export function attachBackButtonHandler(element: HTMLElement, className: string)
 export function attachBackAndHomeHandlers(element: HTMLElement): void {
 	attachBackButtonHandler(element, "detail-back");
 }
+
+// A touchscreen has no hover to show what a stepper's count counts, so a tap on it does, and a tap
+// anywhere else puts it away. Delegated, since the count is drawn again with every page.
+document.addEventListener("click", (event) => {
+	if (!isTouchDevice()) return;
+	const count = (event.target as HTMLElement).closest(".nav-count");
+	document.querySelectorAll(".nav-count--open").forEach((open) => {
+		if (open !== count) open.classList.remove("nav-count--open");
+	});
+	count?.classList.toggle("nav-count--open");
+});

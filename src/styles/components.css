@@ -525,6 +525,68 @@
 	gap: 6px;
 }
 
+/* Up top, the arrows and the count between them are one button of the row's, each arrow lit on its own. */
+.nav-row .nav-arrows {
+	gap: 0;
+	border: 1px solid var(--neutral);
+	border-radius: 6px;
+}
+
+/* Rounded all round, inside the box's border, so a lit arrow is a button of its own shape. */
+.nav-row .nav-arrows > .nav-btn {
+	border: none;
+	border-radius: 5px;
+}
+
+/*
+ * Where the page sits in the list. How many there are is the tooltip's to say. Set as wide as the
+ * list's last number, `--digits` long, so the arrows hold still while it counts.
+ */
+.nav-count {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	box-sizing: content-box;
+	min-width: calc(var(--digits, 1) * 1ch);
+	padding: 0 4px;
+	font-size: 11px;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+	cursor: default;
+}
+
+/* What the count counts, out of how many: under it and clear of the arrows. Drawn as the grid's tooltip is. */
+.nav-count::after {
+	content: attr(data-tip);
+	position: absolute;
+	top: calc(100% + 6px);
+	left: 50%;
+	transform: translateX(-50%);
+	pointer-events: none;
+	z-index: 10;
+	background: rgba(0, 0, 0, 0.8);
+	color: #fff;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 400;
+	white-space: nowrap;
+	opacity: 0;
+	transition: opacity 0.1s;
+}
+
+/* Shown by a pointer on it, or on a touchscreen by a tap; see `src/views/nav-buttons.ts`. */
+@media (hover: hover) {
+	.nav-count:hover::after {
+		opacity: 1;
+	}
+}
+
+.nav-count--open::after {
+	opacity: 1;
+}
+
 /* A line about a strip, on its page or an arc's, after its icon. The text wraps clear of the icon, which sits on its first line. */
 .detail-meta {
 	display: flex;

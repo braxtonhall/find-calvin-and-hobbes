@@ -1,6 +1,7 @@
 import { ARCS_PATH, BOOKS_PATH, CHARACTERS_PATH, CREATORS_PATH, HOME_PATH, SUBJECTS_PATH } from "../routes";
 import { addressOf } from "../base-path";
 import { escHtml } from "../utils";
+import type { Place } from "./page";
 
 /**
  * Back is a `<button>` whether or not it can go anywhere: `history.back()` is a step through a
@@ -68,6 +69,31 @@ export function buildFlashLabels(label: string, done: string): string {
  */
 export function buildNavRow(buttonsHtml: string, arrowsHtml: string): string {
 	return `<div class="nav-row">${buttonsHtml}<span class="nav-arrows">${arrowsHtml}</span></div>`;
+}
+
+/** `Strip 3 of 10`, `Results 3 and 4 of 10`, or `Not among the 10 strips`. */
+function describePlace(place: Place, noun: string): string {
+	const of = place.of.toLocaleString("en-US");
+	const plural = place.of === 1 ? noun.toLowerCase() : `${noun.toLowerCase()}s`;
+	if (place.at.length === 0) return `Not among the ${of} ${plural}`;
+	const at = place.at.map((n) => n.toLocaleString("en-US"));
+	const list = at.length === 1 ? at[0] : `${at.slice(0, -1).join(", ")} and ${at[at.length - 1]}`;
+	return `${noun}${at.length === 1 ? "" : "s"} ${list} of ${of}`;
+}
+
+/**
+ * The arrows with where the page sits between them, `← 2 →`, which the row draws as one button so it
+ * reads as a step through a list: `3,4` for two places, a dash for none. The numbers go ungrouped, so
+ * the comma between two places is the only one. How many there are is left to the tooltip, which
+ * `noun` names the things counted in. The count is as wide as the last place would be, so the arrows
+ * stay put from one page to the next. No count where the page is in no list at all.
+ */
+export function buildStepperHtml(prevHtml: string, nextHtml: string, place: Place | null, noun: string): string {
+	if (!place) return prevHtml + nextHtml;
+	const at = place.at.length > 0 ? place.at.join(",") : "&ndash;";
+	const label = describePlace(place, noun);
+	const count = `<span class="nav-count" role="img" style="--digits: ${String(place.of).length}" data-tip="${label}" aria-label="${label}">${at}</span>`;
+	return prevHtml + count + nextHtml;
 }
 
 const COPY_LINK_ICON = `<svg class="copy-link-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
