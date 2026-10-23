@@ -219,19 +219,6 @@
 	display: none;
 }
 
-/* Close, Open page and the arrows through the results, in one row, as far apart as the actions under the date. */
-.preview-bar {
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	margin-bottom: 20px;
-}
-
-.preview-bar > .detail-back,
-.preview-bar > .detail-home {
-	margin-bottom: 0;
-}
-
 /* Focused so the arrow keys step it, which is no control of its own to ring. */
 .results-preview:focus-visible {
 	outline: none;

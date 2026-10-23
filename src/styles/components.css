@@ -75,6 +75,85 @@
 	opacity: 1;
 }
 
+/*
+ * A page's title, with the button that copies its link after its last word: the button follows the
+ * title onto its last line when it wraps. The whole title copies; see `attachCopyLinkHandler`.
+ */
+.page-title {
+	cursor: pointer;
+}
+
+.page-title__text {
+	display: inline;
+	font: inherit;
+}
+
+.copy-link-btn--icon {
+	position: relative;
+	height: auto;
+	padding: 2px;
+	margin-left: 4px;
+	border: none;
+	vertical-align: -1px;
+}
+
+.copy-link-btn--icon:hover {
+	background: none;
+}
+
+.page-title:hover .copy-link-btn--icon {
+	color: var(--text);
+}
+
+.copy-link-icon {
+	display: block;
+	width: 15px;
+	height: 15px;
+}
+
+.copy-link-icon--copied circle {
+	fill: var(--main);
+}
+
+.copy-link-icon--copied path {
+	stroke: var(--bg);
+}
+
+/* What the button does, for a pointer on it; a touchscreen says it copied by itself. Drawn as the grid's tooltip is. */
+.copy-link-btn--icon::after {
+	content: "Copy";
+	position: absolute;
+	top: 50%;
+	left: calc(100% + 6px);
+	transform: translateY(-50%);
+	pointer-events: none;
+	z-index: 10;
+	background: rgba(0, 0, 0, 0.8);
+	color: #fff;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 400;
+	white-space: nowrap;
+	opacity: 0;
+	transition: opacity 0.1s;
+}
+
+.copy-link-btn--copied.copy-link-btn--icon::after {
+	content: "Copied";
+}
+
+.copy-link-btn--icon:hover::after,
+.copy-link-btn--icon:focus-visible::after {
+	opacity: 1;
+}
+
+@media (hover: none) and (pointer: coarse) {
+	.copy-link-btn--icon::after {
+		display: none;
+	}
+}
+
 .bookmark-btn {
 	display: inline-flex;
 	align-items: center;
@@ -403,7 +482,30 @@
 	cursor: default;
 }
 
-/* The row of small buttons under a page's title: Copy link, and whatever steps to its neighbours. */
+/* The buttons above a page, and the arrows to its neighbours, in one row, as far apart as the actions under its title. */
+.nav-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-bottom: 20px;
+}
+
+.nav-row > .detail-back,
+.nav-row > .detail-home {
+	margin-bottom: 0;
+}
+
+/* Up here the arrows are buttons of the row's size and weight, Back's and Home's. */
+.nav-row .nav-btn {
+	width: auto;
+	height: auto;
+	padding: 6px 12px;
+	color: var(--text);
+	border-radius: 6px;
+}
+
+/* The row of small buttons under a page's title, for what the page holds: a strip's or a book's ownership. */
 .detail-actions {
 	display: flex;
 	align-items: center;
@@ -413,13 +515,12 @@
 }
 
 .detail-actions > .copy-link-btn,
-.detail-actions > .nav-btn,
-.detail-actions__arrows > .nav-btn {
+.nav-arrows > .nav-btn {
 	margin-left: 0;
 }
 
 /* The two arrows wrap onto a new line together, never one without the other. */
-.detail-actions__arrows {
+.nav-arrows {
 	display: inline-flex;
 	gap: 6px;
 }

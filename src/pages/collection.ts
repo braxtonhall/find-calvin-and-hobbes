@@ -12,7 +12,7 @@ import { buildCollectionPath, buildComicPath, buildSearchPath } from "../routes"
 import { addressOf } from "../base-path";
 import { Arc, Collection } from "../types";
 import { CollectionNeighbour, CollectionPage, PageSource } from "./page";
-import { buildFlashLabels, buildBackAndHomeButtons, buildCollectionsButton } from "./nav-buttons";
+import { buildBackAndHomeButtons, buildCollectionsButton, buildNavRow, buildPageTitle } from "./nav-buttons";
 import { arcListFrom, buildArcListHtml } from "./arc-list";
 import { buildOwnershipControlsHtml } from "./ownership";
 import { LINK_ICON_SVG } from "./detail";
@@ -233,13 +233,13 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 	}
 
 	return `<div class="collection-container">
-		${buildNavButtons(canGoBack)}
+		${buildNavRow(buildNavButtons(canGoBack), buildNeighbourButton(page.prev, "prev") + buildNeighbourButton(page.next, "next"))}
 		<div class="collection-header collection-header--book">
 			<div class="collection-cover"${collection.aspectRatio ? ` style="aspect-ratio: ${collection.aspectRatio}"` : ""}>
 				<img src="${imageUrl}"${srcset} alt="${escHtml(collection.name)} cover" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />
 			</div>
 			<div class="collection-info">
-				<h2 class="collection-name">${escHtml(collection.name)}</h2>
+				${buildPageTitle("collection-name", escHtml(collection.name), addressOf(buildCollectionPath(collection.id)))}
 				${collection.subtitle ? `<div class="collection-subtitle">${escHtml(collection.subtitle)}</div>` : ""}
 				<p class="collection-meta"><span class="collection-meta--label">Published:</span> ${pubDateFormatted}</p>
 				<p class="collection-meta"><span class="collection-meta--label">Coverage:</span> ${coverage.join(" · ")}</p>
@@ -247,9 +247,7 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 			</div>
 		</div>
 		<div class="detail-actions collection-actions">
-			<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildCollectionPath(collection.id)))}">${buildFlashLabels("Copy link", "Copied!")}</button>
 			${buildOwnershipControlsHtml("book", collection.id)}
-			<span class="detail-actions__arrows">${buildNeighbourButton(page.prev, "prev")}${buildNeighbourButton(page.next, "next")}</span>
 		</div>
 		${collection.notes && collection.notes.length > 0 ? `<p class="collection-note">${escHtml(collection.notes[0])}</p>` : ""}
 		<details class="collection-section" open>

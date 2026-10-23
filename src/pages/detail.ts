@@ -12,7 +12,7 @@ import {
 } from "../routes";
 import { addressOf } from "../base-path";
 import { BookNeighbours, DetailArc, DetailCollection, DetailPage, PageSource, arcRange } from "./page";
-import { buildBackAndHomeButtons, buildFlashLabels } from "./nav-buttons";
+import { buildBackAndHomeButtons, buildNavRow, buildPageTitle } from "./nav-buttons";
 import { PAGE_CONFIG } from "../site-config";
 import { StripLinkSubject, stripLinks } from "../strip-links";
 import { bookmarkId, ownershipId } from "../library-file";
@@ -539,7 +539,7 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 	const descriptionsResolved = page.descriptions !== null;
 
 	let bodies = "";
-	for (const [index, comic] of comics.entries()) {
+	for (const comic of comics) {
 		const description = getPageDescription(page, comic);
 
 		const transcriptHtml = buildTranscriptHtml(comic, date, alternates);
@@ -553,9 +553,8 @@ function buildComicBodiesHtml(page: DetailPage, date: string, dateFormatted: str
 			? srcsetAttributes(comic.image, comic.width, "(max-width: 768px) calc(100vw - 40px), 800px")
 			: "";
 		const illustratedClass = comic.image ? " detail-comic--illustrated" : "";
-		// The first strip's buttons are in the day's own row of actions; any other has a row of its own.
-		const actionsHtml =
-			index > 0 ? `<div class="detail-actions detail-comic-actions">${buildStripOwnershipHtml(page, comic)}</div>` : "";
+		// Each strip has a row of actions of its own, the first as much as any after it.
+		const actionsHtml = `<div class="detail-actions detail-comic-actions">${buildStripOwnershipHtml(page, comic)}</div>`;
 		// A rerun's note of where it's from heads the column of each strip that reran; a special never did.
 		const rerunBannerHtml = rerunOf && !comic.id ? buildRerunBannerHtml(rerunOf) : "";
 		const runsHtml = buildRunsHtml(page, date, comic);
@@ -719,16 +718,15 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 	const nextButtonHtml = nextDate
 		? `<a class="nav-btn" id="nav-next" href="${addressOf(buildComicPath(nextDate))}" data-date="${nextDate}" title="Next comic">&rarr;</a>`
 		: `<span class="nav-btn nav-btn--disabled" title="Last comic">&rarr;</span>`;
-	return buildDetailShellHtml(page, buildBackAndHomeButtons(canGoBack), prevButtonHtml + nextButtonHtml);
+	return buildDetailShellHtml(page, buildNavRow(buildBackAndHomeButtons(canGoBack), prevButtonHtml + nextButtonHtml));
 }
 
 /**
- * A strip's page with the buttons above its date and the arrows in its row of actions left to the
- * caller: a strip's own page steps through the days, and a search's preview of it through the
- * results, with its arrows among the buttons above instead, and none here. Everything else is the
+ * A strip's page with the row of buttons above its date left to the caller: a strip's own page
+ * steps through the days, and a search's preview of it through the results. Everything else is the
  * page, so the two cannot drift apart.
  */
-export function buildDetailShellHtml(page: DetailPage, leadingHtml: string, arrowsHtml: string): string {
+export function buildDetailShellHtml(page: DetailPage, leadingHtml: string): string {
 	const { date, comics, rerunOf } = page;
 	const dateFormatted = formatLongDate(date);
 	// A rerun's strip is drawn as of the day it originally ran — its own date, its own description.
@@ -737,12 +735,7 @@ export function buildDetailShellHtml(page: DetailPage, leadingHtml: string, arro
 
 	const headerHtml = `<div class="detail-container">
 		${leadingHtml}
-		<h2 class="detail-date">${dateFormatted}</h2>
-		<div class="detail-actions">
-			<button class="copy-link-btn" id="copy-link-btn" data-href="${addressOf(buildComicPath(date))}">${buildFlashLabels("Copy link", "Copied!")}</button>
-			${comics.length > 0 ? buildStripOwnershipHtml(page, comics[0]) : ""}
-			${arrowsHtml ? `<span class="detail-actions__arrows">${arrowsHtml}</span>` : ""}
-		</div>`;
+		${buildPageTitle("detail-date", dateFormatted, addressOf(buildComicPath(date)))}`;
 
 	const bodyHtml =
 		comics.length === 0

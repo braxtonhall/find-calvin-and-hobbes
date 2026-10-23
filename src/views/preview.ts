@@ -422,7 +422,7 @@ export function syncPreview(): void {
 		return;
 	}
 	present();
-	const arrows = pane.querySelector<HTMLElement>(".detail-actions__arrows");
+	const arrows = pane.querySelector<HTMLElement>(".nav-arrows");
 	if (!arrows) return;
 	const [prev, next] = neighbours(all, shown);
 	arrows.innerHTML = buildPreviewArrowsHtml(stepOf(prev), stepOf(next));

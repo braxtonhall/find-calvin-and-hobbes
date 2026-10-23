@@ -5,7 +5,7 @@ import { Appearance, Arc, Comic, PrintFormat } from "../types";
 import { PRINT_FORMATS, printedFormats } from "../print-format";
 import { PAGE_CONFIG } from "../site-config";
 import { ArcNeighbour, ArcPage, PageSource, arcRange } from "./page";
-import { buildFlashLabels, buildArcsButton, buildBackAndHomeButtons } from "./nav-buttons";
+import { buildArcsButton, buildBackAndHomeButtons, buildNavRow, buildPageTitle } from "./nav-buttons";
 import { buildAppearancesSectionHtml, summarizeCollections } from "./detail";
 import { ResultRow, resultsHtml } from "./result-rows";
 
@@ -136,17 +136,12 @@ export function buildArcHtml(page: ArcPage, canGoBack: boolean): string {
 	const count = arc.dates.length;
 
 	return `<div class="collection-container">
-		${buildNavButtons(canGoBack)}
+		${buildNavRow(buildNavButtons(canGoBack), buildNeighbourButton(page.prev, "prev") + buildNeighbourButton(page.next, "next"))}
 		<div class="collection-header">
 			<div class="collection-info">
-				<h2 class="collection-name">${escHtml(arcRange(arc))}</h2>
+				${buildPageTitle("collection-name", escHtml(arcRange(arc)), addressOf(buildArcPath(arc.id)))}
 				<p class="arc-description">${escHtml(arc.description)}</p>
 				<p class="collection-meta"><span class="collection-meta--label">Comics:</span> ${count} strip${count !== 1 ? "s" : ""}</p>
-				<div class="detail-actions">
-					<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildArcPath(arc.id)))}">${buildFlashLabels("Copy link", "Copied!")}</button>
-					${buildNeighbourButton(page.prev, "prev")}
-					${buildNeighbourButton(page.next, "next")}
-				</div>
 			</div>
 		</div>
 		<div class="columns">

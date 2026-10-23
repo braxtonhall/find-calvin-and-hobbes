@@ -1,6 +1,6 @@
 import { escHtml } from "../utils";
 import { addressOf } from "../base-path";
-import { buildFlashLabels } from "./nav-buttons";
+import { buildPageTitle } from "./nav-buttons";
 import { ResultRow, resultsHtml } from "./result-rows";
 
 /** `1985–1995`, or `1950–1960, 1963`: the years, with each run of them as its ends. */
@@ -64,13 +64,10 @@ export function buildStripSetHtml(
 		<div class="collection-header">
 			${image}
 			<div class="collection-info">
-				<h2 class="collection-name">${escHtml(header.name)}</h2>
+				${buildPageTitle("collection-name", escHtml(header.name), addressOf(header.path))}
 				${description}
 				<p class="collection-meta"><span class="collection-meta--label">Comics:</span> ${formatStripCount(header.strips)}</p>
 				${years}
-				<div class="detail-actions">
-					<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(header.path))}">${buildFlashLabels("Copy link", "Copied!")}</button>
-				</div>
 			</div>
 		</div>
 		<div class="arc-strips">${resultsHtml(strips, "")}</div>

@@ -3,7 +3,7 @@ import { buildCharacterPath, buildComicPath, buildCreatorPath } from "../routes"
 import { addressOf } from "../base-path";
 import { ListedSpecial, Person, TabOrder } from "../types";
 import { CharacterPage, CharactersPage, CreatorPage, CreatorsPage, PageSource } from "./page";
-import { buildFlashLabels, buildBackAndHomeButtons, buildCharactersButton, buildCreatorsButton } from "./nav-buttons";
+import { buildPageTitle, buildBackAndHomeButtons, buildCharactersButton, buildCreatorsButton } from "./nav-buttons";
 import { buildLinksHtml, buildRangeHtml } from "./collection";
 import { buildCollectionsHeaderHtml, buildNoMatchesHtml, orderOf } from "./collections";
 import { stripsOn } from "./arc";
@@ -186,13 +186,10 @@ export function buildCreatorHtml(page: CreatorPage, canGoBack: boolean): string 
 		<div class="collection-header">
 			${creator.image ? `<div class="collection-cover"><img class="person-portrait" src="${escHtml(creator.image)}" alt="${escHtml(creator.name)}" /></div>` : ""}
 			<div class="collection-info">
-				<h2 class="collection-name">${escHtml(creator.name)}</h2>
+				${buildPageTitle("collection-name", escHtml(creator.name), addressOf(buildCreatorPath(creator.id)))}
 				<p class="collection-meta"><span class="collection-meta--label">Comics:</span> ${formatStripCount(creator.strips)}</p>
 				<p class="collection-meta"><span class="collection-meta--label">Years:</span> ${formatYears(creator.years)}</p>
 				${roles}
-				<div class="detail-actions">
-					<button class="copy-link-btn" id="copy-link-btn" data-href="${escHtml(addressOf(buildCreatorPath(creator.id)))}">${buildFlashLabels("Copy link", "Copied!")}</button>
-				</div>
 			</div>
 		</div>
 		${ranges ? `<p class="collection-section-heading">Date Ranges</p><div class="collection-ranges">${ranges}</div>` : ""}

@@ -2,6 +2,7 @@ import { escHtml } from "../utils";
 import { ownershipId } from "../library-file";
 import { DetailPage } from "./page";
 import { buildDetailShellHtml } from "./detail";
+import { buildNavRow } from "./nav-buttons";
 
 /**
  * A search's preview of one of its rows, or of a day's: the strip's own page, beside the results, for
@@ -50,12 +51,10 @@ export function buildPreviewHtml(
 	prev: PreviewStep | null,
 	next: PreviewStep | null,
 ): string {
-	// The arrows beside the way out and the way to the strip's page, where stepping is the first thing
-	// to hand, rather than in the row of actions under the date.
-	const leading = `<div class="preview-bar">
-		<button class="detail-back preview-close">Close</button>
-		<a class="detail-home" href="${escHtml(href)}">Open page</a>
-		<span class="detail-actions__arrows">${buildPreviewArrowsHtml(prev, next)}</span>
-	</div>`;
-	return buildDetailShellHtml(page, leading, "");
+	const leading = buildNavRow(
+		`<button class="detail-back preview-close">Close</button>
+		<a class="detail-home" href="${escHtml(href)}">Open page</a>`,
+		buildPreviewArrowsHtml(prev, next),
+	);
+	return buildDetailShellHtml(page, leading);
 }

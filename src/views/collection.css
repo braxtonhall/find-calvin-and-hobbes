@@ -61,11 +61,6 @@
 	color: var(--text-muted);
 }
 
-/* Under the book's details rather than under a heading, so it needs none of the page-level gap below it. */
-.collection-info .detail-actions {
-	margin: 12px 0 0;
-}
-
 /* A book's row of actions runs the width of the page, under its cover and its details. */
 .collection-header--book {
 	margin-bottom: 16px;

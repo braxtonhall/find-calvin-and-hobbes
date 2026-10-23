@@ -22,13 +22,17 @@ export function flashButton(button: HTMLButtonElement): void {
 }
 
 /**
- * Wires the page's Copy link button, if it has one. The button carries the page's address as the
- * links write it, from the mount; the origin is put on here, where it is known.
+ * Wires the page's Copy link button, if it has one, and the title it sits in, which copies wherever
+ * it is clicked — short of a drag that selected some of it, which is someone after the words. The
+ * button carries the page's address as the links write it, from the mount; the origin is put on
+ * here, where it is known.
  */
 export function attachCopyLinkHandler(element: HTMLElement): void {
 	const copyButton = element.querySelector<HTMLButtonElement>("#copy-link-btn");
 	if (!copyButton) return;
-	copyButton.addEventListener("click", () => {
+	const title = copyButton.closest<HTMLElement>(".page-title") ?? copyButton;
+	title.addEventListener("click", () => {
+		if (window.getSelection()?.toString()) return;
 		const url = window.location.origin + copyButton.dataset.href;
 		navigator.clipboard.writeText(url).then(() => flashButton(copyButton));
 	});
