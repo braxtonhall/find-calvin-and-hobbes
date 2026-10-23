@@ -14,8 +14,8 @@ import { PAGE_CONFIG } from "./site-config";
  * operator.
  *
  * A collection is a set of strips — a book's, an arc's, a creator's, a character's or a subject's — with a few
- * words of its own and a few facts about itself. Every kind is judged by the same filters (see
- * `COLLECTION_TAGS`): one that cannot be true of a kind is false of it. Its text is its own words,
+ * words of its own and a few facts about itself. Each kind has its own tags and filters (see
+ * `COLLECTION_TAGS` and `fits`), and the parser lets no other kind's through. Its text is its own words,
  * and an arc's is every word of its strips too, so the words of a query may be found in different
  * strips of it. Books, creators, characters and subjects are known by name, which their strips' words
  * would drown: those are found with `@has`. A subject is known by its keywords and its description
@@ -147,7 +147,7 @@ function didRole(group: Group, tag: string): boolean {
 	);
 }
 
-/** A collection's own tag. One that cannot be true of its kind is false, not a mistake. */
+/** A collection's own tag, of its own kind: the parser lets no other kind's through. */
 function hasCollectionTag(group: Group, tag: string): boolean {
 	switch (tag) {
 		case "any":
@@ -162,7 +162,7 @@ function hasCollectionTag(group: Group, tag: string): boolean {
 	}
 }
 
-/** The reader's own relationship to a collection: `@i:`. Only a book can be owned or noted. */
+/** The reader's own relationship to a collection: `@i:`, which only a book has. */
 function isMine(group: Group, tag: string): boolean {
 	if (group.type !== "book") return false;
 	if (tag === "own") return state.ownedBooks.has(group.id);
@@ -170,10 +170,7 @@ function isMine(group: Group, tag: string): boolean {
 	return false;
 }
 
-/**
- * How this strip appears in this collection: `@as:`, altered or in a format. A tag that cannot be
- * true of the link's kind is false: only a book prints a strip.
- */
+/** How this strip appears in this book: `@as:`, altered or in a format. Only a book prints a strip. */
 function asHolds(link: Link | null, tag: string): boolean {
 	if (link === null || link.group.type !== "book") return false;
 	return (link.comic.appearances ?? []).some(
@@ -197,7 +194,7 @@ function passesCollectionFilter(group: Group, filter: Filter, link: Link | null)
 			return hasCollectionTag(group, filter.tag);
 		case "i":
 			return isMine(group, filter.tag);
-		// A book by the year it came out; an arc or a subject by any year one of its strips ran.
+		// A book by the year it came out; an arc or a subject by any year one of its strips ran. No other kind has it.
 		case "published":
 			if (group.book !== undefined) return matchesExpression(filter.expression, String(group.book.pub_year));
 			return (

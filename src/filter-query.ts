@@ -1,6 +1,16 @@
 import { dateToString, lastDayOf, weekdayOf } from "./date-utils";
 import { DateExpression, MONTHS, WEEKDAYS, matchesExpression, parseDateExpression } from "./date-query";
-import { CROSSING_SPECS, CollectionType, FILTER_NAMES, Language, filterSpec } from "./filter-spec";
+import {
+	COLLECTION_TYPES,
+	CROSSING_SPECS,
+	CollectionType,
+	FILTER_NAMES,
+	Language,
+	filterSpec,
+	fits,
+	kindsList,
+	oneOfKinds,
+} from "./filter-spec";
 import { canonical, knows, termFor } from "./filter-vocabulary";
 import { bookmarkId, ownershipId } from "./library-file";
 import { state } from "./state";
@@ -61,6 +71,8 @@ export interface QueryContext {
 	language: Language;
 	type?: CollectionType;
 	link: boolean;
+	/** The kind of collection at the other end of the link, where something says which. */
+	linked?: CollectionType;
 }
 
 /** The main search box. */
@@ -195,23 +207,42 @@ export function judgeFilter(
 				reason: `${written} describes a strip in a collection: use it inside @in (…) or @has (…)`,
 			};
 		}
-		return knows("as", value, language)
-			? { filter: { kind: "as", tag: canonical("as", value, language) } }
+		const spec = filterSpec("as", language);
+		if (spec?.types !== undefined && !fits(spec, context)) {
+			return {
+				filter: null,
+				reason: `${written} describes a strip in ${oneOfKinds(spec.types)}, not in ${oneOfKinds([context.linked!])}`,
+			};
+		}
+		return knows("as", value, context)
+			? { filter: { kind: "as", tag: canonical("as", value, context) } }
 			: { filter: null };
 	}
 
-	if (filterSpec(name, language) === undefined) {
+	const spec = filterSpec(name, language);
+	if (spec === undefined) {
 		// The other language's filter: said so, with what the reader most likely meant.
 		if (language === "collection") return { filter: null, reason: `Did you mean @has ${written}?` };
 		return { filter: null, reason: `${written} describes a collection, not a strip. Did you mean @in (${written})?` };
 	}
+	// A filter only some kinds have, written of another.
+	if (spec.types !== undefined && !fits(spec, context)) {
+		return { filter: null, reason: `${written} is for ${kindsList(spec.types)}, not ${kindsList([context.type!])}` };
+	}
 
 	if (name === "is" || name === "i") {
-		if (knows(name, value, language)) return { filter: tagFilter(name, value, language) };
+		if (knows(name, value, context)) return { filter: tagFilter(name, value, context) };
 		const mine = name === "is" ? FORMERLY_IS[value] : undefined;
-		if (mine !== undefined && knows("i", mine, language)) return { filter: null, reason: `Did you mean @i:${mine}?` };
+		if (mine !== undefined && knows("i", mine, context)) return { filter: null, reason: `Did you mean @i:${mine}?` };
+		// Another kind's tag.
+		if (language === "collection" && context.type !== undefined) {
+			const kinds = COLLECTION_TYPES.filter((type) => termFor(name, value, { language, type }) !== undefined);
+			if (kinds.length > 0) {
+				return { filter: null, reason: `${written} is for ${kindsList(kinds)}, not ${kindsList([context.type])}` };
+			}
+		}
 		const other: Language = language === "strip" ? "collection" : "strip";
-		if (termFor(name, value, other) === undefined) return { filter: null };
+		if (termFor(name, value, { language: other }) === undefined) return { filter: null };
 		return language === "collection"
 			? { filter: null, reason: `Did you mean @has ${written}?` }
 			: { filter: null, reason: `${written} describes a collection, not a strip. Did you mean @in ${written}?` };
@@ -223,10 +254,10 @@ export function judgeFilter(
 /** The reader's own tags, as `@is:` once took them, and the `@i:` tag each is now. */
 const FORMERLY_IS: Partial<Record<string, string>> = { owned: "own", bookmarked: "bookmarked", noted: "noted" };
 
-function tagFilter(name: "is" | "i", value: string, language: Language): Filter {
+function tagFilter(name: "is" | "i", value: string, context: QueryContext): Filter {
 	if (name === "i") return { kind: "i", tag: value };
-	return language === "collection"
-		? { kind: "tag", tag: canonical("is", value, language) }
+	return context.language === "collection"
+		? { kind: "tag", tag: canonical("is", value, context) }
 		: { kind: "is", tag: value };
 }
 
@@ -273,7 +304,7 @@ function readValue(name: string, value: string): Filter | null {
 	if (name === "about") return knows("about", value) ? { kind: "about", subject: value } : null;
 	if (name === "during") return knows("during", value) ? { kind: "during", arc: value } : null;
 	// Any kind's: which kind is the subject's business, and an id of another kind is only false.
-	if (name === "id") return knows("id", value, "collection") ? { kind: "id", id: value } : null;
+	if (name === "id") return knows("id", value, { language: "collection" }) ? { kind: "id", id: value } : null;
 
 	// `@date`, `@before` and `@after` all read a date the same way: year first, and with no
 	// requirement that the year be one the archive holds. See `DateSource` for both reasons.

@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { compileQuery, contextAt, parseQuery, scanQuery } from "../src/boolean-query";
 import { completionsAt, filterSpans } from "../src/completion";
 import { STRIP_QUERY, collectionQuery } from "../src/filter-query";
+import type { CollectionType } from "../src/filter-spec";
 import { COLLECTION_TAGS, TAGS, registerVocabulary } from "../src/filter-vocabulary";
 import { Compounds, search } from "../src/search";
 import { searchCollections } from "../src/query-eval";
@@ -380,7 +381,7 @@ test("the strip language", async (suite) => {
 });
 
 test("the collection language", async (suite) => {
-	await suite.test("a book's own tags, and a tag that cannot be true of a kind is false", () => {
+	await suite.test("each kind's own tags, and another kind's is a mistake that finds nothing", () => {
 		setUp();
 		state.ownedBooks = new Set(["plainbook"]);
 		state.notedBooks = new Set(["emptybook"]);
@@ -388,7 +389,10 @@ test("the collection language", async (suite) => {
 		assert.deepEqual(listed("@not @i:own", "book"), ["snowbook", "emptybook"]);
 		assert.deepEqual(listed("@i:noted", "book"), ["emptybook"]);
 		assert.deepEqual(listed("@i:own", "arc"), []);
-		assert.deepEqual(listed("@not @i:own", "arc"), ["snowarc", "schoolarc"]);
+		assert.deepEqual(listed("@not @i:own", "arc"), [], "not false of an arc, but no filter of one at all");
+		assert.deepEqual(listed("@is:colour", "arc"), []);
+		assert.deepEqual(listed("@not @is:colour", "arc"), []);
+		assert.deepEqual(listed("@is:any", "arc"), ["snowarc", "schoolarc"], "every kind's");
 		assert.deepEqual(listed("@is:book", "book"), [], "the kind is the tab's to say, not a tag");
 		assert.deepEqual(listed("@is:colour", "book"), ["snowbook"]);
 		assert.deepEqual(listed("@is:color", "book"), ["snowbook"], "an alias");
@@ -521,8 +525,11 @@ test("the search box", async (suite) => {
 		const inBook = menu("@in (@");
 		assert.ok(inBook.includes("@as:") && inBook.includes("@has "));
 		assert.ok(!inBook.includes("@year:"));
-		const inHas = menu("@has (@", collectionQuery("arc"));
+		const inHas = menu("@has (@", collectionQuery("book"));
 		assert.ok(inHas.includes("@year:") && inHas.includes("@as:") && inHas.includes("@in "));
+		assert.ok(!menu("@has (@", collectionQuery("arc")).includes("@as:"), "only a book prints a strip");
+		assert.ok(!menu("@during (@").includes("@as:"));
+		assert.deepEqual(menu("@during @as:"), []);
 		// Back out of the parenthesis, back in the box's own.
 		assert.ok(menu("@in (@i:own) @").includes("@year:"));
 	});
@@ -594,7 +601,7 @@ test("the search box", async (suite) => {
 		try {
 			setSpelling("american");
 			assert.equal(hint(TAGS, "sunday"), "A color Sunday strip");
-			assert.equal(hint(COLLECTION_TAGS, "colour"), "A book that printed its Sundays in color");
+			assert.equal(hint(COLLECTION_TAGS.book, "colour"), "A book that printed its Sundays in color");
 			setSpelling("british");
 			assert.equal(hint(TAGS, "sunday"), "A colour Sunday strip");
 		} finally {
@@ -622,6 +629,50 @@ test("the search box", async (suite) => {
 		assert.deepEqual(
 			nested.map((span) => span.kind),
 			["match", "match"],
+		);
+	});
+
+	await suite.test("each kind offers its own filters and tags, and paints another kind's red", () => {
+		const names = (type: CollectionType) => menu("@", collectionQuery(type));
+		assert.ok(names("book").includes("@i:") && names("book").includes("@published:"));
+		assert.ok(!names("arc").includes("@i:") && names("arc").includes("@published:"));
+		assert.ok(!names("creator").includes("@i:") && !names("creator").includes("@published:"));
+		assert.deepEqual(menu("@i:", collectionQuery("arc")), []);
+		assert.deepEqual(menu("@is:", collectionQuery("arc")), ["@is:any "]);
+		assert.ok(menu("@is:", collectionQuery("book")).includes("@is:colour "));
+		assert.ok(!menu("@is:", collectionQuery("creator")).includes("@is:colour "));
+		assert.ok(!menu("@during @is:").includes("@is:colour "));
+
+		const painted = (text: string, root = STRIP_QUERY) =>
+			filterSpans(text, null, root).map((span) => [span.kind, text.slice(span.start, span.end), span.reason]);
+		assert.deepEqual(painted("@during @as:ink"), [
+			["match", "@during", undefined],
+			["invalid", "@as:ink", "@as:ink describes a strip in a book, not in an arc"],
+		]);
+		assert.deepEqual(painted("@as:ink", collectionQuery("arc")).slice(-1), [
+			["invalid", "@as:ink", "@as:ink describes a strip in a collection: use it inside @in (…) or @has (…)"],
+		]);
+		assert.deepEqual(painted("@has @as:ink", collectionQuery("arc")), [
+			["match", "@has", undefined],
+			["invalid", "@as:ink", "@as:ink describes a strip in a book, not in an arc"],
+		]);
+		assert.deepEqual(painted("@has @as:ink", collectionQuery("book")), [
+			["match", "@has", undefined],
+			["match", "@as:ink", undefined],
+		]);
+		assert.deepEqual(painted("@is:colour", collectionQuery("arc")), [
+			["invalid", "@is:colour", "@is:colour is for books, not arcs"],
+		]);
+		assert.deepEqual(painted("@featuring @i:own"), [
+			["match", "@featuring", undefined],
+			["invalid", "@i:own", "@i:own is for books, not characters"],
+		]);
+		assert.deepEqual(painted("@published:1988", collectionQuery("character")), [
+			["invalid", "@published:1988", "@published:1988 is for books, arcs or subjects, not characters"],
+		]);
+		assert.deepEqual(
+			painted("@in (@is:colour @i:own @published:1988 @is:any)").map(([kind]) => kind),
+			["match", "match", "match", "match", "match"],
 		);
 	});
 

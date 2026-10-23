@@ -336,7 +336,15 @@ function lex(text: string, root: QueryContext): { tokens: Token[]; after: QueryC
 			position++;
 			const spec = crossingSpec(token.operator)!;
 			token.context = here();
-			token.target = { language: spec.to, ...(spec.type ? { type: spec.type } : {}), link: true };
+			// The collection at the other end of the link: the operator's kind going up from a strip,
+			// and going down with `@has`, the kind it was written of.
+			const linked = spec.type ?? token.context.type;
+			token.target = {
+				language: spec.to,
+				...(spec.type ? { type: spec.type } : {}),
+				link: true,
+				...(linked ? { linked } : {}),
+			};
 			pending = token.target;
 		}
 		tokens.push(token);

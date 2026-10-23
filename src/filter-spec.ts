@@ -13,7 +13,8 @@
  * to know about both.
  */
 
-import { AS_TAGS, COLLECTION_MINE, COLLECTION_TAGS, MINE, TAGS } from "./filter-vocabulary";
+import type { QueryContext } from "./filter-query";
+import { AS_TAGS, COLLECTION_MINE, MINE, TAGS, terms } from "./filter-vocabulary";
 import { PAGE_CONFIG } from "./site-config";
 
 /**
@@ -21,13 +22,15 @@ import { PAGE_CONFIG } from "./site-config";
  * the inside of `@has (…)`. A collection query finds books, arcs, creators, characters or subjects:
  * the Collections page's box, and the inside of `@in (…)`, `@by (…)`, `@featuring (…)`, `@about (…)`
  * and `@during (…)`.
- * Every kind of collection shares the one collection language, so a filter means the same on every
- * tab; what differs is only whether its data can be true of that kind.
+ * Every kind of collection shares the one collection language, but not every filter in it: one that
+ * only some kinds have is a mistake on the others, as `@i:own` is on the Arcs tab. See `fits`.
  */
 export type Language = "strip" | "collection";
 
 /** The kinds of collection a strip can belong to. */
 export type CollectionType = "book" | "arc" | "creator" | "character" | "subject";
+
+export const COLLECTION_TYPES: readonly CollectionType[] = ["book", "arc", "creator", "character", "subject"];
 
 /** `a, b or c`. */
 function orList(words: readonly string[]): string {
@@ -62,6 +65,11 @@ export interface FilterSpec {
 	vocabulary?: true;
 	/** Which language the filter belongs to. A filter written in the other one is a mistake. */
 	language: Language | "both";
+	/**
+	 * The kinds of collection it can be asked of, where not every kind: written of another, it is a
+	 * mistake. `@as:`'s are the kinds of collection at the other end of its link.
+	 */
+	types?: readonly CollectionType[];
 }
 
 const YEAR_FIRST: readonly ValueTemplate[] = [
@@ -201,13 +209,14 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		hint: "Collections with a tag",
 		vocabulary: true,
 		language: "collection",
-		templates: [{ label: "tag", hint: orList(COLLECTION_TAGS.map((tag) => tag.value)) }],
+		templates: [{ label: "tag", hint: orList(terms("is", { language: "collection" }).map((tag) => tag.value)) }],
 	},
 	{
 		name: "i",
 		hint: "Books I own or noted",
 		vocabulary: true,
 		language: "collection",
+		types: ["book"],
 		templates: [{ label: "own", hint: orList(COLLECTION_MINE.map((tag) => tag.value)) }],
 	},
 	{
@@ -221,6 +230,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		name: "published",
 		hint: "Books by the year they came out, arcs and subjects by the years they ran",
 		language: "collection",
+		types: ["book", "arc", "subject"],
 		templates: [
 			{ label: "YYYY", hint: "a four-digit year" },
 			{ label: "YY", hint: "any year ending in those two digits" },
@@ -233,6 +243,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 					hint: "How this strip appears in this collection",
 					vocabulary: true,
 					language: "both",
+					types: ["book"],
 					// The last, which is spelt one way only: `ink`, or else `altered`.
 					templates: [{ label: "tag", hint: AS_TAGS[AS_TAGS.length - 1].value }],
 				} satisfies FilterSpec,
@@ -243,6 +254,27 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 /** Whether the filter can be written in this language. */
 export function speaks(spec: FilterSpec, language: Language): boolean {
 	return spec.language === "both" || spec.language === language;
+}
+
+/**
+ * Whether the filter can be asked of the kind of collection where it is written: the kind the
+ * query is about, or for `@as:`, the kind at the other end of its link. Anything goes where nothing
+ * says which kind.
+ */
+export function fits(spec: FilterSpec, context: QueryContext): boolean {
+	if (spec.types === undefined) return true;
+	const type = spec.name === "as" ? context.linked : context.language === "collection" ? context.type : undefined;
+	return type === undefined || spec.types.includes(type);
+}
+
+/** `books, arcs or subjects`. */
+export function kindsList(types: readonly CollectionType[]): string {
+	return orList(types.map((type) => `${type}s`));
+}
+
+/** `a book or an arc`. */
+export function oneOfKinds(types: readonly CollectionType[]): string {
+	return orList(types.map((type) => `${/^[aeiou]/.test(type) ? "an" : "a"} ${type}`));
 }
 
 /** Every name a filter can have in either language, which is what the scanner looks for. */

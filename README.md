@@ -92,10 +92,12 @@ finds. A collection's words are its own — a book's title, an arc's description
 keywords and description — and an arc's are every word of its strips too, so `susie mom` finds the arcs where both appear, in one strip or
 two. Anything about its strips goes in `@has`, which crosses back down: `@has @is:sunday` is an arc
 with a Sunday, `@not @has @is:sunday` one without, `@only @has @year:1988` one entirely in 1988, and
-`@not @has @is:any` one with no strips. A collection's own filters are `@is:` (`colour`, `writer`,
-`artist`, `any` — a tag that cannot be true of a kind is false), `@i:` (`own`, `noted` — only a book), `@id:`
-and `@published:` (a year, as `@year:` takes it: a book's year, or any year one of an arc's or a subject's strips ran;
-two side by side mean either).
+`@not @has @is:any` one with no strips. Each kind has its own filters, and another kind's is a
+mistake where it is written: `@is:` (`any` for every kind, `colour` for a book, `writer` and
+`artist` for a creator), `@i:` (`own`, `noted` — only a book), `@id:` and `@published:` (a book, an
+arc or a subject: a year, as `@year:` takes it — a book's year, or any year one of an arc's or a
+subject's strips ran; two side by side mean either). `@as:` describes a strip in a book, so
+`@during @as:ink` is a mistake too.
 
 Filter values are read year first — `@date:1988/9/3` is September 3rd, never March 9th — and take
 no spaces. A bare date typed on its own is understood without any `@`, as long as it starts from

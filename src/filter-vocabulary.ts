@@ -26,7 +26,7 @@
  */
 
 import { COLLECTION_INDEX } from "./bundled-data";
-import type { Language } from "./filter-spec";
+import type { CollectionType, Language } from "./filter-spec";
 import { PAGE_CONFIG } from "./site-config";
 import { spellText } from "./spelling";
 
@@ -106,24 +106,31 @@ export const TAGS: readonly Term[] = [
 ];
 
 /**
- * A collection's tags: what can be true of one kind or another. Every kind has every tag, so a query
- * means the same on every tab, and a tag that cannot be true of a kind — an arc is never a writer —
- * is simply false of it. See `query-eval.ts`. Not which kind it is: every query has its kind already,
- * from its tab or from the operator it stands inside, so a tag saying so could only ever be all or
- * nothing. `any` is the one that is all.
+ * A collection's tags, kind by kind: each kind has its own, and a tag of another kind is a mistake
+ * where it is written, as `@is:colour` is on the Arcs tab. Not which kind it is: every query has its
+ * kind already, from its tab or from the operator it stands inside, so a tag saying so could only
+ * ever be all or nothing. `any` is the one that is all, and the one every kind has.
  */
-export const COLLECTION_TAGS: readonly Term[] = [
-	...(PAGE_CONFIG.colourSundays
-		? [spelt({ value: "colour", hint: "A book that printed its Sundays in colour", american: "color" })]
-		: []),
-	...(PAGE_CONFIG.creators
-		? [
-				{ value: "writer", hint: "A creator who wrote strips" },
-				{ value: "artist", hint: "A creator who drew strips" },
-			]
-		: []),
-	ANY,
-];
+export const COLLECTION_TAGS: Readonly<Record<CollectionType, readonly Term[]>> = {
+	book: [
+		...(PAGE_CONFIG.colourSundays
+			? [spelt({ value: "colour", hint: "A book that printed its Sundays in colour", american: "color" })]
+			: []),
+		ANY,
+	],
+	arc: [ANY],
+	creator: [
+		...(PAGE_CONFIG.creators
+			? [
+					{ value: "writer", hint: "A creator who wrote strips" },
+					{ value: "artist", hint: "A creator who drew strips" },
+				]
+			: []),
+		ANY,
+	],
+	character: [ANY],
+	subject: [ANY],
+};
 
 /**
  * `@i:`'s tags: the reader's own relationship to a strip, where `@is:` is a fact about it. Read from
@@ -137,7 +144,7 @@ export const MINE: readonly Term[] = [
 	{ value: "noted", hint: "A strip I wrote a note on" },
 ];
 
-/** A collection's `@i:` tags. Only a book can be owned or noted, so they are false of any other kind. */
+/** A book's `@i:` tags. Only a book can be owned or noted, so no other kind has `@i:` at all. */
 export const COLLECTION_MINE: readonly Term[] = [
 	{ value: "own", hint: "A book I own" },
 	{ value: "noted", hint: "A book I wrote a note on" },
@@ -146,7 +153,7 @@ export const COLLECTION_MINE: readonly Term[] = [
 /**
  * What `@as:` can say about a strip in a collection: how that one collection holds that one strip.
  * Whether a book altered it, where any book did, and how it printed it, where the Sundays were a
- * format of their own. A book printing a strip twice, once in colour and once in ink, prints it as both.
+ * format of their own. Only a book prints a strip, so `@as:` is only asked of a book's. A book printing a strip twice, once in colour and once in ink, prints it as both.
  */
 export const AS_TAGS: readonly Term[] = [
 	...(ALTERATIONS ? [{ value: "altered", hint: "Printed with changes in this book" }] : []),
@@ -159,17 +166,40 @@ export const AS_TAGS: readonly Term[] = [
 		: []),
 ];
 
+/** Every kind's tags together, each once, for a collection query that has no kind. */
+function allKinds(lists: readonly (readonly Term[])[]): readonly Term[] {
+	const seen = new Set<string>();
+	return lists.flat().filter((term) => !seen.has(term.value) && seen.add(term.value));
+}
+
 const REGISTRY = new Map<string, Vocabulary>([
 	["is", () => TAGS],
-	["collection:is", () => COLLECTION_TAGS],
+	...Object.entries(COLLECTION_TAGS).map(([type, tags]): [string, Vocabulary] => [`is:${type}`, () => tags]),
+	["collection:is", () => allKinds(Object.values(COLLECTION_TAGS))],
 	["i", () => MINE],
+	["i:book", () => COLLECTION_MINE],
 	["collection:i", () => COLLECTION_MINE],
 	["as", () => AS_TAGS],
 ]);
 
-/** Where a filter's values are kept: by its name, but for the collection language's own `@is:` and `@i:`. */
-function key(name: string, language: Language): string {
-	return language === "collection" && (name === "is" || name === "i") ? `collection:${name}` : name;
+/**
+ * Where a filter is written, as far as its values care: the language, and in the collection one,
+ * which kind where something says which.
+ */
+export interface Where {
+	language: Language;
+	type?: CollectionType;
+}
+
+const STRIP: Where = { language: "strip" };
+
+/**
+ * Where a filter's values are kept: by its name, but for the collection language's own `@is:` and
+ * `@i:`, by its kind too, and every kind's together where nothing says which.
+ */
+function key(name: string, where: Where): string {
+	if (where.language !== "collection" || (name !== "is" && name !== "i")) return name;
+	return where.type === undefined ? `collection:${name}` : `${name}:${where.type}`;
 }
 
 /** Teach a filter its values, for a vocabulary that arrives with the archive. */
@@ -178,24 +208,24 @@ export function registerVocabulary(name: string, vocabulary: Vocabulary): void {
 }
 
 /** The values, in the order the menu should offer them. Empty until they arrive. */
-export function terms(name: string, language: Language = "strip"): readonly Term[] {
-	return REGISTRY.get(key(name, language))?.() ?? [];
+export function terms(name: string, where: Where = STRIP): readonly Term[] {
+	return REGISTRY.get(key(name, where))?.() ?? [];
 }
 
 /** The term a value names, under either of its spellings, or none. */
-export function termFor(name: string, value: string, language: Language = "strip"): Term | undefined {
-	return terms(name, language).find((term) => term.value === value || term.american === value);
+export function termFor(name: string, value: string, where: Where = STRIP): Term | undefined {
+	return terms(name, where).find((term) => term.value === value || term.american === value);
 }
 
 /**
  * Whether the value is one this filter takes — and true for every value while the list is empty.
  * See the note above: that permissiveness is the point, not an oversight.
  */
-export function knows(name: string, value: string, language: Language = "strip"): boolean {
-	return terms(name, language).length === 0 || termFor(name, value, language) !== undefined;
+export function knows(name: string, value: string, where: Where = STRIP): boolean {
+	return terms(name, where).length === 0 || termFor(name, value, where) !== undefined;
 }
 
 /** The value as the filter keeps it: `colour` for `color`, and anything else as it is. */
-export function canonical(name: string, value: string, language: Language = "strip"): string {
-	return termFor(name, value, language)?.value ?? value;
+export function canonical(name: string, value: string, where: Where = STRIP): string {
+	return termFor(name, value, where)?.value ?? value;
 }

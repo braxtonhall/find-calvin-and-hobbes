@@ -26,7 +26,7 @@ import { MONTHS, WEEKDAYS, parseDateExpression } from "./date-query";
 import { FilterMatch, QueryContext, STRIP_QUERY, quoted, quotedSpans, readMatch } from "./filter-query";
 import { contextAt, scanQuery } from "./boolean-query";
 import { dateToString, isSabbatical, lastDayOf } from "./date-utils";
-import { CROSSING_SPECS, FILTER_SPECS, FilterSpec, ValueTemplate, filterSpec, speaks } from "./filter-spec";
+import { CROSSING_SPECS, FILTER_SPECS, FilterSpec, ValueTemplate, filterSpec, fits, speaks } from "./filter-spec";
 import { Term, terms } from "./filter-vocabulary";
 import { preferredSpelling } from "./spelling";
 import { MONTH_NAMES, WEEKDAY_NAMES, YEARS } from "./vocabulary";
@@ -105,17 +105,17 @@ function spellingsOf(term: Term): string[] {
 }
 
 /**
- * The values a vocabulary filter takes where it is written. `@is:` takes a strip's tags or a
- * collection's, by the language; `@id:` takes one kind's ids where something says which kind, and
+ * The values a vocabulary filter takes where it is written. `@is:` takes a strip's tags or one kind of
+ * collection's, by the language and the kind; `@id:` takes one kind's ids where something says which kind, and
  * every kind's where nothing does, and `@published:` one kind's years the same way.
  */
 function valuesOf(spec: FilterSpec, context: QueryContext = STRIP_QUERY): readonly Term[] {
 	const language = spec.language === "both" ? context.language : spec.language;
 	if ((spec.name === "id" || spec.name === "published") && context.type !== undefined) {
-		const typed = terms(`${spec.name}:${context.type}`, "collection");
+		const typed = terms(`${spec.name}:${context.type}`, { language: "collection" });
 		if (typed.length > 0) return typed;
 	}
-	return terms(spec.name, language);
+	return terms(spec.name, { ...context, language });
 }
 
 /** Whether a name slot could still be typed out into one of the names it takes. */
@@ -678,7 +678,11 @@ export function completionsAt(text: string, caret: number, root: QueryContext = 
 	if (value === undefined) {
 		const rows = [
 			...FILTER_SPECS.filter(
-				(spec) => speaks(spec, context.language) && (spec.name !== "as" || context.link) && spec.name.startsWith(name),
+				(spec) =>
+					speaks(spec, context.language) &&
+					(spec.name !== "as" || context.link) &&
+					fits(spec, context) &&
+					spec.name.startsWith(name),
 			).map(nameRow),
 			...OPERATOR_ROWS.filter((row) => row.name.startsWith(name)),
 			...crossingRows(context).filter((row) => row.name.startsWith(name)),
@@ -688,8 +692,8 @@ export function completionsAt(text: string, caret: number, root: QueryContext = 
 
 	const spec = filterSpec(name, context.language);
 	// A colon after a name that is not a filter here has no completion to offer — nor `@as:` where
-	// there is no link for it to describe.
-	if (spec === undefined || (spec.name === "as" && !context.link)) return null;
+	// there is no link for it to describe, nor a filter this kind of collection does not have.
+	if (spec === undefined || (spec.name === "as" && !context.link) || !fits(spec, context)) return null;
 
 	// Whether the filter works is the parser's business rather than a fourth opinion here, so no
 	// shape may claim to be filled inside a filter that would not run.
