@@ -71,6 +71,9 @@ export interface Tuning {
 	descriptionInflectionWeight: number;
 	descriptionPreference: number;
 	agreementBonus: number;
+	fieldLending: number;
+	transcriptLendingReach: number;
+	descriptionLendingReach: number;
 }
 
 /**
@@ -198,11 +201,16 @@ interface Summary {
 	// Coverage is rarity-weighted, so a couple of rare words can stand in for a whole query;
 	// this is the plain count, which they cannot.
 	literalShare: number;
+	// Per term: the share of its own ceiling this field reached, and whether it got there without
+	// spelling correction. Kept per term so the other field of the same strip can fill its holes.
+	covered: Float64Array;
+	literal: Uint8Array;
 }
 
 interface FieldMatch {
 	score: number;
 	ranges: HighlightRange[];
+	summary: Summary;
 }
 
 // A transcript's sequence multiplier is only meaningful next to what the query could achieve,
@@ -211,6 +219,19 @@ interface TranscriptMatch {
 	strength: number;
 	multiplier: number;
 	ranges: HighlightRange[];
+	summary: Summary;
+}
+
+/**
+ * A field's match once the other field of the same strip has been allowed to fill its holes.
+ * `fill` is the share of this field's ceiling that only the other field reached, so it is zero
+ * whenever the two fields matched the same terms, and the strip then scores as it always has.
+ */
+interface Admission {
+	fill: number;
+	// Whether the field passes its gates on its own, without any fill. The agreement bonus is only
+	// paid for two fields that would each have been admitted alone.
+	alone: boolean;
 }
 
 let indexedComics: IndexedComic[] = [];
@@ -703,6 +724,8 @@ function summarise(hits: FieldHits, ceilings: Float64Array, repeatWeight: number
 		// of it there — so applying this too would not bound typo tolerance, it would delete it,
 		// and `transmogrifer` would find nothing at all.
 		literalShare: live > 1 ? literalTerms / live : 1,
+		covered: ceilings.map((ceiling, term) => (ceiling > 0 ? Math.min(best[term], ceiling) / ceiling : 0)),
+		literal,
 	};
 }
 
@@ -798,7 +821,6 @@ function scoreTranscript(
 	corpus: Corpus,
 	expansions: Expansion[],
 	ceilings: Float64Array,
-	required: number,
 	order: number[],
 	breaks: Set<number>,
 	compoundQueries: CompoundQuery[],
@@ -811,8 +833,7 @@ function scoreTranscript(
 	if (compoundQueries.some((query) => !hasCompoundSequence(field, query.parts))) return null;
 
 	const summary = summarise(hits, ceilings, tuning.transcriptRepeatWeight, tuning.repeatVariety);
-	if (summary.ceiling === 0 || summary.coverage < required) return null;
-	if (summary.literalShare < tuning.transcriptLiteralShare) return null;
+	if (summary.ceiling === 0) return null;
 
 	const { lcs, run } = orderedSubsequence(order, hits, breaks);
 	const proportionalRun = run / order.length;
@@ -827,6 +848,7 @@ function scoreTranscript(
 			tuning.transcriptIdfFloor,
 			compoundQueries.filter((query) => query.quoted),
 		),
+		summary,
 	};
 }
 
@@ -835,7 +857,6 @@ function scoreDescription(
 	corpus: Corpus,
 	expansions: Expansion[],
 	ceilings: Float64Array,
-	required: number,
 	compoundQueries: CompoundQuery[],
 	sequence: string[],
 	termIndices: Map<string, number>,
@@ -846,13 +867,7 @@ function scoreDescription(
 	if (compoundQueries.some((query) => !hasCompoundSequence(field, query.parts))) return null;
 
 	const summary = summarise(hits, ceilings, tuning.descriptionRepeatWeight, tuning.repeatVariety);
-	if (summary.ceiling === 0 || summary.coverage < required) return null;
-	// Divided by the query's own length before the comparison, so the threshold means the same
-	// thing to a one-word query as to a six-word one. At normalization 0 the divisor is 1 and this
-	// is the raw sum it has always been.
-	const mass = summary.achieved / Math.max(1, summary.matched) ** tuning.descriptionMassNormalization;
-	if (mass < tuning.descriptionMinMass) return null;
-	if (summary.literalShare < tuning.descriptionLiteralShare) return null;
+	if (summary.ceiling === 0) return null;
 
 	return {
 		score: summary.base / summary.ceiling / lengthPivot(field, corpus, tuning.descriptionLengthNormalization),
@@ -863,6 +878,90 @@ function scoreDescription(
 			tuning.descriptionIdfFloor,
 			compoundQueries.filter((query) => query.quoted),
 		),
+		summary,
+	};
+}
+
+interface Gates {
+	required: number;
+	literalShare: number;
+	// Only descriptions have one; a transcript passes 0, which any match clears.
+	minMass: number;
+	massNormalization: number;
+	// How far short of `required` this field's own coverage may fall and the field still lend its
+	// terms to the strip's other fields: 0 lends only from a field that reaches it alone, 1 from any
+	// field that matched anything.
+	lendingReach: number;
+}
+
+/** A field of the same strip, as another field sees it: what it reached, in its own corpus's terms. */
+interface Lender {
+	summary: Summary;
+	ceilings: Float64Array;
+}
+
+function lends(summary: Summary, gates: Gates): boolean {
+	return summary.coverage >= (1 - gates.lendingReach) * gates.required;
+}
+
+/**
+ * Whether a field is admitted, judged in its own terms — its own ceilings, its own thresholds —
+ * but with every term another field of the strip reached counted as reached here too, at
+ * `lending` of its worth. A query is one question about one strip, so `calvin hello world` against
+ * a strip described as Calvin and saying `hello world` has matched all three words, even though
+ * neither field has. Judged apart, the transcript is missing a word and the description two, and
+ * the strip either drops out or ties with every other strip that says `hello world`.
+ *
+ * Nothing here knows which fields there are. Each is a summary over the same query terms with its
+ * own corpus's ceilings, so a strip with one field has no lenders and is judged as it always was.
+ *
+ * A lent term is worth the lesser of what it is worth in either corpus. A word one corpus has never
+ * seen carries the maximal ceiling there, as a penalty for missing it — see `denominators` — and
+ * that penalty is not information: `I` is in every transcript and in no description, so a
+ * transcript saying it must not lend a description a maximally rare match.
+ */
+function admit(
+	own: Summary,
+	ceilings: Float64Array,
+	lenders: Lender[],
+	gates: Gates,
+	lending: number,
+): Admission | null {
+	// Divided by the query's own length before the comparison, so the threshold means the same
+	// thing to a one-word query as to a six-word one. At normalization 0 the divisor is 1 and this is
+	// the raw sum it has always been. Asked of the field's own words only: the mass gate is what
+	// keeps a lenient coverage floor from admitting weak keyword hits, and lent terms would
+	// otherwise satisfy it for every strip whose other fields half-match.
+	const massive = own.achieved / Math.max(1, own.matched) ** gates.massNormalization >= gates.minMass;
+	const passes = (achieved: number, live: number, literal: number): boolean =>
+		massive && achieved / own.ceiling >= gates.required && (live > 1 ? literal / live : 1) >= gates.literalShare;
+
+	let achieved = 0;
+	let filled = 0;
+	let live = 0;
+	let literal = 0;
+	let ownLiteral = 0;
+	for (let term = 0; term < ceilings.length; term++) {
+		if (ceilings[term] <= 0) continue;
+		live++;
+		const ownMass = ceilings[term] * own.covered[term];
+		let lentMass = 0;
+		let lentLiteral = 0;
+		for (const lender of lenders) {
+			const mass = lending * Math.min(ceilings[term], lender.ceilings[term]) * lender.summary.covered[term];
+			if (mass > lentMass) lentMass = mass;
+			lentLiteral |= lender.summary.literal[term];
+		}
+		achieved += ownMass;
+		filled += Math.max(0, lentMass - ownMass);
+		ownLiteral += own.literal[term];
+		if (own.literal[term] || (lentMass > 0 && lentLiteral)) literal++;
+	}
+
+	if (!passes(achieved + filled, live, literal)) return null;
+	return {
+		fill: filled / own.ceiling,
+		alone: passes(achieved, live, ownLiteral),
 	};
 }
 
@@ -1340,22 +1439,34 @@ function rankedSearch(
 	);
 	const transcriptCeilings = denominators(transcriptExpansions, descriptionExpansions, transcriptCorpus, tuning);
 	const descriptionCeilings = denominators(descriptionExpansions, transcriptExpansions, descriptionCorpus, tuning);
-	const transcriptRequired = requiredCoverage(
-		tuning.transcriptCoverageFloor,
-		effectiveTerms(transcriptCeilings),
-		tuning.transcriptLengthForgiveness,
-	);
-	const descriptionRequired = requiredCoverage(
-		tuning.descriptionCoverageFloor,
-		effectiveTerms(descriptionCeilings),
-		tuning.descriptionLengthForgiveness,
-	);
+	const transcriptGates: Gates = {
+		required: requiredCoverage(
+			tuning.transcriptCoverageFloor,
+			effectiveTerms(transcriptCeilings),
+			tuning.transcriptLengthForgiveness,
+		),
+		literalShare: tuning.transcriptLiteralShare,
+		minMass: 0,
+		massNormalization: 0,
+		lendingReach: tuning.transcriptLendingReach,
+	};
+	const descriptionGates: Gates = {
+		required: requiredCoverage(
+			tuning.descriptionCoverageFloor,
+			effectiveTerms(descriptionCeilings),
+			tuning.descriptionLengthForgiveness,
+		),
+		literalShare: tuning.descriptionLiteralShare,
+		minMass: tuning.descriptionMinMass,
+		massNormalization: tuning.descriptionMassNormalization,
+		lendingReach: tuning.descriptionLendingReach,
+	};
 	interface Candidate {
 		comic: Comic;
-		transcript: TranscriptMatch | null;
+		transcript: (TranscriptMatch & Admission) | null;
 		transcriptText: string;
 		matchedAlternate: boolean;
-		description: FieldMatch | null;
+		description: (FieldMatch & Admission) | null;
 		descriptionText: string;
 	}
 
@@ -1363,39 +1474,12 @@ function rankedSearch(
 	let bestMultiplier = 0;
 
 	for (const { comic, transcripts, description } of indexedComics) {
-		let transcript: TranscriptMatch | null = null;
-		let transcriptText = "";
-		let matchedAlternate = false;
-		for (const [index, field] of transcripts.entries()) {
-			const match = scoreTranscript(
-				field,
-				transcriptCorpus,
-				transcriptExpansions,
-				transcriptCeilings,
-				transcriptRequired,
-				order,
-				breaks,
-				compoundQueries,
-				sequence,
-				termIndices,
-				tuning,
-			);
-			if (match === null) continue;
-			if (transcript === null || match.strength * match.multiplier > transcript.strength * transcript.multiplier) {
-				transcript = match;
-				transcriptText = field.text;
-				matchedAlternate = index > 0;
-			}
-		}
-		if (transcript !== null && transcript.multiplier > bestMultiplier) bestMultiplier = transcript.multiplier;
-
-		const summary = description
+		const described = description
 			? scoreDescription(
 					description,
 					descriptionCorpus,
 					descriptionExpansions,
 					descriptionCeilings,
-					descriptionRequired,
 					compoundQueries,
 					sequence,
 					termIndices,
@@ -1403,13 +1487,71 @@ function rankedSearch(
 				)
 			: null;
 
-		if (transcript === null && summary === null) continue;
+		// Every field is scored before any is admitted, so each can be admitted with the others' help.
+		const scored: { match: TranscriptMatch; index: number; text: string }[] = [];
+		for (const [index, field] of transcripts.entries()) {
+			const match = scoreTranscript(
+				field,
+				transcriptCorpus,
+				transcriptExpansions,
+				transcriptCeilings,
+				order,
+				breaks,
+				compoundQueries,
+				sequence,
+				termIndices,
+				tuning,
+			);
+			if (match !== null) scored.push({ match, index, text: field.text });
+		}
+
+		let transcript: (TranscriptMatch & Admission) | null = null;
+		let transcriptText = "";
+		let matchedAlternate = false;
+		const descriptionLenders: Lender[] =
+			described && lends(described.summary, descriptionGates)
+				? [{ summary: described.summary, ceilings: descriptionCeilings }]
+				: [];
+		for (const { match, index, text } of scored) {
+			const admission = admit(
+				match.summary,
+				transcriptCeilings,
+				descriptionLenders,
+				transcriptGates,
+				tuning.fieldLending,
+			);
+			if (admission === null) continue;
+			if (transcript === null || match.strength * match.multiplier > transcript.strength * transcript.multiplier) {
+				transcript = { ...match, ...admission };
+				transcriptText = text;
+				matchedAlternate = index > 0;
+			}
+		}
+		if (transcript !== null && transcript.multiplier > bestMultiplier) bestMultiplier = transcript.multiplier;
+
+		let admittedDescription: (FieldMatch & Admission) | null = null;
+		if (described !== null) {
+			// An alternate lends as well as the transcript it stands beside: both are the strip's words.
+			const transcriptLenders: Lender[] = scored
+				.filter(({ match }) => lends(match.summary, transcriptGates))
+				.map(({ match }) => ({ summary: match.summary, ceilings: transcriptCeilings }));
+			const admission = admit(
+				described.summary,
+				descriptionCeilings,
+				transcriptLenders,
+				descriptionGates,
+				tuning.fieldLending,
+			);
+			if (admission !== null) admittedDescription = { ...described, ...admission };
+		}
+
+		if (transcript === null && admittedDescription === null) continue;
 		candidates.push({
 			comic,
 			transcript,
 			transcriptText,
 			matchedAlternate,
-			description: summary,
+			description: admittedDescription,
 			descriptionText: description?.text || "",
 		});
 	}
@@ -1422,13 +1564,16 @@ function rankedSearch(
 	const results: SearchResult[] = [];
 
 	for (const candidate of candidates) {
-		const transcriptScore = candidate.transcript
-			? (candidate.transcript.strength * candidate.transcript.multiplier) / normalizer
-			: 0;
-		const descriptionScore = candidate.description ? candidate.description.score * tuning.descriptionPreference : 0;
+		const { transcript, description } = candidate;
+		const transcriptAlone = transcript ? (transcript.strength * transcript.multiplier) / normalizer : 0;
+		const descriptionAlone = description ? description.score * tuning.descriptionPreference : 0;
+		// What the other field lent is worth what a description match is worth, and earns no order
+		// or repetition credit: the lending field's own bonuses are its own.
+		const transcriptScore = transcript ? transcriptAlone + tuning.descriptionPreference * transcript.fill : 0;
+		const descriptionScore = description ? descriptionAlone + tuning.descriptionPreference * description.fill : 0;
 
-		const score =
-			Math.max(transcriptScore, descriptionScore) + tuning.agreementBonus * Math.min(transcriptScore, descriptionScore);
+		const agreement = transcript?.alone && description?.alone ? Math.min(transcriptAlone, descriptionAlone) : 0;
+		const score = Math.max(transcriptScore, descriptionScore) + tuning.agreementBonus * agreement;
 		const preferTranscript = candidate.transcript !== null && transcriptScore >= descriptionScore;
 
 		results.push({

@@ -146,6 +146,21 @@ test("a partial description match survives only if it covers the rare term", () 
 	assert.deepEqual(ranked("transmogrifier porch"), ["2000-01-01"]);
 });
 
+// Issue #90. Judged apart, neither field of the first strip covers the query: the transcript lacks
+// `rosalyn`, which carries most of the query's weight, and the description lacks `hello world`. So
+// the strip that matched every word is dropped, and the one that matched two of them is kept.
+test("a query split across a strip's fields outranks one field alone when fields lend", () => {
+	install(
+		buildArchive([
+			{ date: "2000-01-01", transcript: "Hello world!", description: "Rosalyn wakes up." },
+			{ date: "2000-01-02", transcript: "Hello world!", description: "Hobbes wakes up." },
+		]),
+	);
+	const lending: Tuning = { ...ENGINE_TUNING, fieldLending: 1, descriptionLendingReach: 1 };
+	assert.ok(!ranked("rosalyn hello world").includes("2000-01-01"));
+	assert.deepEqual(ranked("rosalyn hello world", lending), ["2000-01-01"]);
+});
+
 test("a transcript inflection adds variety to an otherwise literal match", () => {
 	install(
 		buildArchive(

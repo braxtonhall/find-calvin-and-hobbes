@@ -33,4 +33,8 @@ export const ENGINE_TUNING: Tuning = {
 	descriptionInflectionWeight: 0.7,
 	descriptionPreference: 0.7,
 	agreementBonus: 0.15,
+	// Off, so these tests describe each field judged alone; a test about lending turns it on.
+	fieldLending: 0,
+	transcriptLendingReach: 0,
+	descriptionLendingReach: 0,
 };

@@ -77,6 +77,13 @@ const CANDIDATES: Record<string, number[]> = {
 	descriptionInflectionWeight: [0, 0.5, 0.7, 0.85, 1],
 	descriptionPreference: [0.4, 0.55, 0.7, 0.85, 1],
 	agreementBonus: [0, 0.15, 0.3, 0.6],
+	// 0 is the engine before fields lent each other terms: each judged alone, the larger score kept.
+	fieldLending: [0, 0.25, 0.5, 0.75, 1],
+	// How short of its own coverage requirement a field may fall and still lend. Judged on the intent
+	// of the field being lent *to*, since that is whose result set the lending widens: a lenient
+	// receiver admits whatever a near-miss lender hands it.
+	transcriptLendingReach: [0, 0.25, 0.5, 0.75, 1],
+	descriptionLendingReach: [0, 0.25, 0.5, 0.75, 1],
 };
 
 // transcriptIdfFloor is deliberately absent. It governs candidate seeding and highlighting
@@ -110,6 +117,9 @@ const OBJECTIVE: Record<string, "recited" | "described" | "combined"> = {
 	repeatVariety: "combined",
 	descriptionPreference: "combined",
 	agreementBonus: "combined",
+	fieldLending: "combined",
+	transcriptLendingReach: "described",
+	descriptionLendingReach: "recited",
 };
 
 const KNOBS = Object.keys(CANDIDATES) as (keyof Tuning)[];

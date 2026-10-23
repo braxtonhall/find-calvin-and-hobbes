@@ -27,6 +27,9 @@ const TUNING_KEYS = [
 	"descriptionInflectionWeight",
 	"descriptionPreference",
 	"agreementBonus",
+	"fieldLending",
+	"transcriptLendingReach",
+	"descriptionLendingReach",
 ] as const satisfies readonly (keyof Tuning)[];
 
 // Fails to compile when `Tuning` gains a setting this list lacks, so the file cannot be read without it.

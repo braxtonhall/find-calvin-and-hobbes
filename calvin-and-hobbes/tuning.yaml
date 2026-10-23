@@ -120,3 +120,21 @@ transcriptInflectionWeight: 0.1
 descriptionInflectionWeight: 0.7
 descriptionPreference: 0.7
 agreementBonus: 0.15
+# Whether a strip's fields judge the query together. Each field is still scored in its own terms,
+# but a query term another field of the strip matched counts as matched here too, at
+# `fieldLending` of its worth, for admission and for score. 0 is the engine before issue #90: each
+# field judged alone and the larger score kept, so `rosalyn hello world` scored a strip described
+# as Rosalyn and saying `hello world` no higher than one that only says `hello world`.
+#
+# A field lends only once its own coverage reaches `(1 - reach) * its required coverage`. The two
+# reaches are not symmetric in effect. A description's coverage floor is lenient, so a transcript
+# lending to it is what widens result sets. Against lending off, on the golden and generated
+# fixtures: lending 1 at reach 1 finds 7 more targets and grows recited result sets 1.86x; lending
+# 0.5 at reach 0.5 finds 6 more at 1.16x, but fails the `calvin good night` monotonicity probe;
+# lending 0.25 at reach 0.5 finds 5 more, puts 7 more first, and grows them 1.07x. At reach 0 the
+# gain is gone. Descriptions lending to transcripts moved nothing measurable at any reach.
+# Hand-swept 2026-10-23: `yarn tune` refuses to run while the baseline already fails the
+# `calvin clean your room` probe, which it did before this setting existed.
+fieldLending: 0.25
+transcriptLendingReach: 0.5
+descriptionLendingReach: 1
