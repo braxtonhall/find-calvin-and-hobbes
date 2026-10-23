@@ -2,6 +2,7 @@ import "./grid.css";
 
 import { Day, Route } from "./types";
 import { computeDays } from "./days";
+import { attachGridScrollbar } from "./grid-scrollbar";
 import { anyCellInView, clearRowHighlights, scrollCellIntoViewIfNeeded, visibleBand } from "./utils";
 import { state } from "./state";
 import { isDayBookmarked } from "./bookmarks";
@@ -903,6 +904,7 @@ export function renderGrid(): void {
 	buildControls();
 	attachYearRail();
 	attachOverscan();
+	attachGridScrollbar(grid);
 	setBoardSource(gridBoard);
 
 	// Opened on a strip, the grid starts on the page holding it, rather than drawing another first.

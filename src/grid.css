@@ -16,6 +16,7 @@
 
 /* The grid over the buttons under it. See `index.html`. */
 #grid-column {
+	position: relative;
 	display: flex;
 	flex-direction: column;
 	flex: 1;
@@ -23,12 +24,55 @@
 	min-height: 0;
 }
 
-/* What scrolls on desktop. On mobile the container does, inside it. */
+/*
+ * What scrolls on desktop. On mobile the container does, inside it. Its own scrollbar would cover the
+ * labels; `attachGridScrollbar` draws another.
+ */
 #grid-scroller {
 	flex: 1;
 	min-height: 0;
 	overflow-x: hidden;
 	overflow-y: auto;
+	scrollbar-width: none;
+}
+
+#grid-scroller::-webkit-scrollbar {
+	display: none;
+}
+
+/*
+ * The grid's scrollbar: a pill around the labels, behind them as the year rail's are behind its years,
+ * in the pale gold of a day a search passed over, for the labels to be read on. Placed by
+ * `attachGridScrollbar`, and grabbed through the labels, so it takes no pointer itself. Over the
+ * header row, whose background crosses the labels' column, so that it reaches the top as the browser's
+ * would; the labels are raised above it in turn.
+ */
+.grid-scrollbar {
+	position: absolute;
+	z-index: 4;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.3s;
+}
+
+.grid-scrollbar[hidden] {
+	display: none;
+}
+
+.grid-scrollbar--shown {
+	opacity: 1;
+	transition-duration: 0.1s;
+}
+
+.grid-scrollbar-thumb {
+	border-radius: 4px;
+	background: var(--main-faded);
+}
+
+/* Dragging it along the labels does not select them. */
+#grid-column.grid-scrollbar-dragging {
+	-webkit-user-select: none;
+	user-select: none;
 }
 
 #grid-container {
@@ -327,7 +371,11 @@
 	}
 }
 
+/* Not text to select: the grid's scrollbar is grabbed through them (see `attachGridScrollbar`). */
 .grid-labels {
+	cursor: default;
+	-webkit-user-select: none;
+	user-select: none;
 	display: grid;
 	grid-auto-rows: var(--cell-size);
 	gap: var(--grid-gap);
@@ -357,7 +405,7 @@
 .grid-sticky-label {
 	position: sticky;
 	top: 0;
-	z-index: 3;
+	z-index: 5;
 	height: var(--cell-size);
 	display: flex;
 	align-items: center;
