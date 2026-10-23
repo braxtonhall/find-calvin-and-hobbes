@@ -249,8 +249,9 @@ export class Evaluator {
 		);
 	}
 
-	/** `@in (…)`, `@by (…)`, `@featuring (…)`, `@about (…)` or `@during (…)`, asked of one strip. */
+	/** `@in (…)`, `@by (…)`, `@featuring (…)`, `@about (…)` or `@during (…)`, asked of one strip — or `@reran (…)` or `@reuses (…)`. */
 	crossFromStrip(crossing: Crossing, row: StripRow): boolean {
+		if (crossing.operator === "reran" || crossing.operator === "reuses") return this.crossToRun(crossing, row);
 		const type = crossingSpec(crossing.operator)?.type;
 		if (type === undefined) return false;
 		const { byId } = groups(type);
@@ -259,6 +260,25 @@ export class Evaluator {
 			.filter((group): group is Group => group !== undefined);
 		const test = (group: Group) =>
 			this.remembered(crossing, group, () => this.groupHolds(crossing.clauses, group, { comic: row.comic, group }));
+		return crossing.only ? related.length > 0 && related.every(test) : related.some(test);
+	}
+
+	/**
+	 * `@reran (…)` or `@reuses (…)`, asked of one strip: the query inside, of the days it ran again, or
+	 * of the day a rerun first ran. A rerun never reran, and a strip on the day it first ran reuses
+	 * nothing, so each holds only of its own side.
+	 */
+	private crossToRun(crossing: Crossing, row: StripRow): boolean {
+		const related: StripRow[] = [];
+		if (crossing.operator === "reran") {
+			if (row.run !== "rerun" && !row.comic.id)
+				for (const rerun of this.rerunsOf(row.comic)) related.push({ comic: rerun, run: "rerun" });
+		} else if (row.run === "rerun") {
+			const original = this.originalOf(row.comic);
+			if (original) related.push({ comic: original, run: "reused" });
+		}
+		const test = (other: StripRow) =>
+			this.remembered(crossing, other.comic, () => this.stripHolds(crossing.clauses, other));
 		return crossing.only ? related.length > 0 && related.every(test) : related.some(test);
 	}
 
@@ -341,6 +361,13 @@ export class Evaluator {
 			}
 		}
 		return this.rerunRows.get(comic.date) ?? [];
+	}
+
+	/** The strip a rerun day's row ran again, on the day it first ran. */
+	private originalOf(rerun: Comic): Comic | undefined {
+		const originalDate = state.reruns.get(rerun.date);
+		if (originalDate === undefined) return undefined;
+		return state.comicsByDate.get(originalDate)?.find((candidate) => !candidate.id);
 	}
 }
 

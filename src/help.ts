@@ -28,6 +28,7 @@ import { AS_TAGS, Term, terms } from "./filter-vocabulary";
 import { CollectionsTab, TAB_TYPES, buildSearchPath, buildTabPath, collectionsTabs } from "./routes";
 import { PAGE_CONFIG } from "./site-config";
 import { YEARS } from "./constants";
+import { RERUNS } from "./bundled-data";
 
 /** One way of writing an entry: `@in:` and a book, or `@in` and a group. */
 export interface HelpForm {
@@ -201,7 +202,32 @@ function collectionValues(spec: FilterSpec): HelpValues[] {
 	return lists.map((list) => ({ kind: `${list.type[0].toUpperCase()}${list.type.slice(1)}s`, terms: list.terms }));
 }
 
+/** The years of the archive's first rerun, the day it ran again and the day it first ran, for the sentences to write about. */
+const [RERAN_YEAR, FIRST_YEAR] = (Object.entries(RERUNS)[0] ?? [String(NEXT_YEAR), String(YEAR)]).map((date) =>
+	date.slice(0, 4),
+);
+
+/** What each operator from a strip to another day it ran has to say beyond its hint, by name. */
+const RUN_NOTES: Partial<Record<string, string[]>> = {
+	reran: [
+		`What follows is about the day it ran again: \`@year:${FIRST_YEAR} @reran @year:${RERAN_YEAR}\` is a strip from ${FIRST_YEAR} that ran again in ${RERAN_YEAR}, shown on the day it first ran.`,
+	],
+	reuses: [
+		`What follows is about the day it first ran: \`@year:${RERAN_YEAR} @reuses @year:${FIRST_YEAR}\` is a rerun in ${RERAN_YEAR} of a strip from ${FIRST_YEAR}, shown on the day it ran again.`,
+	],
+};
+
 function stripEntries(): HelpEntry[] {
+	const runs = CROSSING_SPECS.filter((spec) => spec.from === "strip" && spec.to === "strip").map((spec): HelpEntry => ({
+		id: `strips-${spec.name}`,
+		forms: [crossingForm(spec)],
+		notes: RUN_NOTES[spec.name] ?? [],
+		values: [],
+	}));
+	return [...filterEntries(), ...runs];
+}
+
+function filterEntries(): HelpEntry[] {
 	return FILTER_SPECS.filter((spec) => spec.language === "strip").map((spec) => {
 		const crossing = crossingSpec(spec.name);
 		const crosses = crossing !== undefined && crossing.from === "strip";
@@ -240,7 +266,9 @@ function collectionEntries(): HelpEntry[] {
 
 /** The operators that go up from a strip to a collection, as `@in ( … )`, `@during ( … )` and the rest write them. */
 function upward(): string {
-	const names = CROSSING_SPECS.filter((spec) => spec.from === "strip").map((spec) => `\`@${spec.name} ( … )\``);
+	const names = CROSSING_SPECS.filter((spec) => spec.from === "strip" && spec.to === "collection").map(
+		(spec) => `\`@${spec.name} ( … )\``,
+	);
 	return names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names.join("");
 }
 
@@ -279,7 +307,7 @@ const OPERATORS: HelpEntry[] = [
 		id: "operators-only",
 		forms: [operatorForm("only")],
 		notes: [
-			"Before `@in`, `@has` and their kind, it asks for every one to match rather than just one: `@in @i:own` is a strip in a book you own, and `@only @in @i:own` a strip printed only in books you own.",
+			`Before \`@in\`, \`@has\` and their kind, it asks for every one to match rather than just one: \`@in @i:own\` is a strip in a book you own, and \`@only @in @i:own\` a strip printed only in books you own.${PAGE_CONFIG.reruns ? " Before `@reran`, every day the strip ran again." : ""}`,
 		],
 		values: [],
 	},
@@ -303,9 +331,7 @@ export function helpSections(): HelpSection[] {
 			id: "strips",
 			title: "Filtering strips",
 			intro: [
-				collections
-					? "What the main search box takes, and what goes inside `@has ( … )`. A filter's value follows its colon, with no spaces."
-					: "What the search box takes. A filter's value follows its colon, with no spaces.",
+				`${collections ? "What the main search box takes, and what goes inside `@has ( … )`" : "What the search box takes"}${PAGE_CONFIG.reruns ? ", `@reran ( … )` and `@reuses ( … )`" : ""}. A filter's value follows its colon, with no spaces.`,
 			],
 			entries: stripEntries(),
 		},

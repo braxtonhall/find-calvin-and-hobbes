@@ -215,7 +215,7 @@ function tokenOf(match: FilterMatch): string | null {
  */
 function positives(text: string): FilterMatch[] {
 	const negated = negatedFilters(text);
-	return scanQuery(text, STRIP_QUERY).filters.filter((match) => !negated.has(match.start) && !match.context.link);
+	return scanQuery(text, STRIP_QUERY).filters.filter((match) => !negated.has(match.start) && !match.context.crossed);
 }
 
 /** The filters in the query that tick one of this field's boxes, in the order they were written. */

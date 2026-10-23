@@ -41,7 +41,8 @@ import { Comic } from "./types";
  * it take the one atom after them, which is usually a group: `@in (@i:own @is:colour)` is a
  * strip in a book that is both. `@in` goes up from a strip to its books, `@by` to its creators,
  * `@featuring` to its characters, `@about` to its subjects and `@during` to its arcs; `@has` goes down from a collection to
- * its strips. Each is "some": `@in X` is in at least one book that is X. `@only` before one of them
+ * its strips. `@reran` goes from a strip to the days it ran again, and `@reuses` from one of
+ * those days back to the day it first ran. Each is "some": `@in X` is in at least one book that is X. `@only` before one of them
  * makes it "at least one, and all of them": `@only @in @i:own` is printed only in books the reader
  * owns. `@is:any` is true of everything, so `@in @is:any` is in a book at all. What stands inside one is written in the language on the other side of it — see
  * `QueryContext` — so `@i:own` inside `@in (…)` is a book the reader owns, and outside it a
@@ -337,14 +338,18 @@ function lex(text: string, root: QueryContext): { tokens: Token[]; after: QueryC
 			const spec = crossingSpec(token.operator)!;
 			token.context = here();
 			// The collection at the other end of the link: the operator's kind going up from a strip,
-			// and going down with `@has`, the kind it was written of.
+			// and going down with `@has`, the kind it was written of. A strip to a strip has none.
 			const linked = spec.type ?? token.context.type;
-			token.target = {
-				language: spec.to,
-				...(spec.type ? { type: spec.type } : {}),
-				link: true,
-				...(linked ? { linked } : {}),
-			};
+			token.target =
+				spec.from === spec.to
+					? { language: spec.to, link: false, crossed: true }
+					: {
+							language: spec.to,
+							...(spec.type ? { type: spec.type } : {}),
+							link: true,
+							crossed: true,
+							...(linked ? { linked } : {}),
+						};
 			pending = token.target;
 		}
 		tokens.push(token);
@@ -745,6 +750,10 @@ export interface OperatorMatch {
 function crossingMistake(token: CrossToken): string {
 	if (token.operator === "has")
 		return "@has goes from a collection to its strips: use it on the Collections page, or inside @in (…)";
+	if (token.operator === "reran")
+		return "@reran goes from a strip to the days it ran again. Did you mean @has @reran …?";
+	if (token.operator === "reuses")
+		return "@reuses goes from a rerun to the day its strip first ran. Did you mean @has @reuses …?";
 	return `@${token.operator} goes from a strip to its collections. Did you mean @has @${token.operator} …?`;
 }
 
@@ -844,16 +853,18 @@ export function admits(
 /**
  * Whether some clause asks for the days a strip ran again — see `search`. `@is:rerun` does, and so
  * does each of the reader's own `@i:` tags, since a clipping of a rerun is a printing like any other, and
- * could otherwise never be found.
+ * could otherwise never be found. And `@reuses (…)`, which only a rerun can be.
  */
 export function clausesAskForReruns(clauses: Constraint[][]): boolean {
 	return clauses.some((clause) =>
-		clause.some(
-			(constraint) =>
+		clause.some((constraint) => {
+			if (constraint.negated) return false;
+			if (constraint.kind === "cross") return constraint.crossing.operator === "reuses";
+			return (
 				constraint.kind === "filter" &&
-				!constraint.negated &&
-				((constraint.filter.kind === "is" && constraint.filter.tag === "rerun") || constraint.filter.kind === "i"),
-		),
+				((constraint.filter.kind === "is" && constraint.filter.tag === "rerun") || constraint.filter.kind === "i")
+			);
+		}),
 	);
 }
 

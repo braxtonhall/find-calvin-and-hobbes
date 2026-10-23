@@ -65,13 +65,16 @@ export type Filter =
 /**
  * Where in a query a filter stands, which decides what it can mean: which language, which kind of
  * collection where the language is the collection one and something says which, and whether a
- * crossing operator stands between it and the top — a link between a strip and a collection, which
- * `@as:` describes.
+ * crossing operator stands between it and the top — and whether the nearest is a link between a
+ * strip and a collection, which `@as:` describes. `@reran (…)` and `@reuses (…)` cross from a
+ * strip to a strip, which is no link.
  */
 export interface QueryContext {
 	language: Language;
 	type?: CollectionType;
 	link: boolean;
+	/** Whether any crossing operator stands between it and the top. */
+	crossed?: true;
 	/** The kind of collection at the other end of the link, where something says which. */
 	linked?: CollectionType;
 }
@@ -94,7 +97,7 @@ export type Run = "reused" | "rerun";
 /**
  * The bare words that are operators rather than filters: the logical ones, `@only`, and the crossing
  * operators this site has. `@in` is both — bare, it is the operator, and with a colon the filter —
- * and so are `@by`, `@featuring`, `@about` and `@during`.
+ * and so are `@by`, `@featuring`, `@about` and `@during`. `@reran` and `@reuses` are only operators.
  */
 export const OPERATOR_WORDS: ReadonlySet<string> = new Set([
 	...OPERATOR_SPECS.map((spec) => spec.name),

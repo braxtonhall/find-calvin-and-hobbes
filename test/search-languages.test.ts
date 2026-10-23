@@ -3,7 +3,7 @@ import "./helpers/characters";
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { compileQuery, contextAt, parseQuery, scanQuery } from "../src/boolean-query";
+import { compileQuery, contextAt, parseQuery, scanOperators, scanQuery } from "../src/boolean-query";
 import { completionsAt, filterSpans } from "../src/completion";
 import { STRIP_QUERY, collectionQuery } from "../src/filter-query";
 import type { CollectionType } from "../src/filter-spec";
@@ -201,6 +201,15 @@ test("reading a query where it stands", async (suite) => {
 		assert.equal(parseQuery("@in:snowbook").length, 1);
 	});
 
+	await suite.test("@reran and @reuses stay in the strip language, with no link for @as: to describe", () => {
+		assert.deepEqual(readings("@reran @year:1995 @reuses (@year:1988)"), ["@year:1995 strip", "@year:1988 strip"]);
+		assert.equal(scanQuery("@reran (@as:altered)", STRIP_QUERY).filters[0].valid, false);
+		assert.equal(scanQuery("@in (@has @reuses @as:altered)", STRIP_QUERY).filters[0].valid, false);
+		const [reran] = scanOperators("@reran @year:1995", collectionQuery("book"));
+		assert.equal(reran.reason, "@reran goes from a strip to the days it ran again. Did you mean @has @reran …?");
+		assert.deepEqual(compileQuery("@reuses @year:1988", collectionQuery("book")), []);
+	});
+
 	await suite.test("a strip filter on a tab is a mistake that asks whether @has was meant", () => {
 		const [match] = scanQuery("@is:sunday", collectionQuery("arc")).filters;
 		assert.equal(match.valid, false);
@@ -299,6 +308,37 @@ test("the strip language", async (suite) => {
 		assert.deepEqual(strips("@i:bookmarked"), ["special1"]);
 		state.notedStrips = new Set(["special1"]);
 		assert.deepEqual(strips("@i:noted"), ["special1"]);
+	});
+
+	await suite.test("@reran and @reuses judge the same strip on the other day it ran", () => {
+		setUp();
+		assert.deepEqual(strips("@reran @year:1995"), ["1988-01-04"]);
+		assert.deepEqual(strips("@reran @year:1996"), []);
+		assert.deepEqual(strips("@year:1988 @reran @is:any"), ["1988-01-04"]);
+		// `@reuses` brings the days a strip ran again in, as `@is:rerun` does, since only they reuse anything.
+		assert.deepEqual(strips("@reuses @year:1988"), ["1995-01-04 rerun"]);
+		assert.deepEqual(strips("@year:1995 @reuses @month:1"), ["1995-01-04 rerun"]);
+		assert.deepEqual(strips("@reuses @year:1990"), []);
+		// What is inside is the other day: never the same side.
+		assert.deepEqual(strips("@reran @is:reused"), []);
+		assert.deepEqual(strips("@reuses @is:rerun"), []);
+		assert.deepEqual(strips("@reran @reuses @year:1988"), ["1988-01-04"]);
+		// The strip is the same strip on either day, words and all.
+		assert.deepEqual(strips("@reuses (home @in:snowbook)"), ["1995-01-04 rerun"]);
+		assert.deepEqual(strips("@year:1988 @not @reran @is:any"), ["1988-01-03", "special1", "1988-01-05"]);
+		assert.deepEqual(strips("@not @reuses @is:any"), strips("@is:any"), "asked against, no rerun day comes in");
+	});
+
+	await suite.test("@only @reran asks every day a strip ran again", () => {
+		setUp();
+		state.reruns = new Map([
+			["1995-01-04", "1988-01-04"],
+			["1996-01-04", "1988-01-04"],
+		]);
+		assert.deepEqual(strips("@reran @year:1996"), ["1988-01-04"]);
+		assert.deepEqual(strips("@only @reran @year:1996"), []);
+		assert.deepEqual(strips("@only @reran @month:1"), ["1988-01-04"]);
+		assert.deepEqual(strips("@reuses @is:any"), ["1995-01-04 rerun", "1996-01-04 rerun"]);
 	});
 
 	await suite.test("@only is at least one, and all of them", () => {
@@ -482,6 +522,8 @@ test("the collection language", async (suite) => {
 		setUp();
 		assert.deepEqual(listed("@has @year:1995", "book"), []);
 		assert.deepEqual(listed("@has (@is:rerun @year:1995)", "book"), ["snowbook"]);
+		assert.deepEqual(listed("@has (@reuses @year:1988)", "book"), ["snowbook"]);
+		assert.deepEqual(listed("@has (@reran @year:1995)", "arc"), ["snowarc"]);
 		state.ownedStrips = new Set(["19950104"]);
 		assert.deepEqual(listed("@has @i:own", "arc"), ["snowarc"]);
 	});
@@ -678,6 +720,7 @@ test("the search box", async (suite) => {
 
 	await suite.test("the filter bar ticks nothing inside an operator", () => {
 		assert.deepEqual([...selectedTokens("@is:sunday @in (@has @year:1988)")], ["@is:sunday"]);
+		assert.deepEqual([...selectedTokens("@is:sunday @reran @year:1995")], ["@is:sunday"]);
 	});
 });
 

@@ -19,7 +19,7 @@ import { PAGE_CONFIG } from "./site-config";
 
 /**
  * The two languages a query can be written in. A strip query finds strips: the main search box, and
- * the inside of `@has (…)`. A collection query finds books, arcs, creators, characters or subjects:
+ * the inside of `@has (…)`, `@reran (…)` and `@reuses (…)`. A collection query finds books, arcs, creators, characters or subjects:
  * the Collections page's box, and the inside of `@in (…)`, `@by (…)`, `@featuring (…)`, `@about (…)`
  * and `@during (…)`.
  * Every kind of collection shares the one collection language, but not every filter in it: one that
@@ -302,22 +302,27 @@ export const FILTER_NAMES: ReadonlySet<string> = new Set(FILTER_SPECS.map((spec)
 
 /**
  * The operators that cross between a strip and its collections, each with the language it is written
- * in and the one inside it. `@has` goes down from a collection to its strips; the rest go up from a
- * strip to one kind of collection each. Bare, with no colon: `@in:x` is the filter, and short for
+ * in and the one inside it. `@has` goes down from a collection to its strips; `@in` and its kin go up
+ * from a strip to one kind of collection each. Bare, with no colon: `@in:x` is the filter, and short for
  * `@in (@id:x)`. `@by` only where there are creators, `@featuring` only where there are characters,
  * `@about` only where there are subjects, and `@during` only where there are arcs, as their filters are.
+ *
+ * And the two that cross from a strip to the same strip on another day it ran, where there are
+ * reruns: `@reran` from the day it first ran to the days it ran again, and `@reuses` back. Strip
+ * language on both sides, so what they add is mostly the other day's date: `@year:1985 @reran
+ * @year:1994` is a strip of 1985 that ran again in 1994.
  */
 export interface CrossingSpec {
 	name: CrossingOperator;
 	/** The language it is written in. */
 	from: Language;
-	/** The language inside it, and for a collection, which kind. */
+	/** The language inside it, and for a collection, which kind. A strip inside a strip is another day it ran. */
 	to: Language;
 	type?: CollectionType;
 	hint: string;
 }
 
-export type CrossingOperator = "has" | "in" | "by" | "featuring" | "about" | "during";
+export type CrossingOperator = "has" | "in" | "by" | "featuring" | "about" | "during" | "reran" | "reuses";
 
 export const CROSSING_SPECS: readonly CrossingSpec[] = [
 	{ name: "has", from: "collection", to: "strip", hint: "Contains a strip that matches what follows" },
@@ -363,6 +368,22 @@ export const CROSSING_SPECS: readonly CrossingSpec[] = [
 					to: "collection",
 					type: "subject",
 					hint: "About a subject that matches what follows",
+				} satisfies CrossingSpec,
+			]
+		: []),
+	...(PAGE_CONFIG.reruns
+		? [
+				{
+					name: "reran",
+					from: "strip",
+					to: "strip",
+					hint: "Ran again on a day that matches what follows",
+				} satisfies CrossingSpec,
+				{
+					name: "reuses",
+					from: "strip",
+					to: "strip",
+					hint: "A rerun of a strip whose first day matches what follows",
 				} satisfies CrossingSpec,
 			]
 		: []),
