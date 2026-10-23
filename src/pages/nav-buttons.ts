@@ -103,7 +103,7 @@ const COPIED_ICON = `<svg class="copy-link-icon copy-link-icon--copied" viewBox=
 
 /**
  * A page's title, and the button that copies a link to the page after its last word. A click
- * anywhere on the title copies too, and the button shows it; see `attachCopyLinkHandler`. `className`
+ * on the title's words copies too, and the button shows it; see `attachCopyLinkHandler`. `className`
  * is the title's look, `.detail-date` or `.collection-name`; `titleHtml` is escaped already.
  */
 export function buildPageTitle(className: string, titleHtml: string, href: string): string {

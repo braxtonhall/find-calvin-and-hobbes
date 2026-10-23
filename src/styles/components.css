@@ -77,15 +77,13 @@
 
 /*
  * A page's title, with the button that copies its link after its last word: the button follows the
- * title onto its last line when it wraps. The whole title copies; see `attachCopyLinkHandler`.
+ * title onto its last line when it wraps. The title's words copy too, but not the rest of its row;
+ * see `attachCopyLinkHandler`.
  */
-.page-title {
-	cursor: pointer;
-}
-
 .page-title__text {
 	display: inline;
 	font: inherit;
+	cursor: pointer;
 }
 
 .copy-link-btn--icon {
@@ -101,7 +99,8 @@
 	background: none;
 }
 
-.page-title:hover .copy-link-btn--icon {
+.page-title__text:hover + .copy-link-btn--icon,
+.copy-link-btn--icon:hover {
 	color: var(--text);
 }
 
