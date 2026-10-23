@@ -777,7 +777,7 @@ export function buildDetailHtml(page: DetailPage, canGoBack: boolean): string {
 		page,
 		buildNavRow(
 			buildBackAndHomeButtons(canGoBack),
-			buildStepperHtml(prevButtonHtml, nextButtonHtml, page.place, "Strip"),
+			buildStepperHtml(prevButtonHtml, nextButtonHtml, page.place, "Strip day"),
 		),
 	);
 }

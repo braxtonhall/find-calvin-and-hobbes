@@ -539,52 +539,82 @@
 }
 
 /*
- * Where the page sits in the list. How many there are is the tooltip's to say. Set as wide as the
- * list's last number, `--digits` long, so the arrows hold still while it counts.
+ * Where the page sits in the list, set as wide as the list's last number, `--digits` long, so the
+ * arrows hold still while it counts. Under it waits the rest of its fraction, a bar and how many,
+ * clipped to the box so it rises into sight from under the border rather than below it. A button,
+ * for a tap to find it between the arrows, drawn as the plain number it is. Never narrower than three
+ * digits, so a short list's count still has room to be tapped.
  */
 .nav-count {
 	position: relative;
+	overflow: clip;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	box-sizing: content-box;
-	min-width: calc(var(--digits, 1) * 1ch);
+	min-width: calc(max(var(--digits, 1), 3) * 1ch);
+	margin: 0;
 	padding: 0 4px;
+	font-family: var(--font);
 	font-size: 11px;
+	background: none;
+	border: none;
 	color: var(--text-muted);
 	font-variant-numeric: tabular-nums;
 	cursor: default;
 }
 
-/* What the count counts, out of how many: under it and clear of the arrows. Drawn as the grid's tooltip is. */
-.nav-count::after {
-	content: attr(data-tip);
-	position: absolute;
-	top: calc(100% + 6px);
-	left: 50%;
-	transform: translateX(-50%);
-	pointer-events: none;
-	z-index: 10;
-	background: rgba(0, 0, 0, 0.8);
-	color: #fff;
-	padding: 4px 8px;
-	border-radius: 4px;
-	font-size: 12px;
-	font-weight: 400;
-	white-space: nowrap;
-	opacity: 0;
-	transition: opacity 0.1s;
+/*
+ * The fraction, as one column that moves as one: at rest it sits low, with the count on the box's
+ * middle and the rest under it unseen; shown, it rises to be centred whole as the rest fades in. The
+ * shift is from the count's middle to the column's: half a line, and half the 3px of the bar.
+ */
+.nav-count__stack {
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
+	transform: translateY(calc(0.55em + 1.5px));
+	transition: transform 0.2s ease;
 }
 
-/* Shown by a pointer on it, or on a touchscreen by a tap; see `src/views/nav-buttons.ts`. */
+.nav-count__at,
+.nav-count__of {
+	line-height: 1.1em;
+}
+
+.nav-count__of {
+	align-self: stretch;
+	margin-top: 1px;
+	padding-top: 1px;
+	border-top: 1px solid currentColor;
+	text-align: center;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+}
+
+/* Shown while stepping on a touchscreen (see `src/views/nav-buttons.ts`), or for a pointer on the count. */
+.nav-stepping .nav-count__stack {
+	transform: none;
+}
+
+.nav-stepping .nav-count__of {
+	opacity: 1;
+}
+
 @media (hover: hover) {
-	.nav-count:hover::after {
+	.nav-row .nav-count:hover .nav-count__stack {
+		transform: none;
+	}
+
+	.nav-row .nav-count:hover .nav-count__of {
 		opacity: 1;
 	}
 }
 
-.nav-count--open::after {
-	opacity: 1;
+@media (prefers-reduced-motion: reduce) {
+	.nav-count__stack {
+		transition: none;
+	}
 }
 
 /* A line about a strip, on its page or an arc's, after its icon. The text wraps clear of the icon, which sits on its first line. */

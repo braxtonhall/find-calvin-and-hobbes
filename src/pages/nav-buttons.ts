@@ -71,7 +71,7 @@ export function buildNavRow(buttonsHtml: string, arrowsHtml: string): string {
 	return `<div class="nav-row">${buttonsHtml}<span class="nav-arrows">${arrowsHtml}</span></div>`;
 }
 
-/** `Strip 3 of 10`, `Results 3 and 4 of 10`, or `Not among the 10 strips`. */
+/** `Strip day 3 of 10`, `Results 3 and 4 of 10`, or `Not among the 10 strip days`. */
 function describePlace(place: Place, noun: string): string {
 	const of = place.of.toLocaleString("en-US");
 	const plural = place.of === 1 ? noun.toLowerCase() : `${noun.toLowerCase()}s`;
@@ -84,15 +84,17 @@ function describePlace(place: Place, noun: string): string {
 /**
  * The arrows with where the page sits between them, `← 2 →`, which the row draws as one button so it
  * reads as a step through a list: `3,4` for two places, a dash for none. The numbers go ungrouped, so
- * the comma between two places is the only one. How many there are is left to the tooltip, which
- * `noun` names the things counted in. The count is as wide as the last place would be, so the arrows
- * stay put from one page to the next. No count where the page is in no list at all.
+ * the comma between two places is the only one. Under the count, hidden until hovered or stepped,
+ * is the rest of its fraction, a bar and how many there are; see `src/views/nav-buttons.ts`. A button,
+ * which shows it, so a tap meant for it is not taken for one on an arrow. What is counted, which
+ * `noun` names, is its title's and its label's to say. The count is as wide as the last place would be, so the
+ * arrows stay put from one page to the next. No count where the page is in no list at all.
  */
 export function buildStepperHtml(prevHtml: string, nextHtml: string, place: Place | null, noun: string): string {
 	if (!place) return prevHtml + nextHtml;
 	const at = place.at.length > 0 ? place.at.join(",") : "&ndash;";
 	const label = describePlace(place, noun);
-	const count = `<span class="nav-count" role="img" style="--digits: ${String(place.of).length}" data-tip="${label}" aria-label="${label}">${at}</span>`;
+	const count = `<button type="button" class="nav-count" style="--digits: ${String(place.of).length}" title="${label}" aria-label="${label}"><span class="nav-count__stack"><span class="nav-count__at">${at}</span><span class="nav-count__of">${place.of}</span></span></button>`;
 	return prevHtml + count + nextHtml;
 }
 

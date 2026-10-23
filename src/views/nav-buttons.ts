@@ -21,33 +21,25 @@ export function attachBackAndHomeHandlers(element: HTMLElement): void {
 	attachBackButtonHandler(element, "detail-back");
 }
 
-// A touchscreen has no hover to show what a stepper's count counts, so a tap on it does, and a tap
-// anywhere else puts it away. Delegated, since the count is drawn again with every page.
-//
-// The count is narrow between two links, and a thumb aimed at it tends to land on an arrow, so a step
-// by an arrow shows it too: on the page stepped to, once the router has drawn it, later in this click.
-// Either way it goes again after a moment, so as not to sit over the page's title.
-const COUNT_SHOWN_MS = 1500;
-let countTimer: ReturnType<typeof setTimeout> | undefined;
-
-function showCountBriefly(count: Element): void {
-	clearTimeout(countTimer);
-	count.classList.add("nav-count--open");
-	countTimer = setTimeout(() => count.classList.remove("nav-count--open"), COUNT_SHOWN_MS);
-}
+// Pressing the count shows how many there are, the whole fraction, until a moment after; so does
+// stepping on a touchscreen, while a pointer has hover for it, which is the stylesheet's. Said on the
+// root rather than the count: each step draws the count anew, and one drawn while stepping is drawn
+// shown, with nothing to slide from, so the fraction holds still from page to page. Only the first
+// step slides it in: said once the router has drawn the page stepped to, later in this click, and
+// its count laid out at rest. Delegated, since the stepper is drawn again with every page.
+const FRACTION_SHOWN_MS = 1500;
+let fractionTimer: ReturnType<typeof setTimeout> | undefined;
 
 document.addEventListener("click", (event) => {
-	if (!isTouchDevice()) return;
 	const target = event.target as HTMLElement;
-	const count = target.closest(".nav-count");
-	const wasOpen = count?.classList.contains("nav-count--open") ?? false;
-	document.querySelectorAll(".nav-count--open").forEach((open) => open.classList.remove("nav-count--open"));
-	clearTimeout(countTimer);
-	if (count && !wasOpen) showCountBriefly(count);
-	if (target.closest(".nav-arrows > a.nav-btn")) {
-		setTimeout(() => {
-			const shown = [...document.querySelectorAll<HTMLElement>(".nav-count")].find((c) => c.offsetParent !== null);
-			if (shown) showCountBriefly(shown);
-		});
-	}
+	const stepped = isTouchDevice() && target.closest(".nav-row .nav-arrows") !== null;
+	if (!stepped && !target.closest(".nav-count")) return;
+	const root = document.documentElement;
+	clearTimeout(fractionTimer);
+	fractionTimer = setTimeout(() => root.classList.remove("nav-stepping"), FRACTION_SHOWN_MS);
+	if (root.classList.contains("nav-stepping")) return;
+	setTimeout(() => {
+		void root.offsetWidth;
+		root.classList.add("nav-stepping");
+	});
 });
