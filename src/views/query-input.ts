@@ -1,7 +1,12 @@
 import "./query-input.css";
 
-import { Completion, FilterSpan, Row, SpanKind, completionsAt, filterSpans } from "../completion";
+import { Completion, FilterSpan, Row, completionsAt, filterSpans } from "../completion";
+import { paintHighlights } from "../pages/query-html";
 import { QueryContext, STRIP_QUERY } from "../filter-query";
+import { contextAt } from "../boolean-query";
+import { helpAnchor } from "../help";
+import { HELP_PATH } from "../routes";
+import { addressOf } from "../base-path";
 import { rememberSpelling } from "../spelling";
 import { naturalHeight, onViewportShift, place, viewport } from "../placement";
 import { escHtml } from "../utils";
@@ -50,14 +55,6 @@ const MENU_HEIGHT = 160;
 /** Keys that move the caret without changing the text, so the menu has to be recomputed. */
 const CARET_KEYS = new Set(["ArrowLeft", "ArrowRight", "Home", "End"]);
 
-/** A filter in two parts keeps its tint on the name and marks the rest apart — see `FilterSpan`. */
-const SPAN_CLASS: Record<SpanKind, string> = {
-	match: "query-pill",
-	name: "query-pill",
-	pending: "query-pill--pending",
-	invalid: "query-pill query-pill--invalid",
-};
-
 interface Widget {
 	input: HTMLInputElement;
 	accept(index: number): void;
@@ -94,6 +91,12 @@ function menuElement(): HTMLDivElement {
 	document.body.appendChild(menu);
 
 	menu.addEventListener("mousedown", (event) => {
+		// The link to the help page keeps the focus too, or the menu would be gone before its click
+		// landed. The click itself is the router's, like any other link of ours.
+		if ((event.target as HTMLElement).closest(".query-menu-help") !== null) {
+			event.preventDefault();
+			return;
+		}
 		const row = (event.target as HTMLElement).closest<HTMLElement>(".query-menu-row");
 		if (row === null) return;
 		// Never let the input blur: the blur would tear the menu down before the click resolved,
@@ -147,24 +150,6 @@ window.addEventListener("scroll", () => owner?.reposition(), true);
 // The keyboard is the whole reason the placement measures the visual viewport, and it arrives
 // through neither of the two above.
 onViewportShift(() => owner?.reposition());
-
-/** The query, with the filters in it painted according to how far along each one is. */
-function paintHighlights(text: string, spans: FilterSpan[]): string {
-	let html = "";
-	let cursor = 0;
-	for (const [index, span] of spans.entries()) {
-		const next = spans[index + 1];
-		// A settled name and the value still being typed after it are one pill in two parts, so
-		// only the outer corners of the pair are rounded.
-		const joined = next?.kind === "pending" && next.start === span.end;
-		const classes = SPAN_CLASS[span.kind] + (joined ? " query-pill--head" : "");
-		const reason = span.reason === undefined ? "" : ` data-start="${span.start}" data-reason="${escHtml(span.reason)}"`;
-		html += escHtml(text.slice(cursor, span.start));
-		html += `<span class="${classes}"${reason}>${escHtml(text.slice(span.start, span.end))}</span>`;
-		cursor = span.end;
-	}
-	return html + escHtml(text.slice(cursor));
-}
 
 function rowHtml(row: Row, index: number, active: boolean): string {
 	// The colon stays in the name's own font; only what follows it changes typeface — and a real
@@ -379,12 +364,25 @@ export function attachQueryInput(input: HTMLInputElement, root: QueryContext = S
 			return;
 		}
 
-		element.innerHTML = completion!.rows.map((row, index) => rowHtml(row, index, index === highlighted)).join("");
+		element.innerHTML =
+			completion!.rows.map((row, index) => rowHtml(row, index, index === highlighted)).join("") + helpHtml();
 		element.classList.add("query-menu--visible");
 		input.setAttribute("aria-expanded", "true");
 		if (highlighted < 0) input.removeAttribute("aria-activedescendant");
 		else input.setAttribute("aria-activedescendant", `query-menu-row-${highlighted}`);
 		repositionMenu();
+	}
+
+	/**
+	 * Last of all, the way to the help page: to the entry for the filter whose value is being typed,
+	 * or the section for the language the caret is writing. Not an option — the arrows and Enter are
+	 * for the rows — but a link, for the pointer or a tap.
+	 */
+	function helpHtml(): string {
+		const text = input.value;
+		const name = /^@([a-zA-Z]+):/.exec(text.slice(completion!.start, completion!.end))?.[1]?.toLowerCase();
+		const anchor = helpAnchor(contextAt(text, completion!.start, root).language, name);
+		return `<a class="query-menu-help" href="${escHtml(addressOf(HELP_PATH) + "#" + anchor)}" tabindex="-1">How to search</a>`;
 	}
 
 	function pillAt(x: number, y: number): HTMLElement | null {

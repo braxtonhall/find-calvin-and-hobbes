@@ -109,7 +109,6 @@ search:
     - calvinball
     - waiting for the school bus
     - "@featuring rosalyn"
-    - "@month:december @day:24 @is:sunday"
     - november 18 1985
     - "@is:sunday @year:1985 @year:1995"
     - "@in:sundaypages"
@@ -119,6 +118,36 @@ search:
     - "@is:rerun"
     - "{{featured.month}} {{featured.day}} {{featured.year}}"
     - "@month:{{today.month}} @day:{{today.day}}"
+
+  # Questions in plain words, each with the query that answers it, for the help page, where each is a
+  # link to its search. A query is written for the main search, or for one tab of Collections given
+  # as `tab:` (books, arcs, creators, characters or subjects). One about a tab the site does not
+  # have, or whose filter the site has turned off, is left out. Each must find something, which
+  # the tests check.
+  examples:
+    - question: Which Sundays had Spaceman Spiff in them?
+      query: "@featuring:spiff @is:sunday"
+    - question: What was the very first strip?
+      query: november 18 1985
+    - question: What ran on Christmas Eve?
+      query: "@month:december @day:24"
+    - question: Which strips is Calvin's dad in without Calvin?
+      query: "@featuring:dad @not @featuring:calvin"
+    - question: Which strips are not in the Portable Compendium?
+      query: "@not @in compendium"
+    - question: Which strips did a book print with changes?
+      query: "@is:altered"
+    - question: Which strips have Hobbes as a stuffed tiger?
+      query: "@featuring:stuffedhobbes"
+    - question: Which books have a colour Sunday I don't own?
+      query: "@has (@as:colour @not @i:own)"
+      tab: books
+    - question: Which arcs have Rosalyn in them?
+      query: "@has @featuring:rosalyn"
+      tab: arcs
+    - question: Which arcs ran entirely in 1987?
+      query: "@only @has @year:1987"
+      tab: arcs
 
 # Where and how the site is deployed.
 

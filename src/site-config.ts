@@ -9,6 +9,7 @@
  */
 
 import type { CorrectionPage } from "./correction-links";
+import type { CollectionsTab } from "./routes";
 
 /** One kind of strip's links, in order, each a label and the template of its address. See `strip-links.ts`. */
 export type StripLinkTemplates = { title: string; href: string }[];
@@ -19,6 +20,17 @@ export type StripLinkTemplates = { title: string; href: string }[];
  * See `correction-links.ts`.
  */
 export type CorrectionTemplates = Partial<Record<CorrectionPage, string>>;
+
+/**
+ * A question the help page answers with a search: in plain words, and as the query that asks it —
+ * of the strips, or of one tab of Collections. See `help.ts`.
+ */
+export interface SearchExample {
+	question: string;
+	query: string;
+	/** The tab whose box the query is written in, or none for the main search. */
+	tab?: CollectionsTab;
+}
 
 /** What one box of the grid stands for. See `grid-layout.ts`. */
 export type GridUnit = "day" | "week" | "month" | "year" | "period";
@@ -83,6 +95,8 @@ export interface PageConfig {
 	corrections: CorrectionTemplates;
 	/** What an empty search box types into itself, as templates. See `suggestion-templates.ts`. */
 	suggestions: string[];
+	/** The help page's examples, in order. */
+	examples: SearchExample[];
 	grid: GridConfig;
 }
 

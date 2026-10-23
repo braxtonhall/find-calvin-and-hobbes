@@ -3,6 +3,7 @@ import { DateExpression, MONTHS, WEEKDAYS, matchesExpression, parseDateExpressio
 import {
 	COLLECTION_TYPES,
 	CROSSING_SPECS,
+	OPERATOR_SPECS,
 	CollectionType,
 	FILTER_NAMES,
 	Language,
@@ -96,10 +97,7 @@ export type Run = "reused" | "rerun";
  * and so are `@by`, `@featuring`, `@about` and `@during`.
  */
 export const OPERATOR_WORDS: ReadonlySet<string> = new Set([
-	"and",
-	"or",
-	"not",
-	"only",
+	...OPERATOR_SPECS.map((spec) => spec.name),
 	...CROSSING_SPECS.map((spec) => spec.name),
 ]);
 // A value stops at a parenthesis, so `(@in:book1 @or @in:book3)` closes its group rather than

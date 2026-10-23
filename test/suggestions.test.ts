@@ -24,6 +24,9 @@ import { loadCreators } from "../build-chain/creators";
 import { loadSubjects } from "../build-chain/subjects";
 import { CollectionIndex } from "../src/types";
 import { withConfig } from "./helpers/config";
+import { helpExamples } from "../src/help";
+import { searchCollections } from "../src/query-eval";
+import { TAB_TYPES } from "../src/routes";
 
 const collectionData = loadCollectionData();
 const comicSource = loadComicSource();
@@ -202,5 +205,59 @@ test("config.yaml's suggestions", async (suite) => {
 		assert.throws(() => load("search:\n  suggestions:\n    - snow\n    - snow\n"), /twice/);
 		assert.throws(() => load("search:\n  suggestions:\n    - ''\n"), /is empty/);
 		assert.throws(() => load("search:\n  tuning: {}\n"), /search\.tuning/);
+	});
+});
+
+test("this archive's examples", async (suite) => {
+	// As with the suggestions: the app leaves out an example it cannot run, so this archive, which
+	// has every feature an example here asks for, must have none it would leave out.
+	await suite.test("are all on the help page", () => {
+		assert.equal(helpExamples().length, PAGE_CONFIG.examples.length, "an example was left out");
+	});
+
+	await suite.test("each find something", () => {
+		installSiteArchive();
+		for (const example of PAGE_CONFIG.examples) {
+			if (example.tab === undefined) {
+				assert.ok(
+					search(example.query, "rank", TUNING, CANONICAL_FORMS).length > 0,
+					`"${example.query}" finds nothing`,
+				);
+			} else {
+				const results = searchCollections(example.query, TAB_TYPES[example.tab], CANONICAL_FORMS);
+				assert.ok((results?.ids.size ?? 0) > 0, `"${example.query}" finds no ${example.tab}`);
+			}
+		}
+	});
+});
+
+test("config.yaml's examples", async (suite) => {
+	const load = (search: string) => withConfig(`name: x\nseries: x\n${search}`, loadPageConfig).examples;
+
+	await suite.test("are optional", () => {
+		assert.deepEqual(load(""), []);
+		assert.deepEqual(load("search:\n  examples: []\n"), []);
+	});
+
+	await suite.test("say where they are searched", () => {
+		assert.deepEqual(load("search:\n  examples:\n    - question: Q?\n      query: snow\n"), [
+			{ question: "Q?", query: "snow" },
+		]);
+		assert.deepEqual(load("search:\n  examples:\n    - question: Q?\n      query: snow\n      tab: arcs\n"), [
+			{ question: "Q?", query: "snow", tab: "arcs" },
+		]);
+	});
+
+	await suite.test("are checked", () => {
+		assert.throws(() => load("search:\n  examples: snow\n"), /must be a list/);
+		assert.throws(() => load("search:\n  examples:\n    - snow\n"), /must be a mapping/);
+		assert.throws(() => load("search:\n  examples:\n    - query: snow\n"), /asks no question/);
+		assert.throws(() => load("search:\n  examples:\n    - question: Q?\n"), /has no query/);
+		assert.throws(() => load("search:\n  examples:\n    - question: Q?\n      query: a\n      tab: shelf\n"), /tab/);
+		assert.throws(() => load("search:\n  examples:\n    - question: Q?\n      query: a\n      title: b\n"), /title/);
+		assert.throws(
+			() => load("search:\n  examples:\n    - question: Q?\n      query: a\n    - question: Q?\n      query: b\n"),
+			/twice/,
+		);
 	});
 });

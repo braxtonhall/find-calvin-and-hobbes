@@ -6,13 +6,14 @@ import { clearLibrary } from "../ownership";
 import { Spelling, chooseSpelling, guessedSpelling, rememberedSpelling, respell } from "../spelling";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { ask, attachLibraryTransferHandlers } from "./library-transfer";
-import { flashButton } from "./copy-link";
+import { attachCopyLinkHandler, flashButton } from "./copy-link";
 
 /** Draws the settings, or — with `adopt` — takes over the page the build drew. */
 export function renderSettings(adopt: boolean = false): void {
 	const element = document.getElementById("view-settings")!;
 	if (!adopt) element.innerHTML = buildSettingsHtml(canGoBack());
 	attachBackAndHomeHandlers(element);
+	attachCopyLinkHandler(element);
 	attachLibraryTransferHandlers(element);
 	attachSpellingHandlers(element);
 	attachClearHandler(element);

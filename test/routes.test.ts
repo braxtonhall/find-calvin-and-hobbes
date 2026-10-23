@@ -4,6 +4,7 @@ import {
 	ARCS_PATH,
 	BOOKS_PATH,
 	SETTINGS_PATH,
+	HELP_PATH,
 	BOOKMARKS_PATH,
 	BOOKSHELF_PATH,
 	BOOKSHELF_CLIPPINGS_PATH,
@@ -42,6 +43,7 @@ test("routes", async (suite) => {
 	await suite.test("every path a builder writes parses back to the route it was built from", () => {
 		assert.deepEqual(parseRoutePath("/", ""), { view: "landing" });
 		assert.deepEqual(parseRoutePath("/credits", ""), { view: "credits" });
+		assert.deepEqual(parseRoutePath(HELP_PATH, ""), { view: "help" });
 		assert.deepEqual(parseRoutePath(BOOKS_PATH, ""), { view: "collections" });
 		assert.deepEqual(parseRoutePath(ARCS_PATH, ""), { view: "arcs" });
 		assert.deepEqual(parseRoutePath(SETTINGS_PATH, ""), { view: "settings" });

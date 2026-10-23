@@ -10,6 +10,7 @@ import { BOOKSHELF_BOOKS_QUERY, BookshelfView, LIBRARY_QUERIES, LibraryView, isL
 import { buildLibraryHtml } from "../pages/library";
 import { buildCollectionRowHtml, collectionsPageFrom } from "../pages/collections";
 import { attachBackAndHomeHandlers } from "./nav-buttons";
+import { attachCopyLinkHandler } from "./copy-link";
 import { attachRowFocusHandler, attachRowHandlers } from "./result-rows";
 import { resultsHtml } from "../pages/result-rows";
 import { attachCollectionRowHandlers } from "./collections";
@@ -34,6 +35,7 @@ export function renderLibrary(view: LibraryView | BookshelfView): void {
 	const element = document.getElementById(`view-${view}`)!;
 	element.innerHTML = buildLibraryHtml(view, canGoBack());
 	attachBackAndHomeHandlers(element);
+	attachCopyLinkHandler(element);
 	if (isLibraryView(view) && !focusAttached.has(element)) {
 		attachRowFocusHandler(element);
 		focusAttached.add(element);

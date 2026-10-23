@@ -9,8 +9,10 @@ import type {
 	GridLevel,
 	GridUnit,
 	PageConfig,
+	SearchExample,
 	StripLinkTemplates,
 } from "../src/site-config";
+import type { CollectionsTab } from "../src/routes";
 import { StripKind, StripLinkSubject, stripLinks } from "../src/strip-links";
 import { CORRECTION_PAGES, correctionUrl } from "../src/correction-links";
 import { SUGGESTION_FIELDS, SuggestionFields, fillSuggestion } from "../src/suggestion-templates";
@@ -123,7 +125,7 @@ interface RawConfig {
 	colourSundays?: unknown;
 	details?: Partial<Record<string, unknown>> | null;
 	theme?: Partial<Record<string, unknown>> | null;
-	search?: { suggestions?: unknown } | null;
+	search?: { suggestions?: unknown; examples?: unknown } | null;
 	grid?: { periods?: unknown; levels?: unknown; zoom?: unknown } | null;
 }
 
@@ -517,7 +519,8 @@ function loadSuggestions(search: RawConfig["search"]): string[] {
 	if (typeof search !== "object" || Array.isArray(search))
 		throw new ConfigError((file) => `search in ${file} must be a mapping`);
 	for (const key of Object.keys(search)) {
-		if (key !== "suggestions") throw new ConfigError((file) => `search.${key} in ${file} is not one of suggestions`);
+		if (key !== "suggestions" && key !== "examples")
+			throw new ConfigError((file) => `search.${key} in ${file} is not one of suggestions, examples`);
 	}
 	const suggestions = search.suggestions ?? [];
 	if (!Array.isArray(suggestions)) throw new ConfigError((file) => `search.suggestions in ${file} must be a list`);
@@ -535,6 +538,37 @@ function loadSuggestions(search: RawConfig["search"]): string[] {
 			throw new ConfigError((file) => `search.suggestions in ${file}: ${(error as Error).message}`);
 		}
 		return suggestion;
+	});
+}
+
+const EXAMPLE_TABS: readonly CollectionsTab[] = ["books", "arcs", "creators", "characters", "subjects"];
+
+/** The questions the help page answers with a search, in order. None, and it has no examples. */
+function loadExamples(search: RawConfig["search"]): SearchExample[] {
+	const examples = search?.examples ?? [];
+	if (!Array.isArray(examples)) throw new ConfigError((file) => `search.examples in ${file} must be a list`);
+
+	const seen = new Set<string>();
+	return examples.map((value: unknown, index) => {
+		const where = `search.examples[${index}]`;
+		if (typeof value !== "object" || value === null || Array.isArray(value))
+			throw new ConfigError((file) => `${where} in ${file} must be a mapping`);
+		const entry = value as Record<string, unknown>;
+		for (const key of Object.keys(entry)) {
+			if (key !== "question" && key !== "query" && key !== "tab")
+				throw new ConfigError((file) => `${where}.${key} in ${file} is not one of question, query, tab`);
+		}
+		const question = stringSetting(entry.question, `${where}.question`);
+		if (!question) throw new ConfigError((file) => `${where} in ${file} asks no question`);
+		const query = stringSetting(entry.query, `${where}.query`);
+		if (!query) throw new ConfigError((file) => `${where} in ${file} has no query`);
+		if (seen.has(question)) throw new ConfigError((file) => `search.examples in ${file} asks "${question}" twice`);
+		seen.add(question);
+		const tab = stringSetting(entry.tab, `${where}.tab`);
+		if (!tab) return { question, query };
+		if (!(EXAMPLE_TABS as readonly string[]).includes(tab))
+			throw new ConfigError((file) => `${where}.tab in ${file} is not one of ${EXAMPLE_TABS.join(", ")}`);
+		return { question, query, tab: tab as CollectionsTab };
 	});
 }
 
@@ -883,6 +917,7 @@ function pageConfig(raw: RawConfig, config?: string): PageConfig {
 		details: loadLinkTemplates(raw.details),
 		corrections: loadCorrectionTemplates(raw.corrections),
 		suggestions: loadSuggestions(raw.search),
+		examples: loadExamples(raw.search),
 		colourSundays: flagSetting(raw.colourSundays, "colourSundays", false),
 		grid: loadGrid(raw.grid),
 		...loadFeatures(config),

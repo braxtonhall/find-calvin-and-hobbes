@@ -40,6 +40,7 @@ import { relightRows } from "./views/result-rows";
 import { asksAboutReader } from "./boolean-query";
 import { STRIP_QUERY, collectionQuery } from "./filter-query";
 import { renderCredits } from "./views/credits";
+import { renderHelp } from "./views/help";
 import { closeFilterMenu } from "./views/filter-bar";
 import { closeBookPopup } from "./views/books";
 import { updateCorrectionLink } from "./views/correction";
@@ -113,7 +114,8 @@ export function navigateTo(href: string): boolean {
 	const url = new URL(href, location.href);
 	const path = pathOf(url.pathname);
 	if (path === null) return false;
-	navigate(path + url.search);
+	// The hash too, for a link to one place on a page: `/help#in`.
+	navigate(path + url.search + url.hash);
 	return true;
 }
 
@@ -146,8 +148,8 @@ export function markInitialHistoryEntry(): void {
 		legacy !== null
 			? addressOf(legacy)
 			: path !== null
-				? addressOf(normalizePathname(path)) + location.search
-				: location.pathname + location.search;
+				? addressOf(normalizePathname(path)) + location.search + location.hash
+				: location.pathname + location.search + location.hash;
 	history.replaceState({ depth: currentDepth() } satisfies HistoryState, "", url);
 }
 
@@ -192,7 +194,7 @@ function tabReady(query: string | undefined): boolean {
 
 /**
  * The page the app has the data to draw for a route, or `null` while that data is still loading.
- * The landing, credits and settings pages are made of nothing that has to be fetched.
+ * The landing, credits, help and settings pages are made of nothing that has to be fetched.
  */
 function pageFor(route: Route): Page | null {
 	switch (route.view) {
@@ -200,6 +202,8 @@ function pageFor(route: Route): Page | null {
 			return { view: "landing" };
 		case "credits":
 			return { view: "credits" };
+		case "help":
+			return { view: "help" };
 		case "settings":
 			return { view: "settings" };
 		case "results":
@@ -295,6 +299,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
 	switch (prerendered.view) {
 		case "landing":
 		case "credits":
+		case "help":
 		case "settings":
 			return { page: prerendered, adopt: true };
 		// The build writes each tab with its search closed, in date order.
@@ -473,6 +478,10 @@ export function handleRoute(prerendered: Page | null = null): void {
 		case "credits": {
 			renderCredits(adopt);
 			document.getElementById("main")!.scrollTop = 0;
+			break;
+		}
+		case "help": {
+			renderHelp(adopt);
 			break;
 		}
 	}

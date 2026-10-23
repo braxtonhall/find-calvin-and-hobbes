@@ -21,6 +21,7 @@ import {
 	COLLECTIONS_PATH,
 	CREATORS_PATH,
 	CREDITS_PATH,
+	HELP_PATH,
 	HOME_PATH,
 	SUBJECTS_PATH,
 } from "../src/routes";
@@ -132,6 +133,7 @@ class PagesPlugin {
 					emit("not_found.html", HOME_PATH, landing);
 
 					emitPage(CREDITS_PATH, { view: "credits" });
+					emitPage(HELP_PATH, { view: "help" });
 					emitPage(SEARCH_PATH, { view: "results", q: "", sort: "rank" });
 					emitPage(SETTINGS_PATH, { view: "settings" });
 					emitPage(BOOKMARKS_PATH, { view: "bookmarks" });
@@ -183,6 +185,7 @@ class PagesPlugin {
 						const sitemap = buildSitemapXml(siteUrl, [
 							HOME_PATH,
 							CREDITS_PATH,
+							HELP_PATH,
 							...(books ? [BOOKS_PATH] : []),
 							...(arcs ? [ARCS_PATH] : []),
 							...(creators ? [CREATORS_PATH] : []),

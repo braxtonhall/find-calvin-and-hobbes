@@ -33,6 +33,11 @@ export interface CreditsPage {
 	view: "credits";
 }
 
+/** How to search: drawn from the filters this site has, and nothing that has to be fetched. */
+export interface HelpPage {
+	view: "help";
+}
+
 /** Never prerendered — the rows depend on the query — but the title comes from here like the rest. */
 export interface ResultsPage {
 	view: "results";
@@ -287,6 +292,7 @@ export interface SubjectPage {
 export type Page =
 	| LandingPage
 	| CreditsPage
+	| HelpPage
 	| ResultsPage
 	| SettingsPage
 	| LibraryPage
@@ -370,5 +376,7 @@ export function pageTitle(page: Page): string {
 			return `Books — Bookshelf — ${PAGE_CONFIG.name}`;
 		case "credits":
 			return `Credits — ${PAGE_CONFIG.name}`;
+		case "help":
+			return `Help — ${PAGE_CONFIG.name}`;
 	}
 }

@@ -29,6 +29,7 @@ export function correctionPage(view: Page["view"], rerun: boolean): CorrectionPa
 		case "bookshelf":
 		case "bookshelf-clippings":
 		case "bookshelf-books":
+		case "help":
 			return null;
 		default:
 			return view;

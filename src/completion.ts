@@ -26,7 +26,16 @@ import { MONTHS, WEEKDAYS, parseDateExpression } from "./date-query";
 import { FilterMatch, QueryContext, STRIP_QUERY, quoted, quotedSpans, readMatch } from "./filter-query";
 import { contextAt, scanQuery } from "./boolean-query";
 import { dateToString, isSabbatical, lastDayOf } from "./date-utils";
-import { CROSSING_SPECS, FILTER_SPECS, FilterSpec, ValueTemplate, filterSpec, fits, speaks } from "./filter-spec";
+import {
+	CROSSING_SPECS,
+	FILTER_SPECS,
+	FilterSpec,
+	filterSpec,
+	fits,
+	OPERATOR_SPECS,
+	speaks,
+	ValueTemplate,
+} from "./filter-spec";
 import { Term, terms } from "./filter-vocabulary";
 import { preferredSpelling } from "./spelling";
 import { MONTH_NAMES, WEEKDAY_NAMES, YEARS } from "./vocabulary";
@@ -631,12 +640,11 @@ function nameRow(spec: FilterSpec): Row {
  * combine, not things to search for, and the reader who typed `@` was most likely after a filter.
  * Accepting one brings its space, because an operator has no value to go on and type.
  */
-const OPERATOR_ROWS: readonly Row[] = [
-	{ name: "and", hint: "Both sides, strictly", insert: "@and " },
-	{ name: "or", hint: "Either side", insert: "@or " },
-	{ name: "not", hint: "Without what follows", insert: "@not " },
-	{ name: "only", hint: "At least one, and all of them", insert: "@only " },
-];
+const OPERATOR_ROWS: readonly Row[] = OPERATOR_SPECS.map((spec) => ({
+	name: spec.name,
+	hint: spec.hint,
+	insert: `@${spec.name} `,
+}));
 
 /**
  * The crossing operators that go out of this language, as rows, last of all: under the logical

@@ -142,6 +142,24 @@ export function spellable(word: string): string {
 	return `<span data-spell="${word}">${word}</span>`;
 }
 
+/** The site's own spelling of each American one: `colour` for `color`. */
+const BRITISH: Readonly<Record<string, string>> = Object.fromEntries(
+	Object.entries(AMERICAN).map(([british, american]) => [american, british]),
+);
+
+/**
+ * Text already escaped for a page the build draws, with every word spelt two ways marked as
+ * `spellable` marks one. In either spelling, since a term's hint may already be in the reader's.
+ */
+export function markSpellable(html: string): string {
+	return html.replace(/[A-Za-z]+/g, (word) => {
+		const lower = word.toLowerCase();
+		const british = AMERICAN[lower] === undefined ? BRITISH[lower] : lower;
+		if (british === undefined) return word;
+		return spellable(word[0] === word[0].toUpperCase() ? british[0].toUpperCase() + british.slice(1) : british);
+	});
+}
+
 /** Every word under `root` that `spellable` marked, in the reader's spelling, or the one given. */
 export function respell(root: ParentNode, spelling: Spelling = preferredSpelling()): void {
 	for (const element of root.querySelectorAll<HTMLElement>("[data-spell]")) {

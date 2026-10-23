@@ -31,7 +31,8 @@ function withTabs(books: boolean, arcs: boolean, check: () => void): void {
 	}
 }
 
-const heading = (html: string) => html.match(/<h2 class="collections-heading">([^<]*)<\/h2>/)?.[1];
+const heading = (html: string) =>
+	html.match(/<div class="page-title collections-heading"><h2 class="page-title__text">([^<]*)<\/h2>/)?.[1];
 const landingLink = (html: string) =>
 	html.match(/<nav class="landing-links">\s*<a href="([^"]*)">([^<]*)<\/a>/)?.slice(1);
 

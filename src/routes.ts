@@ -1,6 +1,7 @@
 import { Route, SortMode, TabOrder } from "./types";
 import { PAGE_CONFIG } from "./site-config";
 import { COLLECTION_INDEX } from "./bundled-data";
+import type { CollectionType } from "./filter-spec";
 
 /**
  * The site's addresses, as strings. Nothing in here touches the DOM or `location`, so the build
@@ -125,6 +126,10 @@ export function parseRoutePath(pathname: string, search: string): Route | null {
 		return { view: "credits" };
 	}
 
+	if (path === HELP_PATH) {
+		return { view: "help" };
+	}
+
 	return null;
 }
 
@@ -199,7 +204,16 @@ export function collectionsTabs(): CollectionsTab[] {
 	];
 }
 
-function hasTab(tab: CollectionsTab): boolean {
+/** Which kind of collection each tab lists. */
+export const TAB_TYPES: Record<CollectionsTab, CollectionType> = {
+	books: "book",
+	arcs: "arc",
+	creators: "creator",
+	characters: "character",
+	subjects: "subject",
+};
+
+export function hasTab(tab: CollectionsTab): boolean {
 	return collectionsTabs().includes(tab);
 }
 
@@ -264,6 +278,7 @@ export const BOOKSHELF_PATH = BOOKSHELF_TABS.all.path;
 export const BOOKSHELF_CLIPPINGS_PATH = BOOKSHELF_TABS.clippings.path;
 export const BOOKSHELF_BOOKS_PATH = BOOKSHELF_TABS.books.path;
 export const CREDITS_PATH = "/credits";
+export const HELP_PATH = "/help";
 export const HOME_PATH = "/";
 
 /** The address an old one now lives at, or `null` for one that has not moved. */

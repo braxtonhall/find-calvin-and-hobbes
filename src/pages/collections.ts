@@ -5,7 +5,8 @@ import { TabOrder } from "../types";
 import { CollectionsTab, collectionsTabs, buildCollectionPath, buildTabPath } from "../routes";
 import { addressOf } from "../base-path";
 import { CollectionsPage, CollectionSummary, PageSource } from "./page";
-import { buildBackAndHomeButtons } from "./nav-buttons";
+import { buildBackAndHomeButtons, buildPageTitle } from "./nav-buttons";
+import { buildHelpLinkHtml } from "./help";
 import { formatPublicationDate } from "./collection";
 
 /**
@@ -162,7 +163,7 @@ export function buildCollectionsHeaderHtml(
 			? `<span class="collections-tab collections-tab--current" aria-current="page">${label}</span>`
 			: `<a class="collections-tab" data-tab="${name}" href="${escHtml(addressOf(buildTabPath(name, query, order)))}">${label}</a>`;
 	const heading = `${buildBackAndHomeButtons(canGoBack)}
-		<h2 class="collections-heading">${collectionsLabel()}</h2>`;
+		${buildPageTitle("collections-heading", collectionsLabel(), addressOf(buildTabPath(current, query, order)))}`;
 	const tabs = collectionsTabs().map((name) => tab(name, TAB_LABELS[name]));
 	return `${heading}
 		${tabs.length > 1 ? `<nav class="collections-tabs" aria-label="Collections">${tabs.join(`\n\t\t\t<span aria-hidden="true">·</span>\n\t\t\t`)}</nav>` : ""}
@@ -171,7 +172,7 @@ export function buildCollectionsHeaderHtml(
 
 /** What a search that finds none of a tab's collections says, in place of the list. */
 export function buildNoMatchesHtml(current: CollectionsTab): string {
-	return `<div class="results-empty">No ${TAB_NOUNS[current]} found</div>`;
+	return `<div class="results-empty">No ${TAB_NOUNS[current]} found${buildHelpLinkHtml()}</div>`;
 }
 
 /** The list of books, narrowed to `ids` where a search has narrowed it. */

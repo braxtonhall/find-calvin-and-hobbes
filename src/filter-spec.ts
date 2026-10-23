@@ -240,7 +240,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 		? [
 				{
 					name: "as",
-					hint: "How this strip appears in this collection",
+					hint: "How a book prints the strip it holds",
 					vocabulary: true,
 					language: "both",
 					types: ["book"],
@@ -277,6 +277,26 @@ export function oneOfKinds(types: readonly CollectionType[]): string {
 	return orList(types.map((type) => `${/^[aeiou]/.test(type) ? "an" : "a"} ${type}`));
 }
 
+/**
+ * The operators that combine words, filters and crossings: the logical ones, and `@only`. Bare, as
+ * they are written, with the one line both the menu and the help page say of each.
+ */
+export interface OperatorSpec {
+	name: "and" | "or" | "not" | "only";
+	hint: string;
+}
+
+export const OPERATOR_SPECS: readonly OperatorSpec[] = [
+	{ name: "and", hint: "Both sides, strictly" },
+	{ name: "or", hint: "Either side" },
+	{ name: "not", hint: "Without what follows" },
+	{ name: "only", hint: "Every one, not just one" },
+];
+
+export function operatorSpec(name: OperatorSpec["name"]): OperatorSpec {
+	return OPERATOR_SPECS.find((spec) => spec.name === name)!;
+}
+
 /** Every name a filter can have in either language, which is what the scanner looks for. */
 export const FILTER_NAMES: ReadonlySet<string> = new Set(FILTER_SPECS.map((spec) => spec.name));
 
@@ -300,7 +320,7 @@ export interface CrossingSpec {
 export type CrossingOperator = "has" | "in" | "by" | "featuring" | "about" | "during";
 
 export const CROSSING_SPECS: readonly CrossingSpec[] = [
-	{ name: "has", from: "collection", to: "strip", hint: "Has a strip that matches what follows" },
+	{ name: "has", from: "collection", to: "strip", hint: "Contains a strip that matches what follows" },
 	{ name: "in", from: "strip", to: "collection", type: "book", hint: "In a book that matches what follows" },
 	...(PAGE_CONFIG.arcs
 		? [

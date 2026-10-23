@@ -215,3 +215,19 @@
 	white-space: nowrap;
 	color: var(--text-muted);
 }
+
+/* The way to the help page, under the rows: quieter than any of them, and never highlighted by the
+   arrows, which are for the rows. */
+.query-menu-help {
+	display: block;
+	margin-top: 4px;
+	padding: 6px 8px 4px;
+	border-top: 1px solid var(--neutral);
+	font-size: 12px;
+	color: var(--text-muted);
+	text-decoration: none;
+}
+
+.query-menu-help:hover {
+	color: var(--main);
+}

@@ -1,0 +1,198 @@
+#view-help.active {
+	display: block;
+	/* The corrections link floats over the bottom of the page; the last line clears it. */
+	padding: 20px 20px 56px;
+}
+
+@media (max-width: 768px) {
+	/* On mobile the link follows the page instead of floating over it, so there is nothing to clear. */
+	#view-help.active {
+		padding-bottom: 20px;
+	}
+}
+
+.help-container {
+	max-width: 800px;
+}
+
+/* The settings page's heading. */
+.help-heading {
+	font-size: 22px;
+	font-weight: 700;
+	margin-bottom: 8px;
+}
+
+/* Examples · Words · Combining, in the Collections tabs' idiom. */
+.help-contents {
+	margin: 0 0 20px -6px;
+	font-size: 13px;
+	color: var(--text-muted);
+}
+
+/* Padded rather than spaced, so each link's tap target reaches the dot beside it. */
+.help-contents-link {
+	display: inline-block;
+	padding: 8px 6px;
+	color: inherit;
+	text-decoration: none;
+}
+
+.help-contents-link:hover {
+	color: var(--main);
+}
+
+.help-section {
+	margin-bottom: 32px;
+	/* Clear of the top of the page when an anchor scrolls to it. */
+	scroll-margin-top: 16px;
+}
+
+.help-section-heading {
+	font-size: 15px;
+	font-weight: 600;
+	margin-bottom: 4px;
+}
+
+.help-intro {
+	font-size: 14px;
+	color: var(--text-muted);
+	line-height: 1.5;
+	margin-bottom: 12px;
+}
+
+.help-entry {
+	padding: 10px 0;
+	border-top: 1px solid var(--neutral);
+	scroll-margin-top: 16px;
+}
+
+/* The menu's row: what is written on the left, its hint on the right. */
+.help-form {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	font-size: 14px;
+}
+
+.help-syntax {
+	flex: 0 0 auto;
+	font-family: inherit;
+	font-weight: 600;
+	color: var(--text);
+	white-space: nowrap;
+}
+
+/* The slot to fill, as the menu sets it apart. */
+.help-slot {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-style: italic;
+	font-weight: 400;
+	color: var(--main-text);
+}
+
+.help-hint {
+	color: var(--text-muted);
+}
+
+.help-form > .help-hint {
+	min-width: 0;
+	margin-left: auto;
+	text-align: right;
+}
+
+.help-body {
+	padding-left: 16px;
+}
+
+.help-body:empty {
+	display: none;
+}
+
+.help-summary {
+	margin-top: 4px;
+	font-size: 13px;
+	color: var(--text-muted);
+}
+
+.help-note {
+	margin-top: 6px;
+	font-size: 13px;
+	line-height: 1.5;
+	color: var(--text);
+}
+
+.help-note a,
+.help-example a {
+	color: var(--main);
+	text-decoration: none;
+}
+
+.help-note a:hover,
+.help-example a:hover {
+	text-decoration: underline;
+}
+
+.help-code {
+	font-size: 12px;
+	padding: 1px 4px;
+	border-radius: 3px;
+	background: var(--main-faded);
+	white-space: nowrap;
+}
+
+.help-kind {
+	margin-top: 6px;
+	font-size: 12px;
+	color: var(--text-muted);
+}
+
+.help-values {
+	margin-top: 4px;
+	list-style: none;
+	font-size: 13px;
+	line-height: 1.8;
+}
+
+.help-examples {
+	list-style: none;
+	font-size: 14px;
+}
+
+/* A query as the search box shows it, in a frame like the box's: only its filters on pills. */
+.help-query {
+	padding: 3px 10px;
+	font-size: 13px;
+	color: var(--text);
+	white-space: pre;
+	background: var(--bg-sidebar);
+	border: 1px solid var(--neutral);
+	border-radius: 6px;
+}
+
+/* One in a sentence, sized to sit in its line. */
+.help-query--inline {
+	padding: 1px 6px;
+	font-size: 12px;
+}
+
+.help-example {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 4px 12px;
+	padding: 8px 0;
+	border-top: 1px solid var(--neutral);
+}
+
+@media (max-width: 768px) {
+	/* No room for a hint beside its form: it goes under it. */
+	.help-form {
+		flex-wrap: wrap;
+	}
+
+	.help-form > .help-hint {
+		margin-left: 0;
+		text-align: left;
+	}
+}

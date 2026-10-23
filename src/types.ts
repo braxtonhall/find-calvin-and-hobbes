@@ -185,7 +185,8 @@ export interface Route {
 		| "bookshelf"
 		| "bookshelf-clippings"
 		| "bookshelf-books"
-		| "credits";
+		| "credits"
+		| "help";
 	q?: string;
 	sort?: SortMode;
 	/** Only ever `count`: a tab in date order says nothing. */

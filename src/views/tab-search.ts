@@ -1,14 +1,14 @@
 import { state } from "../state";
 import { replaceSearch } from "../router";
-import { CollectionsTab, buildTabPath } from "../routes";
+import { CollectionsTab, TAB_TYPES, buildTabPath } from "../routes";
 import { addressOf } from "../base-path";
-import { CollectionType } from "../filter-spec";
 import { TabOrder } from "../types";
 import { tabSortButtonAttributes } from "../pages/collections";
 import { collectionQuery } from "../filter-query";
 import { CollectionResults, searchCollections } from "../query-eval";
 import { CANONICAL_FORMS } from "../compounds";
 import { attachQueryInput, syncQueryInput } from "./query-input";
+import { attachCopyLinkHandler } from "./copy-link";
 import { isTouchDevice } from "../utils";
 
 /**
@@ -22,15 +22,6 @@ import { isTouchDevice } from "../utils";
  * The box survives a search the way the search page's does — see `buildSearchBar` — so only the
  * list under it is drawn again as the reader types, or re-sorts it.
  */
-
-/** Which kind of collection each tab lists. */
-export const TAB_TYPES: Record<CollectionsTab, CollectionType> = {
-	books: "book",
-	arcs: "arc",
-	creators: "creator",
-	characters: "character",
-	subjects: "subject",
-};
 
 let debounce: number | null = null;
 
@@ -77,6 +68,9 @@ export function updateTabSearch(element: HTMLElement, query: string | undefined,
 		sort.setAttribute("aria-label", label);
 		sort.setAttribute("aria-pressed", pressed);
 	}
+	// The address in the bar is the page's now, query and order and all, so it is the one to copy.
+	const copy = element.querySelector<HTMLButtonElement>("#copy-link-btn");
+	if (copy) copy.dataset.href = location.pathname + location.search;
 	element.querySelectorAll<HTMLAnchorElement>("a.collections-tab[data-tab]").forEach((link) => {
 		link.href = addressOf(buildTabPath(link.dataset.tab as CollectionsTab, query, order));
 	});
@@ -93,6 +87,7 @@ export function attachTabSearch(element: HTMLElement, tab: CollectionsTab): void
 	const input = element.querySelector<HTMLInputElement>(".collections-search-input")!;
 
 	attachQueryInput(input, collectionQuery(TAB_TYPES[tab]));
+	attachCopyLinkHandler(element);
 
 	const search = (immediately: boolean) => {
 		if (debounce !== null) clearTimeout(debounce);

@@ -170,6 +170,23 @@ test("a prerendered document", async (suite) => {
 		}
 	});
 
+	await suite.test("holds the help page, which explains only the filters this site has", () => {
+		const page: Page = { view: "help" };
+		const document = buildDocumentHtml(template, page, { ...options, path: "/help" });
+		assert.deepEqual(embeddedPage(document), page);
+		const view = activeView(document, "help");
+		assert.equal(view, buildViewHtml(page, false));
+		assert.match(view, /id="strips-in"/);
+		assert.match(view, /id="strips-featuring"/);
+		assert.match(view, /id="collections-has"/);
+		// This archive has characters, but no creators and no subjects.
+		assert.doesNotMatch(view, /id="strips-by"/);
+		assert.doesNotMatch(view, /id="strips-about"/);
+		assert.doesNotMatch(view, />@about</);
+		assert.match(view, /id="examples"/);
+		assert.match(document, /<title>Help — Find Calvin and Hobbes<\/title>/);
+	});
+
 	await suite.test("holds the settings, which are the same for everyone until the app fills them in", () => {
 		const page: Page = { view: "settings" };
 		const document = buildDocumentHtml(template, page, { ...options, path: "/settings" });

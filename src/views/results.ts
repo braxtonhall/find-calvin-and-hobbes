@@ -6,6 +6,7 @@ import { CANONICAL_FORMS } from "../compounds";
 import { assignTiers } from "../tiers";
 import { navigate, replaceSearch } from "../router";
 import { HOME_PATH, buildSearchPath } from "../routes";
+import { buildHelpLinkHtml } from "../pages/help";
 import { filterMenuHasFocus } from "./filter-bar";
 import { attachRowHandlers } from "./result-rows";
 import { resultsHtml } from "../pages/result-rows";
@@ -20,7 +21,7 @@ import { attachPreview, syncPreview } from "./preview";
  * were restating the query that is sitting in the input one line up, and the widest line on the
  * page is worth more than a second copy of it.
  */
-const EMPTY = "No comics found";
+const EMPTY = `No comics found${buildHelpLinkHtml()}`;
 
 /**
  * Built on the first render and kept: see `buildSearchBar`. Built again only if something has

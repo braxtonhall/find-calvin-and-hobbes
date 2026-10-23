@@ -5,6 +5,7 @@ import { basePath } from "../base-path";
 import { Page, pageTitle } from "./page";
 import { buildLandingHtml } from "./landing";
 import { buildCreditsHtml } from "./credits";
+import { buildHelpHtml } from "./help";
 import { buildDetailHtml } from "./detail";
 import { buildCollectionHtml } from "./collection";
 import { buildCollectionsHtml } from "./collections";
@@ -49,6 +50,7 @@ export const VIEWS = [
 	"bookshelf",
 	"bookshelf-clippings",
 	"bookshelf-books",
+	"help",
 	"credits",
 ] as const;
 
@@ -121,6 +123,8 @@ function pageDescription(page: Page): string | null {
 		}
 		case "subjects":
 			return `What ${series} kept coming back to, and the strips about each one.`;
+		case "help":
+			return `How to search ${series}: the words, filters and operators the search box understands.`;
 		default:
 			return description;
 	}
@@ -180,6 +184,8 @@ export function buildViewHtml(page: Page, canGoBack: boolean): string {
 			return buildLandingHtml();
 		case "credits":
 			return buildCreditsHtml(canGoBack);
+		case "help":
+			return buildHelpHtml(canGoBack);
 		case "detail":
 			return buildDetailHtml(page, canGoBack);
 		case "collection":

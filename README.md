@@ -4,7 +4,8 @@ A searchable, browsable archive of every Calvin and Hobbes comic strip (1985–1
 
 ## Search syntax
 
-Type words to search transcripts. Type `@` in the search box for the list of filters.
+Type words to search transcripts. Type `@` in the search box for the list of filters. The site's `/help` page explains each filter and operator the site has, with example questions
+(`search.examples` in `config.yaml`) that link to the searches answering them.
 
 | Filter        | Example                        | Meaning                                                   |
 | ------------- | ------------------------------ | --------------------------------------------------------- |

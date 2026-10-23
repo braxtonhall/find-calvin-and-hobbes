@@ -1,5 +1,7 @@
+import { addressOf } from "../base-path";
+import { SETTINGS_PATH } from "../routes";
 import { spellable } from "../spelling";
-import { buildBackAndHomeButtons, buildFlashLabels } from "./nav-buttons";
+import { buildBackAndHomeButtons, buildFlashLabels, buildPageTitle } from "./nav-buttons";
 
 /**
  * The spellings the reader can choose for a word spelt two ways, as the toggle names them: none, so
@@ -25,7 +27,7 @@ export function buildSettingsHtml(canGoBack: boolean): string {
 	).join(`<span aria-hidden="true">·</span>`);
 	return `<div class="settings-container">
 		${buildBackAndHomeButtons(canGoBack)}
-		<h2 class="settings-heading">Settings</h2>
+		${buildPageTitle("settings-heading", "Settings", addressOf(SETTINGS_PATH))}
 		<section class="settings-section">
 			<h3 class="settings-section-heading">Your library</h3>
 			<p class="settings-section-text">Your bookmarks, the strips and books you own, and your notes are kept in this browser. Export them to a file to keep or to move to another browser, and import that file there.</p>

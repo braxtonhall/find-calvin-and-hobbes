@@ -110,6 +110,21 @@
 	font-size: 16px;
 }
 
+/* Under a search that found nothing: quieter than the news itself. */
+.results-help {
+	display: block;
+	width: fit-content;
+	margin: 8px auto 0;
+	padding: 4px 6px;
+	font-size: 13px;
+	color: var(--text-muted);
+	text-decoration: none;
+}
+
+.results-help:hover {
+	color: var(--main);
+}
+
 /* Under the bar, in the room the empty state takes, while the archive is on its way. */
 .results-spinner {
 	margin: 0 auto;
