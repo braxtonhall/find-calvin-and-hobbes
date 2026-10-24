@@ -605,8 +605,11 @@ export function attachQueryInput(input: HTMLInputElement, root: QueryContext = S
 		refresh();
 	});
 
-	input.addEventListener("keyup", (event) => {
-		if (CARET_KEYS.has(event.key)) refresh();
+	// On the keydown, once its default action has moved the caret, not on the keyup: a Mac sends no
+	// keyup for a key pressed with ⌘ held, so ⌘→ would never refresh, and a held arrow repeats its
+	// keydown many times over before its one keyup.
+	input.addEventListener("keydown", (event) => {
+		if (CARET_KEYS.has(event.key)) requestAnimationFrame(() => refresh());
 	});
 
 	// Brackets typed in pairs — see `bracketEdit`. Not on a touchscreen, whose keyboard has its own
