@@ -137,6 +137,8 @@ search:
       query: "@not @in compendium"
     - question: Which strips did a book print with changes?
       query: "@is:altered"
+    - question: What's on page 47 of Yukon Ho!?
+      query: "@in (@id:yukonho @page:47)"
     - question: Which strips have Hobbes as a stuffed tiger?
       query: "@featuring:stuffedhobbes"
     - question: Which books have a colour Sunday I don't own?

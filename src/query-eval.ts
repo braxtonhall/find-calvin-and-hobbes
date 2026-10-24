@@ -1,11 +1,11 @@
 import { Constraint, Crossing, compileQuery } from "./boolean-query";
 import { CollectionType, crossingSpec } from "./filter-spec";
-import { Filter, Run, collectionQuery, passesFilter } from "./filter-query";
+import { Filter, Run, collectionQuery, describesLink, passesFilter } from "./filter-query";
 import { matchesExpression } from "./date-query";
 import type { Compounds } from "./search";
 import { stripContains, textContains } from "./search";
 import { state } from "./state";
-import { Collection, Comic, PrintFormat } from "./types";
+import { Appearance, Collection, Comic, PrintFormat } from "./types";
 import { printedFormats } from "./print-format";
 import { PAGE_CONFIG } from "./site-config";
 
@@ -47,7 +47,7 @@ export interface StripRow {
 	run?: Run;
 }
 
-/** A strip in a collection, for `@as:` to describe. */
+/** A strip in a collection, for `@as:`, `@book:` and `@page:` to describe. */
 interface Link {
 	comic: Comic;
 	group: Group;
@@ -170,24 +170,41 @@ function isMine(group: Group, tag: string): boolean {
 	return false;
 }
 
-/** How this strip appears in this book: `@as:`, altered or in a format. Only a book prints a strip. */
-function asHolds(link: Link | null, tag: string): boolean {
+/**
+ * How this strip appears in this book: `@as:`, altered or in a format, `@book:`, in which book of a
+ * set, and `@page:`, on which page. Only a book prints a strip. Each is asked of any of the book's
+ * printings of it, on its own — see `FILTER_SPECS`.
+ */
+function linkHolds(link: Link | null, filter: Filter): boolean {
 	if (link === null || link.group.type !== "book") return false;
 	return (link.comic.appearances ?? []).some(
-		(appearance) =>
-			appearance.collection === link.group.id &&
-			(tag === "altered"
+		(appearance) => appearance.collection === link.group.id && printedSo(link, appearance, filter),
+	);
+}
+
+function printedSo(link: Link, appearance: Appearance, filter: Filter): boolean {
+	switch (filter.kind) {
+		case "as":
+			return filter.tag === "altered"
 				? appearance.altered === true
 				: printedFormats(link.comic, appearance, link.group.book, PAGE_CONFIG.colourSundays).includes(
-						tag as PrintFormat,
-					)),
-	);
+						filter.tag as PrintFormat,
+					);
+		case "volume":
+			return appearance.volume === filter.volume;
+		case "page":
+			return appearance.pages.includes(filter.page);
+		default:
+			return false;
+	}
 }
 
 function passesCollectionFilter(group: Group, filter: Filter, link: Link | null): boolean {
 	switch (filter.kind) {
 		case "as":
-			return asHolds(link, filter.tag);
+		case "volume":
+		case "page":
+			return linkHolds(link, filter);
 		case "id":
 			return group.id === filter.id;
 		case "tag":
@@ -229,7 +246,7 @@ export class Evaluator {
 				let holds: boolean;
 				if (constraint.kind === "text") holds = stripContains(row.comic, constraint.text, this.compounds);
 				else if (constraint.kind === "cross") holds = this.crossFromStrip(constraint.crossing, row);
-				else if (constraint.filter.kind === "as") holds = asHolds(link, constraint.filter.tag);
+				else if (describesLink(constraint.filter)) holds = linkHolds(link, constraint.filter);
 				else holds = passesFilter(row.comic, constraint.filter, row.run);
 				return holds !== constraint.negated;
 			}),

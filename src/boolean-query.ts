@@ -7,6 +7,7 @@ import {
 	RawFilter,
 	Run,
 	STRIP_QUERY,
+	describesLink,
 	lexFilters,
 	passesFilter,
 	quoted,
@@ -231,6 +232,9 @@ const OPERATOR_PATTERN = /@([a-zA-Z]+)(?![a-zA-Z:])/g;
  *
  * And a collection's id, of which it has one; and its year, which a book has one of. An arc can run
  * across several, but `@published:` widens on every kind, so the two tabs read a query the same way.
+ *
+ * And where a book prints a strip, its book of a set and its page, of which a printing has one —
+ * near enough: a strip across two pages has both, and both is `@and`.
  */
 const WIDENING = new Set<Filter["kind"]>([
 	"year",
@@ -245,6 +249,8 @@ const WIDENING = new Set<Filter["kind"]>([
 	"during",
 	"id",
 	"published",
+	"volume",
+	"page",
 ]);
 
 /** A query of more clauses than this is refused rather than searched. See `normalise`. */
@@ -260,7 +266,7 @@ export interface Crossing {
 	only: boolean;
 	clauses: Constraint[][];
 	/**
-	 * Whether the query inside asks `@as:` about the link it crosses, at its own level. One that
+	 * Whether the query inside asks `@as:`, `@book:` or `@page:` about the link it crosses, at its own level. One that
 	 * does has to be judged afresh for each link; one that does not can be judged once per collection.
 	 */
 	linked: boolean;
@@ -681,7 +687,7 @@ function compileCrossing(node: CrossNode): Crossing | null {
 		only: node.only,
 		clauses,
 		linked: clauses.some((clause) =>
-			clause.some((constraint) => constraint.kind === "filter" && constraint.filter.kind === "as"),
+			clause.some((constraint) => constraint.kind === "filter" && describesLink(constraint.filter)),
 		),
 		reruns: node.operator === "has" && clausesAskForReruns(clauses),
 	};

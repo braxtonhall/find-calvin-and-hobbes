@@ -58,6 +58,8 @@ export interface Collection {
 	 */
 	colour?: boolean;
 	sundays?: boolean;
+	/** How many books it is a set of, as a compendium is. Left out, it is one book with one run of pages. */
+	volumes?: number;
 	notes: string[];
 	dailies: string[];
 	alterations: Record<string, string>;

@@ -177,6 +177,8 @@ function begins(spec: FilterSpec, template: ValueTemplate, value: string): boole
 		return open(value, template.label === "YYYY" ? YEAR_LONG : YEAR_SHORT);
 	if (spec.name === "month") return template.label === "MM" ? open(value, MONTH) : beginsAName(MONTHS, value);
 	if (spec.name === "day") return template.label === "DD" ? open(value, MONTH_DAY) : beginsAName(WEEKDAYS, value);
+	// A count has no last digit: `@page:4` is page 4 and the start of page 47.
+	if (COUNTED.has(spec.name)) return /^([1-9]\d*)?$/.test(value);
 	return beginsADate(value, template.label.split("/").length);
 }
 
@@ -216,6 +218,7 @@ function fills(spec: FilterSpec, template: ValueTemplate, value: string): boolea
 	if (spec.name === "day") {
 		return template.label === "DD" ? inRange(value, 1, 31) : WEEKDAYS.has(value);
 	}
+	if (COUNTED.has(spec.name)) return /^[1-9]\d*$/.test(value);
 
 	const expression = parseDateExpression(value, "filter");
 	if (expression === null || expression.candidates.length !== 1) return false;
@@ -270,7 +273,13 @@ const CANDIDATES = new Map<string, readonly string[]>([
 	["year", YEAR_VALUES],
 	["month", MONTH_VALUES],
 	["day", DAY_VALUES],
+	// Nothing to list, but the number typed, once it is one, to accept.
+	["book", []],
+	["page", []],
 ]);
+
+/** The filters that take a number counted from 1: a book of a set, and a page. */
+const COUNTED: ReadonlySet<string> = new Set(["book", "page"]);
 
 /**
  * Every spelling a value answers to.
@@ -669,8 +678,8 @@ function crossingRows(context: QueryContext): Row[] {
  *
  * Only what can be written where the caret is: the strip language's filters in the main search and
  * inside `@has (…)`, and the collection language's on the Collections page and inside `@in (…)` and
- * its kin — `root` is the box's. `@as:` only inside an operator, where there is a link for it to
- * describe.
+ * its kin — `root` is the box's. `@as:`, `@book:` and `@page:` only inside an operator, where there
+ * is a link for them to describe.
  */
 export function completionsAt(text: string, caret: number, root: QueryContext = STRIP_QUERY): Completion | null {
 	const token = tokenAt(text, caret);
@@ -688,7 +697,7 @@ export function completionsAt(text: string, caret: number, root: QueryContext = 
 			...FILTER_SPECS.filter(
 				(spec) =>
 					speaks(spec, context.language) &&
-					(spec.name !== "as" || context.link) &&
+					(!spec.link || context.link) &&
 					fits(spec, context) &&
 					spec.name.startsWith(name),
 			).map(nameRow),
@@ -699,9 +708,9 @@ export function completionsAt(text: string, caret: number, root: QueryContext = 
 	}
 
 	const spec = filterSpec(name, context.language);
-	// A colon after a name that is not a filter here has no completion to offer — nor `@as:` where
-	// there is no link for it to describe, nor a filter this kind of collection does not have.
-	if (spec === undefined || (spec.name === "as" && !context.link) || !fits(spec, context)) return null;
+	// A colon after a name that is not a filter here has no completion to offer — nor a link filter
+	// where there is no link for it to describe, nor a filter this kind of collection does not have.
+	if (spec === undefined || (spec.link && !context.link) || !fits(spec, context)) return null;
 
 	// Whether the filter works is the parser's business rather than a fourth opinion here, so no
 	// shape may claim to be filled inside a filter that would not run.

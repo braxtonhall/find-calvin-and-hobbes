@@ -58,15 +58,22 @@ export type Filter =
 	| { kind: "before"; bound: string }
 	| { kind: "during"; arc: string }
 	| { kind: "as"; tag: string }
+	| { kind: "volume"; volume: number }
+	| { kind: "page"; page: number }
 	| { kind: "id"; id: string }
 	| { kind: "tag"; tag: string }
 	| { kind: "published"; expression: DateExpression };
+
+/** Whether the filter describes a strip in a collection rather than either one: `@as:`, `@book:` or `@page:`. */
+export function describesLink(filter: Filter): boolean {
+	return filter.kind === "as" || filter.kind === "volume" || filter.kind === "page";
+}
 
 /**
  * Where in a query a filter stands, which decides what it can mean: which language, which kind of
  * collection where the language is the collection one and something says which, and whether a
  * crossing operator stands between it and the top — and whether the nearest is a link between a
- * strip and a collection, which `@as:` describes. `@reran (…)` and `@reuses (…)` cross from a
+ * strip and a collection, which `@as:`, `@book:` and `@page:` describe. `@reran (…)` and `@reuses (…)` cross from a
  * strip to a strip, which is no link.
  */
 export interface QueryContext {
@@ -176,7 +183,7 @@ function windowBounds(expression: DateExpression): { from: string; to: string } 
  *
  * Read in the language of the place it was written: a strip's filters in the main search and inside
  * `@has (…)`, a collection's on the Collections page and inside `@in (…)` and its kin. A filter of
- * the other language is a mistake there, and so is `@as:` with no link to describe — see
+ * the other language is a mistake there, and so is a link filter with no link to describe — see
  * `judgeFilter` for what the reader is told about each.
  */
 export function readFilter(
@@ -200,24 +207,36 @@ export function judgeFilter(
 	const written = `@${name}${value === undefined ? "" : `:${value}`}`;
 	if (value === undefined) return { filter: null };
 
-	// `@as:` is written in either language, but only inside an operator that crosses between them.
-	if (name === "as") {
+	// A book's id, given where its number in a set goes, is what the reader most likely meant: the book.
+	if (name === "book" && !/^\d+$/.test(value) && termFor("in", value) !== undefined) {
+		const meant = context.link || language === "collection" ? `@id:${value}` : `@in:${value}`;
+		return { filter: null, reason: `${written} asks for a book of a set by its number. Did you mean ${meant}?` };
+	}
+
+	// A link filter is written in either language, but only inside an operator that crosses between them.
+	const link = filterSpec(name, language);
+	if (link?.link === true) {
 		if (!context.link) {
 			return {
 				filter: null,
 				reason: `${written} describes a strip in a collection: use it inside @in (…) or @has (…)`,
 			};
 		}
-		const spec = filterSpec("as", language);
-		if (spec?.types !== undefined && !fits(spec, context)) {
+		if (link.types !== undefined && !fits(link, context)) {
 			return {
 				filter: null,
-				reason: `${written} describes a strip in ${oneOfKinds(spec.types)}, not in ${oneOfKinds([context.linked!])}`,
+				reason: `${written} describes a strip in ${oneOfKinds(link.types)}, not in ${oneOfKinds([context.linked!])}`,
 			};
 		}
-		return knows("as", value, context)
-			? { filter: { kind: "as", tag: canonical("as", value, context) } }
-			: { filter: null };
+		if (name === "as") {
+			return knows("as", value, context)
+				? { filter: { kind: "as", tag: canonical("as", value, context) } }
+				: { filter: null };
+		}
+		// A book of a set and a page are both counted from 1.
+		const number = /^[1-9]\d*$/.test(value) ? Number(value) : null;
+		if (number === null) return { filter: null };
+		return { filter: name === "book" ? { kind: "volume", volume: number } : { kind: "page", page: number } };
 	}
 
 	const spec = filterSpec(name, language);
@@ -508,9 +527,11 @@ export function passesFilter(subject: string | Comic, filter: Filter, run?: Run)
 			return date < filter.bound;
 		case "during":
 			return typeof subject !== "string" && (subject.arcs ?? []).includes(filter.arc);
-		// A collection's filters, and `@as:`, which needs a link: neither is a strip's to answer,
-		// and `query-eval.ts` answers both where they can be.
+		// A collection's filters, and the link filters, which need a link: neither is a strip's to
+		// answer, and `query-eval.ts` answers both where they can be.
 		case "as":
+		case "volume":
+		case "page":
 		case "id":
 		case "tag":
 		case "published":

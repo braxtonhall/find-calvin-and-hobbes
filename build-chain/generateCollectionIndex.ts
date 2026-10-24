@@ -26,8 +26,16 @@ export function generateCollectionIndex(collectionData: CollectionData, basePath
 	const collections = [];
 
 	const printed = new Set<string>();
+	// A set's books by their highest number, read off the same appearances, so `@book:` is offered
+	// only where some strip is in a numbered book.
+	const volumes = new Map<string, number>();
 	for (const appearances of collectionData.appearancesByComic.values()) {
-		for (const appearance of appearances) printed.add(appearance.collection);
+		for (const appearance of appearances) {
+			printed.add(appearance.collection);
+			if (appearance.volume !== undefined) {
+				volumes.set(appearance.collection, Math.max(volumes.get(appearance.collection) ?? 0, appearance.volume));
+			}
+		}
 	}
 
 	for (const source of collectionData.sources) {
@@ -44,6 +52,7 @@ export function generateCollectionIndex(collectionData: CollectionData, basePath
 		const collection: Record<string, unknown> = {
 			...rest,
 			image: publicUrl(rest.image, basePath),
+			...(volumes.has(source.id) ? { volumes: volumes.get(source.id) } : {}),
 			dailies: collectionData.rangesById.get(source.id) || [],
 			specials: collectionData.specialsById.get(source.id) || {},
 			alterations: Object.fromEntries(

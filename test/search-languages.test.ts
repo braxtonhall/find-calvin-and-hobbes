@@ -97,7 +97,7 @@ const COMICS: Comic[] = [
 	{
 		date: "1988-01-04",
 		transcript: "Can I stay home today?",
-		appearances: [{ collection: "snowbook", pages: [2] }],
+		appearances: [{ collection: "snowbook", volume: 2, pages: [2] }],
 		arcs: ["snowarc"],
 		characters: ["mom"],
 		creators: [{ id: "bill" }],
@@ -245,6 +245,33 @@ test("reading a query where it stands", async (suite) => {
 		assert.equal(scanQuery("@as:altered", collectionQuery("book")).filters[0].valid, false);
 	});
 
+	await suite.test("@book: and @page: need a link to describe, and a number from 1", () => {
+		assert.match(scanQuery("@page:2", STRIP_QUERY).filters[0].reason!, /inside @in/);
+		assert.match(scanQuery("@book:2", collectionQuery("book")).filters[0].reason!, /inside @in/);
+		assert.equal(
+			scanQuery("@in (@book:2 @page:47)", STRIP_QUERY).filters.every((match) => match.valid),
+			true,
+		);
+		assert.equal(scanQuery("@has @page:2", collectionQuery("book")).filters[0].valid, true);
+		for (const value of ["0", "02", "2a", "two"]) {
+			assert.equal(scanQuery(`@in @page:${value}`, STRIP_QUERY).filters[0].valid, false, value);
+		}
+		assert.equal(
+			scanQuery("@during @page:2", STRIP_QUERY).filters[0].reason,
+			"@page:2 describes a strip in a book, not in an arc",
+		);
+	});
+
+	await suite.test("a book's id given to @book: is taken for the book it names", () => {
+		setUp();
+		registerVocabulary("in", () => BOOKS.map((each) => ({ value: each.id, hint: each.name })));
+		const reason = (text: string, root = STRIP_QUERY) => scanQuery(text, root).filters[0].reason;
+		assert.match(reason("@book:snowbook")!, /Did you mean @in:snowbook\?$/);
+		assert.match(reason("@in @book:snowbook")!, /Did you mean @id:snowbook\?$/);
+		assert.match(reason("@book:snowbook", collectionQuery("book"))!, /Did you mean @id:snowbook\?$/);
+		assert.equal(reason("@in @book:snowman"), undefined);
+	});
+
 	await suite.test(
 		"a crossing operator in the wrong language, or @only before nothing that crosses, is a mistake",
 		() => {
@@ -383,6 +410,23 @@ test("the strip language", async (suite) => {
 		assert.deepEqual(strips("@in (@id:snowbook @as:ink)"), ["1988-01-04"]);
 		assert.deepEqual(listed("@has @as:color", "book"), ["snowbook"]);
 		assert.deepEqual(listed("@has @as:ink", "arc"), [], "only a book prints a strip");
+	});
+
+	// The Sunday is on page 1 of the snow book and pages 1 and 3 of the plain one; the next day on
+	// page 2 of the snow book's second book, and the school strip on page 2 of the plain book.
+	await suite.test("@page: and @book: say where this book prints the strip", () => {
+		setUp();
+		assert.deepEqual(strips("@in @page:2"), ["1988-01-04", "1988-01-05"]);
+		assert.deepEqual(strips("@in (@id:plainbook @page:3)"), ["1988-01-03"]);
+		assert.deepEqual(strips("@in (@id:snowbook @page:3)"), [], "page 3 of another book");
+		assert.deepEqual(strips("@in (@id:snowbook @page:1 @page:2)"), ["1988-01-03", "1988-01-04"], "either page");
+		assert.deepEqual(strips("@in (@id:plainbook @page:1 @and @page:3)"), ["1988-01-03"], "across both");
+		assert.deepEqual(strips("@in @book:2"), ["1988-01-04"]);
+		assert.deepEqual(strips("@in (@book:2 @page:2)"), ["1988-01-04"]);
+		assert.deepEqual(strips("@in @book:1"), [], "a book that is not a set has no number");
+		assert.deepEqual(listed("@has @page:2", "book"), ["snowbook", "plainbook"]);
+		assert.deepEqual(listed("@has (@page:3 @is:sunday)", "book"), ["plainbook"]);
+		assert.deepEqual(listed("@has @page:1", "arc"), [], "only a book has pages");
 	});
 
 	await suite.test("each kind of collection has its operator, and its filter as short for it", () => {
@@ -572,6 +616,10 @@ test("the search box", async (suite) => {
 		assert.ok(!menu("@has (@", collectionQuery("arc")).includes("@as:"), "only a book prints a strip");
 		assert.ok(!menu("@during (@").includes("@as:"));
 		assert.deepEqual(menu("@during @as:"), []);
+		assert.ok(inBook.includes("@book:") && inBook.includes("@page:"));
+		assert.ok(!menu("@").includes("@page:") && !menu("@during (@").includes("@page:"));
+		assert.deepEqual(menu("@in @page:"), []);
+		assert.deepEqual(menu("@in @page:47"), ["@page:47 "]);
 		// Back out of the parenthesis, back in the box's own.
 		assert.ok(menu("@in (@i:own) @").includes("@year:"));
 	});

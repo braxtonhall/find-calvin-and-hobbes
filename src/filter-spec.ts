@@ -14,7 +14,7 @@
  */
 
 import type { QueryContext } from "./filter-query";
-import { AS_TAGS, COLLECTION_MINE, MINE, TAGS, terms } from "./filter-vocabulary";
+import { AS_TAGS, COLLECTION_MINE, MINE, TAGS, VOLUMES, terms } from "./filter-vocabulary";
 import { PAGE_CONFIG } from "./site-config";
 
 /**
@@ -67,9 +67,15 @@ export interface FilterSpec {
 	language: Language | "both";
 	/**
 	 * The kinds of collection it can be asked of, where not every kind: written of another, it is a
-	 * mistake. `@as:`'s are the kinds of collection at the other end of its link.
+	 * mistake. A link filter's are the kinds of collection at the other end of its link.
 	 */
 	types?: readonly CollectionType[];
+	/**
+	 * It describes a strip in a collection — how, or where, that one collection holds that one strip —
+	 * so it is written only inside an operator that crosses between them, in either language:
+	 * `@as:`, `@book:` and `@page:`.
+	 */
+	link?: true;
 }
 
 const YEAR_FIRST: readonly ValueTemplate[] = [
@@ -90,8 +96,12 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
  * `WIDENING` in `boolean-query.ts`.
  *
  * `@featuring:` only where `config.yaml` has characters for it, `@by:` only where it has creators,
- * `@about:` only where it has subjects, `@during:` only where it has arcs, and `@as:` only where a
- * book printed a strip with changes.
+ * `@about:` only where it has subjects, `@during:` only where it has arcs, `@as:` only where a
+ * book printed a strip with changes, and `@book:` only where a book is a set of them.
+ *
+ * `@book:` and `@page:` each ask the strip's printings in that book on their own, as `@as:` does,
+ * rather than together of one printing: `@book:2 @page:47` is a strip on page 47 of some book of the
+ * set that is also in Book 2. No strip is in two books of one set, so the two readings agree.
  */
 export const FILTER_SPECS: readonly FilterSpec[] = [
 	{
@@ -244,11 +254,32 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 					vocabulary: true,
 					language: "both",
 					types: ["book"],
+					link: true,
 					// The last, which is spelt one way only: `ink`, or else `altered`.
 					templates: [{ label: "tag", hint: AS_TAGS[AS_TAGS.length - 1].value }],
 				} satisfies FilterSpec,
 			]
 		: []),
+	...(VOLUMES
+		? [
+				{
+					name: "book",
+					hint: "Which book of a set holds the strip",
+					language: "both",
+					types: ["book"],
+					link: true,
+					templates: [{ label: "N", hint: "a book's number in its set, from 1" }],
+				} satisfies FilterSpec,
+			]
+		: []),
+	{
+		name: "page",
+		hint: "The page a book prints the strip on",
+		language: "both",
+		types: ["book"],
+		link: true,
+		templates: [{ label: "N", hint: "a page number" }],
+	},
 ];
 
 /** Whether the filter can be written in this language. */
@@ -258,12 +289,12 @@ export function speaks(spec: FilterSpec, language: Language): boolean {
 
 /**
  * Whether the filter can be asked of the kind of collection where it is written: the kind the
- * query is about, or for `@as:`, the kind at the other end of its link. Anything goes where nothing
- * says which kind.
+ * query is about, or for a link filter, the kind at the other end of its link. Anything goes where
+ * nothing says which kind.
  */
 export function fits(spec: FilterSpec, context: QueryContext): boolean {
 	if (spec.types === undefined) return true;
-	const type = spec.name === "as" ? context.linked : context.language === "collection" ? context.type : undefined;
+	const type = spec.link ? context.linked : context.language === "collection" ? context.type : undefined;
 	return type === undefined || spec.types.includes(type);
 }
 

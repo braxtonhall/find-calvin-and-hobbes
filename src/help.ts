@@ -24,7 +24,7 @@ import {
 	OperatorSpec,
 	operatorSpec,
 } from "./filter-spec";
-import { AS_TAGS, Term, terms } from "./filter-vocabulary";
+import { AS_TAGS, Term, VOLUMES, terms } from "./filter-vocabulary";
 import { CollectionsTab, TAB_TYPES, buildSearchPath, buildTabPath, collectionsTabs } from "./routes";
 import { PAGE_CONFIG } from "./site-config";
 import { YEARS } from "./constants";
@@ -130,6 +130,14 @@ const COLLECTION_NOTES: Partial<Record<string, string[]>> = {
 	as: [
 		`Filters on how a book and a strip in it go together, so it goes inside \`@in ( … )\` or \`@has ( … )\`, where there are both${asExample()}.`,
 	],
+	book: [
+		"For a book that comes as a set, numbered as the set numbers them. Like `@as:`, it goes inside `@in ( … )` or `@has ( … )`: `@in (@id:a @book:2 @page:47)` is page 47 of the second book of set a.",
+		"A book that is not a set has no number, so `@in @book:1` is a strip in some set. Two side by side mean either.",
+	],
+	page: [
+		`Like \`@as:\`, it goes inside \`@in ( … )\` or \`@has ( … )\`: \`@in (@id:a @page:47)\` is what book a prints on page 47.${VOLUMES ? " Each book of a set starts its pages again, so add `@book:` to say which." : ""}`,
+		"A strip printed across two pages is on both. Two side by side mean either page.",
+	],
 };
 
 /** `@in:x is short for @in (@id:x)`, for each crossing that has a filter of its name. */
@@ -152,8 +160,8 @@ function andList(words: readonly string[]): string {
  * `Works on the Books and Arcs tabs, and inside @in ( … ) and @during ( … ).`
  */
 function kindsNote(spec: FilterSpec): string[] {
-	// `@as:`'s own note says where it goes.
-	if (spec.types === undefined || spec.name === "as") return [];
+	// A link filter's own note says where it goes.
+	if (spec.types === undefined || spec.link) return [];
 	const tabs = collectionsTabs();
 	const fits = tabs.filter((tab) => spec.types!.includes(TAB_TYPES[tab]));
 	if (fits.length === tabs.length || fits.length === 0) return [];
@@ -403,7 +411,7 @@ export function helpAnchor(language: Language, name?: string): string {
 	anchors ??= new Set(helpSections().flatMap((section) => section.entries.map((entry) => entry.id)));
 	const section = language === "strip" ? "strips" : "collections";
 	if (name !== undefined && anchors.has(`${section}-${name}`)) return `${section}-${name}`;
-	// `@as:` is written in either language, and explained once, with the collections.
+	// A link filter is written in either language, and explained once, with the collections.
 	if (name !== undefined && anchors.has(`collections-${name}`)) return `collections-${name}`;
 	return section === "collections" && collectionsTabs().length === 0 ? "strips" : section;
 }

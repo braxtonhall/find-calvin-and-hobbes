@@ -83,10 +83,14 @@ the collection rather than the strip — `@in:book3` is short for `@in (@id:book
 | `@only @in @i:own`            | in at least one book, and only in books you own |
 | `@not @in @is:any`            | in no book at all                               |
 | `@in (@id:book1 @as:altered)` | altered in Book 1                               |
+| `@in (@id:yukonho @page:47)`  | on page 47 of _Yukon Ho!_                       |
 
 `@only` before any of these is "at least one, and all of them". `@is:any` is anything at all, so
 `@in @is:any` is in any book and `@not @featuring @is:any` features no character. `@as:altered`, inside one, is
-about how that collection prints that strip, where `@is:altered` is altered in any book.
+about how that collection prints that strip, where `@is:altered` is altered in any book. `@page:` and
+`@book:` say where it prints it: on which page, and for a set like the Complete or a Portable
+Compendium, which numbered book of it, since each starts its pages again —
+`@in (@id:compendium1 @book:2 @page:47)`.
 
 The Collections page has a search box too, and the tab you are on says which kind of collection it
 finds. A collection's words are its own — a book's title, an arc's description, a subject's name,
@@ -97,8 +101,8 @@ with a Sunday, `@not @has @is:sunday` one without, `@only @has @year:1988` one e
 mistake where it is written: `@is:` (`any` for every kind, `colour` for a book, `writer` and
 `artist` for a creator), `@i:` (`own`, `noted` — only a book), `@id:` and `@published:` (a book, an
 arc or a subject: a year, as `@year:` takes it — a book's year, or any year one of an arc's or a
-subject's strips ran; two side by side mean either). `@as:` describes a strip in a book, so
-`@during @as:ink` is a mistake too.
+subject's strips ran; two side by side mean either). `@as:`, `@book:` and `@page:` describe a strip
+in a book, so `@during @as:ink` is a mistake too.
 
 Filter values are read year first — `@date:1988/9/3` is September 3rd, never March 9th — and take
 no spaces. A bare date typed on its own is understood without any `@`, as long as it starts from

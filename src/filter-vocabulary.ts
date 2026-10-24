@@ -38,6 +38,9 @@ export const ALTERATIONS = COLLECTION_INDEX.collections.some(
 	(collection) => Object.keys(collection.alterations ?? {}).length > 0,
 );
 
+/** Whether any book is a set of numbered books, each with its own pages: whether there is `@book:`. Read as above. */
+export const VOLUMES = COLLECTION_INDEX.collections.some((collection) => collection.volumes !== undefined);
+
 /** One value a data-driven filter takes: what a reader types, and what it names. */
 export interface Term {
 	/** The spelling the filter takes. Space-free and lowercase, because `scanFilters` requires it. */

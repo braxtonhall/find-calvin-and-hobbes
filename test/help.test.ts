@@ -39,6 +39,17 @@ test("the help page", async (suite) => {
 		);
 	});
 
+	await suite.test("explains where a book prints a strip once, with the collections, and says where it goes", () => {
+		const entries = helpSections().flatMap((section) => section.entries);
+		for (const name of ["book", "page"]) {
+			assert.ok(!ids().includes(`strips-${name}`), name);
+			const entry = entries.find((each) => each.id === `collections-${name}`)!;
+			assert.match(entry.notes.join(" "), /inside `@in \( … \)` or `@has \( … \)`/, name);
+		}
+		assert.ok(runs("@in (@id:yukonho @book:2 @page:47)", STRIP_QUERY));
+		assert.ok(!runs("@page:47", STRIP_QUERY));
+	});
+
 	await suite.test("checks a query against the kind it is about", () => {
 		assert.ok(runs("@is:colour", collectionQuery("book")));
 		assert.ok(!runs("@is:colour", collectionQuery("arc")));
@@ -50,6 +61,8 @@ test("a search box's way to the help page", async (suite) => {
 		assert.equal(helpAnchor("strip", "year"), "strips-year");
 		assert.equal(helpAnchor("collection", "published"), "collections-published");
 		assert.equal(helpAnchor("strip", "as"), "collections-as");
+		assert.equal(helpAnchor("strip", "page"), "collections-page");
+		assert.equal(helpAnchor("collection", "book"), "collections-book");
 	});
 
 	await suite.test("goes to the language's section otherwise", () => {
