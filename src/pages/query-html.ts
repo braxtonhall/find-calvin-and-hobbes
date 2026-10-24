@@ -12,6 +12,7 @@ const SPAN_CLASS: Record<SpanKind, string> = {
 	name: "query-pill",
 	pending: "query-pill--pending",
 	invalid: "query-pill query-pill--invalid",
+	pair: "query-pair",
 };
 
 /** The query, with the filters in it painted according to how far along each one is. */

@@ -255,7 +255,7 @@ type Gap = "side" | "or" | "and" | "mixed";
 
 function gapOf(gap: string): Gap {
 	if (/^\s*@or\s*$/i.test(gap)) return "or";
-	if (/[()]|@(?:or|not)(?![a-zA-Z:])/i.test(gap)) return "mixed";
+	if (/[()[\]{}]|@(?:or|not)(?![a-zA-Z:])/i.test(gap)) return "mixed";
 	return /@and(?![a-zA-Z:])/i.test(gap) ? "and" : "side";
 }
 
@@ -402,7 +402,7 @@ function removeTokens(text: string, tokens: Iterable<string>): string {
 function cut(text: string, start: number, end: number): string {
 	let before = text.slice(0, start).replace(/\s+$/, "");
 	let after = text.slice(end).replace(/^\s+/, "");
-	const left = /(^|[\s(])@(or|and)$/i.exec(before);
+	const left = /(^|[\s([{])@(or|and)$/i.exec(before);
 	const right = /^@(or|and)(?![a-zA-Z:])\s*/i.exec(after);
 	// Side by side with another of its own name, the token was in a group that binds tighter than an
 	// `@and` before it, as a group under `@or` does: `@in:book1 @and @in:book2 @in:book3` without
@@ -416,7 +416,7 @@ function cut(text: string, start: number, end: number): string {
 			right?.[1].toLowerCase() === "and");
 	if (takeLeft) before = before.slice(0, left.index + left[1].length).replace(/\s+$/, "");
 	else if (right !== null) after = after.slice(right[0].length);
-	// Nor inside a parenthesis, so `(@in:book1 @or @in:book3)` loses a book and stays `(@in:book1)`.
-	if (before === "" || after === "" || before.endsWith("(") || after.startsWith(")")) return before + after;
+	// Nor inside a bracket, so `(@in:book1 @or @in:book3)` loses a book and stays `(@in:book1)`.
+	if (before === "" || after === "" || /[([{]$/.test(before) || /^[)\]}]/.test(after)) return before + after;
 	return `${before} ${after}`;
 }

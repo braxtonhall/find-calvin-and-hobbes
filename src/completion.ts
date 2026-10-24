@@ -24,7 +24,7 @@
 import { RANGE_END, RANGE_START } from "./constants";
 import { MONTHS, WEEKDAYS, parseDateExpression } from "./date-query";
 import { FilterMatch, QueryContext, STRIP_QUERY, quoted, quotedSpans, readMatch } from "./filter-query";
-import { contextAt, scanQuery } from "./boolean-query";
+import { Bracket, closerOf, contextAt, scanBrackets, scanQuery } from "./boolean-query";
 import { dateToString, isSabbatical, lastDayOf } from "./date-utils";
 import {
 	CROSSING_SPECS,
@@ -716,9 +716,11 @@ export function completionsAt(text: string, caret: number, root: QueryContext = 
  * How much of a filter is settled.
  *
  * `match` parses; `name` is a filter name that is settled while the rest of it is not; `pending`
- * is the part still being typed; `invalid` will match nothing however the reader waits.
+ * is the part still being typed; `invalid` will match nothing however the reader waits. And `pair`
+ * is not a filter at all, but a bracket beside the caret and the one it pairs with — see
+ * `bracketPairAt`.
  */
-export type SpanKind = "match" | "name" | "pending" | "invalid";
+export type SpanKind = "match" | "name" | "pending" | "invalid" | "pair";
 
 export interface FilterSpan {
 	start: number;
@@ -749,6 +751,12 @@ export interface FilterSpan {
  * are wrong where they stand, and any operator with nothing after it is only unfinished while it is
  * the last thing in a query still being written. A crossing operator in the wrong language, and an
  * `@only` before what is not a crossing, are wrong where they stand.
+ *
+ * And the brackets that pair with nothing — once there is an `@` in the query to give them a
+ * meaning. Before that, `calvin (sigh` has a bracket that groups nothing, and painting it would be
+ * noise. A closer with nothing to close is wrong where it stands, and so is an opener closed by a
+ * closer of another kind; one left open at the end is only unfinished while the query is being
+ * written, as an operator with nothing after it is.
  */
 export function filterSpans(text: string, caret: number | null, root: QueryContext = STRIP_QUERY): FilterSpan[] {
 	const spans: FilterSpan[] = [];
@@ -806,7 +814,104 @@ export function filterSpans(text: string, caret: number | null, root: QueryConte
 		else spans.push({ start, end, kind: "invalid", reason: `${name} needs something after it` });
 	}
 
+	if (grouping(text)) {
+		for (const bracket of scanBrackets(text)) {
+			if (bracket.partner !== null) continue;
+			if (bracket.closedAt === text.length && caret !== null) continue;
+			const closer = closerOf(bracket.mark);
+			const reason = closer === undefined ? `Unexpected '${bracket.mark}'` : `Missing '${closer}'`;
+			spans.push({ start: bracket.start, end: bracket.start + 1, kind: "invalid", reason });
+		}
+	}
+
 	return spans.sort((one, other) => one.start - other.start);
+}
+
+/**
+ * Whether the query has an `@` anything in it — a filter or an operator, whether or not it works —
+ * outside a quotation. Without one, a bracket changes nothing about what the query finds.
+ */
+function grouping(text: string): boolean {
+	const quotes = quotedSpans(text);
+	return [...text.matchAll(/@[a-zA-Z]/g)].some((match) => !quoted(quotes, match.index));
+}
+
+/**
+ * The bracket beside the caret and the one it pairs with, painted as a pair: the one just before
+ * the caret if it is a bracket, and the one just after it if not. Nothing for one that pairs with
+ * nothing, which `filterSpans` has painted already, nor before the query has an `@` in it.
+ */
+export function bracketPairAt(text: string, caret: number): FilterSpan[] {
+	if (!grouping(text)) return [];
+	const brackets = scanBrackets(text);
+	const beside =
+		brackets.find((bracket) => bracket.start === caret - 1) ?? brackets.find((bracket) => bracket.start === caret);
+	if (beside === undefined || beside.partner === null) return [];
+	return [beside.start, beside.partner]
+		.sort((one, other) => one - other)
+		.map((start) => ({ start, end: start + 1, kind: "pair" as const }));
+}
+
+/** An edit to the query: `insert` in place of `start` to `end`, and the selection to leave after it. */
+export interface BracketEdit {
+	start: number;
+	end: number;
+	insert: string;
+	selection: [number, number];
+}
+
+/**
+ * What a key does to the brackets around the selection, or null for what it would do anyway.
+ *
+ * An opener wraps a selection in its pair, and with none brings its closer along — where there is
+ * nothing after the caret for the pair to have been meant to go around: a space, the end, or a
+ * closer. Before a word, the reader is more likely putting a bracket in front of it, and the closer
+ * belongs further on. A closer typed onto the same closer, waiting with a partner, steps over it —
+ * by writing it again over itself, so that the step is an edit of its own to undo. And Backspace between an empty pair takes both. None of it inside a quotation, where a bracket
+ * is only text.
+ */
+export function bracketEdit(text: string, start: number, end: number, key: string): BracketEdit | null {
+	const closer = closerOf(key);
+	if (closer !== undefined) {
+		if (insideQuote(text, start)) return null;
+		if (start !== end) {
+			return {
+				start,
+				end,
+				insert: key + text.slice(start, end) + closer,
+				selection: [start + 1, end + 1],
+			};
+		}
+		const next = text[start];
+		if (next !== undefined && !/\s/.test(next) && !isCloser(next)) return null;
+		return { start, end, insert: key + closer, selection: [start + 1, start + 1] };
+	}
+	if (start !== end) return null;
+	const brackets = scanBrackets(text);
+	const at = (index: number): Bracket | undefined => brackets.find((bracket) => bracket.start === index);
+	if (isCloser(key)) {
+		const waiting = at(start);
+		if (waiting?.mark !== key || waiting.partner === null) return null;
+		return { start, end: start + 1, insert: key, selection: [start + 1, start + 1] };
+	}
+	if (key === "Backspace") {
+		const opener = at(start - 1);
+		if (opener === undefined || closerOf(opener.mark) === undefined || opener.partner !== start) return null;
+		return { start: start - 1, end: start + 1, insert: "", selection: [start - 1, start - 1] };
+	}
+	return null;
+}
+
+function isCloser(character: string): boolean {
+	return character === ")" || character === "]" || character === "}";
+}
+
+/**
+ * Whether text typed at `caret` would land inside a quotation: between its marks, or anywhere after
+ * the opening mark of one left open, which runs to the end.
+ */
+function insideQuote(text: string, caret: number): boolean {
+	return quotedSpans(text).some((span) => caret > span.start && (caret < span.end || !span.closed));
 }
 
 /** Why a filter the parser rejected was rejected, in one line, for the tooltip on it. */

@@ -103,10 +103,10 @@ export const OPERATOR_WORDS: ReadonlySet<string> = new Set([
 	...OPERATOR_SPECS.map((spec) => spec.name),
 	...CROSSING_SPECS.map((spec) => spec.name),
 ]);
-// A value stops at a parenthesis, so `(@in:book1 @or @in:book3)` closes its group rather than
-// asking for a book called `book3)`, and at a quotation mark, so `@year:1988"snow"` leaves the
-// phrase where it was written. No value of any filter can contain either.
-const FILTER_PATTERN = /@([a-zA-Z]+)(?::([^\s()"“”]+))?/g;
+// A value stops at a bracket, so `(@in:book1 @or @in:book3)` closes its group rather than asking
+// for a book called `book3)`, and at a quotation mark, so `@year:1988"snow"` leaves the phrase
+// where it was written. No value of any filter can contain either.
+const FILTER_PATTERN = /@([a-zA-Z]+)(?::([^\s()[\]{}"“”]+))?/g;
 
 /**
  * A straight quotation mark or either curly one. A phone's keyboard curls them as it sees fit, and

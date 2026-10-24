@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Completion, Row, completionsAt, describeInvalid, filterSpans } from "../src/completion";
+import {
+	Completion,
+	Row,
+	bracketEdit,
+	bracketPairAt,
+	completionsAt,
+	describeInvalid,
+	filterSpans,
+} from "../src/completion";
 import { CROSSING_SPECS, FILTER_SPECS } from "../src/filter-spec";
 import { registerVocabulary } from "../src/filter-vocabulary";
 import { collectionQuery, passesFilter, scanFilters } from "../src/filter-query";
@@ -907,4 +915,104 @@ test("@published offers the years books came out in, as @year: offers its own", 
 		registerVocabulary("published", () => []);
 		registerVocabulary("published:arc", () => []);
 	}
+});
+
+test("brackets", async (suite) => {
+	await suite.test("one that pairs with nothing is a mistake", () => {
+		assert.deepEqual(spans("@is:sunday [(])"), [
+			["match", "@is:sunday"],
+			["invalid", "("],
+			["invalid", ")"],
+		]);
+		const reasons = filterSpans("@is:sunday (] {", null).map((span) => span.reason);
+		assert.deepEqual(reasons, [undefined, "Missing ')'", "Unexpected ']'", "Missing '}'"]);
+	});
+
+	await suite.test("but not before there is an @ for it to group", () => {
+		assert.deepEqual(spans("calvin (sigh"), []);
+		assert.deepEqual(spans("calvin ] hobbes"), []);
+		assert.deepEqual(spans('"@is:sunday" (sigh'), []);
+	});
+
+	await suite.test("an opener left open is only unfinished while the query is being written", () => {
+		assert.deepEqual(spans("@is:sunday (calvin|"), [["match", "@is:sunday"]]);
+		assert.deepEqual(spans("@is:sunday (calvin"), [
+			["match", "@is:sunday"],
+			["invalid", "("],
+		]);
+		// Closed by the `]`, it is finished, and wrong.
+		assert.deepEqual(spans("@is:sunday [(calvin]|"), [
+			["match", "@is:sunday"],
+			["invalid", "("],
+		]);
+	});
+
+	await suite.test("inside a quotation a bracket is text", () => {
+		assert.deepEqual(spans('@is:sunday "(sigh"'), [["match", "@is:sunday"]]);
+	});
+
+	await suite.test("the bracket beside the caret is painted with its partner", () => {
+		const pair = (marked: string) => {
+			const caret = marked.indexOf("|");
+			const text = marked.slice(0, caret) + marked.slice(caret + 1);
+			return bracketPairAt(text, caret).map((span) => span.start);
+		};
+		assert.deepEqual(pair("@in (snow)|"), [4, 9]);
+		assert.deepEqual(pair("@in |(snow)"), [4, 9]);
+		// Before the caret first.
+		assert.deepEqual(pair("@in [(snow)|]"), [5, 10]);
+		assert.deepEqual(pair("@in (sn|ow)"), []);
+		assert.deepEqual(pair("@in (snow|"), []);
+		assert.deepEqual(pair("(snow)|"), []);
+	});
+
+	/**
+	 * The query after a key, written with the caret as `|` and a selection as two of them — or null
+	 * where the key is left to do what it would anyway.
+	 */
+	const typed = (marked: string, key: string): string | null => {
+		const start = marked.indexOf("|");
+		const second = marked.indexOf("|", start + 1);
+		const end = second === -1 ? start : second - 1;
+		const text = marked.replaceAll("|", "");
+		const edit = bracketEdit(text, start, end, key);
+		if (edit === null) return null;
+		const after = text.slice(0, edit.start) + edit.insert + text.slice(edit.end);
+		const [from, to] = edit.selection;
+		return from === to
+			? after.slice(0, from) + "|" + after.slice(from)
+			: after.slice(0, from) + "|" + after.slice(from, to) + "|" + after.slice(to);
+	};
+
+	await suite.test("an opener brings its closer where nothing follows for it to go around", () => {
+		assert.equal(typed("@in |", "("), "@in (|)");
+		assert.equal(typed("|", "{"), "{|}");
+		assert.equal(typed("[|]", "("), "[(|)]");
+		assert.equal(typed("rosalyn @or |baby sitter", "("), null);
+		assert.equal(typed("rosalyn @or |@is:sunday", "("), null);
+	});
+
+	await suite.test("an opener wraps a selection", () => {
+		assert.equal(typed("rosalyn @or |baby sitter|", "("), "rosalyn @or (|baby sitter|)");
+	});
+
+	await suite.test("a closer steps over the same closer waiting with a partner", () => {
+		assert.equal(typed("(snow|)", ")"), "(snow)|");
+		assert.equal(typed("snow|)", ")"), null);
+		assert.equal(typed("[(|)]", "]"), null);
+	});
+
+	await suite.test("Backspace between an empty pair takes both", () => {
+		assert.equal(typed("@in (|)", "Backspace"), "@in |");
+		assert.equal(typed("(|a)", "Backspace"), null);
+		assert.equal(typed("(|]", "Backspace"), null);
+	});
+
+	await suite.test("none of it inside a quotation", () => {
+		assert.equal(typed('"baby |', "("), null);
+		assert.equal(typed('"baby |"', "("), null);
+		assert.equal(typed('"baby" |', "("), '"baby" (|)');
+		assert.equal(typed('"(|)"', ")"), null);
+		assert.equal(typed('"(|)"', "Backspace"), null);
+	});
 });

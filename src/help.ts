@@ -300,7 +300,7 @@ const OPERATORS: HelpEntry[] = [
 	{
 		id: "operators-group",
 		forms: [{ syntax: "( … )", hint: "One group, to the operators around it" }],
-		notes: ["A parenthesis left open closes at the end."],
+		notes: ["A parenthesis left open closes at the end.", "`[ … ]` and `{ … }` group too."],
 		values: [],
 	},
 	{

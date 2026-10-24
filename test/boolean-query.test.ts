@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Branch, admits, negatedFilters, parseQuery } from "../src/boolean-query";
+import { Branch, admits, negatedFilters, parseQuery, scanBrackets } from "../src/boolean-query";
 
 /** The branches as their words, and whether a day survives each — the shape a reader can check. */
 function shape(query: string): string[][] {
@@ -120,6 +120,36 @@ test("operators", async (suite) => {
 	await suite.test("a parenthesis ends a filter's value", () => {
 		assert.ok(keeps("(@year:1988)", "1988-08-03"));
 		assert.ok(keeps("(@year:1989 @or @year:1988)", "1988-08-03"));
+	});
+
+	await suite.test("square and curly brackets group as parentheses do", () => {
+		const grouped = shape("(rosalyn @or baby) sitter");
+		assert.deepEqual(shape("[rosalyn @or baby] sitter"), grouped);
+		assert.deepEqual(shape("{rosalyn @or baby} sitter"), grouped);
+		assert.ok(keeps("[@year:1988]", "1988-08-03"));
+		assert.ok(keeps("{@year:1989 @or @year:1988}", "1988-08-03"));
+	});
+
+	// A closer of another kind closes back to its own opener, as the end of the query would.
+	await suite.test("a bracket closes only its own kind", () => {
+		assert.deepEqual(shape("[(rosalyn @or baby] sitter)"), shape("(rosalyn @or baby) sitter"));
+		assert.deepEqual(shape("(rosalyn @or baby] sitter"), shape("(rosalyn @or baby sitter)"));
+		assert.deepEqual(shape("calvin ] hobbes"), [["calvin hobbes"]]);
+		assert.deepEqual(shape('"[baby] sitter"'), [['"[baby] sitter"']]);
+	});
+
+	await suite.test("what each bracket pairs with", () => {
+		assert.deepEqual(scanBrackets("[(])"), [
+			{ start: 0, mark: "[", partner: 2 },
+			{ start: 1, mark: "(", partner: null, closedAt: 2 },
+			{ start: 2, mark: "]", partner: 0 },
+			{ start: 3, mark: ")", partner: null },
+		]);
+		assert.deepEqual(scanBrackets("(]"), [
+			{ start: 0, mark: "(", partner: null, closedAt: 2 },
+			{ start: 1, mark: "]", partner: null },
+		]);
+		assert.deepEqual(scanBrackets('"(" @year:1988'), []);
 	});
 
 	await suite.test("distribution past its limit is refused rather than searched", () => {

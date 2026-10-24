@@ -1,6 +1,6 @@
 import "./query-input.css";
 
-import { Completion, FilterSpan, Row, completionsAt, filterSpans } from "../completion";
+import { Completion, FilterSpan, Row, bracketEdit, bracketPairAt, completionsAt, filterSpans } from "../completion";
 import { paintHighlights } from "../pages/query-html";
 import { QueryContext, STRIP_QUERY } from "../filter-query";
 import { contextAt } from "../boolean-query";
@@ -9,7 +9,7 @@ import { HELP_PATH } from "../routes";
 import { addressOf } from "../base-path";
 import { rememberSpelling } from "../spelling";
 import { naturalHeight, onViewportShift, place, viewport } from "../placement";
-import { escHtml } from "../utils";
+import { escHtml, isTouchDevice } from "../utils";
 
 /**
  * The search box, taught to say what it knows about `@filters`.
@@ -272,6 +272,8 @@ export function attachQueryInput(input: HTMLInputElement, root: QueryContext = S
 	 */
 	let armed = false;
 	let focused = document.activeElement === input;
+	/** The query and its selection before each recent bracket edit, for an undo to put the caret back. */
+	const bracketHistory: { value: string; selection: [number, number] }[] = [];
 	/** The broken pill the pointer is inside, which outranks the one the caret is inside. */
 	let hovered: HTMLElement | null = null;
 	/** Whether the mouse button went down on the input and has not come back up yet. */
@@ -438,6 +440,10 @@ export function attachQueryInput(input: HTMLInputElement, root: QueryContext = S
 		completion = completionsAt(text, caret ?? text.length, root);
 
 		spans = filterSpans(text, writing ? caret : null, root);
+		// The pair beside the caret, for as long as there is a caret to be beside.
+		if (focused && caret !== null && caret === input.selectionEnd) {
+			spans = [...spans, ...bracketPairAt(text, caret)].sort((one, other) => one.start - other.start);
+		}
 		highlights.innerHTML = paintHighlights(text, spans);
 		fitWidth();
 		if (follow) followCaret();
@@ -539,7 +545,13 @@ export function attachQueryInput(input: HTMLInputElement, root: QueryContext = S
 		true,
 	);
 
-	input.addEventListener("input", () => {
+	input.addEventListener("input", (event) => {
+		// An undo puts back the text from before a bracket edit, but leaves selected whatever the edit
+		// replaced, the caret it started from forgotten. So the caret goes back too.
+		if ((event as InputEvent).inputType === "historyUndo") {
+			const before = bracketHistory.findLast((each) => each.value === input.value);
+			if (before !== undefined) input.setSelectionRange(...before.selection);
+		}
 		if (editing === null) {
 			armed = true;
 			writing = true;
@@ -595,6 +607,28 @@ export function attachQueryInput(input: HTMLInputElement, root: QueryContext = S
 
 	input.addEventListener("keyup", (event) => {
 		if (CARET_KEYS.has(event.key)) refresh();
+	});
+
+	// Brackets typed in pairs — see `bracketEdit`. Not on a touchscreen, whose keyboard has its own
+	// ideas about what it has just typed. Each edit goes in through `insertText`, which leaves it on
+	// the browser's undo stack where setting the value would wipe the stack clean.
+	input.addEventListener("keydown", (event) => {
+		if (isTouchDevice() || event.isComposing || event.ctrlKey || event.metaKey || event.altKey) return;
+		const from = input.selectionStart ?? 0;
+		const to = input.selectionEnd ?? 0;
+		const edit = bracketEdit(input.value, from, to, event.key);
+		if (edit === null) return;
+		event.preventDefault();
+		bracketHistory.push({ value: input.value, selection: [from, to] });
+		if (bracketHistory.length > 50) bracketHistory.shift();
+		const { start, end, insert, selection } = edit;
+		input.setSelectionRange(start, end);
+		if (!document.execCommand(insert === "" ? "delete" : "insertText", false, insert)) {
+			input.setRangeText(insert, start, end);
+			input.dispatchEvent(new Event("input", { bubbles: true }));
+		}
+		input.setSelectionRange(...selection);
+		refresh();
 	});
 
 	// The caret moves after the keystroke's default action, not during it. Keys only: a selection

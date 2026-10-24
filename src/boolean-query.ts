@@ -3,6 +3,7 @@ import {
 	FilterMatch,
 	OPERATOR_WORDS,
 	QueryContext,
+	QuotedSpan,
 	RawFilter,
 	Run,
 	STRIP_QUERY,
@@ -50,7 +51,8 @@ import { Comic } from "./types";
  *
  * The parse is lenient, because it runs on every keystroke and a reader halfway through typing is
  * not wrong: an unclosed parenthesis or quotation closes at the end, a stray parenthesis is dropped,
- * and an operator with nothing to work on is ignored.
+ * and an operator with nothing to work on is ignored. Square and curly brackets group as
+ * parentheses do, each closing only its own kind — see `scanBrackets`.
  *
  * A quotation is one atom, a phrase, and everything in it is text: `"rosalyn @or baby"` is the
  * words `rosalyn or baby` in that order, not a choice between two of them. So `@not "baby sitter"`
@@ -137,8 +139,71 @@ interface RawFilterToken {
 
 type Token = TextLeaf | FilterLeaf | { kind: "open" } | { kind: "close" } | OperatorToken | CrossToken | OnlyToken;
 
-/** A quotation with nothing in it: found, so its marks are not taken for text, and then dropped. */
+/**
+ * A quotation with nothing in it, or a closing bracket with nothing to close: found, so its marks
+ * are not taken for text, and then dropped.
+ */
 type Gap = { kind: "empty" };
+
+/** Each opening bracket's closer. `()`, `[]` and `{}` group alike, and each kind closes only its own. */
+const CLOSERS: Readonly<Record<string, string>> = { "(": ")", "[": "]", "{": "}" };
+
+const OPENERS: Readonly<Record<string, string>> = { ")": "(", "]": "[", "}": "{" };
+
+/** A bracket of the query, and what it pairs with. See `scanBrackets`. */
+export interface Bracket {
+	start: number;
+	/** The bracket itself: `(`, `[` or `{`, or the closer of one. */
+	mark: string;
+	/** Where the bracket it pairs with stands, or null for one that pairs with nothing. */
+	partner: number | null;
+	/**
+	 * Where an opener that pairs with nothing was closed: at a closer of another kind, or at the end
+	 * of the query, `text.length`. Unset on everything else.
+	 */
+	closedAt?: number;
+}
+
+/**
+ * Every bracket in the query that is one, in order — not those in a quotation, which are text.
+ *
+ * Each closer closes back to the nearest opener of its own kind, and whatever was opened after that
+ * opener is closed with it, the way the end of the query closes whatever is still open. So in
+ * `[(])` the `]` closes the `(` on its way to the `[`, and the `)` after it has nothing left to
+ * close. A closer with no opener of its kind open closes nothing at all: `(]` is still a group
+ * running to the end.
+ */
+export function scanBrackets(text: string): Bracket[] {
+	return bracketsOf(text, lexFilters(text), quotedSpans(text));
+}
+
+function bracketsOf(text: string, filters: RawFilter[], quotes: QuotedSpan[]): Bracket[] {
+	const brackets: Bracket[] = [];
+	const open: Bracket[] = [];
+	for (const match of text.matchAll(/[()[\]{}]/g)) {
+		const start = match.index;
+		if (quoted(quotes, start) || filters.some((filter) => start >= filter.start && start < filter.end)) continue;
+		const bracket: Bracket = { start, mark: match[0], partner: null };
+		brackets.push(bracket);
+		if (CLOSERS[bracket.mark] !== undefined) {
+			open.push(bracket);
+			continue;
+		}
+		const depth = open.findLastIndex((each) => each.mark === OPENERS[bracket.mark]);
+		if (depth === -1) continue;
+		for (const each of open.splice(depth + 1)) each.closedAt = start;
+		const opener = open.pop()!;
+		opener.partner = start;
+		bracket.partner = opener.start;
+	}
+	for (const each of open) each.closedAt = text.length;
+	return brackets;
+}
+
+/** The closer an opening bracket wants, or undefined for anything else. */
+export function closerOf(mark: string): string | undefined {
+	return CLOSERS[mark];
+}
 
 type Operator = "and" | "or" | "not";
 
@@ -276,9 +341,20 @@ function lex(text: string, root: QueryContext): { tokens: Token[]; after: QueryC
 			spans.push({ start, end, token: { kind: "cross", operator, start, end, context: root, target: root } });
 		}
 	}
-	for (const match of text.matchAll(/[()]/g)) {
-		if (inFilter(match.index) || quoted(quotes, match.index)) continue;
-		spans.push({ start: match.index, end: match.index + 1, token: { kind: match[0] === "(" ? "open" : "close" } });
+	const brackets = bracketsOf(text, filters, quotes);
+	for (const bracket of brackets) {
+		const { start } = bracket;
+		const end = start + 1;
+		if (CLOSERS[bracket.mark] !== undefined) {
+			spans.push({ start, end, token: { kind: "open" } });
+		} else if (bracket.partner === null) {
+			// Found, so that it is not read as a word of its own, and then dropped.
+			spans.push({ start, end, token: { kind: "empty" } });
+		} else {
+			// One close for its own opener, and one for each opener it closed on the way there.
+			const closes = 1 + brackets.filter((each) => each.partner === null && each.closedAt === start).length;
+			for (let count = 0; count < closes; count++) spans.push({ start, end, token: { kind: "close" } });
+		}
 	}
 	for (const quote of quotes) {
 		const phrase = phraseText(quote.inner);
