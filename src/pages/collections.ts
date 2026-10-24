@@ -160,8 +160,8 @@ export function buildCollectionsHeaderHtml(
 ): string {
 	const tab = (name: CollectionsTab, label: string) =>
 		name === current
-			? `<span class="collections-tab collections-tab--current" aria-current="page">${label}</span>`
-			: `<a class="collections-tab" data-tab="${name}" href="${escHtml(addressOf(buildTabPath(name, query, order)))}">${label}</a>`;
+			? `<span class="collections-tab collections-tab--current" data-label="${escHtml(label)}" aria-current="page">${label}</span>`
+			: `<a class="collections-tab" data-tab="${name}" data-label="${escHtml(label)}" href="${escHtml(addressOf(buildTabPath(name, query, order)))}">${label}</a>`;
 	const heading = `${buildBackAndHomeButtons(canGoBack)}
 		${buildPageTitle("collections-heading", collectionsLabel(), addressOf(buildTabPath(current, query, order)))}`;
 	const tabs = collectionsTabs().map((name) => tab(name, TAB_LABELS[name]));

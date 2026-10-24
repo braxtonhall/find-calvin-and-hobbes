@@ -43,10 +43,21 @@
 
 /* Padded rather than spaced, so each tab's tap target reaches the dot beside it. */
 .collections-tab {
-	display: inline-block;
+	display: inline-flex;
+	flex-direction: column;
+	align-items: center;
 	padding: 8px 6px;
 	color: inherit;
 	text-decoration: none;
+}
+
+/* An invisible bold copy of the label holds every tab at its bold width, so switching tabs moves nothing. */
+.collections-tab::after {
+	content: attr(data-label);
+	font-weight: 700;
+	height: 0;
+	overflow: hidden;
+	visibility: hidden;
 }
 
 a.collections-tab:hover {

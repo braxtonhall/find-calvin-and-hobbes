@@ -25,8 +25,8 @@ function buildBookshelfTabsHtml(current: BookshelfView): string {
 		const { view, path } = BOOKSHELF_TABS[name];
 		const label = BOOKSHELF_TAB_LABELS[name];
 		return view === current
-			? `<span class="collections-tab collections-tab--current" aria-current="page">${label}</span>`
-			: `<a class="collections-tab" href="${escHtml(addressOf(path))}">${label}</a>`;
+			? `<span class="collections-tab collections-tab--current" data-label="${escHtml(label)}" aria-current="page">${label}</span>`
+			: `<a class="collections-tab" data-label="${escHtml(label)}" href="${escHtml(addressOf(path))}">${label}</a>`;
 	});
 	return `<nav class="collections-tabs" aria-label="Bookshelf">${tabs.join(`\n\t\t\t<span aria-hidden="true">·</span>\n\t\t\t`)}</nav>`;
 }
