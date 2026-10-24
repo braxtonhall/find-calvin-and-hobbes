@@ -1,4 +1,4 @@
-export interface Comic {
+export interface Comic extends CharacterRoles {
 	date: string;
 	transcript: string;
 	alternate?: string;
@@ -12,7 +12,7 @@ export interface Comic {
 	appearances?: Appearance[];
 	/** The arcs the strip belongs to, by id. None does to more than one today, but nothing forbids it. */
 	arcs?: string[];
-	/** The characters the strip features, by id, as `comics.yaml` lists them. */
+	/** The characters the strip features, by id, as `comics.yaml` lists them: those seen or heard in it. */
 	characters?: string[];
 	/** Who made the strip, as the creators' file credits it. */
 	creators?: Credit[];
@@ -111,6 +111,17 @@ export interface Person extends StripSummary {
 	name: string;
 	/** A portrait, from the mount where the build publishes it. */
 	image?: string;
+}
+
+/**
+ * How a strip has its characters, where `comics.yaml` says more than who is in it: those of
+ * `characters` only seen and those only heard, and those not in it at all, but talked about or spoken
+ * to. Each by id, in the order the strip lists them, and none on a strip that says nothing more.
+ */
+export interface CharacterRoles {
+	seenOnly?: string[];
+	heardOnly?: string[];
+	mentioned?: string[];
 }
 
 /** Someone a strip can feature: the id `@featuring:` takes, the name a reader knows them by, and where they are found. */

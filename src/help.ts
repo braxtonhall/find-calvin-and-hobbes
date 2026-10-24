@@ -24,7 +24,7 @@ import {
 	OperatorSpec,
 	operatorSpec,
 } from "./filter-spec";
-import { AS_TAGS, Term, VOLUMES, terms } from "./filter-vocabulary";
+import { AS_TAGS, Term, VOLUMES, Where, characterAsTags, terms } from "./filter-vocabulary";
 import { CollectionsTab, TAB_TYPES, buildSearchPath, buildTabPath, collectionsTabs } from "./routes";
 import { PAGE_CONFIG } from "./site-config";
 import { YEARS } from "./constants";
@@ -129,6 +129,11 @@ const COLLECTION_NOTES: Partial<Record<string, string[]>> = {
 	published: ["A book's year, or any year an arc's or a subject's strips ran. Two side by side mean either."],
 	as: [
 		`Filters on how a book and a strip in it go together, so it goes inside \`@in ( … )\` or \`@has ( … )\`, where there are both${asExample()}.`,
+		...(characterAsTags().length > 0
+			? [
+					"Inside `@featuring ( … )`, it says how the strip has the character: `@featuring (@id:a @not @as:heard)` is a strip where character a is seen but never heard. A strip that only mentions a character is left out unless `@as:mentioned` asks for it.",
+				]
+			: []),
 	],
 	book: [
 		"For a book that comes as a set, numbered as the set numbers them. Like `@as:`, it goes inside `@in ( … )` or `@has ( … )`: `@in (@id:a @book:2 @page:47)` is page 47 of the second book of set a.",
@@ -200,9 +205,11 @@ function stripValues(spec: FilterSpec): HelpValues[] {
 /** A collection filter's values, kind by kind where the kinds do not share them all. */
 function collectionValues(spec: FilterSpec): HelpValues[] {
 	if (!LISTED.has(spec.name)) return [];
-	if (spec.name === "as") return [{ terms: terms("as") }];
+	// `@as:`'s are the kind's at the other end of its link.
+	const where = (type: CollectionType): Where =>
+		spec.name === "as" ? { language: "collection", linked: type } : { language: "collection", type };
 	const types = siteTypes().filter((type) => spec.types === undefined || spec.types.includes(type));
-	const lists = types.map((type) => ({ type, terms: terms(spec.name, { language: "collection", type }) }));
+	const lists = types.map((type) => ({ type, terms: terms(spec.name, where(type)) }));
 	const same = lists.every(
 		(list) => list.terms.map((term) => term.value).join() === lists[0].terms.map((term) => term.value).join(),
 	);

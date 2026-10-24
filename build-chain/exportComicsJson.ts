@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Appearance, CollectionData } from "./collectionPages";
 import { loadComicSource } from "./comicSource";
-import { Arc, Credit, PrintFormat } from "../src/types";
+import { Arc, CharacterRoles, Credit, PrintFormat } from "../src/types";
 import { loadComicImages } from "./siteConfig";
 import { aspectRatio } from "./imageSize";
 import { variantSourceWidth } from "./imageVariants";
@@ -31,7 +31,7 @@ function formatDate(dateStr: string): string {
 	return `${dateStr.slice(0, 4)}-${dateStr.slice(4, 6)}-${dateStr.slice(6, 8)}`;
 }
 
-interface Entry {
+interface Entry extends CharacterRoles {
 	date: string;
 	transcript: string;
 	alternate?: string;
@@ -56,8 +56,8 @@ interface Entry {
  * Sundays: an arc is made of the strips that ran in the paper, and a special never did.
  *
  * And its characters, its creators and its subjects, for `@featuring:`, `@by:` and `@about:`, special
- * or not, each keyed as `comics.yaml` keys the strip. None where it has none, which is every strip on
- * a site without them.
+ * or not, each keyed as `comics.yaml` keys the strip — and how it has its characters, for `@as:`
+ * inside `@featuring (…)`. None where it has none, which is every strip on a site without them.
  */
 export function exportComicsJson(
 	collectionData: CollectionData,
@@ -66,6 +66,7 @@ export function exportComicsJson(
 	characters: ReadonlyMap<string, string[]> = new Map(),
 	creators: ReadonlyMap<string, Credit[]> = new Map(),
 	subjects: ReadonlyMap<string, string[]> = new Map(),
+	roles: ReadonlyMap<string, CharacterRoles> = new Map(),
 	config?: string,
 ): string {
 	const folder = loadComicImages(config);
@@ -81,6 +82,7 @@ export function exportComicsJson(
 	const attachLists = (entry: Entry, key: string) => {
 		const featured = characters.get(key);
 		if (featured) entry.characters = featured;
+		Object.assign(entry, roles.get(key));
 		const credits = creators.get(key);
 		if (credits) entry.creators = credits;
 		const about = subjects.get(key);

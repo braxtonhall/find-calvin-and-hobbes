@@ -25,7 +25,7 @@
  * nothing registered at all.
  */
 
-import { COLLECTION_INDEX } from "./bundled-data";
+import { CHARACTER_ROLES, COLLECTION_INDEX } from "./bundled-data";
 import type { CollectionType, Language } from "./filter-spec";
 import { PAGE_CONFIG } from "./site-config";
 import { spellText } from "./spelling";
@@ -40,6 +40,15 @@ export const ALTERATIONS = COLLECTION_INDEX.collections.some(
 
 /** Whether any book is a set of numbered books, each with its own pages: whether there is `@book:`. Read as above. */
 export const VOLUMES = COLLECTION_INDEX.collections.some((collection) => collection.volumes !== undefined);
+
+/**
+ * What the archive's data turns on that `config.yaml` does not: whether any strip says how it has a
+ * character — only seen, only heard, or only mentioned — which is whether `@as:` has `seen`, `heard`
+ * and `mentioned`. Read off the script, as above, so a site whose strips only list who is in them
+ * has none. An object, so that a test can turn it on before `FILTER_SPECS` reads it, as it does the
+ * flags of `PAGE_CONFIG`.
+ */
+export const ARCHIVE_FEATURES = { characterRoles: CHARACTER_ROLES };
 
 /** One value a data-driven filter takes: what a reader types, and what it names. */
 export interface Term {
@@ -169,6 +178,21 @@ export const AS_TAGS: readonly Term[] = [
 		: []),
 ];
 
+/**
+ * What `@as:` can say about a character in a strip: how the strip has them. A strip that lists a
+ * character has them seen and heard unless it says otherwise, and one that only mentions them —
+ * talks about them, or to them — does not have them at all, so `@featuring (…)` leaves its mentions
+ * out unless asked for them with `@as:mentioned`. None until `ARCHIVE_FEATURES` says the strips say so.
+ */
+export function characterAsTags(): readonly Term[] {
+	if (!ARCHIVE_FEATURES.characterRoles) return [];
+	return [
+		{ value: "seen", hint: "Seen in the strip" },
+		{ value: "heard", hint: "Heard in the strip" },
+		{ value: "mentioned", hint: "Talked about or to, but neither seen nor heard" },
+	];
+}
+
 /** Every kind's tags together, each once, for a collection query that has no kind. */
 function allKinds(lists: readonly (readonly Term[])[]): readonly Term[] {
 	const seen = new Set<string>();
@@ -182,25 +206,30 @@ const REGISTRY = new Map<string, Vocabulary>([
 	["i", () => MINE],
 	["i:book", () => COLLECTION_MINE],
 	["collection:i", () => COLLECTION_MINE],
-	["as", () => AS_TAGS],
+	["as:book", () => AS_TAGS],
+	["as:character", characterAsTags],
+	["as", () => allKinds([AS_TAGS, characterAsTags()])],
 ]);
 
 /**
  * Where a filter is written, as far as its values care: the language, and in the collection one,
- * which kind where something says which.
+ * which kind where something says which — and for `@as:`, the kind at the other end of its link.
  */
 export interface Where {
 	language: Language;
 	type?: CollectionType;
+	linked?: CollectionType;
 }
 
 const STRIP: Where = { language: "strip" };
 
 /**
  * Where a filter's values are kept: by its name, but for the collection language's own `@is:` and
- * `@i:`, by its kind too, and every kind's together where nothing says which.
+ * `@i:`, by its kind too, and every kind's together where nothing says which. `@as:`'s by the kind
+ * its link goes to, in either language.
  */
 function key(name: string, where: Where): string {
+	if (name === "as") return where.linked === undefined ? name : `${name}:${where.linked}`;
 	if (where.language !== "collection" || (name !== "is" && name !== "i")) return name;
 	return where.type === undefined ? `collection:${name}` : `${name}:${where.type}`;
 }

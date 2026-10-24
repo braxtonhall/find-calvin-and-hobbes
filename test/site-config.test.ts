@@ -417,6 +417,76 @@ test("config.yaml", async (suite) => {
 		});
 	});
 
+	await suite.test("reads how a strip has its characters, and leaves its mentions out of who it features", () => {
+		const source: ComicSource = {
+			strips: {
+				"19851118": {
+					transcript: "",
+					characters: ["calvin", { seen: ["hobbes", "susie"] }, { heard: "mom", mentioned: "dad" }],
+				},
+				"19851119": { transcript: "", characters: [{ mentioned: ["susie"] }] },
+			},
+			specials: {},
+		};
+		withConfig(
+			"name: x\nseries: x\ncharacters:\n  calvin: { name: Calvin }\n  hobbes: { name: Hobbes }\n  susie: { name: Susie }\n  mom: { name: Mom }\n  dad: { name: Dad }\n",
+			(config) => {
+				const { characters, byStrip, roles } = loadCharacters(source, "/", config);
+				assert.deepEqual([...byStrip], [["19851118", ["calvin", "hobbes", "susie", "mom"]]]);
+				assert.deepEqual(
+					[...roles],
+					[
+						["19851118", { seenOnly: ["hobbes", "susie"], heardOnly: ["mom"], mentioned: ["dad"] }],
+						["19851119", { mentioned: ["susie"] }],
+					],
+				);
+				// A mention is no appearance.
+				assert.deepEqual(
+					characters.map((character) => [character.id, character.strips]),
+					[
+						["calvin", 1],
+						["hobbes", 1],
+						["susie", 1],
+						["mom", 1],
+						["dad", 0],
+					],
+				);
+			},
+		);
+	});
+
+	await suite.test("says nothing more of strips that only list who is in them", () => {
+		withConfig("name: x\nseries: x\ncharacters:\n  calvin: { name: Calvin }\n  susie: { name: Susie }\n", (config) => {
+			assert.equal(loadCast(config).roles.size, 0);
+		});
+	});
+
+	await suite.test("refuses a character listed twice in two ways, or under a role there is not", () => {
+		const cast = "name: x\nseries: x\ncharacters:\n  susie: { name: Susie }\n";
+		const strip = (characters: unknown): ComicSource => ({
+			strips: { "19851118": { transcript: "", characters: characters as never } },
+			specials: {},
+		});
+		withConfig(cast, (config) => {
+			assert.throws(
+				() => loadCharacters(strip([{ seen: "susie" }, { heard: "susie" }]), "/", config),
+				/Strip 19851118 lists "susie" as both seen and heard: write the id alone/,
+			);
+			assert.throws(
+				() => loadCharacters(strip(["susie", { mentioned: "susie" }]), "/", config),
+				/Strip 19851118 lists "susie" as seen and heard, and again as mentioned/,
+			);
+			assert.throws(
+				() => loadCharacters(strip([{ smelled: "susie" }]), "/", config),
+				/Strip 19851118 lists characters under "smelled"/,
+			);
+			assert.throws(
+				() => loadCharacters(strip([{ mentioned: "suzy" }]), "/", config),
+				/Strip 19851118 mentions "suzy", which is not one of the characters/,
+			);
+		});
+	});
+
 	await suite.test("imports a file relative to the one importing it", () => {
 		withConfig("name: x\nseries: x\ncharacters: !Import ./cast/index.yaml\n", (config, projectDir) => {
 			fs.mkdirSync(path.join(projectDir, "cast"));

@@ -71,6 +71,7 @@ class YamlToJsonPlugin {
 						characters.byStrip,
 						creators.byStrip,
 						subjects.byStrip,
+						characters.roles,
 					);
 					compilation.emitAsset("comics.json", new sources.RawSource(comicsJson));
 

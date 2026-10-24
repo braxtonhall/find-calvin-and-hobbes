@@ -8,8 +8,8 @@ export interface StripEntry {
 	description?: string;
 	source?: string;
 	review?: string;
-	/** Character ids from `characters.yaml`. Checked where it is read, in `stripSets.ts`. */
-	characters?: string[];
+	/** Character ids from `characters.yaml`, or roles with ids under them. Checked where it is read, in `characters.ts`. */
+	characters?: (string | Partial<Record<"seen" | "heard" | "mentioned", string | string[]>>)[];
 	/** Subject ids from `subjects.yaml`. Checked where it is read, in `stripSets.ts`. */
 	subjects?: string[];
 }

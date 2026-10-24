@@ -18,6 +18,8 @@ export interface BundledJson {
 	collectionIndex: string;
 	arcs: string;
 	characters: string;
+	/** Whether any strip says how it has a character, beyond who is in it: whether there are `@as:seen` and its kin. */
+	characterRoles: string;
 	creators: string;
 	subjects: string;
 }
@@ -27,11 +29,13 @@ export function loadBundledJson(config?: string): BundledJson {
 	const collectionData = loadCollectionData(config);
 	// The books' images are named from the mount, so the app can show them from any page as they are.
 	const basePath = loadSiteConfig()?.basePath ?? "/";
+	const characters = loadCharacters(source, basePath, config);
 	return {
 		reruns: exportRerunsJson(source, config),
 		collectionIndex: generateCollectionIndex(collectionData, basePath),
 		arcs: exportArcsJson(loadArcs(source, collectionData, config)),
-		characters: exportCharactersJson(loadCharacters(source, basePath, config).characters),
+		characters: exportCharactersJson(characters.characters),
+		characterRoles: JSON.stringify(characters.roles.size > 0),
 		creators: exportCreatorsJson(loadCreators(source, basePath, config).creators),
 		subjects: exportSubjectsJson(loadSubjects(source, config).subjects),
 	};
@@ -43,6 +47,7 @@ export function loadBundledData(): {
 	COLLECTION_INDEX: unknown;
 	ARCS: unknown;
 	CHARACTERS: unknown;
+	CHARACTER_ROLES: unknown;
 	CREATORS: unknown;
 	SUBJECTS: unknown;
 } {
@@ -52,6 +57,7 @@ export function loadBundledData(): {
 		COLLECTION_INDEX: JSON.parse(json.collectionIndex),
 		ARCS: JSON.parse(json.arcs),
 		CHARACTERS: JSON.parse(json.characters),
+		CHARACTER_ROLES: JSON.parse(json.characterRoles),
 		CREATORS: JSON.parse(json.creators),
 		SUBJECTS: JSON.parse(json.subjects),
 	};
@@ -72,6 +78,7 @@ export default function bundledDataLoader(this: LoaderContext<unknown>): string 
 		`export const COLLECTION_INDEX = ${parsed(json.collectionIndex)};`,
 		`export const ARCS = ${parsed(json.arcs)};`,
 		`export const CHARACTERS = ${parsed(json.characters)};`,
+		`export const CHARACTER_ROLES = ${json.characterRoles};`,
 		`export const CREATORS = ${parsed(json.creators)};`,
 		`export const SUBJECTS = ${parsed(json.subjects)};`,
 		"",

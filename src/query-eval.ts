@@ -37,6 +37,8 @@ export interface Group {
 	stripWords: boolean;
 	/** Its strips, as the archive holds them, in its order. Never a day a strip ran again. */
 	strips: Comic[];
+	/** A character's strips that only mention them, as above, for `@has (@as:mentioned)`. None of any other kind. */
+	mentions: Comic[];
 	/** The book, for a book's facts. */
 	book?: Collection;
 }
@@ -103,26 +105,27 @@ export function groups(type: CollectionType): Groups {
 	if (type === "book") {
 		for (const book of state.collectionIndex?.collections ?? []) {
 			const words = book.subtitle ? `${book.name} ${book.subtitle}` : book.name;
-			list.push({ type, id: book.id, words, stripWords: false, strips: [], book });
+			list.push({ type, id: book.id, words, stripWords: false, strips: [], mentions: [], book });
 		}
 	} else if (type === "arc") {
 		for (const arc of state.arcs ?? []) {
-			list.push({ type, id: arc.id, words: arc.description, stripWords: true, strips: [] });
+			list.push({ type, id: arc.id, words: arc.description, stripWords: true, strips: [], mentions: [] });
 		}
 	} else if (type === "creator" || type === "character") {
 		for (const person of (type === "creator" ? state.creatorsById : state.charactersById).values()) {
-			list.push({ type, id: person.id, words: person.name, stripWords: false, strips: [] });
+			list.push({ type, id: person.id, words: person.name, stripWords: false, strips: [], mentions: [] });
 		}
 	} else {
 		for (const subject of state.subjectsById.values()) {
 			const words = [subject.name, ...subject.keywords, subject.description ?? ""].join(" ");
-			list.push({ type, id: subject.id, words, stripWords: false, strips: [] });
+			list.push({ type, id: subject.id, words, stripWords: false, strips: [], mentions: [] });
 		}
 	}
 
 	const byId = new Map(list.map((group) => [group.id, group]));
 	for (const comic of state.comics) {
 		for (const id of groupIdsOf(comic, type)) byId.get(id)?.strips.push(comic);
+		if (type === "character") for (const id of comic.mentioned ?? []) byId.get(id)?.mentions.push(comic);
 	}
 	const result = { list, byId };
 	built.set(type, result);
@@ -172,14 +175,34 @@ function isMine(group: Group, tag: string): boolean {
 
 /**
  * How this strip appears in this book: `@as:`, altered or in a format, `@book:`, in which book of a
- * set, and `@page:`, on which page. Only a book prints a strip. Each is asked of any of the book's
- * printings of it, on its own — see `FILTER_SPECS`.
+ * set, and `@page:`, on which page. Each is asked of any of the book's printings of it, on its own —
+ * see `FILTER_SPECS`. Or how this strip has this character, which only `@as:` asks.
  */
 function linkHolds(link: Link | null, filter: Filter): boolean {
-	if (link === null || link.group.type !== "book") return false;
+	if (link === null) return false;
+	if (link.group.type === "character") return filter.kind === "as" && hasCharacterSo(link, filter.tag);
+	if (link.group.type !== "book") return false;
 	return (link.comic.appearances ?? []).some(
 		(appearance) => appearance.collection === link.group.id && printedSo(link, appearance, filter),
 	);
+}
+
+/**
+ * Whether the strip has the character so: seen or heard where it lists them, unless it says they are
+ * only the other, and mentioned where it says it only mentions them. See `characterAsTags`.
+ */
+function hasCharacterSo({ comic, group }: Link, tag: string): boolean {
+	const listed = (comic.characters ?? []).includes(group.id);
+	switch (tag) {
+		case "seen":
+			return listed && !(comic.heardOnly ?? []).includes(group.id);
+		case "heard":
+			return listed && !(comic.seenOnly ?? []).includes(group.id);
+		case "mentioned":
+			return (comic.mentioned ?? []).includes(group.id);
+		default:
+			return false;
+	}
 }
 
 function printedSo(link: Link, appearance: Appearance, filter: Filter): boolean {
@@ -272,7 +295,9 @@ export class Evaluator {
 		const type = crossingSpec(crossing.operator)?.type;
 		if (type === undefined) return false;
 		const { byId } = groups(type);
-		const related = groupIdsOf(row.comic, type)
+		// The characters it only mentions too, where the query inside asks for them.
+		const mentioned = crossing.mentions && type === "character" ? (row.comic.mentioned ?? []) : [];
+		const related = [...groupIdsOf(row.comic, type), ...mentioned]
 			.map((id) => byId.get(id))
 			.filter((group): group is Group => group !== undefined);
 		const test = (group: Group) =>
@@ -301,7 +326,7 @@ export class Evaluator {
 
 	/** `@has (…)`, asked of one collection. */
 	crossFromGroup(crossing: Crossing, group: Group): boolean {
-		const rows = this.rowsOf(group, crossing.reruns);
+		const rows = this.rowsOf(group, crossing);
 		const test = (row: StripRow) => this.hasHolds(crossing, row, group);
 		return crossing.only ? rows.length > 0 && rows.every(test) : rows.some(test);
 	}
@@ -313,15 +338,19 @@ export class Evaluator {
 		);
 	}
 
-	/** The strips a `@has` looks through: the collection's own, and the days they ran again where asked. */
-	rowsOf(group: Group, reruns: boolean): StripRow[] {
+	/**
+	 * The strips a `@has` looks through: the collection's own, and where asked, the days they ran
+	 * again and a character's strips that only mention them.
+	 */
+	rowsOf(group: Group, { reruns, mentions }: Crossing): StripRow[] {
 		const originals = this.rerunOriginals();
-		const rows: StripRow[] = group.strips.map((comic) => ({
+		const strips = mentions ? [...group.strips, ...group.mentions] : group.strips;
+		const rows: StripRow[] = strips.map((comic) => ({
 			comic,
 			...(!comic.id && originals.has(comic.date) ? { run: "reused" as const } : {}),
 		}));
 		if (!reruns) return rows;
-		for (const comic of group.strips) {
+		for (const comic of strips) {
 			if (comic.id) continue;
 			for (const rerun of this.rerunsOf(comic)) rows.push({ comic: rerun, run: "rerun" });
 		}
@@ -431,7 +460,7 @@ export function searchCollections(query: string, type: CollectionType, compounds
 					for (const comic of group.strips) if (saying.has(comic)) lit.add(comic);
 				} else if (constraint.kind === "cross") {
 					asked = true;
-					for (const row of evaluator.rowsOf(group, constraint.crossing.reruns)) {
+					for (const row of evaluator.rowsOf(group, constraint.crossing)) {
 						if (evaluator.hasHolds(constraint.crossing, row, group)) lit.add(row.comic);
 					}
 				}

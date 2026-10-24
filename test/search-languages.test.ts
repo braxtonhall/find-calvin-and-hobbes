@@ -237,6 +237,12 @@ test("reading a query where it stands", async (suite) => {
 		assert.equal(bookmarked.reason, "Did you mean @has @i:bookmarked?");
 	});
 
+	await suite.test("@as: says nothing of a character where no strip says how it has one", () => {
+		const [filter] = scanQuery("@featuring (@as:heard)", STRIP_QUERY).filters;
+		assert.equal(filter.valid, false);
+		assert.match(filter.reason!, /describes a strip in a book, not in a character/);
+	});
+
 	await suite.test("@as: needs a link to describe", () => {
 		assert.equal(scanQuery("@as:altered", STRIP_QUERY).filters[0].valid, false);
 		assert.match(scanQuery("@as:altered", STRIP_QUERY).filters[0].reason!, /inside @in/);

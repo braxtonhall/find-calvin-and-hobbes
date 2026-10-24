@@ -14,7 +14,7 @@
  */
 
 import type { QueryContext } from "./filter-query";
-import { AS_TAGS, COLLECTION_MINE, MINE, TAGS, VOLUMES, terms } from "./filter-vocabulary";
+import { AS_TAGS, COLLECTION_MINE, MINE, TAGS, VOLUMES, characterAsTags, terms } from "./filter-vocabulary";
 import { PAGE_CONFIG } from "./site-config";
 
 /**
@@ -85,6 +85,29 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
 ];
 
 /**
+ * `@as:`, for the kinds of collection it has tags for: a book's, where a book printed a strip with
+ * changes or the Sundays were a format of their own, and a character's, where the strips say how they
+ * have their characters. Where only a book has any, its hint is only about printing.
+ */
+const AS_SPEC: FilterSpec | null = (() => {
+	const lists = { book: AS_TAGS, character: characterAsTags() };
+	const types = (["book", "character"] as const).filter((type) => lists[type].length > 0);
+	if (types.length === 0) return null;
+	const [first] = types;
+	const hints = { book: "How a book prints the strip it holds", character: "How the strip has the character" };
+	return {
+		name: "as",
+		hint: types.length === 1 ? hints[first] : "How a book prints the strip, or how the strip has the character",
+		vocabulary: true,
+		language: "both",
+		types,
+		link: true,
+		// A book's last, which is spelt one way only: `ink`, or else `altered`.
+		templates: [{ label: "tag", hint: lists[first][lists[first].length - 1].value }],
+	};
+})();
+
+/**
  * Ordered as a reader would reach for them — the ones that are not about time, then the three
  * calendar fields, then the date forms, then the bounds. Not alphabetically: `@after` is not the
  * thing to meet first. The collection language's own filters come after the strip language's, since
@@ -96,8 +119,9 @@ const YEAR_FIRST: readonly ValueTemplate[] = [
  * `WIDENING` in `boolean-query.ts`.
  *
  * `@featuring:` only where `config.yaml` has characters for it, `@by:` only where it has creators,
- * `@about:` only where it has subjects, `@during:` only where it has arcs, `@as:` only where a
- * book printed a strip with changes, and `@book:` only where a book is a set of them.
+ * `@about:` only where it has subjects, `@during:` only where it has arcs, `@as:` only where it has
+ * something to say of a book's strips or a character's — see `AS_SPEC` — and `@book:` only where a
+ * book is a set of them.
  *
  * `@book:` and `@page:` each ask the strip's printings in that book on their own, as `@as:` does,
  * rather than together of one printing: `@book:2 @page:47` is a strip on page 47 of some book of the
@@ -246,20 +270,7 @@ export const FILTER_SPECS: readonly FilterSpec[] = [
 			{ label: "YY", hint: "any year ending in those two digits" },
 		],
 	},
-	...(AS_TAGS.length > 0
-		? [
-				{
-					name: "as",
-					hint: "How a book prints the strip it holds",
-					vocabulary: true,
-					language: "both",
-					types: ["book"],
-					link: true,
-					// The last, which is spelt one way only: `ink`, or else `altered`.
-					templates: [{ label: "tag", hint: AS_TAGS[AS_TAGS.length - 1].value }],
-				} satisfies FilterSpec,
-			]
-		: []),
+	...(AS_SPEC ? [AS_SPEC] : []),
 	...(VOLUMES
 		? [
 				{

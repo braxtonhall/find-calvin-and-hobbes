@@ -272,6 +272,8 @@ export interface Crossing {
 	linked: boolean;
 	/** Whether a `@has` asks for the days a strip ran again, which it otherwise leaves out. */
 	reruns: boolean;
+	/** Whether it asks for the characters a strip only mentions, which it otherwise leaves out: `@as:mentioned`. */
+	mentions: boolean;
 }
 
 /**
@@ -690,6 +692,7 @@ function compileCrossing(node: CrossNode): Crossing | null {
 			clause.some((constraint) => constraint.kind === "filter" && describesLink(constraint.filter)),
 		),
 		reruns: node.operator === "has" && clausesAskForReruns(clauses),
+		mentions: clausesAskForMentions(clauses),
 	};
 }
 
@@ -947,6 +950,23 @@ export function clausesAskForReruns(clauses: Constraint[][]): boolean {
 				((constraint.filter.kind === "is" && constraint.filter.tag === "rerun") || constraint.filter.kind === "i")
 			);
 		}),
+	);
+}
+
+/**
+ * Whether some clause asks, of the link it stands in, for a character the strip only mentions — see
+ * `characterAsTags`. Only `@as:mentioned` does, and not under `@not`: `@featuring (@not @as:heard)`
+ * is a character seen and never heard, not one the strip only talks about.
+ */
+function clausesAskForMentions(clauses: Constraint[][]): boolean {
+	return clauses.some((clause) =>
+		clause.some(
+			(constraint) =>
+				!constraint.negated &&
+				constraint.kind === "filter" &&
+				constraint.filter.kind === "as" &&
+				constraint.filter.tag === "mentioned",
+		),
 	);
 }
 
