@@ -38,6 +38,7 @@
 		"sample": "SITE_CONFIG=config.yaml node --import tsx test/tuning/sample.ts",
 		"probe": "SITE_CONFIG=config.yaml node --import tsx test/tuning/probe.ts",
 		"candidates": "SITE_CONFIG=config.yaml node --import tsx build-chain/compoundCandidates.ts",
+		"typecheck": "tsc --noEmit",
 		"lint": "eslint .",
 		"fix": "yarn lint --fix",
 		"pretty": "yarn prettier --write .",

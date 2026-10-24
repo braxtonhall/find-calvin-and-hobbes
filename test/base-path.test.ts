@@ -122,6 +122,7 @@ test("a site mounted at /repo/", async (suite) => {
 				rerunOf: null,
 				prevDate: "1986-07-06",
 				nextDate: "1986-07-08",
+				place: { at: [2], of: 3 },
 				runs: ["1986-07-07"],
 				bookNeighbours: {},
 				collections: [],

@@ -34,6 +34,7 @@ const detail: Page = {
 	rerunOf: null,
 	prevDate: null,
 	nextDate: null,
+	place: { at: [1], of: 1 },
 	runs: ["1986-07-07"],
 	bookNeighbours: {},
 	collections: [],
@@ -55,6 +56,7 @@ const collection: Page = {
 	dates: [],
 	prev: null,
 	next: null,
+	place: null,
 	arcs: { arcs: [], longest: 0 },
 };
 

@@ -21,6 +21,9 @@ jobs:
       - name: install packages
         run: yarn install
 
+      - name: typecheck
+        run: yarn typecheck
+
       - name: test
         run: yarn test
 
