@@ -92,6 +92,13 @@ function substituteEnvironment(text: string, dotenv: Record<string, string>): st
 function substituteAll(value: unknown, dotenv: Record<string, string>): unknown {
 	// Read later, and as it is. See `readConfig`.
 	if (value instanceof Import || value instanceof ImportAll) return value;
+	if (value instanceof Combine) {
+		return new Combine(
+			value.tag,
+			value.items.map((item) => substituteAll(item, dotenv)),
+			value.from,
+		);
+	}
 	if (typeof value === "string") return substituteEnvironment(value, dotenv).trim();
 	if (Array.isArray(value)) return value.map((item) => substituteAll(item, dotenv));
 	if (value && typeof value === "object") {
@@ -283,8 +290,67 @@ function mapTag(context: ImportContext) {
 	});
 }
 
+/** The tags that make one value of a list of them. See `combine`. */
+type Combining = "Merge" | "Concatenate";
+
+/**
+ * A `!Merge` or `!Concatenate` in `config.yaml`, made once what its items import is read, as an
+ * `Import` is, rather than when the configuration is.
+ */
+class Combine {
+	constructor(
+		readonly tag: Combining,
+		readonly items: readonly unknown[],
+		/** The file it is written in, as a message about it calls it. */
+		readonly from: string,
+	) {}
+}
+
+/**
+ * `!Merge [{ a: foo }, { b: bar }]`: the mappings as one, `{ a: foo, b: bar }`, a key in a later one
+ * taking its value from an earlier. `!Concatenate [[a], [b, c]]`: the lists end to end, `[a, b, c]`.
+ * An item of anything else stops the build.
+ */
+function combine(tag: Combining, items: readonly unknown[], from: string): unknown {
+	if (tag === "Merge") {
+		const merged: Record<string, unknown> = {};
+		for (const item of items) {
+			if (item === null || typeof item !== "object" || Array.isArray(item)) {
+				throw new Error(`${from} has a !Merge of something that is not a mapping`);
+			}
+			Object.assign(merged, item);
+		}
+		return merged;
+	}
+	return items.flatMap((item) => {
+		if (!Array.isArray(item)) throw new Error(`${from} has a !Concatenate of something that is not a list`);
+		return item;
+	});
+}
+
+/** `!Merge [...]` or `!Concatenate [...]`, as `combine` makes them: in place, or later in `config.yaml`. */
+function combineTag(tag: Combining, context: ImportContext) {
+	return yaml.defineSequenceTag<unknown[], unknown>(`!${tag}`, {
+		create: () => [],
+		addItem: (items, item) => {
+			items.push(item);
+		},
+		finalize: (items) => {
+			const from = path.basename(context.file);
+			return context.lazy ? new Combine(tag, items, from) : combine(tag, items, from);
+		},
+		identify: () => false,
+	});
+}
+
 function importSchema(context: ImportContext): yaml.Schema {
-	return yaml.CORE_SCHEMA.withTags(importTag(context), mapTag(context), pathTag(context));
+	return yaml.CORE_SCHEMA.withTags(
+		importTag(context),
+		mapTag(context),
+		pathTag(context),
+		combineTag("Merge", context),
+		combineTag("Concatenate", context),
+	);
 }
 
 /** An imported file's contents: YAML parsed, its own imports read in place, and Markdown as text. */
@@ -305,6 +371,7 @@ function readImport(file: string, importing: readonly string[], dependencies?: C
 function resolved(value: unknown): unknown {
 	if (value instanceof Import) return readImport(value.file, value.importing);
 	if (value instanceof ImportAll) return value.imports.map(resolved);
+	if (value instanceof Combine) return combine(value.tag, value.items.map(resolved), value.from);
 	if (Array.isArray(value)) return value.map(resolved);
 	if (value && typeof value === "object") {
 		return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, resolved(item)]));
@@ -344,6 +411,8 @@ export function configDependencies(config = configPath()): ConfigDependencies {
 		} else if (value instanceof ImportAll) {
 			dependencies.directories.push(value.directory);
 			value.imports.forEach(visit);
+		} else if (value instanceof Combine) {
+			value.items.forEach(visit);
 		} else if (value && typeof value === "object") {
 			Object.values(value).forEach(visit);
 		}
