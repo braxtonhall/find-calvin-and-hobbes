@@ -9896,6 +9896,7 @@ strips:
   "19930421":
     transcript: '"F"?! It seems to me that if I''m not learning this material, you must not be a very good teacher! Wogga muk gubba pum wup! Boo! Gop! What??'
     description: Calvin gets a grade of "F".  He complains that if he's not learning the material, Miss Wormwood must not be a very good teacher.  She says something, but Calvin imagines Spaceman Spiff facing a horrible alien.  After she's finished, Calvin asks what she just said.
+    # TODO review: does wormwood count? She's never drawn; she only "speaks" through the alien in the Spiff panel
     characters: [calvin, wormwood, spiff]
   "19930422":
     transcript: Is this milk spoiled? Smell it and see. I'M not going to smell it! YOU smell it! Oh, for goodness' sake. Here... it's fine. I don't take chances with a product that prints the date you might expire.
