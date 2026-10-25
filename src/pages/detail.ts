@@ -426,14 +426,19 @@ function buildBookHtml(printing: Printing, steps: BookSteps, alterationKey: stri
 		collection.width,
 		`${Math.ceil(64 * (collection.aspectRatio ?? 1))}px`,
 	);
-	// One short line for the label under the cover: `Bk 1 · p. 357`, the volume shortened to fit. An
-	// arc's label names only the page its first strip is on; the popup has the rest.
+	// One short line for the label under the cover: the page, after the volume in a small disc so the
+	// label stays about as narrow as the cover. An arc's label names only the page its first strip is
+	// on; the popup has the rest.
 	const places =
 		steps.unit === "arc"
 			? printing.places.slice(0, 1).map((place) => ({ ...place, pages: place.pages.slice(0, 1) }))
 			: printing.places;
 	const caption = places
-		.map((place) => (place.volume ? `Bk ${place.volume} · ${formatPages(place.pages)}` : formatPages(place.pages)))
+		.map((place) =>
+			place.volume
+				? `<span class="collection-pages__volume">${place.volume}</span>${formatPages(place.pages)}`
+				: formatPages(place.pages),
+		)
 		.join(", ");
 	// The popup has room for the words: `Book 1, page 357`.
 	const where = printing.places.map((place) =>
