@@ -697,7 +697,7 @@ test("the search box", async (suite) => {
 		try {
 			setSpelling("american");
 			assert.equal(hint(TAGS, "sunday"), "A color Sunday strip");
-			assert.equal(hint(COLLECTION_TAGS.book, "colour"), "A book that printed its Sundays in color");
+			assert.equal(hint(COLLECTION_TAGS.book, "colour"), "A book that is printed in color");
 			setSpelling("british");
 			assert.equal(hint(TAGS, "sunday"), "A colour Sunday strip");
 		} finally {

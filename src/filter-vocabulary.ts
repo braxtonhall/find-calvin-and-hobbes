@@ -126,7 +126,7 @@ export const TAGS: readonly Term[] = [
 export const COLLECTION_TAGS: Readonly<Record<CollectionType, readonly Term[]>> = {
 	book: [
 		...(PAGE_CONFIG.colourSundays
-			? [spelt({ value: "colour", hint: "A book that printed its Sundays in colour", american: "color" })]
+			? [spelt({ value: "colour", hint: "A book that is printed in colour", american: "color" })]
 			: []),
 		ANY,
 	],
