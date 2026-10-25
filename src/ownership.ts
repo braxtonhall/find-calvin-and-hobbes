@@ -2,6 +2,7 @@ import { BOOKS_STORE_NAME, STORE_NAME, STRIPS_STORE_NAME } from "./constants";
 import { inTransaction } from "./database";
 import { LibraryData, OwnershipRecord, cleanNote, ownershipRecord } from "./library-file";
 import { state } from "./state";
+import { libraryChanged } from "./cloud-saves";
 
 export type OwnershipKind = "strip" | "book";
 
@@ -47,7 +48,58 @@ export function updateOwnership(
 		else owned.delete(id);
 		if (record.note !== undefined) noted.add(id);
 		else noted.delete(id);
+		libraryChanged({ kind, record });
 		return record;
+	});
+}
+
+/**
+ * Some entries, as another copy of the library has them — the cloud save's: each bookmark on or off,
+ * each record as it stands, or `null` where there is none. Only these are written, so a change made
+ * here meanwhile to any other is kept. Settles once `state` holds them too.
+ */
+export interface LibraryEntries {
+	bookmarks: Map<string, boolean>;
+	strips: Map<string, OwnershipRecord | null>;
+	books: Map<string, OwnershipRecord | null>;
+}
+
+export function putLibraryEntries(entries: LibraryEntries): Promise<void> {
+	return inTransaction<void>(LIBRARY_STORES, "readwrite", (transaction, finish) => {
+		const bookmarks = transaction.objectStore(STORE_NAME);
+		for (const [id, bookmarked] of entries.bookmarks) {
+			if (bookmarked) bookmarks.put({ date: id });
+			else bookmarks.delete(id);
+		}
+		for (const [kind, records] of [
+			["strip", entries.strips],
+			["book", entries.books],
+		] as const) {
+			const store = transaction.objectStore(storeFor(kind));
+			for (const [id, record] of records) {
+				if (record) store.put(record);
+				else store.delete(id);
+			}
+		}
+		finish();
+	}).then(() => {
+		for (const [id, bookmarked] of entries.bookmarks) {
+			if (bookmarked) state.bookmarkedStrips.add(id);
+			else state.bookmarkedStrips.delete(id);
+		}
+		for (const [kind, records] of [
+			["strip", entries.strips],
+			["book", entries.books],
+		] as const) {
+			const owned = kind === "strip" ? state.ownedStrips : state.ownedBooks;
+			const noted = kind === "strip" ? state.notedStrips : state.notedBooks;
+			for (const [id, record] of records) {
+				if (record?.owned) owned.add(id);
+				else owned.delete(id);
+				if (record?.note !== undefined) noted.add(id);
+				else noted.delete(id);
+			}
+		}
 	});
 }
 

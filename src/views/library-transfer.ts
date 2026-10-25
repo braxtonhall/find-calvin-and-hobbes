@@ -3,6 +3,7 @@ import { handleRoute } from "../router";
 import { escHtml } from "../utils";
 import { changeLibrary, holdLibrary, readLibrary } from "../ownership";
 import { flashButton } from "./copy-link";
+import { libraryChanged } from "../cloud-saves";
 import { isLibraryEmpty, libraryFile, libraryFileName, mergeLibraries, parseLibraryFile } from "../library-file";
 
 /** The site this page is served from, mount and all: what an export says it came from. */
@@ -83,7 +84,9 @@ async function importLibrary(file: File): Promise<{ imported: boolean; message: 
 	}
 
 	// Merged into the library as it is once the reader has chosen, not as it was when they were asked.
-	holdLibrary(await changeLibrary((current) => (merge ? mergeLibraries(current, parsed.data) : parsed.data)));
+	const data = await changeLibrary((current) => (merge ? mergeLibraries(current, parsed.data) : parsed.data));
+	holdLibrary(data);
+	libraryChanged({ kind: "library", data });
 	const skipped =
 		parsed.skipped > 0 ? `Skipped ${parsed.skipped} entr${parsed.skipped === 1 ? "y" : "ies"} it couldn't read.` : "";
 	return { imported: true, message: skipped };

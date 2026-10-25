@@ -1,6 +1,7 @@
 import { escHtml } from "../utils";
 import type { OwnershipKind } from "../ownership";
 import { BOOKMARK_ICON_SVG } from "./bookmark-icon";
+import { NOTE_MAX_LENGTH } from "../library-file";
 
 // Three books on a shelf: drawn as solid books once owned, and only as their spines until then,
 // since at this size the books' outlines crowd together.
@@ -28,5 +29,13 @@ export function buildOwnershipControlsHtml(
 	const bookmarkButton = bookmark
 		? `<button type="button" class="bookmark-btn ownership-btn ownership-bookmark-btn" data-bookmark="${escHtml(bookmark.id)}" data-date="${bookmark.date}" aria-label="Bookmark" aria-pressed="false">${BOOKMARK_ICON_SVG}${label("Bookmark", "Bookmarked")}</button>`
 		: "";
-	return `<span class="ownership" data-kind="${kind}" data-id="${escHtml(id)}"><span class="ownership-buttons">${bookmarkButton}<button type="button" class="bookmark-btn ownership-btn ownership-owned-btn" aria-label="Own" aria-pressed="false">${OWNED_ICON_SVG}${label("Own", "Owned")}</button><button type="button" class="bookmark-btn ownership-btn ownership-note-btn" aria-label="Note" aria-expanded="false">${NOTE_ICON_SVG}${label("Note", "Noted")}</button></span><textarea class="ownership-note" rows="2" placeholder="A note on ${what}" aria-label="Note" hidden></textarea></span>`;
+	return `<span class="ownership" data-kind="${kind}" data-id="${escHtml(id)}"><span class="ownership-buttons">${bookmarkButton}<button type="button" class="bookmark-btn ownership-btn ownership-owned-btn" aria-label="Own" aria-pressed="false">${OWNED_ICON_SVG}${label("Own", "Owned")}</button><button type="button" class="bookmark-btn ownership-btn ownership-note-btn" aria-label="Note" aria-expanded="false">${NOTE_ICON_SVG}${label("Note", "Noted")}</button></span>${buildNoteBoxHtml(`A note on ${what}`, 2, true)}</span>`;
+}
+
+/**
+ * A note's box, which takes no more than a note can keep, and under it the count of what is in it,
+ * left empty — and so out of sight — until the note nears the limit. See `views/note-count.ts`.
+ */
+export function buildNoteBoxHtml(placeholder: string, rows: number, hidden: boolean, extraClass = ""): string {
+	return `<textarea class="ownership-note${extraClass ? ` ${extraClass}` : ""}" rows="${rows}" maxlength="${NOTE_MAX_LENGTH}" placeholder="${escHtml(placeholder)}" aria-label="Note"${hidden ? " hidden" : ""}></textarea><span class="ownership-note-count" aria-live="polite"></span>`;
 }

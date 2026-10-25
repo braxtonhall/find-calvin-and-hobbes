@@ -75,6 +75,16 @@
 	margin-bottom: 12px;
 }
 
+/* Tucked up under the box, above the buttons. */
+.row-note-dialog .ownership-note-count {
+	display: block;
+	margin: -8px 0 12px;
+}
+
+.row-note-dialog .ownership-note-count:empty {
+	display: none;
+}
+
 /* The row a menu is open on, tinted as hovered: the pointer is in its menu, not off it. */
 .row--menu-open {
 	background: var(--bg-sidebar);

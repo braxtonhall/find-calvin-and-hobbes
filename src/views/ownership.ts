@@ -2,7 +2,8 @@ import { OwnershipKind, getOwnership, updateOwnership } from "../ownership";
 import { OwnershipRecord } from "../library-file";
 import { isBookmarked, toggleBookmark } from "../bookmarks";
 import { state } from "../state";
-import { announceLibraryChange } from "./row-menu";
+import { LIBRARY_CHANGE_EVENT, announceLibraryChange } from "./row-menu";
+import { attachNoteCount, showNoteCount } from "./note-count";
 
 /** How long the note waits after the last keystroke before it saves. Leaving the box saves at once. */
 const NOTE_SAVE_DELAY = 400;
@@ -65,6 +66,33 @@ function readRecord(kind: OwnershipKind, id: string): Promise<OwnershipRecord | 
 }
 
 /**
+ * The library changed anywhere else — a row's menu, the cloud — shows on every strip's or book's
+ * buttons on the page: a strip's own page, or its preview beside the results it was changed from. A
+ * note being typed in is left as the reader has it; it saves over the change when they leave it.
+ */
+document.addEventListener(LIBRARY_CHANGE_EVENT, () => {
+	if (!state.bookmarksLoaded) return;
+	document.querySelectorAll<HTMLElement>(".ownership").forEach((controls) => {
+		const bookmarkButton = controls.querySelector<HTMLButtonElement>(".ownership-bookmark-btn");
+		if (bookmarkButton) showBookmark(bookmarkButton, state.bookmarkedStrips.has(bookmarkButton.dataset.bookmark!));
+		const id = controls.dataset.id!;
+		readRecord(controls.dataset.kind as OwnershipKind, id)
+			.then((record) => {
+				if (!controls.isConnected) return;
+				showRecord(controls, record ?? { id, owned: false });
+				const note = controls.querySelector<HTMLTextAreaElement>(".ownership-note")!;
+				if (document.activeElement === note) return;
+				const text = record?.note ?? "";
+				if (note.value === text) return;
+				note.value = text;
+				showNoteCount(note);
+				setNoteOpen(controls, record?.note !== undefined);
+			})
+			.catch(() => {});
+	});
+});
+
+/**
  * Tells a page listing the library — a search about it beside its preview of a strip — that it may
  * have to draw its rows again, as a row's menu does. Not by pointer: the pointer is on these
  * buttons, not over a row to light.
@@ -88,6 +116,7 @@ export function attachOwnershipControls(element: HTMLElement): void {
 		const note = controls.querySelector<HTMLTextAreaElement>(".ownership-note")!;
 		const bookmarkButton = controls.querySelector<HTMLButtonElement>(".ownership-bookmark-btn");
 		if (bookmarkButton) attachBookmarkButton(bookmarkButton);
+		attachNoteCount(note);
 
 		readRecord(kind, id)
 			.then((record) => {
@@ -96,6 +125,7 @@ export function attachOwnershipControls(element: HTMLElement): void {
 				// Unless the reader has started a note of their own while this was being read.
 				if (record.note !== undefined && note.value === "") {
 					note.value = record.note;
+					showNoteCount(note);
 					setNoteOpen(controls, true);
 				}
 			})

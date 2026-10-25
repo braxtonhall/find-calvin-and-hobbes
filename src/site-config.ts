@@ -87,6 +87,8 @@ export interface PageConfig {
 	 * it printed its Sundays in colour — means anything.
 	 */
 	colourSundays: boolean;
+	/** The bobs-sink service's origin, where the reader's library can be saved, or `null` for no cloud saves. */
+	cloudSaves: string | null;
 	details: {
 		daily: StripLinkTemplates;
 		rerun: StripLinkTemplates;

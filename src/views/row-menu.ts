@@ -6,7 +6,8 @@ import { formatLongDate } from "../date-utils";
 import { toggleBookmark } from "../bookmarks";
 import { OwnershipKind, getOwnership, updateOwnership } from "../ownership";
 import { BOOKMARK_ICON_SVG } from "../pages/bookmark-icon";
-import { NOTE_ICON_SVG, OWNED_ICON_SVG } from "../pages/ownership";
+import { NOTE_ICON_SVG, OWNED_ICON_SVG, buildNoteBoxHtml } from "../pages/ownership";
+import { attachNoteCount, showNoteCount } from "./note-count";
 
 /**
  * The menu a strip's or a book's row opens on a right-click or a long press: own it or note it, and
@@ -190,13 +191,14 @@ function editNote(row: HTMLElement, { kind, id, title }: RowTarget): void {
 	dialog.className = "library-dialog row-note-dialog";
 	dialog.innerHTML = `<form method="dialog">
 			<p class="library-dialog__message">Note on ${kind === "strip" ? "the strip from " : ""}<strong>${escHtml(title)}</strong></p>
-			<textarea class="ownership-note row-note" rows="5" placeholder="A note on this ${kind}" aria-label="Note"></textarea>
+			${buildNoteBoxHtml(`A note on this ${kind}`, 5, false, "row-note")}
 			<div class="detail-actions library-dialog__choices">
 				<button class="copy-link-btn" value="save">Save</button>
 				<button class="copy-link-btn" value="cancel">Cancel</button>
 			</div>
 		</form>`;
 	const note = dialog.querySelector<HTMLTextAreaElement>("textarea")!;
+	attachNoteCount(note);
 
 	dialog.addEventListener("keydown", (event) => {
 		// Escape closes the dialog, and is kept from the page, where it would also go home.
@@ -221,7 +223,10 @@ function editNote(row: HTMLElement, { kind, id, title }: RowTarget): void {
 	getOwnership(kind, id)
 		.then((record) => {
 			// Unless the reader has started typing while this was being read.
-			if (record?.note !== undefined && note.value === "") note.value = record.note;
+			if (record?.note !== undefined && note.value === "") {
+				note.value = record.note;
+				showNoteCount(note);
+			}
 		})
 		.catch(() => {})
 		.finally(() => {

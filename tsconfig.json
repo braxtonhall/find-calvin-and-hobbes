@@ -3,12 +3,20 @@
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
 		"target": "ES2022",
+		// For `import()`, which keeps the cloud saves out of the bundle until a reader turns them on.
+		"module": "ES2020",
 		"moduleResolution": "node",
 		"strict": true,
 		"types": ["node"],
 		"lib": ["ES2024", "DOM", "DOM.Iterable"],
 		"resolveJsonModule": true,
 		"noImplicitAny": true
+	},
+	// webpack reads its configuration, and the build chain's loaders, through ts-node, as CommonJS.
+	"ts-node": {
+		"compilerOptions": {
+			"module": "CommonJS"
+		}
 	},
 	"exclude": ["node_modules"]
 }

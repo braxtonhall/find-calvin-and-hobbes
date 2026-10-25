@@ -327,6 +327,18 @@ test("config.yaml", async (suite) => {
 		);
 	});
 
+	await suite.test("has cloud saves only where a service is named", () => {
+		assert.equal(withConfig("name: x\nseries: x\n", loadPageConfig).cloudSaves, null);
+		assert.equal(withConfig("name: x\nseries: x\ncloudSaves: false\n", loadPageConfig).cloudSaves, null);
+		assert.equal(
+			withConfig("name: x\nseries: x\ncloudSaves: https://sink.x.test/\n", loadPageConfig).cloudSaves,
+			"https://sink.x.test",
+		);
+		for (const bad of ["true", "sink.x.test", "https://sink.x.test/path", "ftp://sink.x.test"]) {
+			assert.throws(() => withConfig(`name: x\nseries: x\ncloudSaves: ${bad}\n`, loadPageConfig), /cloudSaves.*origin/);
+		}
+	});
+
 	await suite.test("reads no arcs.yaml or reruns.yaml for a site without them", () => {
 		// The project holds only `config.yaml`, so reading either file would throw.
 		withConfig("name: x\nseries: x\narcs: false\nreruns: false\n", (config) => {

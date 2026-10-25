@@ -89,3 +89,110 @@
 .settings-preview-word {
 	color: var(--text);
 }
+
+/* Its buttons are drawn inline-flex, which would show them through `hidden`. */
+.cloud-saves [hidden] {
+	display: none;
+}
+
+/*
+ * How cloud saves stand, as a light after the heading: green once saved, amber while connecting, grey
+ * offline, red where the reader has something to do. What it means shows over it, drawn as the copy
+ * button's tooltip is — on a touchscreen once it is tapped, which focuses it.
+ */
+.cloud-saves__light {
+	position: relative;
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	margin-left: 8px;
+	/* Centred on the heading's capitals rather than its lowercase, which `middle` would be. */
+	vertical-align: 0.1em;
+	border-radius: 50%;
+	background: var(--neutral);
+	outline: none;
+	cursor: default;
+}
+
+.cloud-saves__light[data-light="synced"] {
+	background: #3a9a55;
+}
+
+.cloud-saves__light[data-light="connecting"] {
+	background: #d4a12a;
+}
+
+.cloud-saves__light[data-light="paused"] {
+	background: #c8553d;
+}
+
+.cloud-saves__light::after {
+	content: attr(data-label);
+	position: absolute;
+	top: 50%;
+	left: calc(100% + 6px);
+	transform: translateY(-50%);
+	pointer-events: none;
+	z-index: 10;
+	background: rgba(0, 0, 0, 0.8);
+	color: #fff;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	font-weight: 400;
+	white-space: nowrap;
+	opacity: 0;
+	transition: opacity 0.1s;
+}
+
+.cloud-saves__light:hover::after,
+.cloud-saves__light:focus::after {
+	opacity: 1;
+}
+
+/* Enable and Disable stacked in one place, the one that applies showing. */
+.cloud-saves__labels {
+	display: inline-grid;
+	justify-items: center;
+}
+
+.cloud-saves__labels > * {
+	grid-area: 1 / 1;
+}
+
+.cloud-saves__label-on,
+.cloud-saves--on .cloud-saves__label-off {
+	visibility: hidden;
+}
+
+.cloud-saves--on .cloud-saves__label-on {
+	visibility: visible;
+}
+
+/* The cloud saves to choose from, one to a line, each with when it was last used under what it holds. */
+.cloud-saves-choices {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.cloud-saves-choice {
+	flex-direction: column;
+	align-items: flex-start;
+	height: auto;
+	margin-left: 0;
+	padding: 6px 10px;
+	font-size: 13px;
+	color: var(--text);
+	text-align: left;
+}
+
+.cloud-saves-choice:hover {
+	border-color: var(--main);
+}
+
+.cloud-saves-choice__used {
+	font-size: 12px;
+	color: var(--text-muted);
+}

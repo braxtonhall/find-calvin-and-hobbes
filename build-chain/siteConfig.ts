@@ -123,6 +123,7 @@ interface RawConfig {
 	subjects?: unknown;
 	comicImages?: unknown;
 	colourSundays?: unknown;
+	cloudSaves?: unknown;
 	details?: Partial<Record<string, unknown>> | null;
 	theme?: Partial<Record<string, unknown>> | null;
 	search?: { suggestions?: unknown; examples?: unknown } | null;
@@ -894,6 +895,25 @@ function loadGrid(grid: RawConfig["grid"]): GridConfig {
 	return { periods, levels, zoom };
 }
 
+/** The cloud saves' service, as an origin, or `null` where it is `false` or left out. */
+function loadCloudSaves(value: unknown): string | null {
+	const raw = stringSetting(value, "cloudSaves");
+	if (!raw || raw.toLowerCase() === "false") return null;
+	let url: URL | null = null;
+	try {
+		url = new URL(raw);
+	} catch {
+		// Said below, with the rest.
+	}
+	if (!url || (url.protocol !== "https:" && url.protocol !== "http:") || url.origin !== raw.replace(/\/$/, "")) {
+		throw new ConfigError(
+			(file) =>
+				`cloudSaves in ${file} must be false, or a service's origin, like https://sink.example.com (got "${raw}")`,
+		);
+	}
+	return url.origin;
+}
+
 /** The parts of the configuration the pages are drawn with. See `src/site-config.ts`. */
 export function loadPageConfig(config?: string): PageConfig {
 	const raw = readConfig(config);
@@ -919,6 +939,7 @@ function pageConfig(raw: RawConfig, config?: string): PageConfig {
 		suggestions: loadSuggestions(raw.search),
 		examples: loadExamples(raw.search),
 		colourSundays: flagSetting(raw.colourSundays, "colourSundays", false),
+		cloudSaves: loadCloudSaves(raw.cloudSaves),
 		grid: loadGrid(raw.grid),
 		...loadFeatures(config),
 	};

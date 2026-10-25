@@ -173,6 +173,12 @@ url: ${SITE_URL}
 #              the address back up.
 pageLayout: ${PAGE_LAYOUT:-html}
 
+# From CLOUD_SAVES. Experimental. The bobs-sink service a reader's library is saved to, so it follows
+# them to their other browsers: its origin, like https://sink.bobs-server.net. Set, the Settings page
+# has a Cloud Saves section. False or left out, the site has no cloud saves at all, and never
+# loads the code for them.
+cloudSaves: ${CLOUD_SAVES:-false}
+
 # The link on each page to the corrections form.
 #
 # Each page's link is a template, by the kind of page it is on. A kind left out, or empty, carries

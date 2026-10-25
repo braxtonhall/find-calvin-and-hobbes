@@ -2,6 +2,7 @@ import { STORE_NAME } from "./constants";
 import { inTransaction } from "./database";
 import { state } from "./state";
 import { dayCell } from "./grid";
+import { libraryChanged } from "./cloud-saves";
 
 // A bookmark is a strip's, by `bookmarkId`. The store's key is still called `date`, as it was when
 // a bookmark was a whole day's; a special's bookmark keeps its id there.
@@ -33,6 +34,7 @@ export function toggleBookmark(id: string, date: string): Promise<boolean> {
 	}).then((bookmarked) => {
 		if (bookmarked) state.bookmarkedStrips.add(id);
 		else state.bookmarkedStrips.delete(id);
+		libraryChanged({ kind: "bookmark", id, bookmarked });
 		// A box of many days, zoomed out, shows no bookmarks.
 		dayCell(date)?.classList.toggle("cell--bookmarked", isDayBookmarked(date));
 		return bookmarked;

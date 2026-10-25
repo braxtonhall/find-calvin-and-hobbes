@@ -44,6 +44,7 @@ jobs:
           SITE_URL: ${{ vars.SITE_URL }}
           PAGE_LAYOUT: ${{ vars.PAGE_LAYOUT }}
           CORRECTIONS: ${{ vars.CORRECTIONS }}
+          CLOUD_SAVES: ${{ vars.CLOUD_SAVES }}
 
       - name: upload artifact
         uses: actions/upload-pages-artifact@v5

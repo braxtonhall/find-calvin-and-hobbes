@@ -66,9 +66,21 @@ export function isLibraryEmpty(data: LibraryData): boolean {
 	return data.bookmarks.length === 0 && data.strips.length === 0 && data.books.length === 0;
 }
 
-/** A note as kept: without the blank around it, and none at all where it is only blank. */
+/**
+ * The longest a note is kept, in characters. The cloud saves' service refuses a longer one, so a
+ * note box takes no more, and a note from a file, or two joined in a merge, is cut to it.
+ */
+export const NOTE_MAX_LENGTH = 10000;
+
+/**
+ * A note as kept: without the blank around it, none at all where it is only blank, and cut to
+ * `NOTE_MAX_LENGTH` — by whole characters, so a cut never splits an emoji.
+ */
 export function cleanNote(note: string | undefined): string | undefined {
-	const trimmed = note?.trim();
+	let trimmed = note?.trim();
+	if (trimmed && trimmed.length > NOTE_MAX_LENGTH) {
+		trimmed = Array.from(trimmed).slice(0, NOTE_MAX_LENGTH).join("").trimEnd();
+	}
 	return trimmed ? trimmed : undefined;
 }
 
@@ -83,7 +95,7 @@ export function mergeNotes(old: string | undefined, incoming: string | undefined
 	const a = cleanNote(old);
 	const b = cleanNote(incoming);
 	if (!a || !b) return a ?? b;
-	return `\n${a}\n`.includes(`\n${b}\n`) ? a : `${a}\n${b}`;
+	return `\n${a}\n`.includes(`\n${b}\n`) ? a : cleanNote(`${a}\n${b}`);
 }
 
 function mergeRecord(old: OwnershipRecord, incoming: OwnershipRecord): OwnershipRecord {

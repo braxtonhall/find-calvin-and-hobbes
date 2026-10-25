@@ -7,6 +7,8 @@ import { Spelling, chooseSpelling, guessedSpelling, rememberedSpelling, respell 
 import { attachBackAndHomeHandlers } from "./nav-buttons";
 import { ask, attachLibraryTransferHandlers } from "./library-transfer";
 import { attachCopyLinkHandler, flashButton } from "./copy-link";
+import { attachCloudSavesHandlers } from "./cloud-saves";
+import { cloudSavesOn, loadCloudSync } from "../cloud-saves";
 
 /** Draws the settings, or — with `adopt` — takes over the page the build drew. */
 export function renderSettings(adopt: boolean = false): void {
@@ -15,6 +17,7 @@ export function renderSettings(adopt: boolean = false): void {
 	attachBackAndHomeHandlers(element);
 	attachCopyLinkHandler(element);
 	attachLibraryTransferHandlers(element);
+	attachCloudSavesHandlers(element);
 	attachSpellingHandlers(element);
 	attachClearHandler(element);
 }
@@ -60,12 +63,15 @@ const CLEAR = "Clear everything";
 function attachClearHandler(element: HTMLElement): void {
 	const button = element.querySelector<HTMLButtonElement>("#settings-clear-btn")!;
 	button.addEventListener("click", async () => {
+		const cloud = cloudSavesOn();
 		const sure = await ask(
-			"Clear your bookmarks, the strips and books you own, your notes and your spelling from this browser? This can't be undone. Export your library first to keep a copy.",
+			`Clear your bookmarks, the strips and books you own, your notes and your spelling from this browser?${cloud ? " Cloud saves are turned off here too, and your cloud save keeps what it has." : ""} This can't be undone. Export your library first to keep a copy.`,
 			[CLEAR, "Cancel"],
 		);
 		if (sure !== CLEAR) return;
 		try {
+			// Off first, so that clearing this browser's library doesn't clear the cloud save's too.
+			if (cloud) await (await loadCloudSync()).disableCloudSaves();
 			await clearLibrary();
 			chooseSpelling(null);
 			// The page drawn again with the spelling unset, and the grid without the bookmarks.

@@ -24,6 +24,7 @@ import { HOME_PATH, buildComicPath } from "./routes";
 import { getSameDayComicDate } from "./pages/detail";
 import { attachLifeEasterEgg } from "./life";
 import { holdLibrary, readLibrary } from "./ownership";
+import { startCloudSaves } from "./cloud-saves";
 import { closePreview, previewHasFocus, previewShowing, stepPreview, stepPreviewDay } from "./views/preview";
 
 function initialize(): void {
@@ -104,6 +105,8 @@ function initialize(): void {
 		.finally(() => {
 			state.bookmarksLoaded = true;
 			resumeRoute();
+			// Once the library here has been read, which the cloud save may then change.
+			startCloudSaves();
 		});
 }
 

@@ -6,6 +6,8 @@ import {
 	libraryFileName,
 	mergeLibraries,
 	mergeNotes,
+	NOTE_MAX_LENGTH,
+	cleanNote,
 	ownershipId,
 	parseLibraryFile,
 } from "../src/library-file";
@@ -78,6 +80,15 @@ test("library file", async (suite) => {
 		// Whole lines only.
 		assert.equal(mergeNotes("colored", "red"), "colored\nred");
 		assert.equal(mergeNotes("x\ny", "y\nz"), "x\ny\ny\nz");
+	});
+
+	await suite.test("a note is cut to the longest kept, by whole characters", () => {
+		assert.equal(cleanNote("x".repeat(NOTE_MAX_LENGTH)), "x".repeat(NOTE_MAX_LENGTH));
+		assert.equal(cleanNote("x".repeat(NOTE_MAX_LENGTH + 1)), "x".repeat(NOTE_MAX_LENGTH));
+		// Each emoji is one character, but two UTF-16 code units.
+		assert.equal(cleanNote("🐯".repeat(NOTE_MAX_LENGTH + 1)), "🐯".repeat(NOTE_MAX_LENGTH));
+		const half = "x".repeat(NOTE_MAX_LENGTH / 2 + 1);
+		assert.equal(mergeNotes(half, `y${half}`)!.length, NOTE_MAX_LENGTH);
 	});
 
 	await suite.test("a merge keeps everything of both, owned if either owns it", () => {
