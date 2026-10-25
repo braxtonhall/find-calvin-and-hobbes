@@ -162,5 +162,5 @@ reach the same form. Set `CORRECTIONS=false` to leave the link off every page.
 
 ### Images
 
-A strip's image goes in the folder `calvin-and-hobbes/comics/`, as `YYYYMMDD.ext` or a special's id — drop
-one in and that strip has an image.
+A strip's image goes in the folder `calvin-and-hobbes/comics/images/`, as `YYYYMMDD.ext` or a special's
+id — drop one in and that strip has an image.

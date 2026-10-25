@@ -222,6 +222,10 @@ corrections:
 # text. A file named that isn't there stops the build. Every part must be given, and the optional
 # ones can be set to false instead, which leaves out what they are for and reads nothing.
 #
+# Several values can be made one: `!Merge [{ a: foo }, { b: bar }]` is `{ a: foo, b: bar }`, a key in
+# a later mapping taking its value from an earlier, and `!Concatenate [[a], [b, c]]` is `[a, b, c]`.
+# Each item can be an `!Import`, as the strips are here, a file to each year.
+#
 #   comics      the strips: their transcripts, descriptions, and specials, each special with a
 #               `title`, which a creator's, a character's or a subject's page lists it by
 #   collections the books, as a list. `!Map [Import, ./folder/*.yaml]` imports every file a pattern
@@ -271,7 +275,20 @@ corrections:
 #               isn't there yet has none. Each image's shape is read from its file, for a strip's page
 #               to hold the space for it while it loads. Without one, the strips are shown as their
 #               transcripts alone
-comics: !Import ./calvin-and-hobbes/comics.yaml
+comics:
+  strips: !Merge
+    - !Import ./calvin-and-hobbes/comics/1985.yaml
+    - !Import ./calvin-and-hobbes/comics/1986.yaml
+    - !Import ./calvin-and-hobbes/comics/1987.yaml
+    - !Import ./calvin-and-hobbes/comics/1988.yaml
+    - !Import ./calvin-and-hobbes/comics/1989.yaml
+    - !Import ./calvin-and-hobbes/comics/1990.yaml
+    - !Import ./calvin-and-hobbes/comics/1991.yaml
+    - !Import ./calvin-and-hobbes/comics/1992.yaml
+    - !Import ./calvin-and-hobbes/comics/1993.yaml
+    - !Import ./calvin-and-hobbes/comics/1994.yaml
+    - !Import ./calvin-and-hobbes/comics/1995.yaml
+  specials: !Import ./calvin-and-hobbes/comics/specials.yaml
 collections: !Map [Import, ./calvin-and-hobbes/collections/*.yaml]
 tuning: !Import ./calvin-and-hobbes/tuning.yaml
 credits: !Import ./calvin-and-hobbes/credits.md
@@ -282,7 +299,7 @@ misspellings: !Import ./calvin-and-hobbes/misspellings.yaml
 characters: !Import ./calvin-and-hobbes/characters.yaml
 creators: false
 subjects: false
-comicImages: ./calvin-and-hobbes/comics
+comicImages: ./calvin-and-hobbes/comics/images
 
 # Whether the Sundays ran in colour and the dailies in black and white, a format of their own. When
 # true, the search has `@is:sunday` and `@is:daily` and the filter bar a Format field to pick one,

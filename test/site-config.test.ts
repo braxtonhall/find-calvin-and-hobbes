@@ -249,6 +249,64 @@ test("config.yaml", async (suite) => {
 		});
 	});
 
+	await suite.test("merges mappings, a later key winning, and concatenates lists, in place or imported", () => {
+		withConfig(
+			"comics:\n  strips: !Merge [!Import ./1985.yaml, { '19851119': Bye. }, !Import ./1986.yaml]\n" +
+				"collections: !Concatenate [[{ id: a }], !Map [Import, ./books/*.yaml]]\n",
+			(config) => {
+				assert.deepEqual(loadRequiredPart("comics", config), {
+					strips: { "19851118": "Hi.", "19851119": "Again.", "19860101": "New." },
+				});
+				assert.deepEqual(loadRequiredPart("collections", config), [{ id: "a" }, { id: "b" }, { id: "c" }]);
+			},
+			{
+				"1985.yaml": "'19851118': Hi.\n'19851119': Hello.\n",
+				"1986.yaml": "'19851119': Again.\n'19860101': New.\n",
+				"books/b.yaml": "id: b\n",
+				"books/c.yaml": "id: c\n",
+			},
+		);
+		// In an imported file, made as it is read.
+		withConfig(
+			"comics: !Import ./strips/index.yaml\n",
+			(config) => assert.deepEqual(loadRequiredPart("comics", config), { strips: { a: 1, b: 2 }, list: [1, 2] }),
+			{
+				"strips/index.yaml": "strips: !Merge [{ a: 1 }, !Import ./b.yaml]\nlist: !Concatenate [[1], [2]]\n",
+				"strips/b.yaml": "b: 2\n",
+			},
+		);
+	});
+
+	await suite.test("watches what a !Merge imports, and reads the environment only into what it writes", () => {
+		withEnvironment({ FIVE: "5" }, () =>
+			withConfig(
+				"comics:\n  strips: !Merge [{ a: $FIVE }, !Import ./more.yaml]\n",
+				(config, projectDir) => {
+					assert.deepEqual(loadRequiredPart("comics", config), { strips: { a: "5", b: "$FIVE" } });
+					assert.ok(configDependencies(config).files.includes(path.join(projectDir, "more.yaml")));
+				},
+				{ "more.yaml": "b: $FIVE\n" },
+			),
+		);
+	});
+
+	await suite.test("fails for a !Merge of anything but mappings, or a !Concatenate of anything but lists", () => {
+		withConfig("comics: !Merge [{ a: 1 }, [b]]\n", (config) => {
+			assert.throws(() => loadRequiredPart("comics", config), /has a !Merge of something that is not a mapping/);
+		});
+		withConfig("collections: !Concatenate [[a], { b: 1 }]\n", (config) => {
+			assert.throws(
+				() => loadRequiredPart("collections", config),
+				/has a !Concatenate of something that is not a list/,
+			);
+		});
+		withConfig(
+			"comics: !Import ./index.yaml\n",
+			(config) => assert.throws(() => loadRequiredPart("comics", config), /index\.yaml has a !Merge/),
+			{ "index.yaml": "!Merge [{ a: 1 }, b]\n" },
+		);
+	});
+
 	await suite.test("publishes a banner named with !Path, with its size read from the file unless given", () => {
 		const files = { "banner.gif": sampleGif(722, 103) };
 		withConfig(
