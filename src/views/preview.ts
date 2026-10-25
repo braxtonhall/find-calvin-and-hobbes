@@ -10,7 +10,7 @@ import { isShowing, scrollCellIntoViewIfNeeded } from "../utils";
 import { respell } from "../spelling";
 import { weekdayOf } from "../date-utils";
 import { attachDetailHandlers } from "./detail";
-import { attachCellHighlightLink } from "./cell-highlight";
+import { attachCellHighlightLink, focusQuietly } from "./cell-highlight";
 import { closeBookPopup } from "./books";
 import { ROWS_DRAWN, resultsOf, rowAt } from "./result-rows";
 import { alternatesOf, rowHrefOf } from "../pages/result-rows";
@@ -250,9 +250,11 @@ function show(target: readonly string[], scrollList: boolean): boolean {
 	const firstRow = scrollList || onRow ? rowOf(first) : undefined;
 	if (scrollList && firstRow) scrollRowIntoView(firstRow);
 
-	if (onArrow) pane.querySelector<HTMLElement>(`a.preview-step[data-step="${onArrow}"]`)?.focus();
+	// The arrow now steps to the result after, whose cell its focus would scroll the grid to instead.
+	const arrow = onArrow ? pane.querySelector<HTMLElement>(`a.preview-step[data-step="${onArrow}"]`) : null;
+	if (arrow) focusQuietly(arrow);
 	// Still in the preview, for the keys that step it to keep stepping it.
-	else if (inPane) pane.focus({ preventScroll: true });
+	else if (inPane && !onArrow) pane.focus({ preventScroll: true });
 	else if (onRow && firstRow && !shown.some((entry) => entry.strip === focused!.dataset.ownership)) focusRow(firstRow);
 	return true;
 }

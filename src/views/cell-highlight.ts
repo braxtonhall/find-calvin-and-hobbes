@@ -28,9 +28,22 @@ export function attachCellHighlightLink(link: HTMLElement, date: string): void {
 	};
 
 	link.addEventListener("mouseenter", () => show(false));
-	link.addEventListener("focus", () => show(true));
+	link.addEventListener("focus", () => show(!focusingQuietly));
 	link.addEventListener("mouseleave", clear);
 	link.addEventListener("blur", clear);
+}
+
+/** Set while `focusQuietly` moves the focus, which is no reader tabbing to the link. */
+let focusingQuietly = false;
+
+/**
+ * Focuses `link` without scrolling the grid to its strip: the focus put back on a link drawn anew,
+ * whose strip is not the one the reader went to.
+ */
+export function focusQuietly(link: HTMLElement): void {
+	focusingQuietly = true;
+	link.focus();
+	focusingQuietly = false;
 }
 
 type BookRanges = Pick<Collection, "dailies" | "sundays">;
