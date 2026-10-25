@@ -64,8 +64,11 @@ export interface Completion {
 	rows: Row[];
 }
 
-/** `@` plus a name, then optionally a colon and however much of the value exists yet. */
-const TOKEN_PATTERN = /^@([a-zA-Z]*)(?::(\S*))?$/;
+/**
+ * `@` plus a name, then optionally a colon and however much of the value exists yet — stopping
+ * where the parser's `FILTER_PATTERN` would, so whatever follows is left out of the token.
+ */
+const TOKEN_PATTERN = /@([a-zA-Z]*)(?::([^\s()[\]{}"“”]*))?/y;
 
 /** A numeric slot: how wide it can get, and the largest number it will hold. */
 interface Field {
@@ -621,8 +624,12 @@ function valueRows(spec: FilterSpec, value: string, parses: boolean, context: Qu
  * Nor across a quotation mark, and never from inside a quotation: the parser reads everything
  * there as text, so there is nothing for a menu to complete — and an open quotation runs to the end
  * of the query, so `"rosalyn @` is the phrase being typed rather than a filter being started.
+ *
+ * It ends where the parser's filter would, not at the next space: `@has (@)`, as the bracket
+ * pairing leaves it, is a bare `@` before a closing bracket, and the bracket stays where it is when
+ * a row is accepted. A caret past that end is not in the filter at all.
  */
-function tokenAt(text: string, caret: number): { start: number; end: number; body: string } | null {
+function tokenAt(text: string, caret: number): { start: number; end: number; name: string; value?: string } | null {
 	let start = -1;
 	for (let index = caret; index > 0; index--) {
 		const character = text[index - 1];
@@ -634,10 +641,13 @@ function tokenAt(text: string, caret: number): { start: number; end: number; bod
 	}
 	if (start === -1 || quoted(quotedSpans(text), start)) return null;
 
-	let end = caret;
-	while (end < text.length && !/[\s"“”]/.test(text[end])) end++;
+	TOKEN_PATTERN.lastIndex = start;
+	const parts = TOKEN_PATTERN.exec(text);
+	if (parts === null) return null;
+	const end = start + parts[0].length;
+	if (end < caret) return null;
 
-	return { start, end, body: text.slice(start, end) };
+	return { start, end, name: parts[1], value: parts[2] };
 }
 
 function nameRow(spec: FilterSpec): Row {
@@ -685,11 +695,8 @@ export function completionsAt(text: string, caret: number, root: QueryContext = 
 	const token = tokenAt(text, caret);
 	if (token === null) return null;
 
-	const parts = TOKEN_PATTERN.exec(token.body);
-	if (parts === null) return null;
-
-	const name = parts[1].toLowerCase();
-	const value = parts[2]?.toLowerCase();
+	const name = token.name.toLowerCase();
+	const value = token.value?.toLowerCase();
 	const context = contextAt(text, token.start, root);
 
 	if (value === undefined) {
@@ -714,7 +721,7 @@ export function completionsAt(text: string, caret: number, root: QueryContext = 
 
 	// Whether the filter works is the parser's business rather than a fourth opinion here, so no
 	// shape may claim to be filled inside a filter that would not run.
-	const raw = { name, value, start: 0, end: token.body.length };
+	const raw = { name, value, start: 0, end: token.end - token.start };
 	const parses = value !== "" && readMatch(raw, context).valid;
 
 	const rows = valueRows(spec, value, parses, context);

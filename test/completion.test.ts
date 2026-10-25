@@ -619,6 +619,31 @@ test("finding the token", async (suite) => {
 		);
 	});
 
+	// The bracket pairing leaves `@has (@)` behind, and the `)` is no part of the filter.
+	await suite.test("a closing bracket after the caret ends the token", () => {
+		const completion = at("@has (@|)");
+		assert.equal(completion!.start, 6);
+		assert.equal(completion!.end, 7);
+		assert.ok(completion!.rows.some((row) => row.name === "year"));
+		assert.deepEqual(names("(@yea|)"), ["year"]);
+		assert.equal(at("(@year:198|)")!.end, 10);
+		assert.ok(values("(@year:198|)").includes("1988"));
+	});
+
+	await suite.test("anything the parser would not take into the name ends the token", () => {
+		const completion = at("@ye|,");
+		assert.equal(completion!.end, 3);
+		assert.deepEqual(
+			completion!.rows.map((row) => row.name),
+			["year"],
+		);
+	});
+
+	await suite.test("a caret past where the filter ends is not in it", () => {
+		assert.equal(at("(@year)|"), null);
+		assert.equal(at("@year)x|"), null);
+	});
+
 	await suite.test("whitespace ends the token, so a finished filter is behind us", () => {
 		assert.equal(at("@year:1990 |"), null);
 		assert.equal(at("@year:1990 snowman|"), null);
