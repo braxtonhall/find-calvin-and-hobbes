@@ -374,7 +374,7 @@
 "19950401":
   transcript: Susie, your Mom just called and she's walking over to pick you up. Finally! I'll talk you YOU in a few minutes upstairs. Bye Susie! Don't lock yourself in any more closets! We got rid of a slimy girl! What a great day of grossness! This goes in the log book! I'd say some promotions, awards, medals, and advanced degrees are in order! Should we get them before we get in trouble, or after?
   description: Mom tells Susie that her mom is home and she will come pick Susie up.  Susie is relieved.  Mom angrily says she'll talk to Calvin in a few minutes.  Calvin tells Susie not to lock herself in any more closets.  Calvin and Hobbes run upstairs.  Calvin says some promotions and medals are in order.  Hobbes asks if they should get them before they get in trouble or after.
-  characters: [calvin, wormwood]
+  characters: [calvin, hobbes, mom, susie, stuffedhobbes]
   source: s-anand
   review: "settled: a source dates a different strip here; the original text was restored on the maintainer's check"
 "19950402":
@@ -385,7 +385,7 @@
 "19950403":
   transcript: Any monsters under my bed tonight? Maybe, maybe not. You mean, "definitely yes"? We didn't say that. "WE"? I mean, "I". ..uh.. that is, if there were any of me. Shut up, Winslow. Luckily for me, monsters don't think clearly when they're hungry.
   description: Calvin asks if there are any monsters under his bed tonight.  A voice comes out from below the bed, saying maybe, maybe not.  Calvin asks if they mean "definitely yes".  The voice says they didn't say that.  Calvin asks if he just heard "we".  The voice clarifies "I".  It goes on to say "if there were any of me".  Another voice says "shut up, Winslow".  Calvin says luckily for him, monsters don't think clearly when they're hungry.
-  characters: [calvin, mom, wormwood]
+  characters: [calvin]
   review: "settled: our transcript and description corroborate each other at 0.67; seligman's nine words are a different exchange"
 "19950404":
   transcript: We don't value craftsmanship any more! All we value is ruthless efficiency, and I say we deny our own humanity that way! Without an appreciation for grace and beauty, there's no pleasure in having them! Our lives are made drearier, rather than richer! How can a person take pride in his work when skill and care are considered luxuries! We're not machines! We have a human need for craftsmanship! You had two days to write that paper. Two days?! Two days is NOTHING!
@@ -394,10 +394,9 @@
   source: s-anand
   review: "settled: a source dates a different strip here; the original text was restored on the maintainer's check"
 "19950405":
-  transcript: It's hard to know what's important in life. We don't notice the small stuff and we're never prepared for the big stuff. What about the stuf in between? That stuff's boring. Let's hope bumbling along without a clue is important. According to the ads, fresh breath and dry armpits are crucial.\
+  transcript: It's hard to know what's important in life. We don't notice the small stuff and we're never prepared for the big stuff. What about the stuff in between? That stuff's boring. Let's hope bumbling along without a clue is important. According to the ads, fresh breath and dry armpits are crucial.
   description: Calvin says it's hard to know what's important in life.  They don't notice the small print, and they're never prepared for the big stuff.  Hobbes asks what about the stuff in between.  Calvin says that's boring.  Hobbes says they should hope bumbling along without a clue is important.  Calvin says that according to the ads, fresh breath and dry armpits are crucial.
   characters: [calvin, hobbes]
-  review: "checked against the strip: the image is a copy of 19950408's strip, so the real 4/5 strip is missing from assets and this text is unverified"
 "19950406":
   transcript: Can I get a drink of water? All right, but hurry up. What are YOU doing home?! I prefer OUR water.
   description: Calvin asks his teacher if he can get a drink of water.  She says it's alright, but he should hurry.  Calvin runs down the hallway.  Mom opens the door and asks Calvin why he's home.  Calvin tells her he prefers their water.
