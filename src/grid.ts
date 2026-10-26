@@ -741,15 +741,9 @@ function showAnyOf(dates: ReadonlySet<string>): void {
 	if (first !== null) showDate(first);
 }
 
-const LIT_CLASSES = [
-	"cell--search-match",
-	"cell--search-nonmatch",
-	"cell--search-t1",
-	"cell--search-t2",
-	"cell--search-t3",
-	"cell--search-t4",
-	"cell--search-t5",
-];
+const TIER_CLASSES = ["cell--search-t1", "cell--search-t2", "cell--search-t3", "cell--search-t4", "cell--search-t5"];
+
+const LIT_CLASSES = ["cell--search-match", "cell--search-nonmatch", ...TIER_CLASSES];
 
 function applyLight(cell: HTMLElement, light: Light): void {
 	if (light === undefined) return;
@@ -831,7 +825,8 @@ export function paintGrid(route: Route): void {
 }
 
 /**
- * Lights `dates` and dims the rest, as a book's page does, or with `null` takes that lighting off.
+ * Lights `dates` in full and dims the rest, as a book's page does, or with `null` takes that lighting
+ * off. A search's tiers are not put back: `paintGrid` does that.
  * A day's cell has only the classes that differ toggled, so one already right costs no restyle and
  * starts no fade. Returns the cells lit.
  */
@@ -853,6 +848,8 @@ export function lightDates(dates: ReadonlySet<string> | null): HTMLElement[] {
 
 	for (const cell of cells) {
 		const date = cell.dataset.date;
+		// A collection's strips are lit in full, whatever tier a search had them at.
+		if (dates !== null) cell.classList.remove(...TIER_CLASSES);
 		const matches = dates !== null && date !== undefined && dates.has(date);
 		cell.classList.toggle("cell--search-match", matches);
 		cell.classList.toggle("cell--search-nonmatch", dates !== null && !matches);
