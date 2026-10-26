@@ -26,6 +26,17 @@ import { isTouchDevice } from "../utils";
 let debounce: number | null = null;
 
 /**
+ * The box sticks to the top, so anything under it that sticks too — a year's heading among the
+ * arcs — sticks below it rather than behind it. A box drawn over is let go of.
+ */
+const searchHeightObserver = new ResizeObserver((entries) => {
+	for (const { target } of entries) {
+		if (!target.isConnected) searchHeightObserver.unobserve(target);
+		else target.parentElement!.style.setProperty("--tab-search-height", `${(target as HTMLElement).offsetHeight}px`);
+	}
+});
+
+/**
  * The collections the tab's query finds, or null where it is empty, which lists all of them. What
  * the grid lights is set here too, so that it agrees with the list.
  */
@@ -88,6 +99,8 @@ export function attachTabSearch(element: HTMLElement, tab: CollectionsTab): void
 
 	attachQueryInput(input, collectionQuery(TAB_TYPES[tab]));
 	attachCopyLinkHandler(element);
+
+	searchHeightObserver.observe(element.querySelector(".collections-search")!);
 
 	const search = (immediately: boolean) => {
 		if (debounce !== null) clearTimeout(debounce);
