@@ -1391,7 +1391,7 @@ santascheme:
 # TODO review
 snowballrestraint:
   description: Calvin struggles not to throw snowballs before Christmas.
-  dates: ["19931217", "19931218", "19931219", "19931220", "19931221", "19931222", "19931223", "19931224", "19931225"]
+  dates: ["19931217", "19931218", "19931220", "19931221", "19931222", "19931223", "19931224", "19931225"]
 
 #TODO review (merged into snowballrestraint)
 # snowballhoard:
