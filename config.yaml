@@ -142,7 +142,7 @@ search:
     - question: Which strips have Hobbes as a stuffed tiger?
       query: "@featuring:stuffedhobbes"
     - question: Which books have a colour Sunday I don't own?
-      query: "@has (@as:colour @not @i:own)"
+      query: "@has (@as:colour @not @in @i:own)"
       tab: books
     - question: Which arcs have Rosalyn in them?
       query: "@has @featuring:rosalyn"
