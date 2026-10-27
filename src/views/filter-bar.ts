@@ -16,6 +16,7 @@ import {
 } from "../query-edit";
 import { naturalHeight, onViewportShift, place, shed, viewport } from "../placement";
 import { escHtml } from "../utils";
+import { inlineHtml } from "../inline-markup";
 import { editQueryInput } from "./query-input";
 
 /**
@@ -186,7 +187,7 @@ function optionHtml(bar: Bar, field: FilterField, option: FilterOption, index: n
 			aria-selected="${checked}"
 			data-index="${index}"
 			tabindex="-1"
-		>${check}<span class="filter-option-label">${escHtml(option.label)}</span></div>`;
+		>${check}<span class="filter-option-label">${inlineHtml(option.styledLabel ?? option.label)}</span></div>`;
 }
 
 /** Whether the field has anything in it to clear, which is the only thing `Clear` is offered for. */

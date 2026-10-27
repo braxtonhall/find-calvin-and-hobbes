@@ -65,7 +65,7 @@ export interface LibraryPage {
  */
 export type DetailCollection = Pick<
 	Collection,
-	"id" | "name" | "pub_year" | "image" | "colour" | "aspectRatio" | "width" | "alterations"
+	"id" | "name" | "styledName" | "pub_year" | "image" | "colour" | "aspectRatio" | "width" | "alterations"
 >;
 
 /**
@@ -213,6 +213,7 @@ export type CollectionSummary = Pick<
 	Collection,
 	| "id"
 	| "name"
+	| "styledName"
 	| "subtitle"
 	| "pub_year"
 	| "pub_month"

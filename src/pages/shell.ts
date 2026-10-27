@@ -3,6 +3,7 @@ import { formatLongDate } from "../date-utils";
 import { PAGE_CONFIG } from "../site-config";
 import { basePath } from "../base-path";
 import { Page, pageTitle } from "./page";
+import { plainText } from "../inline-markup";
 import { buildLandingHtml } from "./landing";
 import { buildCreditsHtml } from "./credits";
 import { buildHelpHtml } from "./help";
@@ -89,7 +90,7 @@ function pageDescription(page: Page): string | null {
 		case "collection": {
 			const { collection } = page;
 			if (!collection) return description;
-			const note = collection.notes && collection.notes.length > 0 ? ` ${collection.notes[0]}` : "";
+			const note = collection.notes && collection.notes.length > 0 ? ` ${plainText(collection.notes[0])}` : "";
 			return `${collection.name}, published ${collection.pub_year}. Every ${series} strip it holds, and where to find each one.${note}`;
 		}
 		case "collections":

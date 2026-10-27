@@ -4,6 +4,7 @@ import "./styles/components.css";
 
 import { ARCS, CHARACTERS, COLLECTION_INDEX, CREATORS, SUBJECTS } from "./bundled-data";
 import { Term, registerVocabulary } from "./filter-vocabulary";
+import type { Collection } from "./types";
 import { arcRange } from "./pages/page";
 import { subjectStripCount, subjectYears as subjectYearsOf } from "./pages/subjects";
 import { sortedByCount } from "./pages/collections";
@@ -27,12 +28,19 @@ import { holdLibrary, readLibrary } from "./ownership";
 import { startCloudSaves } from "./cloud-saves";
 import { closePreview, previewHasFocus, previewShowing, stepPreview, stepPreviewDay } from "./views/preview";
 
+/** A book as the menus offer it: by its id, with its title beside it. */
+function bookTerm(collection: Collection): Term {
+	return {
+		value: collection.id,
+		hint: collection.name,
+		...(collection.styledName ? { styledHint: collection.styledName } : {}),
+	};
+}
+
 function initialize(): void {
 	// The filters whose values are loaded data. A thunk, so this can be registered before the
 	// collection index is in `state` and answer with the books once it is. See `filter-vocabulary.ts`.
-	registerVocabulary("in", () =>
-		(state.collectionIndex?.collections ?? []).map((collection) => ({ value: collection.id, hint: collection.name })),
-	);
+	registerVocabulary("in", () => (state.collectionIndex?.collections ?? []).map(bookTerm));
 	const named = (items: { id: string; name: string }[]): Term[] =>
 		items.map((item) => ({ value: item.id, hint: item.name }));
 	// The most common first, ties to the earliest, then by id: the subjects already come by first
@@ -53,7 +61,7 @@ function initialize(): void {
 	// `@id:` takes any collection's, and inside an operator or on a tab that says which kind, that
 	// kind's alone is offered. See `completion.ts`.
 	const ids: Record<string, Term[]> = {
-		book: COLLECTION_INDEX.collections.map((collection) => ({ value: collection.id, hint: collection.name })),
+		book: COLLECTION_INDEX.collections.map(bookTerm),
 		arc: arcs,
 		creator: creators,
 		character: characters,

@@ -489,6 +489,20 @@ test("how long the list gets", async (suite) => {
 		}
 		assert.equal(at("@in:book|"), null);
 	});
+
+	// The plain hint stays plain; the markup rides beside it for the menu to draw.
+	await suite.test("a book's styled title rides beside its plain one", () => {
+		try {
+			registerVocabulary("in", () => [
+				{ value: "packed", hint: "The Days Are Just Packed", styledHint: "The Days Are Just <i>Packed</i>" },
+			]);
+			const [row] = at("@in:pack|")?.rows ?? [];
+			assert.equal(row.hint, "The Days Are Just Packed");
+			assert.equal(row.styledHint, "The Days Are Just <i>Packed</i>");
+		} finally {
+			registerVocabulary("in", () => []);
+		}
+	});
 });
 
 test("highlighting what is already there", async (suite) => {

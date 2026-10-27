@@ -1,4 +1,5 @@
 import { escHtml } from "../utils";
+import { inlineHtml, nameHtml } from "../inline-markup";
 import { srcsetAttributes } from "../srcset";
 import { PAGE_CONFIG } from "../site-config";
 import {
@@ -220,7 +221,7 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 
 	let extrasHtml = "";
 	if (page.extras.length > 0) {
-		extrasHtml = `<p class="collection-section-heading">Extras</p><ul class="collection-extras">${page.extras.map((extra) => `<li>${escHtml(extra)}</li>`).join("")}</ul>`;
+		extrasHtml = `<p class="collection-section-heading">Extras</p><ul class="collection-extras">${page.extras.map((extra) => `<li>${inlineHtml(extra)}</li>`).join("")}</ul>`;
 	}
 
 	// Closed until asked for: a compendium holds most of the arcs there are, and the list would bury
@@ -246,7 +247,7 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 				<img src="${imageUrl}"${srcset} alt="${escHtml(collection.name)} cover" onload="this.parentElement.style.aspectRatio='auto'" onerror="this.parentElement.style.aspectRatio='auto'" />
 			</div>
 			<div class="collection-info">
-				${buildPageTitle("collection-name", escHtml(collection.name), addressOf(buildCollectionPath(collection.id)))}
+				${buildPageTitle("collection-name", nameHtml(collection), addressOf(buildCollectionPath(collection.id)))}
 				${collection.subtitle ? `<div class="collection-subtitle">${escHtml(collection.subtitle)}</div>` : ""}
 				<p class="collection-meta"><span class="collection-meta--label">Published:</span> ${pubDateFormatted}</p>
 				<p class="collection-meta"><span class="collection-meta--label">Coverage:</span> ${coverage.join(" · ")}</p>
@@ -256,7 +257,7 @@ export function buildCollectionHtml(page: CollectionPage, canGoBack: boolean): s
 		<div class="detail-actions collection-actions">
 			${buildOwnershipControlsHtml("book", collection.id)}
 		</div>
-		${collection.notes && collection.notes.length > 0 ? `<p class="collection-note">${escHtml(collection.notes[0])}</p>` : ""}
+		${collection.notes && collection.notes.length > 0 ? `<p class="collection-note">${inlineHtml(collection.notes[0])}</p>` : ""}
 		<details class="collection-section" open>
 			<summary class="collection-section-heading">Date Ranges</summary>
 			<div class="collection-ranges">${rangesHtml}</div>

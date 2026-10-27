@@ -53,6 +53,8 @@ export interface Row {
 	 */
 	value?: string;
 	hint: string;
+	/** The hint with its markup, where the value's has any. See `Term`. */
+	styledHint?: string;
 	/** What to splice over the token when the row is accepted. Every row can be accepted. */
 	insert: string;
 }
@@ -445,6 +447,7 @@ interface Offer {
 	shape?: ValueTemplate;
 	/** A hint the value brought with it, which outranks the shape's — see `rowsFor`. */
 	hint?: string;
+	styledHint?: string;
 	/**
 	 * Whether accepting it finishes the filter off.
 	 *
@@ -476,6 +479,7 @@ function rowsFor(spec: FilterSpec, offers: Offer[]): Row[] {
 			template: offer.shape?.label,
 			value: offer.value,
 			hint,
+			...(offer.styledHint ? { styledHint: offer.styledHint } : {}),
 			insert: `@${spec.name}:${offer.value}${offer.commits ? " " : ""}`,
 		});
 		said = offer.hint ?? shared;
@@ -588,7 +592,13 @@ function valueRows(spec: FilterSpec, value: string, parses: boolean, context: Qu
 		const offers: Offer[] = [];
 		for (const term of valuesOf(spec, context)) {
 			const spelling = spellingFor(term, value);
-			if (spelling !== null) offers.push({ value: spelling, hint: term.hint, commits: true });
+			if (spelling !== null)
+				offers.push({
+					value: spelling,
+					hint: term.hint,
+					...(term.styledHint ? { styledHint: term.styledHint } : {}),
+					commits: true,
+				});
 		}
 		return rowsFor(spec, offers);
 	}

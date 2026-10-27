@@ -56,6 +56,8 @@ export interface Term {
 	value: string;
 	/** What the value is, for the row that offers it — a book id is not a book title. */
 	hint: string;
+	/** The hint with its `<i>` and `<b>`, where it has any, as a book's `styledName`. See `inline-markup.ts`. */
+	styledHint?: string;
 	/**
 	 * The American spelling, where the term is spelt two ways: `color` beside `colour`. Either is
 	 * the term, and the menu offers whichever the reader is likelier to write. See `spelling.ts`.

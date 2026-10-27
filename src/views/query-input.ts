@@ -10,6 +10,7 @@ import { addressOf } from "../base-path";
 import { rememberSpelling } from "../spelling";
 import { naturalHeight, onViewportShift, place, viewport } from "../placement";
 import { escHtml, isTouchDevice } from "../utils";
+import { inlineHtml } from "../inline-markup";
 
 /**
  * The search box, taught to say what it knows about `@filters`.
@@ -165,7 +166,7 @@ function rowHtml(row: Row, index: number, active: boolean): string {
 			data-index="${index}"
 		>
 			<span class="query-menu-syntax">@${escHtml(row.name)}${template}</span>
-			<span class="query-menu-hint">${escHtml(row.hint)}</span>
+			<span class="query-menu-hint">${inlineHtml(row.styledHint ?? row.hint)}</span>
 		</div>`;
 }
 

@@ -46,6 +46,8 @@ export interface FilterOption {
 	 */
 	token: string;
 	label: string;
+	/** The label with its markup, where a book's title has any. See `Term`. */
+	styledLabel?: string;
 }
 
 export interface FilterField {
@@ -161,7 +163,12 @@ export const FILTER_FIELDS: readonly FilterField[] = [
 		// The one field whose label and token cannot be the same string: an id takes no spaces and a
 		// title is nothing but spaces, so the row reads as the title and writes as the id. Which is
 		// also the whole argument for the field existing — see the note at the top of the file.
-		options: () => terms("in").map(({ value, hint }) => ({ token: `@in:${value}`, label: hint })),
+		options: () =>
+			terms("in").map(({ value, hint, styledHint }) => ({
+				token: `@in:${value}`,
+				label: hint,
+				...(styledHint ? { styledLabel: styledHint } : {}),
+			})),
 	},
 ];
 

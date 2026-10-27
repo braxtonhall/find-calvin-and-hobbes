@@ -1,5 +1,6 @@
 import { Appearance, Comic, PrintFormat } from "../types";
 import { escHtml } from "../utils";
+import { nameHtml } from "../inline-markup";
 import { srcsetAttributes } from "../srcset";
 import { dateToCompact, formatLongDate, weekdayOf } from "../date-utils";
 import {
@@ -116,6 +117,7 @@ export function summarizeCollections(source: PageSource, comics: Comic[]): Detai
 			summaries.set(collection.id, {
 				id: collection.id,
 				name: collection.name,
+				...(collection.styledName ? { styledName: collection.styledName } : {}),
 				pub_year: collection.pub_year,
 				image: collection.image,
 				colour: collection.colour,
@@ -457,7 +459,7 @@ function buildBookHtml(printing: Printing, steps: BookSteps, alterationKey: stri
 	const nav = `<span class="book__nav">${buildBookArrowHtml(steps.prev, -1, steps.unit)}${goTo}${buildBookArrowHtml(steps.next, 1, steps.unit)}</span>`;
 	const card = `<template class="book__card">
 		<div class="book__text">
-			<a class="book__name" href="${href}" data-collection-id="${escHtml(collection.id)}">${escHtml(collection.name)}</a> <span class="book__year">${collection.pub_year}</span>
+			<a class="book__name" href="${href}" data-collection-id="${escHtml(collection.id)}">${nameHtml(collection)}</a> <span class="book__year">${collection.pub_year}</span>
 			<span class="book__line">${escHtml(where.join("; "))}${colour}</span>
 			${notes.map((note) => `<span class="book__line book__note">${escHtml(note)}</span>`).join("")}
 		</div>

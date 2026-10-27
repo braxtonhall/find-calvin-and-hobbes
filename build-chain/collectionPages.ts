@@ -6,6 +6,7 @@ import type { PrintFormat } from "../src/types";
 import { aspectRatio } from "./imageSize";
 import { variantSourceWidth } from "./imageVariants";
 import { isUrl, staticPath } from "./staticFiles";
+import { markupProblem } from "../src/inline-markup";
 
 type JsonSafe = string | number | boolean | null | JsonSafe[] | { [key: string]: JsonSafe };
 
@@ -187,6 +188,19 @@ function formatOf(
 	return usualFormat({ special, sunday, format: specials[comicKey]?.format }, { colour: collection.colour === true });
 }
 
+/** A book's name, notes and extras may carry `<i>` and `<b>`, and only well. See `src/inline-markup.ts`. */
+function checkMarkup(collection: CollectionSource): void {
+	const words = [
+		["name", collection.name],
+		...((collection.notes as unknown[] | undefined) ?? []).map((note) => ["a note", note]),
+		...(collection.extras ?? []).map((extra) => ["an extra", extra]),
+	];
+	for (const [field, text] of words) {
+		const problem = typeof text === "string" ? markupProblem(text) : undefined;
+		if (problem) throw new Error(`${collection.id}'s ${field}, ${JSON.stringify(text)}: ${problem}`);
+	}
+}
+
 /** The books, as `config.yaml` gives them: a list, usually `!Map [Import, ./collections/*.yaml]`. */
 export function loadCollectionData(config?: string): CollectionData {
 	const books = loadRequiredPart("collections", config);
@@ -201,6 +215,7 @@ export function loadCollectionData(config?: string): CollectionData {
 		const { "aspect-ratio": ratio, ...raw } = jsonSafe(book) as Record<string, unknown>;
 		const collection = raw as unknown as CollectionSource;
 		Object.assign(collection, coverSetting(raw.image, ratio, `${raw.id}'s image`, files, config));
+		checkMarkup(collection);
 		sources.push(collection);
 	}
 

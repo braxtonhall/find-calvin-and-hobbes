@@ -1,4 +1,5 @@
 import { escHtml } from "../utils";
+import { nameHtml } from "../inline-markup";
 import { srcsetAttributes } from "../srcset";
 import { isDateInCollection } from "../date-utils";
 import { TabOrder } from "../types";
@@ -41,6 +42,7 @@ export function collectionsPageFrom(source: PageSource, q?: string, order?: TabO
 	const collections = books.map((collection): CollectionSummary => ({
 		id: collection.id,
 		name: collection.name,
+		...(collection.styledName ? { styledName: collection.styledName } : {}),
 		...(collection.subtitle ? { subtitle: collection.subtitle } : {}),
 		pub_year: collection.pub_year,
 		pub_month: collection.pub_month,
@@ -64,7 +66,7 @@ export function buildCollectionRowHtml(collection: CollectionSummary): string {
 				<img src="${escHtml(collection.image)}"${srcset} alt="" loading="lazy" />
 			</div>
 			<div class="collections-info">
-				<div class="collections-name">${escHtml(collection.name)}</div>
+				<div class="collections-name">${nameHtml(collection)}</div>
 				<div class="collections-meta">${collection.subtitle ? `${escHtml(collection.subtitle)} · ` : ""}${formatPublicationDate(collection)}</div>
 			</div>
 		</a>`;

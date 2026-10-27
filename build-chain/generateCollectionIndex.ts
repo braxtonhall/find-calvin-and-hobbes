@@ -1,5 +1,6 @@
 import { CollectionData } from "./collectionPages";
 import { isUrl } from "./staticFiles";
+import { plainText } from "../src/inline-markup";
 
 /** A cover as a page links to it: a URL as it is, and a published file from the mount, since the page may be at any depth. */
 function publicUrl(image: unknown, basePath: string): unknown {
@@ -49,8 +50,13 @@ export function generateCollectionIndex(collectionData: CollectionData, basePath
 			collectionExtras[source.id] = extras;
 		}
 
+		// The name without its markup for everything that reads it, the search above all; with it only
+		// where a page shows it. Notes and extras keep theirs, since only a page shows them.
+		const name = plainText(String(rest.name));
 		const collection: Record<string, unknown> = {
 			...rest,
+			name,
+			...(name !== rest.name ? { styledName: rest.name } : {}),
 			image: publicUrl(rest.image, basePath),
 			...(volumes.has(source.id) ? { volumes: volumes.get(source.id) } : {}),
 			dailies: collectionData.rangesById.get(source.id) || [],

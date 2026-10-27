@@ -45,7 +45,10 @@ export interface Appearance {
 
 export interface Collection {
 	id: string;
+	/** Plain, as the search and a tab's title read it. */
 	name: string;
+	/** The name with its `<i>` and `<b>`, where it has any. See `src/inline-markup.ts`. */
+	styledName?: string;
 	/** A line under the name, like `Treasury`. Left out, the book has none. */
 	subtitle?: string;
 	pub_year: number;
