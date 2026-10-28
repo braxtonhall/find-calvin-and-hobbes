@@ -53,7 +53,7 @@ export function getCollectionCoverage(collection: Collection): string[] {
 		coverage.push("Dailies & Sundays");
 	}
 	if (PAGE_CONFIG.colourSundays)
-		coverage.push(collection.colour ? `Sundays in ${spellable("colour")}` : "Sundays in black & white");
+		coverage.push(collection.colour ? `Printed in ${spellable("colour")}` : "Printed in black & white");
 	return coverage;
 }
 
