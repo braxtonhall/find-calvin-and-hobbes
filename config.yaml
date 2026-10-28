@@ -108,14 +108,10 @@ search:
     - water balloon
     - calvinball
     - waiting for the school bus
-    - "@featuring rosalyn"
-    - november 18 1985
-    - "@is:sunday @year:1985 @year:1995"
     - "@in:sundaypages"
     - "@in:lazysunday"
-    # - "@in:exploring" # TODO add this in when Exploring is indexed
+    - "@in:exploring"
     - "@in:tenthanniversary"
-    - "@is:rerun"
     - "{{featured.month}} {{featured.day}} {{featured.year}}"
     - "@month:{{today.month}} @day:{{today.day}}"
 
@@ -125,22 +121,20 @@ search:
   # have, or whose filter the site has turned off, is left out. Each must find something, which
   # the tests check.
   examples:
-    - question: Which Sundays had Spaceman Spiff in them?
-      query: "@featuring:spiff @is:sunday"
     - question: What was the very first strip?
       query: november 18 1985
-    - question: What ran on Christmas Eve?
-      query: "@month:december @day:24"
-    - question: Which strips is Calvin's dad in without Calvin?
-      query: "@featuring:dad @not @featuring:calvin"
-    - question: Which strips are not in the Portable Compendium?
-      query: "@not @in compendium"
     - question: Which strips did a book print with changes?
       query: "@is:altered"
+    - question: Which Sundays had Spaceman Spiff in them?
+      query: "@featuring:spiff @is:sunday"
+    - question: What ran on Christmas Eve?
+      query: "@month:december @day:24"
+    - question: Which strips are not in the Portable Compendium?
+      query: "@not @in compendium"
+    - question: Which strips is Calvin's dad in without Calvin?
+      query: "@featuring:dad @not @featuring:calvin"
     - question: What's on page 47 of Yukon Ho!?
       query: "@in (@id:yukonho @page:47)"
-    - question: Which strips have Hobbes as a stuffed tiger?
-      query: "@featuring:stuffedhobbes"
     - question: Which books have a colour Sunday I don't own?
       query: "@has (@as:colour @not @in @i:own)"
       tab: books
@@ -150,6 +144,7 @@ search:
     - question: Which arcs ran entirely in 1987?
       query: "@only @has @year:1987"
       tab: arcs
+      # TODO: is this one too complex? "@only @in (@as:greyscale @or complete @or compendium)"
 
 # Where and how the site is deployed.
 
