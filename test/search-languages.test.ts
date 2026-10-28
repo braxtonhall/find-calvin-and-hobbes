@@ -707,7 +707,7 @@ test("the search box", async (suite) => {
 
 	await suite.test("a book's coverage marks its colour for the browser to respell", () => {
 		const coverage = getCollectionCoverage({ ...book("x", "X", 1990, true), dailies: ["1990-01-01"] });
-		assert.ok(coverage.includes(`Sundays in ${spellable("colour")}`));
+		assert.ok(coverage.includes(`Printed in ${spellable("colour")}`));
 	});
 
 	await suite.test("the reader's own tags are painted as any filter is, and the mistakes say why", () => {
