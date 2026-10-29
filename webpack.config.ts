@@ -2,6 +2,7 @@ import path from "path";
 import webpack, { Configuration, WebpackOptionsNormalized } from "webpack";
 import MiniCssExtractPlugin from "mini-css-extract-plugin";
 import CopyWebpackPlugin from "copy-webpack-plugin";
+import CssMinimizerPlugin from "css-minimizer-webpack-plugin";
 import SiteFilesPlugin from "./build-chain/SiteFilesPlugin";
 import YamlToJsonPlugin from "./build-chain/YamlToJsonPlugin";
 import PagesPlugin from "./build-chain/PagesPlugin";
@@ -92,6 +93,11 @@ module.exports = (_env: unknown, options: WebpackOptionsNormalized): Configurati
 				use: [MiniCssExtractPlugin.loader, "css-loader"],
 			},
 		],
+	},
+	optimization: {
+		// Production mode minifies the script on its own, but not the stylesheet; "..." keeps the
+		// script's minimizer beside this one.
+		minimizer: ["...", new CssMinimizerPlugin()],
 	},
 	resolve: {
 		extensions: [".tsx", ".ts", ".json", ".js"],
