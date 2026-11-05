@@ -649,6 +649,11 @@
 		padding-left: 6px;
 	}
 
+	/* A sticky offset is measured inside the container's padding, where the room for the days is. */
+	.grid-header-row:not(.grid-header-row--hidden) + #grid-scroller .grid-sticky-label {
+		top: calc(-1 * var(--day-size));
+	}
+
 	.grid-control {
 		padding: 8px 0;
 		font-size: 16px;
