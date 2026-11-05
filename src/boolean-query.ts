@@ -15,6 +15,7 @@ import {
 	readMatch,
 } from "./filter-query";
 import { CrossingOperator, crossingSpec } from "./filter-spec";
+import { DateExpression, parseDateExpression } from "./date-query";
 import { Comic } from "./types";
 
 /**
@@ -288,6 +289,7 @@ export interface Crossing {
 export type Constraint =
 	| { kind: "filter"; filter: Filter; negated: boolean }
 	| { kind: "text"; text: string; negated: boolean }
+	| { kind: "date"; expression: DateExpression; words: string[]; negated: boolean }
 	| { kind: "cross"; crossing: Crossing; negated: boolean };
 
 /** One plain query: words to rank, and rows to keep. */
@@ -676,13 +678,66 @@ function segmentsOf(words: TextLeaf[]): string[] {
 	return segments;
 }
 
+/** The crossings whose query is about strips, so that a date among its words is a day. */
+const STRIP_CROSSINGS = new Set<string>(["has", "reran", "reuses"]);
+
+/**
+ * The clause's constraints with its words made a date where they are one, as the top level reads the
+ * words left over by its filters.
+ *
+ * If the unnegated words together, none quoted, are a whole date, they are one — and since at the top
+ * level a date adds to what the words find, the words stay beside it. Otherwise each run of words the
+ * reader set apart (`(december 30 1985) @and six`) that is a date by itself is one the same way, and the
+ * strip has to have it as well as the other words.
+ */
+function withDate(clause: Literal[], constraints: Constraint[]): Constraint[] {
+	const words = clause.flatMap((literal, index) =>
+		literal.atom.kind === "text" && !literal.negated ? [{ leaf: literal.atom, index }] : [],
+	);
+	if (words.length === 0 || words.some(({ leaf }) => leaf.text.startsWith('"'))) return constraints;
+	words.sort((one, other) => one.leaf.position - other.leaf.position);
+
+	const runs: (typeof words)[] = [];
+	for (const word of words) {
+		const run = runs[runs.length - 1];
+		if (run !== undefined && word.leaf.position === run[run.length - 1].leaf.position + 1) run.push(word);
+		else runs.push([word]);
+	}
+
+	const replace = (taken: typeof words, date: Constraint): Constraint[] => {
+		const indexes = new Set(taken.map(({ index }) => index));
+		return [date, ...constraints.filter((_, index) => !indexes.has(index))];
+	};
+
+	const whole = parseDateExpression(words.map(({ leaf }) => leaf.text).join(" "));
+	if (whole !== null) {
+		return replace(words, {
+			kind: "date",
+			expression: whole,
+			words: words.map(({ leaf }) => leaf.text),
+			negated: false,
+		});
+	}
+	const dated = runs.flatMap((run) => {
+		const texts = run.map(({ leaf }) => leaf.text);
+		const expression = parseDateExpression(texts.join(" "));
+		return expression === null
+			? []
+			: [{ run, date: { kind: "date", expression, words: texts, negated: false } as const }];
+	});
+	if (dated.length === 0) return constraints;
+	const taken = new Set(dated.flatMap(({ run }) => run.map(({ index }) => index)));
+	return [...dated.map(({ date }) => date), ...constraints.filter((_, index) => !taken.has(index))];
+}
+
 /**
  * The crossing as its compiled query, or null where everything inside it is a mistake — which a
  * mistake anywhere sinks the clause of, as a filter that cannot be read does.
  */
 function compileCrossing(node: CrossNode): Crossing | null {
 	if (!node.valid) return null;
-	const clauses = compileClauses(normalise(node.item, false));
+	// Inside a strip's query, as at the top level, words that are a date name its day.
+	const clauses = compileClauses(normalise(node.item, false), STRIP_CROSSINGS.has(node.operator));
 	if (clauses.length === 0) return null;
 	return {
 		operator: node.operator,
@@ -711,11 +766,13 @@ function constraintOf({ atom, negated }: Literal): Constraint | null {
 }
 
 /** The clauses as constraints, with every clause that holds a mistake dropped. */
-function compileClauses(clauses: Literal[][]): Constraint[][] {
+function compileClauses(clauses: Literal[][], strips = false): Constraint[][] {
 	const compiled: Constraint[][] = [];
 	for (const clause of clauses) {
 		const constraints = clause.map(constraintOf);
-		if (constraints.every((constraint) => constraint !== null)) compiled.push(constraints as Constraint[]);
+		if (constraints.every((constraint) => constraint !== null)) {
+			compiled.push(strips ? withDate(clause, constraints as Constraint[]) : (constraints as Constraint[]));
+		}
 	}
 	return compiled;
 }
@@ -930,6 +987,7 @@ export function admits(
 		clause.every((constraint) => {
 			if (constraint.kind === "filter") return passesFilter(subject, constraint.filter, run) !== constraint.negated;
 			if (constraint.kind === "text") return (contains?.(constraint.text) ?? false) !== constraint.negated;
+			if (constraint.kind === "date") return false;
 			return (crosses?.(constraint.crossing) ?? false) !== constraint.negated;
 		}),
 	);

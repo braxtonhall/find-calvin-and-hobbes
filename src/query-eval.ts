@@ -268,7 +268,11 @@ export class Evaluator {
 			clause.every((constraint) => {
 				let holds: boolean;
 				if (constraint.kind === "text") holds = stripContains(row.comic, constraint.text, this.compounds);
-				else if (constraint.kind === "cross") holds = this.crossFromStrip(constraint.crossing, row);
+				else if (constraint.kind === "date") {
+					holds =
+						matchesExpression(constraint.expression, row.comic.date) ||
+						constraint.words.every((word) => stripContains(row.comic, word, this.compounds));
+				} else if (constraint.kind === "cross") holds = this.crossFromStrip(constraint.crossing, row);
 				else if (describesLink(constraint.filter)) holds = linkHolds(link, constraint.filter);
 				else holds = passesFilter(row.comic, constraint.filter, row.run);
 				return holds !== constraint.negated;
@@ -282,6 +286,8 @@ export class Evaluator {
 			clause.every((constraint) => {
 				let holds: boolean;
 				if (constraint.kind === "text") holds = this.groupContains(group, constraint.text);
+				// Made only inside a strip's query, which a collection is never asked.
+				else if (constraint.kind === "date") holds = false;
 				else if (constraint.kind === "cross") holds = this.crossFromGroup(constraint.crossing, group);
 				else holds = passesCollectionFilter(group, constraint.filter, link);
 				return holds !== constraint.negated;
@@ -458,6 +464,9 @@ export function searchCollections(query: string, type: CollectionType, compounds
 					if (!group.stripWords) continue;
 					const saying = evaluator.stripsSaying(constraint.text);
 					for (const comic of group.strips) if (saying.has(comic)) lit.add(comic);
+				} else if (constraint.kind === "date") {
+					asked = true;
+					for (const comic of group.strips) if (matchesExpression(constraint.expression, comic.date)) lit.add(comic);
 				} else if (constraint.kind === "cross") {
 					asked = true;
 					for (const row of evaluator.rowsOf(group, constraint.crossing)) {

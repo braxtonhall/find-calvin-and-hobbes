@@ -584,6 +584,46 @@ test("the collection language", async (suite) => {
 		assert.deepEqual(listed("snowball @is:sunday", "arc"), []);
 	});
 
+	await suite.test("a date inside @has names its day, as it does in the main box", () => {
+		setUp();
+		assert.deepEqual(listed("@has (january 3 1988)", "arc"), ["snowarc"]);
+		assert.deepEqual(listed("@has (january 3 1988)", "book"), ["snowbook", "plainbook"]);
+		assert.deepEqual(listed("@has (1988)", "arc"), ["snowarc", "schoolarc"]);
+		assert.deepEqual(listed("@has (january 3 1988 @year:1988)", "arc"), ["snowarc"]);
+		assert.deepEqual(listed("@has (january 3 1988 @is:sunday)", "arc"), ["snowarc"]);
+		assert.deepEqual(listed("@not @has (january 3 1988)", "arc"), ["schoolarc"]);
+		assert.deepEqual(listed("@has (january 5 1988 @is:sunday)", "arc"), []);
+		// Words beside the date are text, not a date; a quotation is never one.
+		assert.deepEqual(listed("@has (january 3 1988 snow)", "arc"), []);
+		assert.deepEqual(listed('@has ("1988")', "arc"), []);
+		// A rerun day is not counted unless the rerun is asked for.
+		assert.deepEqual(listed("@has (january 4 1995)", "arc"), []);
+		assert.deepEqual(listed("@has (@reran (january 4 1995))", "arc"), ["snowarc"]);
+		assert.deepEqual(listed("@has (@is:rerun january 4 1995)", "arc"), ["snowarc"]);
+		const lit = [...searchCollections("@has (january 3 1988)", "arc", NO_COMPOUNDS)!.dates];
+		assert.deepEqual(lit, ["1988-01-03"]);
+	});
+
+	await suite.test("a date set apart by @and narrows the other words, in the main box and inside @has", () => {
+		setUp();
+		assert.deepEqual(strips("(january 3 1988) @and fort"), ["1988-01-03"]);
+		assert.deepEqual(strips("january 3 1988 @and fort"), ["1988-01-03"]);
+		assert.deepEqual(strips("(january 3 1988) @and snowball"), []);
+		assert.deepEqual(strips("(january 4 1988) @and fort"), []);
+		// Each date is a date as it is alone, so a repeated one asks for nothing more.
+		assert.deepEqual(strips("1988 @and 1988"), strips("1988"));
+		assert.deepEqual(strips("1988 @and january 1988"), strips("january 1988"));
+		assert.deepEqual(strips("(january 3 1988) @and january 1988"), strips("january 3 1988"));
+		assert.deepEqual(listed("@has (1988 @and 1988)", "arc"), listed("@has (1988)", "arc"));
+		assert.deepEqual(listed("@has (1988 @and january 4 1988)", "arc"), ["snowarc"]);
+		// Side by side, they are one run of words and no date, as ever.
+		assert.deepEqual(strips("(january 3 1988) fort"), ["1988-01-03"]);
+		assert.deepEqual(listed("@has ((january 3 1988) @and fort)", "arc"), ["snowarc"]);
+		assert.deepEqual(listed("@has ((january 3 1988) @and snowball)", "arc"), []);
+		assert.deepEqual(listed("@has ((january 5 1988) @and snowball)", "arc"), ["schoolarc"]);
+		assert.deepEqual(listed("@has (january 3 1988 fort)", "arc"), []);
+	});
+
 	await suite.test("the grid lights the strips that are why each collection is listed", () => {
 		setUp();
 		const dates = (query: string, type: "book" | "arc") =>

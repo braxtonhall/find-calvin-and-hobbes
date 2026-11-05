@@ -1038,6 +1038,25 @@ export function search(query: string, sort: SortMode, tuning: Tuning, compounds:
 let evaluator: Evaluator | null = null;
 
 /**
+ * The runs of words in a branch that are each a date, and the words besides: null where the words
+ * together are a date, or one run, as the text pipeline has always read them, or none is a date.
+ */
+function datesApart(
+	segments: string[],
+): { dates: { expression: DateExpression; text: string }[]; rest: string[] } | null {
+	if (segments.length < 2 || segments.some((segment) => quotedSpans(segment).length > 0)) return null;
+	if (parseDateExpression(segments.join(" ")) !== null) return null;
+	const dates: { expression: DateExpression; text: string }[] = [];
+	const rest: string[] = [];
+	for (const segment of segments) {
+		const expression = parseDateExpression(segment);
+		if (expression === null) rest.push(segment);
+		else dates.push({ expression, text: segment });
+	}
+	return dates.length === 0 ? null : { dates, rest };
+}
+
+/**
  * One plain query — see `Branch` — searched as every query was before `@or` existed.
  */
 function searchBranch(branch: Branch, tuning: Tuning, compounds: Compounds): SearchResult[] {
@@ -1063,15 +1082,34 @@ function searchBranch(branch: Branch, tuning: Tuning, compounds: Compounds): Sea
 		return results;
 	}
 
-	let results = searchText(branch.segments, residual, tuning, compounds);
+	// A run of words set apart from the rest (`(december 30 1985) @and six`) that is a date by itself
+	// is a date as at the top level — the strips on that day, and any that say it — and a strip must
+	// have it as well as the others: `1988 @and 1988` finds what `1988` does.
+	const apart = datesApart(branch.segments);
+	let results: SearchResult[];
+	if (apart === null) results = searchText(branch.segments, residual, tuning, compounds);
+	else if (apart.rest.length > 0) results = searchText(apart.rest, apart.rest.join(" "), tuning, compounds);
+	else {
+		const [first] = apart.dates;
+		results = withDateMatches(searchText([first.text], first.text, tuning, compounds), first.expression, tuning);
+	}
 	// Implicit date search is all or nothing: `parseDateExpression` returns null unless the whole
 	// residual is a date, so the text query is never rewritten and the coverage arithmetic in
 	// `rankedSearch` never sees a stray year or day number. A quotation is never a date: `"1988"`
 	// asks for the strips that say it, which is the one thing a date match cannot answer.
-	const expression = quotedSpans(residual).length > 0 ? null : parseDateExpression(residual);
+	const expression = apart !== null || quotedSpans(residual).length > 0 ? null : parseDateExpression(residual);
 	if (expression !== null) results = withDateMatches(results, expression, tuning);
 	// Before the filters, so that they judge a rerun by the date it ran again on, as its row shows.
 	if (rerunDays !== null) results = withReruns(results, rerunDays);
+	if (apart !== null) {
+		const dates = apart.rest.length > 0 ? apart.dates : apart.dates.slice(1);
+		results = results.filter((result) =>
+			dates.every(
+				({ expression, text }) =>
+					matchesExpression(expression, result.comic.date) || stripContains(result.comic, text, compounds),
+			),
+		);
+	}
 	// Filters restrict the finished set. Applied before the union, they would let a date match
 	// through that the reader had explicitly excluded.
 	if (constrains(branch)) {
