@@ -99,7 +99,8 @@ function initialize(): void {
 	renderGrid();
 	// The build may have written this very page into the document; if so, it is taken over as it
 	// stands rather than replaced with a spinner until the archive arrives. See `handleRoute`.
-	handleRoute(readPrerenderedPage());
+	// The one route that is not the reader's doing: the grid jumps to it rather than scrolling there.
+	handleRoute(readPrerenderedPage(), "instant");
 
 	// After the first paint, not before it: opening IndexedDB can take longer than drawing a
 	// prerendered page, and what waits on the answer is the grid's bookmark highlights and any search

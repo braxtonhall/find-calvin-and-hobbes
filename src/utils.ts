@@ -85,6 +85,17 @@ export function anyCellInView(cells: Iterable<HTMLElement>): boolean {
 	return false;
 }
 
-export function scrollCellIntoViewIfNeeded(cell: HTMLElement): void {
-	if (!anyCellInView([cell])) cell.scrollIntoView({ block: "center", behavior: "smooth" });
+/**
+ * How the grid should scroll when asked to `behavior`. A scroll the reader can't see is not worth
+ * animating — on mobile, with the sidebar closed, the grid is off screen, and would play out
+ * unseen only to be found half-finished when the sidebar opens — so it jumps.
+ */
+export function gridScrollBehavior(behavior: ScrollBehavior = "smooth"): ScrollBehavior {
+	const sidebar = document.getElementById("sidebar");
+	if (sidebar && sidebar.getBoundingClientRect().right <= 0) return "instant";
+	return behavior;
+}
+
+export function scrollCellIntoViewIfNeeded(cell: HTMLElement, behavior: ScrollBehavior = "smooth"): void {
+	if (!anyCellInView([cell])) cell.scrollIntoView({ block: "center", behavior: gridScrollBehavior(behavior) });
 }

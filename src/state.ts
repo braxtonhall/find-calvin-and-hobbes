@@ -31,7 +31,8 @@ export interface AppState {
 	/** Whether IndexedDB has answered — or failed to — so an empty library means there is none. */
 	bookmarksLoaded: boolean;
 	dataLoaded: boolean;
-	pendingRoute: Route | null;
+	/** The route a spinner is standing in for, and how the grid should scroll once it is drawn. */
+	pendingRoute: { route: Route; scroll: ScrollBehavior } | null;
 	resultsDebounceTimer: number | null;
 }
 

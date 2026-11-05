@@ -1,5 +1,5 @@
 import { state } from "../state";
-import { anyCellInView, scrollCellIntoViewIfNeeded } from "../utils";
+import { anyCellInView, gridScrollBehavior, scrollCellIntoViewIfNeeded } from "../utils";
 import { cellForDate, lightDates, paintGrid } from "../grid";
 import { parseRoute } from "../router";
 import { isDateInCollection, isSabbatical } from "../date-utils";
@@ -94,7 +94,7 @@ export function highlightCollection(dates: ReadonlySet<string> | null, scroll: b
 	cancelCollectionClear();
 	const matched = lightDates(dates);
 	if (scroll && matched.length > 0 && !anyCellInView(matched)) {
-		matched[0].scrollIntoView({ block: "center", behavior: "smooth" });
+		matched[0].scrollIntoView({ block: "center", behavior: gridScrollBehavior() });
 	}
 }
 

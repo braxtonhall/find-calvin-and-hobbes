@@ -269,7 +269,7 @@ function pageFor(route: Route): Page | null {
  */
 export function resumeRoute(): void {
 	if (state.pendingRoute) {
-		handleRoute();
+		handleRoute(null, state.pendingRoute.scroll);
 	} else {
 		updateGridState(parseRoute());
 	}
@@ -341,7 +341,7 @@ function servePrerendered(prerendered: Page, route: Route): { page: Page; adopt:
  * is adopted — handlers attached, nothing redrawn — rather than replaced with a spinner until the
  * archive arrives.
  */
-export function handleRoute(prerendered: Page | null = null): void {
+export function handleRoute(prerendered: Page | null = null, scroll: ScrollBehavior = "smooth"): void {
 	const route = parseRoute();
 
 	const served = prerendered ? servePrerendered(prerendered, route) : null;
@@ -384,12 +384,12 @@ export function handleRoute(prerendered: Page | null = null): void {
 		// A search typed into a bar already showing waits under it, so the bar — and a phone's
 		// keyboard, which goes with its focus — stays up.
 		if (route.view === "results" && !arriving && showResultsLoading()) {
-			state.pendingRoute = route;
-			updateGridState(route);
+			state.pendingRoute = { route, scroll };
+			updateGridState(route, scroll);
 			return;
 		}
-		showLoadingView(viewElement, route);
-		updateGridState(route);
+		showLoadingView(viewElement, route, scroll);
+		updateGridState(route, scroll);
 		return;
 	}
 
@@ -489,17 +489,17 @@ export function handleRoute(prerendered: Page | null = null): void {
 	// The words a page spells two ways, in the reader's spelling. See `spelling.ts`.
 	respell(viewElement);
 	document.title = pageTitle(page);
-	updateGridState(route);
+	updateGridState(route, scroll);
 }
 
-function showLoadingView(viewElement: HTMLElement, route: Route): void {
+function showLoadingView(viewElement: HTMLElement, route: Route, scroll: ScrollBehavior): void {
 	viewElement.classList.add("active");
 	viewElement.style.height = "100%";
 	viewElement.style.display = "flex";
 	viewElement.style.alignItems = "center";
 	viewElement.style.justifyContent = "center";
 	viewElement.innerHTML = '<div class="spinner"></div>';
-	state.pendingRoute = route;
+	state.pendingRoute = { route, scroll };
 }
 
 /**
@@ -522,7 +522,7 @@ document.addEventListener(LIBRARY_CHANGE_EVENT, (event) => {
 	relightRows((event as CustomEvent<{ byPointer: boolean }>).detail.byPointer);
 });
 
-export function updateGridState(route: Route): void {
+export function updateGridState(route: Route, scroll: ScrollBehavior = "smooth"): void {
 	// Any page drawn, even one whose grid looks the same, ends a game of life — and a book's hover
 	// still waiting to be cleared, which would otherwise undo the page's own lighting.
 	stopLife();
@@ -538,16 +538,12 @@ export function updateGridState(route: Route): void {
 	if (route.view === "landing") state.searchResultTiers = null;
 
 	// The grid turns to the page holding what this one is about, if it is showing another.
-	followRoute(route);
+	followRoute(route, scroll);
 
 	paintGrid(route);
 
 	if (route.view === "detail" && route.date) {
 		const cell = cellForDate(route.date);
-		if (cell) {
-			setTimeout(() => {
-				scrollCellIntoViewIfNeeded(cell);
-			}, 50);
-		}
+		if (cell) scrollCellIntoViewIfNeeded(cell, scroll);
 	}
 }

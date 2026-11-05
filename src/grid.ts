@@ -3,7 +3,13 @@ import "./grid.css";
 import { Day, Route } from "./types";
 import { computeDays } from "./days";
 import { attachGridScrollbar } from "./grid-scrollbar";
-import { anyCellInView, clearRowHighlights, scrollCellIntoViewIfNeeded, visibleBand } from "./utils";
+import {
+	anyCellInView,
+	clearRowHighlights,
+	gridScrollBehavior,
+	scrollCellIntoViewIfNeeded,
+	visibleBand,
+} from "./utils";
 import { state } from "./state";
 import { isDayBookmarked } from "./bookmarks";
 import { loadDescriptions } from "./details";
@@ -388,6 +394,20 @@ function attachOverscan(): void {
 	window.addEventListener("resize", updateOverscan);
 }
 
+/**
+ * Draws the grid again where the layout turns between desktop and mobile. The sizes come from the
+ * sidebar's `--day-size` and `--grid-gap`, which the breakpoint changes, but chunks that were skipped
+ * by the browser (see `.grid-chunk`) have been seen keeping the old ones, leaving the grid as wide as
+ * the other layout's and the labels beside it pushed out of the sidebar. New elements take the
+ * current ones.
+ */
+function attachBreakpointRedraw(): void {
+	window.matchMedia("(max-width: 768px)").addEventListener("change", () => {
+		finishMove();
+		goTo(view.level, view.page, anchorDate());
+	});
+}
+
 function attachYearRail(): void {
 	let queued = false;
 	const queueUpdate = () => {
@@ -655,7 +675,7 @@ let subjectShown: string | null = null;
  * reader — the page drawing again, as it does when the archive or the bookmarks arrive, does not
  * turn it back. Leaving forgets the subject, so coming back to it turns there again.
  */
-export function followRoute(route: Route): void {
+export function followRoute(route: Route, scroll: ScrollBehavior = "smooth"): void {
 	// A search submitted is waited for on its own results page; any other page drops it.
 	if (submitted !== null && (route.view !== "results" || route.q !== submitted)) submitted = null;
 	if (route.view === "detail" && route.date) {
@@ -679,7 +699,7 @@ export function followRoute(route: Route): void {
 	// its best matches, unless any match is on screen already.
 	const reveal = submitted !== null;
 	submitted = null;
-	const revealSearched = (): void => scrollToAnyOf(subject.dates, state.searchResultTiers!.keys());
+	const revealSearched = (): void => scrollToAnyOf(subject.dates, state.searchResultTiers!.keys(), scroll);
 	if (subject.key === subjectShown) {
 		if (reveal) revealSearched();
 		return;
@@ -691,7 +711,7 @@ export function followRoute(route: Route): void {
 	// into view, as a strip's page brings its strip. A search's best matches change a key at a time,
 	// so they leave the grid where it is, unless the reader submitted it.
 	if (reveal) revealSearched();
-	else if (LIGHTS_ITS_OWN.has(route.view)) scrollToAnyOf(subject.dates);
+	else if (LIGHTS_ITS_OWN.has(route.view)) scrollToAnyOf(subject.dates, subject.dates, scroll);
 }
 
 /** The query the reader last submitted, until its results page has brought its matches into view. */
@@ -714,7 +734,11 @@ export function revealSearch(query: string): void {
  * Scrolls the grid to the first of `dates` it is showing, unless one of `enough` — `dates` themselves,
  * unless told otherwise — is already in view.
  */
-function scrollToAnyOf(dates: ReadonlySet<string>, enough: Iterable<string> = dates): void {
+function scrollToAnyOf(
+	dates: ReadonlySet<string>,
+	enough: Iterable<string> = dates,
+	scroll: ScrollBehavior = "smooth",
+): void {
 	if (!drawn) return;
 	let first: string | null = null;
 	for (const date of dates) {
@@ -727,7 +751,7 @@ function scrollToAnyOf(dates: ReadonlySet<string>, enough: Iterable<string> = da
 		if (cell) cells.add(cell);
 	}
 	if (anyCellInView(cells)) return;
-	drawn.byDate.get(first)!.scrollIntoView({ block: "center", behavior: "smooth" });
+	drawn.byDate.get(first)!.scrollIntoView({ block: "center", behavior: gridScrollBehavior(scroll) });
 }
 
 /** Turns to the page holding the first of `dates`, unless the grid is already showing one of them. */
@@ -1081,6 +1105,7 @@ export function renderGrid(): void {
 	buildControls();
 	attachYearRail();
 	attachOverscan();
+	attachBreakpointRedraw();
 	attachGridScrollbar(grid);
 	setBoardSource(gridBoard);
 
