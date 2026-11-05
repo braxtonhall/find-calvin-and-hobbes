@@ -238,6 +238,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	overlay.addEventListener("click", () => setSidebarOpen(false));
 
+	// Widening past the mobile layout closes the sidebar, so its overlay does not linger over the
+	// desktop page (same breakpoint as the mobile rules in components.css).
+	window.matchMedia("(max-width: 768px)").addEventListener("change", (event) => {
+		if (event.matches) return;
+		// Not `setSidebarOpen(false)`: on desktop there is no slide for `mobile-closing` to wait out, so
+		// it would never be cleared and would show the sidebar sliding out when narrowing again.
+		sidebar.classList.remove("mobile-visible", "mobile-closing");
+		overlay.classList.remove("visible");
+	});
+
 	document.addEventListener("mousemove", (event) => {
 		if (state.keyboardNavActive) {
 			state.keyboardNavActive = false;
