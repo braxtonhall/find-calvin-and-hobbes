@@ -1,6 +1,4 @@
-import { search, Tuning } from "../../../src/search";
-import { TUNING } from "../../../src/tuning";
-import { CANONICAL_FORMS } from "../../../src/compounds";
+import { search, TUNING, type Tuning } from "./site";
 import { LabelledQuery, QueryClass } from "./queries";
 
 export interface Evaluation {
@@ -73,7 +71,7 @@ export function evaluate(queries: Rankable[], tuning: Tuning = TUNING): Evaluati
 	const misses: Evaluation["misses"] = [];
 
 	for (const row of rows) {
-		const results = search(row.query, "rank", tuning, CANONICAL_FORMS);
+		const results = search(row.query, "rank", tuning);
 		const position = results.findIndex((result) => result.comic.date === row.date);
 		const rank = position === -1 ? NOT_FOUND : position + 1;
 
@@ -114,7 +112,7 @@ export function evaluateHollow(queries: LabelledQuery[], tuning: Tuning = TUNING
 	let descriptionSourced = 0;
 
 	for (const row of rows) {
-		const results = search(row.query, "rank", tuning, CANONICAL_FORMS);
+		const results = search(row.query, "rank", tuning);
 		totalResults += results.length;
 		worstResults = Math.max(worstResults, results.length);
 		descriptionSourced += results.filter((result) => result.source === "description").length;
@@ -136,7 +134,7 @@ export function evaluateNearMiss(queries: LabelledQuery[], tuning: Tuning = TUNI
 	let targetAboveDecoy = 0;
 
 	for (const row of rows) {
-		const results = search(row.query, "rank", tuning, CANONICAL_FORMS);
+		const results = search(row.query, "rank", tuning);
 		const target = results.findIndex((result) => result.comic.date === row.date);
 		const decoy = results.findIndex((result) => result.comic.date === row.decoy);
 		const where = { query: row.query, date: row.date!, decoy: row.decoy! };

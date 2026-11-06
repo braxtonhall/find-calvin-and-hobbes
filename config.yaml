@@ -24,7 +24,7 @@ description: Search the complete Calvin and Hobbes archive. Browse every comic s
 # window of its own, like an app. A URL is the tab's alone, as it is, since the build never fetches
 # it, and a phone adds the site to its home screen as a bookmark. Without one, the browser shows its
 # own.
-favicon: !Path ./calvin-and-hobbes/icon.png
+favicon: !Path ./icon.png
 
 landing:
   # The banner over the home page's search box, and the link preview's image for a page with none of
@@ -272,29 +272,29 @@ corrections:
 #               transcripts alone
 comics:
   strips: !Merge
-    - !Import ./calvin-and-hobbes/comics/1985.yaml
-    - !Import ./calvin-and-hobbes/comics/1986.yaml
-    - !Import ./calvin-and-hobbes/comics/1987.yaml
-    - !Import ./calvin-and-hobbes/comics/1988.yaml
-    - !Import ./calvin-and-hobbes/comics/1989.yaml
-    - !Import ./calvin-and-hobbes/comics/1990.yaml
-    - !Import ./calvin-and-hobbes/comics/1991.yaml
-    - !Import ./calvin-and-hobbes/comics/1992.yaml
-    - !Import ./calvin-and-hobbes/comics/1993.yaml
-    - !Import ./calvin-and-hobbes/comics/1994.yaml
-    - !Import ./calvin-and-hobbes/comics/1995.yaml
-  specials: !Import ./calvin-and-hobbes/comics/specials.yaml
-collections: !Map [Import, ./calvin-and-hobbes/collections/*.yaml]
-tuning: !Import ./calvin-and-hobbes/tuning.yaml
-credits: !Import ./calvin-and-hobbes/credits.md
-arcs: !Import ./calvin-and-hobbes/arcs.yaml
-reruns: !Import ./calvin-and-hobbes/reruns.yaml
-compounds: !Import ./calvin-and-hobbes/compounds.yaml
-misspellings: !Import ./calvin-and-hobbes/misspellings.yaml
-characters: !Import ./calvin-and-hobbes/characters.yaml
+    - !Import ./comics/1985.yaml
+    - !Import ./comics/1986.yaml
+    - !Import ./comics/1987.yaml
+    - !Import ./comics/1988.yaml
+    - !Import ./comics/1989.yaml
+    - !Import ./comics/1990.yaml
+    - !Import ./comics/1991.yaml
+    - !Import ./comics/1992.yaml
+    - !Import ./comics/1993.yaml
+    - !Import ./comics/1994.yaml
+    - !Import ./comics/1995.yaml
+  specials: !Import ./comics/specials.yaml
+collections: !Map [Import, ./collections/*.yaml]
+tuning: !Import ./tuning.yaml
+credits: !Import ./credits.md
+arcs: !Import ./arcs.yaml
+reruns: !Import ./reruns.yaml
+compounds: !Import ./compounds.yaml
+misspellings: !Import ./misspellings.yaml
+characters: !Import ./characters.yaml
 creators: false
 subjects: false
-comicImages: ./calvin-and-hobbes/comics/images
+comicImages: ./comics/images
 
 # Whether the Sundays ran in colour and the dailies in black and white, a format of their own. When
 # true, the search has `@is:sunday` and `@is:daily` and the filter bar a Format field to pick one,

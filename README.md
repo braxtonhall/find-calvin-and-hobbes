@@ -134,15 +134,16 @@ do. For a host that does not, set `PAGE_LAYOUT=directory` to write `credits/inde
 (see `config.yaml`). `yarn serve` handles either, and it is what to use locally, since the app
 routes on the path and does not work from `file://`.
 
-Every page is built by the same code the app uses to draw it: the view builders in `src/pages/`
-have no DOM and take a `Page` of plain data, and `src/views/` wraps them with the handlers. The
-pages are written by `build-chain/PagesPlugin.ts`.
+Every page is built by the same code the app uses to draw it, which lives in
+[`find-strips`](https://github.com/braxtonhall/find-strips): its view builders have no DOM and take a
+`Page` of plain data, and they are wrapped with the handlers. The pages are written by its
+`build-chain/PagesPlugin.ts`. This repository holds the archive's data and the search's tuning.
 
 ### Configuration
 
 Everything about the site and its archive is in `config.yaml`, and its comments explain each
-setting. The build reads whichever file `SITE_CONFIG` names, which every script in `package.json`
-sets to `config.yaml`; to build from another, run `SITE_CONFIG=other.yaml npx webpack --mode production`.
+setting. The build reads the file it is given, which every script in `package.json` points at
+`config.yaml`; to build from another, run `npx find-strips build other.yaml dist`.
 
 The search's tuning is measured in `test/tuning`: `yarn tune` sweeps its values, `yarn probe "<query>"`
 shows what a query returns, and `yarn candidates` lists compound words `compounds` doesn't mention yet.
@@ -162,5 +163,5 @@ reach the same form. Set `CORRECTIONS=false` to leave the link off every page.
 
 ### Images
 
-A strip's image goes in the folder `calvin-and-hobbes/comics/images/`, as `YYYYMMDD.ext` or a special's
+A strip's image goes in the folder `comics/images/`, as `YYYYMMDD.ext` or a special's
 id — drop one in and that strip has an image.

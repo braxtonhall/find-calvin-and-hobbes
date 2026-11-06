@@ -1,9 +1,5 @@
 import fs from "fs";
 import path from "path";
-import { search, Tuning } from "../../src/search";
-import { TUNING } from "../../src/tuning";
-import { stem } from "../../src/stem";
-import { CANONICAL_FORMS } from "../../src/compounds";
 import {
 	describeMisses,
 	evaluate,
@@ -12,7 +8,6 @@ import {
 	evaluateNearMiss,
 	summarise,
 } from "./helpers/metrics";
-import { install, loadRealArchive } from "./helpers/archive";
 import {
 	CLASS_NAMES,
 	countByClass,
@@ -22,6 +17,7 @@ import {
 	select,
 	subsample,
 } from "./helpers/queries";
+import { CANONICAL_FORMS, search, stem, TUNING, type Tuning } from "./helpers/site";
 
 const CANDIDATES: Record<string, number[]> = {
 	sequenceWeight: [0, 0.5, 1, 2, 3],
@@ -188,7 +184,7 @@ function literal(text: string, terms: string[], stems: Set<string>): boolean {
 function bare(probe: string, tuning: Tuning): string[] {
 	const terms = words(probe);
 	const stems = new Set(terms.map(stem));
-	return search(probe, "rank", tuning, CANONICAL_FORMS)
+	return search(probe, "rank", tuning)
 		.filter((result) => !literal(result.text, terms, stems))
 		.map((result) => result.comic.date);
 }
@@ -206,18 +202,16 @@ function corrections(tuning: Tuning): string[] {
 const COLLAPSE_SHARE = 0.5;
 
 function descriptionResults(probe: string, tuning: Tuning): number {
-	return search(probe, "rank", tuning, CANONICAL_FORMS).filter((result) => result.source === "description").length;
+	return search(probe, "rank", tuning).filter((result) => result.source === "description").length;
 }
 
 function violations(tuning: Tuning): string[] {
 	return MONOTONICITY_PROBES.filter(([shorter, longer]) => {
-		return (
-			search(longer, "rank", tuning, CANONICAL_FORMS).length > search(shorter, "rank", tuning, CANONICAL_FORMS).length
-		);
+		return search(longer, "rank", tuning).length > search(shorter, "rank", tuning).length;
 	}).map(([shorter, longer]) => `"${longer}" widens "${shorter}"`);
 }
 
-// Filled once the archive is installed, since every probe is a real search.
+// Filled once the archive is loaded, since every probe is a real search.
 let baselineDescriptionResults = new Map<string, number>();
 
 function collapses(tuning: Tuning): string[] {
@@ -243,9 +237,7 @@ let baselineHollowResults = 0;
 function hollowResults(tuning: Tuning): number {
 	const rows = select(generated, { classes: ["D"] });
 	if (rows.length === 0) return 0;
-	return (
-		rows.reduce((total, row) => total + search(row.query, "rank", tuning, CANONICAL_FORMS).length, 0) / rows.length
-	);
+	return rows.reduce((total, row) => total + search(row.query, "rank", tuning).length, 0) / rows.length;
 }
 
 function bloats(tuning: Tuning): string[] {
@@ -262,7 +254,6 @@ interface Score {
 	combined: number;
 }
 
-install(loadRealArchive());
 baselineDescriptionResults = new Map(DESCRIPTION_PROBES.map((probe) => [probe, descriptionResults(probe, TUNING)]));
 
 const generated = loadGenerated();

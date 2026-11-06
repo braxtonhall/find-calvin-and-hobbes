@@ -7,7 +7,7 @@
  * Seeded so a run can be repeated exactly, and so two iterations of the loop can be given
  * different seeds without overlapping by accident.
  */
-import { loadRealArchive } from "./helpers/archive";
+import { loadRealArchive } from "./helpers/site";
 
 function parseArguments(argv: string[]): { count: number; seed: number } {
 	const seedFlag = argv.indexOf("--seed");

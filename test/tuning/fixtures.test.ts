@@ -2,12 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "fs";
 import path from "path";
-import { loadRealArchive } from "./helpers/archive";
 import { DESCRIBED, RECITED } from "./fixtures/golden";
-import { stem } from "../../src/stem";
-import { parseDateExpression } from "../../src/date-query";
-import { parseQuery } from "../../src/boolean-query";
 import { CLASS_NAMES, GENERATED_PATH, LabelledQuery, loadGenerated, parseQueryLine, splitFor } from "./helpers/queries";
+import { stem, parseDateExpression, parseQuery, loadRealArchive } from "./helpers/site";
 
 const CLASSES = Object.keys(CLASS_NAMES);
 const STATUSES = ["validated", "ambiguous"];

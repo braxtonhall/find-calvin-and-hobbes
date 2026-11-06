@@ -1,16 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { search } from "../../src/search";
-import { TUNING } from "../../src/tuning";
-import { CANONICAL_FORMS } from "../../src/compounds";
 import { DESCRIBED, RECITED } from "./fixtures/golden";
 import { describeMisses, evaluate } from "./helpers/metrics";
-import { install, loadRealArchive } from "./helpers/archive";
 import { loadGenerated } from "./helpers/queries";
+import { search, TUNING, loadRealArchive } from "./helpers/site";
 
 test("golden queries", async (suite) => {
-	install(loadRealArchive());
-
 	// Thresholds sit roughly one query below what the tuned weights achieve, so a real
 	// regression fails while ordinary churn does not.
 	await suite.test("recited dialogue ranks its strip first", () => {
@@ -44,10 +39,8 @@ test("golden queries", async (suite) => {
 });
 
 test("real archive behaviour", async (suite) => {
-	install(loadRealArchive());
-
 	await suite.test("a name that fills the descriptions returns only transcript matches", () => {
-		const results = search("calvin", "rank", TUNING, CANONICAL_FORMS);
+		const results = search("calvin", "rank", TUNING);
 		assert.ok(results.length > 0);
 		assert.ok(
 			results.every((result) => result.source === "transcript"),
@@ -56,7 +49,7 @@ test("real archive behaviour", async (suite) => {
 	});
 
 	await suite.test("a rare keyword returns a short, description-led result set", () => {
-		const results = search("transmogrifier", "rank", TUNING, CANONICAL_FORMS);
+		const results = search("transmogrifier", "rank", TUNING);
 		assert.ok(results.length <= 40, `expected a tight result set, got ${results.length}`);
 		assert.ok(results.some((result) => result.source === "description"));
 	});
@@ -71,9 +64,7 @@ test("real archive behaviour", async (suite) => {
 				})
 				.map((comic) => comic.date),
 		);
-		const strays = search("calvin transmogrifier", "rank", TUNING, CANONICAL_FORMS).filter(
-			(result) => !mentions.has(result.comic.date),
-		);
+		const strays = search("calvin transmogrifier", "rank", TUNING).filter((result) => !mentions.has(result.comic.date));
 		assert.deepEqual(
 			strays.map((result) => result.comic.date),
 			[],
@@ -94,8 +85,8 @@ test("real archive behaviour", async (suite) => {
 			["good night", "calvin good night"],
 		];
 		for (const [shorter, longer] of pairs) {
-			const before = search(shorter, "rank", TUNING, CANONICAL_FORMS).length;
-			const after = search(longer, "rank", TUNING, CANONICAL_FORMS).length;
+			const before = search(shorter, "rank", TUNING).length;
+			const after = search(longer, "rank", TUNING).length;
 			assert.ok(after <= before, `"${longer}" returned ${after} results against ${before} for "${shorter}"`);
 		}
 	});
@@ -107,17 +98,15 @@ test("real archive behaviour", async (suite) => {
 	// `snow` from 129 description results to none, and nothing else in this project notices.
 	await suite.test("a single keyword still returns description-led results", () => {
 		for (const probe of ["snow", "snowman", "wagon", "rosalyn", "bicycle", "doctor"]) {
-			const sourced = search(probe, "rank", TUNING, CANONICAL_FORMS).filter(
-				(result) => result.source === "description",
-			);
+			const sourced = search(probe, "rank", TUNING).filter((result) => result.source === "description");
 			assert.ok(sourced.length > 0, `"${probe}" returned no description-sourced results at all`);
 		}
 	});
 
 	await suite.test("a single query stays well under a frame budget", () => {
-		search("warm up", "rank", TUNING, CANONICAL_FORMS);
+		search("warm up", "rank", TUNING);
 		const started = process.hrtime.bigint();
-		search("calvin clean your room right now young man", "rank", TUNING, CANONICAL_FORMS);
+		search("calvin clean your room right now young man", "rank", TUNING);
 		const elapsed = Number(process.hrtime.bigint() - started) / 1e6;
 		assert.ok(elapsed < 250, `query took ${elapsed.toFixed(1)}ms`);
 	});
@@ -134,8 +123,6 @@ test("real archive behaviour", async (suite) => {
 // absent cannot separate anything. Note what is NOT asserted — that the target wins. A pair the
 // target loses is the interesting kind, and one currently does.
 test("emphasis pairs put both strips in the results", async (suite) => {
-	install(loadRealArchive());
-
 	const claimed = loadGenerated().filter(
 		(row) => row.class === "E" && row.date && row.decoy && (row.corruption ?? "").toLowerCase().includes("emphasis"),
 	);
@@ -147,7 +134,7 @@ test("emphasis pairs put both strips in the results", async (suite) => {
 	await suite.test("both the target and the decoy are admitted", () => {
 		const untested = claimed
 			.map((row) => {
-				const results = search(row.query, "rank", TUNING, CANONICAL_FORMS);
+				const results = search(row.query, "rank", TUNING);
 				const target = results.findIndex((result) => result.comic.date === row.date);
 				const decoy = results.findIndex((result) => result.comic.date === row.decoy);
 				return { row, target, decoy };
