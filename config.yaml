@@ -59,6 +59,8 @@ theme:
   neutral: "#e0e0e0"
   # The ring around the day that is open, and the outline of a book's links out.
   selected: "#e6052f"
+  # The ring around a bookmarked day that is open, which would be lost against the bookmark's own colour.
+  bookmarkSelected: "#000000"
   # The glow around a day while its search result is pointed at, and that result's row.
   hover: "#ffd700"
   hoverRow: "#fff8e1"

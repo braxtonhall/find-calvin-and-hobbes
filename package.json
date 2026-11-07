@@ -2,7 +2,7 @@
 	"name": "imagination-archive",
 	"license": "MIT",
 	"dependencies": {
-		"find-strips": "github:braxtonhall/find-strips#0.1.0"
+		"find-strips": "github:braxtonhall/find-strips#0.2.0"
 	},
 	"devDependencies": {
 		"@types/node": "^22.14.1",

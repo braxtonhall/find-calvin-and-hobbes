@@ -1,5 +1,5 @@
 import { loadSite } from "find-strips";
-import type * as Engine from "find-strips/search";
+import { createSearch } from "find-strips/search";
 import type { Comic, SortMode, Tuning } from "find-strips/search";
 
 export type { Tuning };
@@ -14,11 +14,6 @@ export interface Archive {
 // package scripts do. One archive per process: the engine keeps the strips in module state.
 const site = loadSite("config.yaml");
 
-// The engine reads the configuration when it is first loaded, so it is loaded after `loadSite`, not
-// with the imports above.
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { createSearch, parseDateExpression, parseQuery, stem } = require("find-strips/search") as typeof Engine;
-
 // Only what the tuning is measured on: each strip's date, transcript and alternate text, with none of
 // the data the filters read, so that the scores stay comparable with the ones already logged.
 const comics: Comic[] = site.comics.map(({ date, id, transcript, alternate }) => ({
@@ -29,7 +24,7 @@ const comics: Comic[] = site.comics.map(({ date, id, transcript, alternate }) =>
 }));
 const engine = createSearch({ ...site, comics });
 
-export { parseDateExpression, parseQuery, stem };
+export const { parseDateExpression, parseQuery, stem } = engine;
 
 /** The tuning the site's configuration gives: what the search scores with unless told otherwise. */
 export const TUNING: Tuning = site.tuning;

@@ -1581,9 +1581,9 @@ fdir@^6.5.0:
   dependencies:
     flat-cache "^6.1.23"
 
-"find-strips@github:braxtonhall/find-strips#0.1.0":
-  version "0.1.0"
-  resolved "https://codeload.github.com/braxtonhall/find-strips/tar.gz/b048a67c168275a23ae3588f2e68a9f92c8384d3"
+"find-strips@github:braxtonhall/find-strips#0.2.0":
+  version "0.2.0"
+  resolved "https://codeload.github.com/braxtonhall/find-strips/tar.gz/a254d908af00016d823fa2cb805683f90a9fcd15"
   dependencies:
     "@bobs-sink/client" "0.1.0"
     copy-webpack-plugin "^13.0.0"
